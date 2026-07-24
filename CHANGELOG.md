@@ -26,3 +26,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   (`PreUpdateBackupRequiredException`) and `component.*` lifecycle events.
 - Fixed `AuditLogger::record()`'s `organizationId` to the internal `BIGINT`
   id the schema actually expects (it was typed as the public uid string).
+- Backup and recovery (Substage 1.4): `BackupProviderRegistry`;
+  `LocalFilesystemBackupWriter`/`Reader` (local protected storage, JSON
+  Lines per table); `CoreBackupProvider` — a real `BackupProviderInterface`
+  implementation covering every table Core owns, with checksum-based
+  verification and transactional restore; `BackupManager` application
+  service (`create()` always exports then verifies in one call, per
+  kontor.md#24); `RecoveryModeManager`, a filesystem-marker recovery/
+  maintenance flag that works even when the database is mid-restore;
+  `bin/kontor` CLI for `backup:create`, `backup:list`, `restore:run` and
+  `recovery:enable`/`disable`/`status`.

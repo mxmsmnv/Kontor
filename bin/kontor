@@ -1,0 +1,140 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Kontor\Core\Application\BackupManager;
+use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
+use Kontor\Core\Infrastructure\Recovery\RecoveryModeManager;
+use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
+
+/**
+ * Minimal CLI covering Substage 1.4's "CLI restore" milestone. This is not
+ * the full command-family framework of kontor.md section 35 (component:*,
+ * import:*, etc.) — those land with the dedicated CLI/Automation stages.
+ * Connection settings come from the environment, matching the pattern
+ * already used by tests/Integration/DatabaseTestCase.php.
+ */
+
+function kontorFail(string $message): never
+{
+    fwrite(STDERR, $message . PHP_EOL);
+    exit(1);
+}
+
+function kontorPdo(): PDO
+{
+    $dsn = getenv('KONTOR_DB_DSN');
+
+    if ($dsn === false) {
+        kontorFail('Set KONTOR_DB_DSN (and optionally KONTOR_DB_USER / KONTOR_DB_PASS) to connect to MySQL.');
+    }
+
+    return new PDO(
+        $dsn,
+        getenv('KONTOR_DB_USER') ?: null,
+        getenv('KONTOR_DB_PASS') ?: null,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+}
+
+function kontorBackupManager(): BackupManager
+{
+    $registry = new BackupProviderRegistry();
+    $registry->register('core', new CoreBackupProvider(kontorPdo()));
+
+    $backupDir = getenv('KONTOR_BACKUP_DIR') ?: (getcwd() . '/kontor-backups');
+
+    return new BackupManager($registry, $backupDir);
+}
+
+function kontorRecovery(): RecoveryModeManager
+{
+    $stateDir = getenv('KONTOR_STATE_DIR') ?: (getcwd() . '/kontor-state');
+
+    return new RecoveryModeManager($stateDir);
+}
+
+$command = $argv[1] ?? null;
+
+switch ($command) {
+    case 'recovery:enable':
+        $reason = $argv[2] ?? 'manual';
+        kontorRecovery()->enable($reason);
+        echo "Recovery mode enabled: {$reason}" . PHP_EOL;
+        break;
+
+    case 'recovery:disable':
+        kontorRecovery()->disable();
+        echo 'Recovery mode disabled.' . PHP_EOL;
+        break;
+
+    case 'recovery:status':
+        $recovery = kontorRecovery();
+        echo $recovery->isActive() ? 'ACTIVE: ' . $recovery->reason() . PHP_EOL : 'inactive' . PHP_EOL;
+        break;
+
+    case 'backup:create':
+        $component = $argv[2] ?? kontorFail('Usage: kontor backup:create <component> <kind> <organizationId>');
+        $kind = $argv[3] ?? 'component';
+        $organizationId = $argv[4] ?? kontorFail('Usage: kontor backup:create <component> <kind> <organizationId>');
+
+        $record = kontorBackupManager()->create($component, $kind, $organizationId);
+
+        echo json_encode([
+            'id' => $record->id,
+            'path' => $record->path,
+            'verified' => $record->verified,
+            'itemCount' => $record->itemCount,
+            'errors' => $record->verificationErrors,
+        ], JSON_PRETTY_PRINT) . PHP_EOL;
+
+        exit($record->verified ? 0 : 1);
+
+    case 'backup:list':
+        foreach (kontorBackupManager()->list() as $path) {
+            echo $path . PHP_EOL;
+        }
+
+        break;
+
+    case 'restore:run':
+        $path = $argv[2] ?? kontorFail('Usage: kontor restore:run <path> <component> <organizationId> [--dry-run]');
+        $component = $argv[3] ?? kontorFail('Usage: kontor restore:run <path> <component> <organizationId> [--dry-run]');
+        $organizationId = $argv[4] ?? kontorFail('Usage: kontor restore:run <path> <component> <organizationId> [--dry-run]');
+        $dryRun = in_array('--dry-run', $argv, true);
+
+        $recovery = kontorRecovery();
+
+        if (!$dryRun) {
+            $recovery->enable("restore:{$component}");
+        }
+
+        $result = kontorBackupManager()->restore($path, $component, $organizationId, $dryRun);
+
+        if (!$dryRun) {
+            $recovery->disable();
+        }
+
+        echo json_encode([
+            'success' => $result->success,
+            'restoredCount' => $result->restoredCount,
+            'errors' => $result->errors,
+        ], JSON_PRETTY_PRINT) . PHP_EOL;
+
+        exit($result->success ? 0 : 1);
+
+    default:
+        kontorFail(<<<USAGE
+            Usage: kontor <command> [args]
+
+              recovery:enable <reason>
+              recovery:disable
+              recovery:status
+              backup:create <component> <kind> <organizationId>
+              backup:list
+              restore:run <path> <component> <organizationId> [--dry-run]
+            USAGE);
+}

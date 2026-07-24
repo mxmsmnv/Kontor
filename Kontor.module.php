@@ -3,10 +3,14 @@
 namespace ProcessWire;
 
 use Kontor\Core\Application\AuditLogger;
+use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ComponentManager;
+use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use Kontor\Core\Infrastructure\Recovery\RecoveryModeManager;
+use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\CapabilityRegistry;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\RouteRegistry;
@@ -50,6 +54,12 @@ class Kontor extends WireData implements Module
                 'kontor-components-remove' => 'Remove Kontor components',
                 'kontor-audit-view' => 'View the Kontor audit log',
                 'kontor-health-view' => 'View Kontor health checks',
+                'kontor-backups-view' => 'View Kontor backups',
+                'kontor-backups-create' => 'Create Kontor backups',
+                'kontor-backups-download' => 'Download Kontor backups',
+                'kontor-backups-restore' => 'Restore Kontor backups',
+                'kontor-backups-configure' => 'Configure Kontor backup destinations',
+                'kontor-updates-bypass-backup' => 'Update components without a verified pre-update backup',
             ],
         ];
     }
@@ -94,6 +104,20 @@ class Kontor extends WireData implements Module
                 organizationId: $organizations->internalIdOf($organization->uid->toString()),
             );
         });
+        $container->bind(BackupProviderRegistry::class, static function () use ($pdo): BackupProviderRegistry {
+            $registry = new BackupProviderRegistry();
+            $registry->register('core', new CoreBackupProvider($pdo));
+
+            return $registry;
+        });
+        $container->bind(
+            RecoveryModeManager::class,
+            fn (): RecoveryModeManager => new RecoveryModeManager($this->wire()->config->paths->assets . 'kontor/state')
+        );
+        $container->bind(BackupManager::class, fn (Container $c): BackupManager => new BackupManager(
+            $c->get(BackupProviderRegistry::class),
+            $this->wire()->config->paths->assets . 'kontor/backups'
+        ));
 
         return $this->container = $container;
     }
