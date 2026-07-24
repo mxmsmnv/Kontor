@@ -1,0 +1,31 @@
+{
+    "name": "kontor/sdk",
+    "description": "Canonical contracts, DTOs, event envelope and value objects shared by all Kontor components.",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "psr/container": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kontor\\SDK\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\SDK\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}

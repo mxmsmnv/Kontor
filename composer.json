@@ -1,0 +1,37 @@
+{
+    "name": "kontor/core",
+    "description": "Kontor Core: service container, capability/component registries, migrations, audit and the ProcessKontor admin shell for ProcessWire.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^0.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "packages/sdk"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Core\\": "src/",
+            "Kontor\\Core\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Core\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}
