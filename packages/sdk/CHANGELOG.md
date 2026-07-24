@@ -3,7 +3,21 @@
 All notable changes to `kontor/sdk` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.2.0] - Unreleased
+
+### Changed
+
+- `JobInterface::handle()` now takes a second `JobProgressReporterInterface
+  $progress` parameter, so a running job can report its own completion
+  percentage (kontor.md section 31 "progress"). `JobInterface` had no
+  concrete implementation anywhere yet (KontorQueue is the first consumer),
+  so this is not a breaking change in practice.
+
+### Added
+
+- `JobProgressReporterInterface`.
+
+## [0.1.0]
 
 ### Added
 

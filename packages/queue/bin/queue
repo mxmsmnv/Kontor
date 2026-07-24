@@ -1,0 +1,145 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Kontor\Queue\Application\QueueWorker;
+use Kontor\Queue\Infrastructure\GenericJob;
+use Kontor\Queue\Infrastructure\Persistence\JobRepository;
+use Kontor\Queue\Infrastructure\Queue;
+use Kontor\Queue\JobRegistry;
+use Kontor\SDK\DTO\QueueOptions;
+
+/**
+ * Substage 2.1 "CLI worker" milestone. Connection settings come from the
+ * environment, matching kontor/core's bin/kontor and
+ * tests/Integration/DatabaseTestCase.php.
+ *
+ * `work` needs real job classes registered to actually execute anything —
+ * pass --jobs=path/to/register-jobs.php, a script that returns a callable
+ * accepting a JobRegistry, e.g.:
+ *   return function (JobRegistry $registry): void {
+ *       $registry->register('send.invoice', fn (array $p) => new SendInvoiceJob($p));
+ *   };
+ */
+
+function queueFail(string $message): never
+{
+    fwrite(STDERR, $message . PHP_EOL);
+    exit(1);
+}
+
+function queuePdo(): PDO
+{
+    $dsn = getenv('KONTOR_DB_DSN');
+
+    if ($dsn === false) {
+        queueFail('Set KONTOR_DB_DSN (and optionally KONTOR_DB_USER / KONTOR_DB_PASS) to connect to MySQL.');
+    }
+
+    return new PDO(
+        $dsn,
+        getenv('KONTOR_DB_USER') ?: null,
+        getenv('KONTOR_DB_PASS') ?: null,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+}
+
+/**
+ * @param array<int, string> $argv
+ */
+function queueOption(array $argv, string $name, ?string $default = null): ?string
+{
+    foreach ($argv as $arg) {
+        if (str_starts_with($arg, "--{$name}=")) {
+            return substr($arg, strlen($name) + 3);
+        }
+    }
+
+    return $default;
+}
+
+function queueJobRegistry(array $argv): JobRegistry
+{
+    $registry = new JobRegistry();
+    $jobsFile = queueOption($argv, 'jobs');
+
+    if ($jobsFile !== null) {
+        $configure = require $jobsFile;
+        $configure($registry);
+    }
+
+    return $registry;
+}
+
+$command = $argv[1] ?? null;
+
+switch ($command) {
+    case 'work':
+        $queueName = $argv[2] ?? queueFail('Usage: queue work <queue> [--max=N] [--sleep=N] [--jobs=path.php]');
+        $max = queueOption($argv, 'max');
+        $sleepSeconds = (int) (queueOption($argv, 'sleep') ?? '1');
+
+        $jobs = new JobRepository(queuePdo());
+        $worker = new QueueWorker($jobs, queueJobRegistry($argv));
+
+        $worker->work($queueName, $sleepSeconds, $max !== null ? (int) $max : null);
+        break;
+
+    case 'job:dispatch':
+        $jobType = $argv[2] ?? queueFail('Usage: queue job:dispatch <jobType> <payloadJson> [--queue=] [--priority=] [--max-attempts=] [--delay=] [--idempotency-key=]');
+        $payloadJson = $argv[3] ?? '{}';
+        $payload = json_decode($payloadJson, associative: true, flags: JSON_THROW_ON_ERROR);
+
+        $options = new QueueOptions(
+            queue: queueOption($argv, 'queue', 'default'),
+            priority: (int) (queueOption($argv, 'priority') ?? '0'),
+            maxAttempts: (int) (queueOption($argv, 'max-attempts') ?? '3'),
+            idempotencyKey: queueOption($argv, 'idempotency-key'),
+        );
+
+        $queue = new Queue(new JobRepository(queuePdo()));
+        $delay = queueOption($argv, 'delay');
+
+        $uid = $delay !== null
+            ? $queue->later((new DateTimeImmutable())->modify("+{$delay} seconds"), new GenericJob($jobType, $payload), $options)
+            : $queue->dispatch(new GenericJob($jobType, $payload), $options);
+
+        echo $uid . PHP_EOL;
+        break;
+
+    case 'job:cancel':
+        $uid = $argv[2] ?? queueFail('Usage: queue job:cancel <uid>');
+        $cancelled = (new Queue(new JobRepository(queuePdo())))->cancel($uid);
+
+        echo $cancelled ? "Cancelled {$uid}." . PHP_EOL : "Could not cancel {$uid} (not found, or no longer pending)." . PHP_EOL;
+        exit($cancelled ? 0 : 1);
+
+    case 'list':
+        $rows = (new JobRepository(queuePdo()))->all(queueOption($argv, 'queue'), queueOption($argv, 'status'));
+
+        foreach ($rows as $row) {
+            echo json_encode([
+                'uid' => $row['uid'],
+                'queue' => $row['queue'],
+                'job_type' => $row['job_type'],
+                'status' => $row['status'],
+                'attempts' => $row['attempts'],
+                'progress' => $row['progress'],
+            ]) . PHP_EOL;
+        }
+
+        break;
+
+    default:
+        queueFail(<<<USAGE
+            Usage: queue <command> [args]
+
+              work <queue> [--max=N] [--sleep=N] [--jobs=path.php]
+              job:dispatch <jobType> <payloadJson> [--queue=] [--priority=] [--max-attempts=] [--delay=] [--idempotency-key=]
+              job:cancel <uid>
+              list [--queue=] [--status=]
+            USAGE);
+}

@@ -13,5 +13,5 @@ interface JobInterface
      */
     public function payload(): array;
 
-    public function handle(array $payload): void;
+    public function handle(array $payload, JobProgressReporterInterface $progress): void;
 }

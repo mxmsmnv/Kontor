@@ -7,8 +7,11 @@ for the canonical architecture specification.
 This repository is **Kontor Core** (`kontor/core`) — the service container,
 capability/component registries, migrations, audit log, and the single
 `ProcessKontor` admin shell that business components register into. It is
-also the monorepo staging ground for `kontor/sdk` while the ecosystem is
-still pre-split into separate repositories (spec section 5.6 / `KontorDev`).
+also the monorepo staging ground for the ecosystem's other components
+while they're still pre-split into separate repositories (spec section 5.6
+/ `KontorDev`) — each one is its own Composer package under `packages/`,
+depending on `kontor/core`/`kontor/sdk` rather than the other way around,
+exactly as it would across separate repos.
 
 ## Layout
 
@@ -20,6 +23,7 @@ bin/kontor                  CLI: recovery mode, backup create/list, restore
 src/                        Kontor\Core\... (Domain, Application, Infrastructure, Admin)
 migrations/                 Core schema migrations
 packages/sdk/               kontor/sdk — contracts, DTOs, event envelope, value objects
+packages/queue/              kontor/queue — jobs, retries, dead-letter queue, CLI worker
 tests/                       Core unit/integration/migration tests
 ```
 
@@ -89,10 +93,19 @@ A live (non-dry-run) import is gated behind a verified pre-import backup,
 the same pattern `ComponentManager::update()` uses (see
 `PreImportBackupRequiredException` / `PreUpdateBackupRequiredException`).
 
+## Other components
+
+- [`packages/queue/`](packages/queue/) — `kontor/queue` (Substage 2.1):
+  asynchronous/delayed jobs, retries with backoff, dead-letter queue,
+  priorities, progress, and a CLI worker. Registers itself as the `queue`
+  capability in Core's `CapabilityRegistry` rather than being depended on
+  directly. Has its own `composer.json`, `kontor.json`, tests and
+  `docker-compose.test.yml`-based integration tests — see its own README.
+
 ## Status
 
-Stage 0 (SDK contracts) and Substage 1.1–1.5 (module bootstrap, core
+Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
-export) per spec section 36. Not yet installed against a live ProcessWire
-instance — see the spec's Definition of Done (section 38) for what
-"complete" means for each subsequent milestone.
+export), and Substage 2.1 (Queue) per spec section 36. Not yet installed
+against a live ProcessWire instance — see the spec's Definition of Done
+(section 38) for what "complete" means for each subsequent milestone.

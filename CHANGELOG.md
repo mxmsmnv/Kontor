@@ -47,3 +47,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   events, and `rollback()`, which archives every record a batch created or
   updated via the audit ledger's `correlation_id` and `RepositoryInterface`;
   `ExportManager` streaming a provider's rows into any format writer.
+- Bumped the `kontor/sdk` requirement to `^0.2` (`JobInterface::handle()`
+  gained a `JobProgressReporterInterface` parameter for the new
+  `kontor/queue` component; see `packages/sdk/CHANGELOG.md`).

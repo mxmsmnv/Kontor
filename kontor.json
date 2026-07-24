@@ -19,7 +19,7 @@
     "requires": {
         "php": ">=8.2",
         "processwire": ">=3.0.240",
-        "kontor/sdk": "^0.1"
+        "kontor/sdk": "^0.2"
     },
     "suggests": {},
     "conflicts": {},
