@@ -53,7 +53,13 @@
     },
     "services": [],
     "events": {
-        "publishes": [],
+        "publishes": [
+            "component.installed",
+            "component.updated",
+            "component.enabled",
+            "component.disabled",
+            "component.uninstalled"
+        ],
         "subscribes": []
     },
     "providers": {

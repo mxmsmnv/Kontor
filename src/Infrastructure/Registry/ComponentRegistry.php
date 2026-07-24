@@ -11,7 +11,7 @@ use RuntimeException;
  * This is distinct from the CapabilityRegistry: it records install/enable
  * lifecycle, not the capabilities a component provides at runtime.
  */
-final class ComponentRegistry
+final class ComponentRegistry implements ComponentRegistryInterface
 {
     public function __construct(private readonly \PDO $pdo)
     {
@@ -60,6 +60,16 @@ final class ComponentRegistry
             'UPDATE kontor_components SET status = :status, disabled_at = :now, updated_at = :now WHERE name = :name'
         );
         $statement->execute(['status' => 'disabled', 'now' => $this->now(), 'name' => $name]);
+    }
+
+    public function uninstall(string $name): void
+    {
+        $this->requireExists($name);
+
+        $statement = $this->pdo->prepare(
+            'UPDATE kontor_components SET status = :status, disabled_at = :now, updated_at = :now WHERE name = :name'
+        );
+        $statement->execute(['status' => 'uninstalled', 'now' => $this->now(), 'name' => $name]);
     }
 
     public function isEnabled(string $name): bool

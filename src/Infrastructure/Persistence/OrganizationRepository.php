@@ -34,6 +34,25 @@ final class OrganizationRepository
         return $this->find($uid) ?? throw new RuntimeException("Organization \"{$uid}\" was not found.");
     }
 
+    /**
+     * Resolves the internal kontor_organizations.id for a uid. Only
+     * infrastructure code populating an organization_id FK column
+     * (kontor.md#10.4) needs this — domain and API layers use the uid.
+     */
+    public function internalIdOf(string $uid): int
+    {
+        $statement = $this->pdo->prepare('SELECT id FROM kontor_organizations WHERE uid = :uid');
+        $statement->execute(['uid' => $uid]);
+
+        $id = $statement->fetchColumn();
+
+        if ($id === false) {
+            throw new RuntimeException("Organization \"{$uid}\" was not found.");
+        }
+
+        return (int) $id;
+    }
+
     public function save(Organization $organization): void
     {
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s.u');

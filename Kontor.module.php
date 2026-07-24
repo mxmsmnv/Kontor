@@ -83,10 +83,17 @@ class Kontor extends WireData implements Module
         $container->bind(ComponentRegistry::class, static fn (): ComponentRegistry => new ComponentRegistry($pdo));
         $container->bind(OrganizationRepository::class, static fn (): OrganizationRepository => new OrganizationRepository($pdo));
         $container->bind(AuditLogger::class, static fn (): AuditLogger => new AuditLogger($pdo));
-        $container->bind(
-            ComponentManager::class,
-            static fn (Container $c): ComponentManager => new ComponentManager($c->get(ComponentRegistry::class))
-        );
+        $container->bind(ComponentManager::class, static function (Container $c): ComponentManager {
+            $organizations = $c->get(OrganizationRepository::class);
+            $organization = $organizations->defaultOrganization('US', 'en', 'EUR');
+
+            return new ComponentManager(
+                registry: $c->get(ComponentRegistry::class),
+                events: $c->get(EventDispatcher::class),
+                audit: $c->get(AuditLogger::class),
+                organizationId: $organizations->internalIdOf($organization->uid->toString()),
+            );
+        });
 
         return $this->container = $container;
     }

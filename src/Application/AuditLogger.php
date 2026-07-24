@@ -19,12 +19,13 @@ final class AuditLogger
     }
 
     /**
+     * @param int $organizationId the internal kontor_organizations.id (BIGINT FK), not its public uid (kontor.md#10.4)
      * @param array<string, mixed>|null $previous
      * @param array<string, mixed>|null $current
      * @param array<string, mixed> $metadata
      */
     public function record(
-        string $organizationId,
+        int $organizationId,
         string $component,
         string $entityType,
         string $entityUid,

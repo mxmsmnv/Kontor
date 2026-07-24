@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Core\Infrastructure\Registry;
 
+use Kontor\Core\Support\VersionConstraint;
 use Kontor\SDK\Contracts\CapabilityRegistryInterface;
 use RuntimeException;
 
@@ -51,7 +52,7 @@ final class CapabilityRegistry implements CapabilityRegistryInterface
             return true;
         }
 
-        return $this->satisfies($this->capabilities[$capability]['version'], $constraint);
+        return VersionConstraint::satisfies($this->capabilities[$capability]['version'], $constraint);
     }
 
     public function get(string $capability, ?string $constraint = null): object
@@ -72,21 +73,5 @@ final class CapabilityRegistry implements CapabilityRegistryInterface
             static fn (array $entry): object => $entry['implementation'],
             $this->capabilities
         );
-    }
-
-    /**
-     * Minimal caret-range check ("^1.0" matches "1.x", "1.0" matches exactly).
-     */
-    private function satisfies(string $version, string $constraint): bool
-    {
-        if (!str_starts_with($constraint, '^')) {
-            return $version === $constraint;
-        }
-
-        $required = ltrim($constraint, '^');
-        $requiredMajor = explode('.', $required)[0];
-        $actualMajor = explode('.', $version)[0];
-
-        return $requiredMajor === $actualMajor && version_compare($version, $required, '>=');
     }
 }

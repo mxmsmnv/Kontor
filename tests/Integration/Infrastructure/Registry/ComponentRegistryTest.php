@@ -43,4 +43,19 @@ final class ComponentRegistryTest extends DatabaseTestCase
 
         $registry->enable('KontorGhost');
     }
+
+    public function test_uninstall_retains_the_ledger_row(): void
+    {
+        $registry = new ComponentRegistry($this->pdo);
+        $registry->markInstalled('KontorCRM', '1.0.0', 'local');
+        $registry->enable('KontorCRM');
+
+        $registry->uninstall('KontorCRM');
+
+        $this->assertFalse($registry->isEnabled('KontorCRM'));
+        $row = $registry->find('KontorCRM');
+        $this->assertNotNull($row);
+        $this->assertSame('uninstalled', $row['status']);
+        $this->assertSame('1.0.0', $row['version']);
+    }
 }

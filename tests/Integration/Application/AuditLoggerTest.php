@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Core\Tests\Integration\Application;
 
 use Kontor\Core\Application\AuditLogger;
+use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Tests\Integration\DatabaseTestCase;
 use Kontor\SDK\ValueObjects\Uid;
 
@@ -13,11 +14,13 @@ final class AuditLoggerTest extends DatabaseTestCase
     public function test_record_writes_a_queryable_audit_event(): void
     {
         $logger = new AuditLogger($this->pdo);
-        $orgUid = Uid::generate()->toString();
+        $organizations = new OrganizationRepository($this->pdo);
+        $organization = $organizations->defaultOrganization('US', 'en', 'EUR');
+        $organizationId = $organizations->internalIdOf($organization->uid->toString());
         $entityUid = Uid::generate()->toString();
 
         $logger->record(
-            organizationId: $orgUid,
+            organizationId: $organizationId,
             component: 'KontorInvoices',
             entityType: 'invoice',
             entityUid: $entityUid,
@@ -33,6 +36,7 @@ final class AuditLoggerTest extends DatabaseTestCase
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
         $this->assertNotFalse($row);
+        $this->assertSame($organizationId, (int) $row['organization_id']);
         $this->assertSame('issue', $row['action']);
         $this->assertSame('{"status":"draft"}', $row['previous_json']);
         $this->assertSame('{"status":"issued"}', $row['current_json']);
