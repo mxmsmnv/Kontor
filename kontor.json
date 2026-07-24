@@ -3,7 +3,7 @@
     "schemaVersion": 1,
     "name": "Kontor",
     "title": "Kontor Core",
-    "description": "Service container, capability/component/backup-provider registries, migrations, audit, backup and recovery, and the ProcessKontor admin shell.",
+    "description": "Service container, capability/component/backup/import/export-provider registries, migrations, audit, backup and recovery, import/export, and the ProcessKontor admin shell.",
     "version": "0.1.0",
     "type": "core",
     "category": "core",
@@ -39,7 +39,13 @@
         "kontor-backups-download",
         "kontor-backups-restore",
         "kontor-backups-configure",
-        "kontor-updates-bypass-backup"
+        "kontor-updates-bypass-backup",
+        "kontor-import",
+        "kontor-import-update",
+        "kontor-import-admin",
+        "kontor-export",
+        "kontor-export-personal-data",
+        "kontor-export-financial"
     ],
     "admin": {
         "sections": [
@@ -64,7 +70,11 @@
             "component.updated",
             "component.enabled",
             "component.disabled",
-            "component.uninstalled"
+            "component.uninstalled",
+            "import.progress",
+            "import.previewed",
+            "import.completed",
+            "import.rolled_back"
         ],
         "subscribes": []
     },

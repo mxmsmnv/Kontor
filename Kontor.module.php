@@ -5,6 +5,8 @@ namespace ProcessWire;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ComponentManager;
+use Kontor\Core\Application\ExportManager;
+use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
@@ -13,6 +15,9 @@ use Kontor\Core\Infrastructure\Recovery\RecoveryModeManager;
 use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\CapabilityRegistry;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Core\Infrastructure\Registry\ExportProviderRegistry;
+use Kontor\Core\Infrastructure\Registry\ImportProviderRegistry;
+use Kontor\Core\Infrastructure\Registry\RepositoryRegistry;
 use Kontor\Core\Infrastructure\Registry\RouteRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
@@ -60,6 +65,12 @@ class Kontor extends WireData implements Module
                 'kontor-backups-restore' => 'Restore Kontor backups',
                 'kontor-backups-configure' => 'Configure Kontor backup destinations',
                 'kontor-updates-bypass-backup' => 'Update components without a verified pre-update backup',
+                'kontor-import' => 'Import records',
+                'kontor-import-update' => 'Import records that update existing records',
+                'kontor-import-admin' => 'Roll back import batches',
+                'kontor-export' => 'Export records',
+                'kontor-export-personal-data' => 'Export personal data fields',
+                'kontor-export-financial' => 'Export financial data fields',
             ],
         ];
     }
@@ -118,6 +129,20 @@ class Kontor extends WireData implements Module
             $c->get(BackupProviderRegistry::class),
             $this->wire()->config->paths->assets . 'kontor/backups'
         ));
+        $container->bind(ImportProviderRegistry::class, static fn (): ImportProviderRegistry => new ImportProviderRegistry());
+        $container->bind(ExportProviderRegistry::class, static fn (): ExportProviderRegistry => new ExportProviderRegistry());
+        $container->bind(RepositoryRegistry::class, static fn (): RepositoryRegistry => new RepositoryRegistry());
+        $container->bind(ImportManager::class, static fn (Container $c): ImportManager => new ImportManager(
+            providers: $c->get(ImportProviderRegistry::class),
+            repositories: $c->get(RepositoryRegistry::class),
+            audit: $c->get(AuditLogger::class),
+            events: $c->get(EventDispatcher::class),
+            pdo: $pdo,
+        ));
+        $container->bind(
+            ExportManager::class,
+            static fn (Container $c): ExportManager => new ExportManager($c->get(ExportProviderRegistry::class))
+        );
 
         return $this->container = $container;
     }

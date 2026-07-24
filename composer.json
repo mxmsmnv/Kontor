@@ -11,6 +11,9 @@
     ],
     "require": {
         "php": ">=8.2",
+        "ext-dom": "*",
+        "ext-json": "*",
+        "ext-zip": "*",
         "kontor/sdk": "^0.1"
     },
     "require-dev": {

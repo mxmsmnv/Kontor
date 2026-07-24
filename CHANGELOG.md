@@ -36,3 +36,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   maintenance flag that works even when the database is mid-restore;
   `bin/kontor` CLI for `backup:create`, `backup:list`, `restore:run` and
   `recovery:enable`/`disable`/`status`.
+- Import and export (Substage 1.5): `ImportProviderRegistry`,
+  `ExportProviderRegistry`, `RepositoryRegistry`; format readers/writers for
+  CSV, JSON, JSON Lines and XLSX (`Infrastructure\ImportExport\Format`), the
+  XLSX ones hand-rolled over `ZipArchive`/`DOMDocument` to avoid a
+  third-party dependency that would narrow the supported PHP range;
+  `FormatResolver`; `ImportManager` — field mapping, dry-run preview
+  (create/update detection without ever calling `import()`), a pre-import
+  backup gate (`PreImportBackupRequiredException`), progress/completed
+  events, and `rollback()`, which archives every record a batch created or
+  updated via the audit ledger's `correlation_id` and `RepositoryInterface`;
+  `ExportManager` streaming a provider's rows into any format writer.
