@@ -1,0 +1,166 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * `bin/kontor-make` — the CLI front-end for the `make:*` command family
+ * (kontor.md section 35, Substage 7.4). Dispatches to the scaffolders in
+ * `Kontor\SDK\Scaffolding`.
+ *
+ * Supports `--dry-run` and `--non-interactive` (kontor.md section 35's
+ * cross-cutting CLI requirements). JSON output, audit logging and
+ * confirmation flags are explicitly out of scope for this substage —
+ * scaffolding writes new files only, it never touches existing data, so
+ * a confirmation/audit trail carries none of the weight it would for a
+ * `restore:*` or `migration:*` command.
+ */
+
+foreach ([__DIR__.'/../vendor/autoload.php', __DIR__.'/../../../vendor/autoload.php'] as $autoload) {
+    if (is_file($autoload)) {
+        require $autoload;
+
+        break;
+    }
+}
+
+use Kontor\SDK\Scaffolding\ComponentScaffolder;
+use Kontor\SDK\Scaffolding\EntityScaffolder;
+use Kontor\SDK\Scaffolding\MigrationScaffolder;
+use Kontor\SDK\Scaffolding\ReportScaffolder;
+
+/**
+ * @param string[] $argv
+ * @return array{command: ?string, options: array<string, string>, dryRun: bool, nonInteractive: bool}
+ */
+function kontor_make_parse_args(array $argv): array
+{
+    $command = null;
+    $options = [];
+    $dryRun = false;
+    $nonInteractive = false;
+
+    foreach (array_slice($argv, 1) as $arg) {
+        if ($arg === '--dry-run') {
+            $dryRun = true;
+        } elseif ($arg === '--non-interactive') {
+            $nonInteractive = true;
+        } elseif (str_starts_with($arg, '--') && str_contains($arg, '=')) {
+            [$key, $value] = explode('=', substr($arg, 2), 2);
+            $options[$key] = $value;
+        } elseif ($command === null) {
+            $command = $arg;
+        }
+    }
+
+    return ['command' => $command, 'options' => $options, 'dryRun' => $dryRun, 'nonInteractive' => $nonInteractive];
+}
+
+/**
+ * @param array<string, string> $options
+ * @param string[] $required
+ */
+function kontor_make_resolve(array &$options, array $required, bool $nonInteractive): void
+{
+    $missing = array_values(array_filter($required, static fn (string $key) => !isset($options[$key])));
+
+    if ($missing === []) {
+        return;
+    }
+
+    if ($nonInteractive) {
+        fwrite(STDERR, 'Missing required option(s): --'.implode(', --', $missing).PHP_EOL);
+        exit(1);
+    }
+
+    foreach ($missing as $key) {
+        fwrite(STDOUT, "{$key}: ");
+        $options[$key] = trim((string) fgets(STDIN));
+    }
+}
+
+/**
+ * @param array<string, string> $files
+ */
+function kontor_make_report(array $files, string $targetDir, bool $dryRun): void
+{
+    $verb = $dryRun ? 'Would create' : 'Created';
+
+    foreach (array_keys($files) as $relativePath) {
+        echo "{$verb}: ".rtrim($targetDir, '/').'/'.$relativePath.PHP_EOL;
+    }
+}
+
+$parsed = kontor_make_parse_args($argv);
+$command = $parsed['command'];
+$options = $parsed['options'];
+$dryRun = $parsed['dryRun'];
+$nonInteractive = $parsed['nonInteractive'];
+
+if ($command === null) {
+    fwrite(STDERR, 'Usage: kontor-make <make:component|make:entity|make:migration|make:report> [--option=value ...] [--dry-run] [--non-interactive]'.PHP_EOL);
+    exit(1);
+}
+
+switch ($command) {
+    case 'make:component':
+        kontor_make_resolve($options, ['name', 'slug', 'title', 'description', 'target'], $nonInteractive);
+
+        $scaffolder = new ComponentScaffolder(
+            name: $options['name'],
+            packageSlug: $options['slug'],
+            title: $options['title'],
+            description: $options['description'],
+            category: $options['category'] ?? 'business',
+        );
+
+        kontor_make_report($scaffolder->generate($options['target'], $dryRun), $options['target'], $dryRun);
+
+        break;
+
+    case 'make:entity':
+        kontor_make_resolve($options, ['namespace', 'entity', 'table', 'target'], $nonInteractive);
+
+        $scaffolder = new EntityScaffolder(
+            namespace: $options['namespace'],
+            entityName: $options['entity'],
+            tableName: $options['table'],
+        );
+
+        kontor_make_report($scaffolder->generate($options['target'], $dryRun), $options['target'], $dryRun);
+
+        break;
+
+    case 'make:migration':
+        kontor_make_resolve($options, ['namespace', 'component', 'number', 'name', 'table', 'target'], $nonInteractive);
+
+        $scaffolder = new MigrationScaffolder(
+            namespace: $options['namespace'],
+            component: $options['component'],
+            number: (int) $options['number'],
+            migrationName: $options['name'],
+            tableName: $options['table'],
+        );
+
+        kontor_make_report($scaffolder->generate($options['target'], $dryRun), $options['target'], $dryRun);
+
+        break;
+
+    case 'make:report':
+        kontor_make_resolve($options, ['namespace', 'class', 'key', 'title', 'target'], $nonInteractive);
+
+        $scaffolder = new ReportScaffolder(
+            namespace: $options['namespace'],
+            className: $options['class'],
+            key: $options['key'],
+            title: $options['title'],
+        );
+
+        kontor_make_report($scaffolder->generate($options['target'], $dryRun), $options['target'], $dryRun);
+
+        break;
+
+    default:
+        fwrite(STDERR, "Unknown command \"{$command}\". Expected one of: make:component, make:entity, make:migration, make:report.".PHP_EOL);
+        exit(1);
+}

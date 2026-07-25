@@ -7,6 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
+  helpers" milestone) — the shared abstract base class for every
+  component's own DB-gated integration tests, replacing the ~90 lines of
+  boilerplate every package since `kontor/sales` hand-wrote independently
+  (connect, drop tables, run migrations via `MigrationRunner`, seed a
+  default organization via `OrganizationRepository`, clean up in
+  `tearDown()`). Lives here rather than in `kontor/sdk` because it
+  depends on classes that themselves depend on the SDK. Not retrofitted
+  into any already-shipped package's own copy — same "built once, adopted
+  by whoever wants it next" precedent as every other registry/extension
+  point added this way (e.g. `ReportProviderRegistry`).
 - `ExtensionRepository`, generic CRUD for `kontor_extensions` (kontor.md#11.8)
   — missing since Substage 1.2 only created the table. First real consumer:
   `kontor/contacts`' tags (Substage 3.1).

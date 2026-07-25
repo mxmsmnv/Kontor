@@ -252,6 +252,24 @@ the same pattern `ComponentManager::update()` uses (see
   building endpoints itself yet. Depends only on `kontor/core` — see its
   own README.
 
+Substage 7.4 (SDK and scaffolding) closes out Stage 7 and splits across
+two existing packages rather than a new one (spec section 5.6 rules out
+`KontorDev` becoming a source repository for component code):
+
+- `src/Testing/DatabaseTestCase.php` (this repository, `kontor/core`) —
+  the shared base class for every component's own DB-gated integration
+  tests (connect, drop tables, run migrations, seed a default
+  organization, clean up), replacing the ~90 lines of boilerplate every
+  package from `kontor/sales` onward hand-wrote independently. Lives in
+  Core rather than the SDK because it needs `MigrationRunner`/
+  `OrganizationRepository`, which themselves depend on `kontor/sdk`.
+- [`packages/sdk/`](packages/sdk/)'s `Scaffolding/ComponentScaffolder`,
+  `EntityScaffolder`, `MigrationScaffolder`, `ReportScaffolder`, and the
+  `bin/kontor-make` CLI (`make:component`/`make:entity`/`make:migration`/
+  `make:report`) — pure filesystem generators reproducing this guide's
+  own conventions. See
+  [`packages/sdk/docs/COMPONENT-GUIDE.md`](packages/sdk/docs/COMPONENT-GUIDE.md).
+
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
@@ -263,7 +281,8 @@ Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
-6.3 Expenses, 6.4 Projects — operations), and Substage 7.1–7.3 (Workflow,
-Automation, Custom Entities) per spec section 36. Not yet installed
+6.3 Expenses, 6.4 Projects — operations), and all of Stage 7 (Substage
+7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
+scaffolding — extensibility) per spec section 36. Not yet installed
 against a live ProcessWire instance — see the spec's Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.

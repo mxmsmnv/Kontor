@@ -19,6 +19,22 @@ depend on it, never the other way around.
 - `DTO/` — request/response objects used by the contracts above.
 - `Events/` — `KontorEvent`, the canonical event envelope (spec section 21).
 - `ValueObjects/` — `Uid` (ULID), `Money` (minor units), `OrganizationId`.
+- `Scaffolding/` — `ComponentScaffolder`/`EntityScaffolder`/
+  `MigrationScaffolder`/`ReportScaffolder` (Substage 7.4's `make:*`
+  milestones), driven by the `bin/kontor-make` CLI. See
+  [`docs/COMPONENT-GUIDE.md`](docs/COMPONENT-GUIDE.md) for the
+  conventions they reproduce and how to use them.
+
+## Scaffolding a new component
+
+```bash
+bin/kontor-make make:component --name=Widgets --slug=widgets \
+    --title="Kontor Widgets" --description="..." --target=../widgets
+```
+
+See [`docs/COMPONENT-GUIDE.md`](docs/COMPONENT-GUIDE.md) for the full
+`make:*` command reference (`make:entity`, `make:migration`,
+`make:report`) and every convention a Kontor component follows.
 
 ## Testing
 
