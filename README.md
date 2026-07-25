@@ -174,6 +174,15 @@ the same pattern `ComponentManager::update()` uses (see
   a denormalized counter). `CommentService::post()` ties mentions and
   followers together — posting auto-follows the thread for its author.
   Depends only on `kontor/core` — see its own README.
+- [`packages/dashboard/`](packages/dashboard/) — `kontor/dashboard`
+  (Substage 5.3): a widget registry (`WidgetProviderInterface`, this
+  package's own extension point — not an SDK contract, mirroring where
+  `kontor/search`'s `SearchProviderRegistry` lives), layouts
+  (`kontor_dashboard_widgets`: position/size/config), and personal/role
+  dashboards. `DashboardService::dashboardFor()` resolves a user's
+  personal default, falling back to their role's default. Ships one
+  trivial built-in widget proving the pipeline end-to-end; depends only on
+  `kontor/core` — see its own README.
 
 ## Status
 
@@ -183,7 +192,7 @@ export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
 Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
-sales and finance-lite), and Substage 5.1–5.2 (Tasks, Collaboration) per
-spec section 36. Not yet installed against a live ProcessWire instance —
-see the spec's Definition of Done (section 38) for what "complete" means
-for each subsequent milestone.
+sales and finance-lite), and Substage 5.1–5.3 (Tasks, Collaboration,
+Dashboard) per spec section 36. Not yet installed against a live
+ProcessWire instance — see the spec's Definition of Done (section 38) for
+what "complete" means for each subsequent milestone.

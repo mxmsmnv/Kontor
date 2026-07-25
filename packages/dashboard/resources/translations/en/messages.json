@@ -1,0 +1,9 @@
+{
+    "field.name": "Name",
+    "field.widget": "Widget",
+    "scope.personal": "Personal",
+    "scope.role": "Role",
+    "action.add_widget": "Add widget",
+    "action.set_default": "Set as default",
+    "widget.welcome.title": "Welcome"
+}
