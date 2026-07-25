@@ -1,0 +1,15 @@
+{
+    "lead.title.required": "Geben Sie einen Titel für diesen Lead ein.",
+    "lead.estimated_value.currency_required": "Geben Sie entweder einen geschätzten Wert und eine Währung beide ein oder keines von beidem.",
+    "deal.title.required": "Geben Sie einen Titel für dieses Geschäft ein.",
+    "deal.pipeline_uid.required": "Wählen Sie eine Pipeline für dieses Geschäft.",
+    "deal.stage_uid.required": "Wählen Sie eine Phase für dieses Geschäft.",
+    "deal.value.currency_required": "Geben Sie entweder einen Wert und eine Währung beide ein oder keines von beidem.",
+    "field.title": "Titel",
+    "field.source": "Quelle",
+    "field.priority": "Priorität",
+    "field.pipeline": "Pipeline",
+    "field.stage": "Phase",
+    "field.value": "Wert",
+    "field.expected_close_date": "Voraussichtliches Abschlussdatum"
+}

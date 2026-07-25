@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 - `ExtensionRepository`, generic CRUD for `kontor_extensions` (kontor.md#11.8)
   — missing since Substage 1.2 only created the table. First real consumer:
   `kontor/contacts`' tags (Substage 3.1).
+- `ReportProviderRegistry` — `ReportProviderInterface` (kontor.md#9.9) has
+  existed in the SDK since Substage 0.2 but had no registry until
+  `kontor/crm`'s `PipelineReportProvider` became its first real consumer
+  (Substage 3.3).
 - Service container (`Kontor\Core\Support\Container`).
 - Capability registry, event dispatcher, route registry and translation
   registry (`Kontor\Core\Infrastructure\Registry`, `Infrastructure\Events`).

@@ -1,0 +1,126 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorCRM",
+    "title": "Kontor CRM",
+    "description": "Leads, deals, pipelines and sales activities.",
+    "version": "0.1.0",
+    "type": "business",
+    "category": "crm",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorCRM",
+    "package": "kontor/crm",
+    "namespace": "Kontor\\CRM",
+    "processWireModule": "KontorCRM",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/core": "^0.1",
+        "kontor/contacts": "^0.1"
+    },
+    "suggests": {
+        "kontor/sales": "^0.1",
+        "kontor/reports": "^0.1"
+    },
+    "conflicts": {},
+    "capabilities": [
+        {
+            "name": "crm",
+            "version": "1.0",
+            "contract": "Kontor\\CRM\\Contracts\\CRMServiceInterface"
+        }
+    ],
+    "permissions": [
+        "kontor-crm-lead-view",
+        "kontor-crm-lead-create",
+        "kontor-crm-lead-edit",
+        "kontor-crm-lead-convert",
+        "kontor-crm-lead-archive",
+        "kontor-crm-deal-view",
+        "kontor-crm-deal-create",
+        "kontor-crm-deal-edit",
+        "kontor-crm-deal-move",
+        "kontor-crm-deal-close-won",
+        "kontor-crm-deal-close-lost",
+        "kontor-crm-pipeline-admin"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "crm",
+                "title": "CRM",
+                "icon": "handshake-o",
+                "order": 200
+            }
+        ],
+        "routes": [
+            {
+                "path": "crm/leads",
+                "controller": "Kontor\\CRM\\Admin\\LeadsController"
+            },
+            {
+                "path": "crm/deals",
+                "controller": "Kontor\\CRM\\Admin\\DealsController"
+            }
+        ]
+    },
+    "services": [
+        "Kontor\\CRM\\Application\\CRMService"
+    ],
+    "events": {
+        "publishes": [
+            "crm.lead.created",
+            "crm.lead.converted",
+            "crm.deal.stage_changed",
+            "crm.deal.won",
+            "crm.deal.lost"
+        ],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [
+            "Kontor\\CRM\\Infrastructure\\Import\\LeadImportProvider",
+            "Kontor\\CRM\\Infrastructure\\Import\\DealImportProvider"
+        ],
+        "export": [
+            "Kontor\\CRM\\Infrastructure\\Export\\LeadExportProvider",
+            "Kontor\\CRM\\Infrastructure\\Export\\DealExportProvider"
+        ],
+        "search": [
+            "Kontor\\Search\\Infrastructure\\Search\\SqlFullTextSearchProvider"
+        ],
+        "reports": [
+            "Kontor\\CRM\\Infrastructure\\Reports\\PipelineReportProvider"
+        ],
+        "health": [
+            "Kontor\\CRM\\Health\\CRMHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_crm_leads",
+            "kontor_crm_pipelines",
+            "kontor_crm_stages",
+            "kontor_crm_deals"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["lead.estimated_value_minor", "deal.value_minor"]
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "lead.title.required": "Introduzca un título para este cliente potencial.",
+    "lead.estimated_value.currency_required": "Introduzca tanto un valor estimado como una moneda, o ninguno de los dos.",
+    "deal.title.required": "Introduzca un título para este negocio.",
+    "deal.pipeline_uid.required": "Elija un pipeline para este negocio.",
+    "deal.stage_uid.required": "Elija una etapa para este negocio.",
+    "deal.value.currency_required": "Introduzca tanto un valor como una moneda, o ninguno de los dos.",
+    "field.title": "Título",
+    "field.source": "Origen",
+    "field.priority": "Prioridad",
+    "field.pipeline": "Pipeline",
+    "field.stage": "Etapa",
+    "field.value": "Valor",
+    "field.expected_close_date": "Fecha de cierre prevista"
+}

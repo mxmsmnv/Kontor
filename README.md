@@ -125,14 +125,21 @@ the same pattern `ComponentManager::update()` uses (see
   price resolution, units of measure and tax code reference registries.
   First real consumer of the SDK's `Money` value object — see its own
   README.
+- [`packages/crm/`](packages/crm/) — `kontor/crm` (Substage 3.3): leads,
+  pipelines, stages, deals, lead-to-deal conversion, Kanban board data, and
+  a pipeline report. The one component the spec gives a full worked
+  manifest example for (section 22.1) — followed as closely as this
+  substage's milestones allow. First real consumer of
+  `ReportProviderInterface`, which had no registry in Core until now — see
+  its own README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
 export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
-2.4 Search — platform infrastructure), and Substage 3.1–3.2 (Contacts,
-Catalog — foundational business components) per spec section 36. Not yet
-installed against a live ProcessWire instance — see the spec's Definition
-of Done (section 38) for what "complete" means for each subsequent
-milestone.
+2.4 Search — platform infrastructure), and all of Stage 3
+(Substage 3.1 Contacts, 3.2 Catalog, 3.3 CRM — foundational business
+components) per spec section 36. Not yet installed against a live
+ProcessWire instance — see the spec's Definition of Done (section 38) for
+what "complete" means for each subsequent milestone.

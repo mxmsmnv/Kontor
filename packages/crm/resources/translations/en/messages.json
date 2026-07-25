@@ -1,0 +1,15 @@
+{
+    "lead.title.required": "Enter a title for this lead.",
+    "lead.estimated_value.currency_required": "Enter both an estimated value and a currency, or neither.",
+    "deal.title.required": "Enter a title for this deal.",
+    "deal.pipeline_uid.required": "Choose a pipeline for this deal.",
+    "deal.stage_uid.required": "Choose a stage for this deal.",
+    "deal.value.currency_required": "Enter both a deal value and a currency, or neither.",
+    "field.title": "Title",
+    "field.source": "Source",
+    "field.priority": "Priority",
+    "field.pipeline": "Pipeline",
+    "field.stage": "Stage",
+    "field.value": "Value",
+    "field.expected_close_date": "Expected close date"
+}

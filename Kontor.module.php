@@ -19,6 +19,7 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\ExportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\ImportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\RepositoryRegistry;
+use Kontor\Core\Infrastructure\Registry\ReportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\RouteRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
@@ -134,6 +135,7 @@ class Kontor extends WireData implements Module
         $container->bind(ImportProviderRegistry::class, static fn (): ImportProviderRegistry => new ImportProviderRegistry());
         $container->bind(ExportProviderRegistry::class, static fn (): ExportProviderRegistry => new ExportProviderRegistry());
         $container->bind(RepositoryRegistry::class, static fn (): RepositoryRegistry => new RepositoryRegistry());
+        $container->bind(ReportProviderRegistry::class, static fn (): ReportProviderRegistry => new ReportProviderRegistry());
         $container->bind(ImportManager::class, static fn (Container $c): ImportManager => new ImportManager(
             providers: $c->get(ImportProviderRegistry::class),
             repositories: $c->get(RepositoryRegistry::class),
