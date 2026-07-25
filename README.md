@@ -119,14 +119,20 @@ the same pattern `ComponentManager::update()` uses (see
   addresses, memberships, tags, duplicate detection, import/export. Unlike
   the platform components, it *consumes* Core/Search rather than providing
   a capability — see its own README.
+- [`packages/catalog/`](packages/catalog/) — `kontor/catalog`
+  (Substage 3.2): items (products/services via `item_type`), categories
+  (another schema gap-fill), price lists with quantity-tier/date-window
+  price resolution, units of measure and tax code reference registries.
+  First real consumer of the SDK's `Money` value object — see its own
+  README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
 export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
-2.4 Search — platform infrastructure), and Substage 3.1 (Contacts — the
-first foundational business component) per spec section 36. Not yet
+2.4 Search — platform infrastructure), and Substage 3.1–3.2 (Contacts,
+Catalog — foundational business components) per spec section 36. Not yet
 installed against a live ProcessWire instance — see the spec's Definition
 of Done (section 38) for what "complete" means for each subsequent
 milestone.

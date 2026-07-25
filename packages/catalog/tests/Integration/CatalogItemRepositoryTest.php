@@ -1,0 +1,100 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Kontor\Catalog\Tests\Integration;
+
+use Kontor\Catalog\Domain\CatalogItem;
+use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
+use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use Kontor\SDK\ValueObjects\Money;
+
+final class CatalogItemRepositoryTest extends DatabaseTestCase
+{
+    private function repository(): CatalogItemRepository
+    {
+        return new CatalogItemRepository($this->pdo, new OrganizationRepository($this->pdo));
+    }
+
+    public function test_save_then_find_round_trips_including_money(): void
+    {
+        $repository = $this->repository();
+        $item = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Widget', 'fr' => 'Gadget'],
+            sku: 'WID-001',
+            salesPrice: Money::ofMinor(1999, 'EUR'),
+        );
+
+        $repository->save($item);
+        $found = $repository->find($item->uid->toString());
+
+        $this->assertSame(['en' => 'Widget', 'fr' => 'Gadget'], $found->title);
+        $this->assertSame('WID-001', $found->sku);
+        $this->assertSame(1999, $found->salesPrice->amountMinor());
+        $this->assertSame('EUR', $found->salesPrice->currencyCode());
+    }
+
+    public function test_find_by_sku(): void
+    {
+        $repository = $this->repository();
+        $item = CatalogItem::create($this->organizationUid, ['en' => 'Widget'], sku: 'WID-001');
+        $repository->save($item);
+
+        $this->assertSame($item->uid->toString(), $repository->findBySku($this->organizationUid, 'WID-001')->uid->toString());
+        $this->assertNull($repository->findBySku($this->organizationUid, 'NOPE'));
+    }
+
+    public function test_save_upserts_rather_than_duplicating(): void
+    {
+        $repository = $this->repository();
+        $item = CatalogItem::create($this->organizationUid, ['en' => 'Widget']);
+        $repository->save($item);
+
+        $item->status = 'discontinued';
+        $repository->save($item);
+
+        $this->assertSame('discontinued', $repository->find($item->uid->toString())->status);
+
+        $count = (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_catalog_items')->fetchColumn();
+        $this->assertSame(1, $count);
+    }
+
+    public function test_archive_then_restore(): void
+    {
+        $repository = $this->repository();
+        $item = CatalogItem::create($this->organizationUid, ['en' => 'Widget']);
+        $repository->save($item);
+
+        $repository->archive($item->uid->toString());
+        $row = $this->pdo->query('SELECT archived_at FROM kontor_catalog_items')->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNotNull($row['archived_at']);
+
+        $repository->restore($item->uid->toString());
+        $row = $this->pdo->query('SELECT archived_at FROM kontor_catalog_items')->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNull($row['archived_at']);
+    }
+
+    public function test_require_throws_for_unknown_uid(): void
+    {
+        $this->expectException(\RuntimeException::class);
+
+        $this->repository()->require(\Kontor\SDK\ValueObjects\Uid::generate()->toString());
+    }
+
+    public function test_save_rejects_a_non_catalog_item_entity(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->repository()->save(new \stdClass());
+    }
+
+    public function test_service_item_type_round_trips(): void
+    {
+        $repository = $this->repository();
+        $item = CatalogItem::create($this->organizationUid, ['en' => 'Consulting'], itemType: 'service');
+        $repository->save($item);
+
+        $this->assertTrue($repository->find($item->uid->toString())->isService());
+    }
+}

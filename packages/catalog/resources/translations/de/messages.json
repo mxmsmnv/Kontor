@@ -1,0 +1,18 @@
+{
+    "catalog_item.title.required": "Geben Sie einen Titel in mindestens einer Sprache ein.",
+    "catalog_item.unit_code.unknown": "Unbekannte Maßeinheit.",
+    "catalog_item.tax_code.unknown": "Unbekannter Steuercode.",
+    "catalog_item.sales_price.currency_required": "Geben Sie entweder Verkaufspreis und Währung beide ein oder keines von beidem.",
+    "catalog_item.purchase_price.currency_required": "Geben Sie entweder Einkaufspreis und Währung beide ein oder keines von beidem.",
+    "catalog_item.cost_price.currency_required": "Geben Sie entweder Kostenpreis und Währung beide ein oder keines von beidem.",
+    "field.title": "Titel",
+    "field.description": "Beschreibung",
+    "field.sku": "Artikelnummer",
+    "field.barcode": "Barcode",
+    "field.category": "Kategorie",
+    "field.unit": "Einheit",
+    "field.tax_code": "Steuercode",
+    "field.sales_price": "Verkaufspreis",
+    "field.purchase_price": "Einkaufspreis",
+    "field.cost_price": "Kostenpreis"
+}
