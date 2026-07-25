@@ -1,0 +1,16 @@
+{
+    "field.name": "Nom",
+    "field.trigger_event": "Événement déclencheur",
+    "field.field": "Champ",
+    "field.operator": "Opérateur",
+    "field.value": "Valeur",
+    "operator.equals": "Égal à",
+    "operator.not_equals": "Différent de",
+    "operator.greater_than": "Supérieur à",
+    "operator.less_than": "Inférieur à",
+    "operator.contains": "Contient",
+    "status.active": "Actif",
+    "status.inactive": "Inactif",
+    "action.dry_run": "Simulation",
+    "label.execution_logs": "Journaux d'exécution"
+}

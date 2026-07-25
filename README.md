@@ -231,6 +231,16 @@ the same pattern `ComponentManager::update()` uses (see
   workflow even when this package isn't installed. First component of
   Stage 7 (Extensibility); depends only on `kontor/core` — see its own
   README.
+- [`packages/automation/`](packages/automation/) — `kontor/automation`
+  (Substage 7.2): triggers, conditions, actions, dry run, logs, and
+  recursion protection — kontor.md#30's Trigger → Conditions → Actions
+  pipeline. Triggers are real Kontor events: `KontorAutomation::init()`
+  subscribes `AutomationEngine::handleEvent()` onto `kontor/core`'s actual
+  `EventDispatcher` for every distinct active rule's `trigger_event` — a
+  genuine integration, not deferred. Recursion protection is a plain
+  instance depth counter, since Core's dispatcher is fully synchronous
+  with no call-depth concept of its own. Depends only on `kontor/core` —
+  see its own README.
 
 ## Status
 
@@ -243,7 +253,7 @@ Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
-6.3 Expenses, 6.4 Projects — operations), and Substage 7.1 (Workflow) per
-spec section 36. Not yet installed against a live ProcessWire instance —
-see the spec's Definition of Done (section 38) for what "complete" means
-for each subsequent milestone.
+6.3 Expenses, 6.4 Projects — operations), and Substage 7.1–7.2 (Workflow,
+Automation) per spec section 36. Not yet installed against a live
+ProcessWire instance — see the spec's Definition of Done (section 38) for
+what "complete" means for each subsequent milestone.

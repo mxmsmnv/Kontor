@@ -1,0 +1,16 @@
+{
+    "field.name": "Name",
+    "field.trigger_event": "Trigger event",
+    "field.field": "Field",
+    "field.operator": "Operator",
+    "field.value": "Value",
+    "operator.equals": "Equals",
+    "operator.not_equals": "Does not equal",
+    "operator.greater_than": "Greater than",
+    "operator.less_than": "Less than",
+    "operator.contains": "Contains",
+    "status.active": "Active",
+    "status.inactive": "Inactive",
+    "action.dry_run": "Dry run",
+    "label.execution_logs": "Execution logs"
+}

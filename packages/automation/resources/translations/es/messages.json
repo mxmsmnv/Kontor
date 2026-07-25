@@ -1,0 +1,16 @@
+{
+    "field.name": "Nombre",
+    "field.trigger_event": "Evento desencadenante",
+    "field.field": "Campo",
+    "field.operator": "Operador",
+    "field.value": "Valor",
+    "operator.equals": "Igual a",
+    "operator.not_equals": "Distinto de",
+    "operator.greater_than": "Mayor que",
+    "operator.less_than": "Menor que",
+    "operator.contains": "Contiene",
+    "status.active": "Activo",
+    "status.inactive": "Inactivo",
+    "action.dry_run": "Simulación",
+    "label.execution_logs": "Registros de ejecución"
+}

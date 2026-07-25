@@ -1,0 +1,43 @@
+{
+    "name": "kontor/automation",
+    "description": "Kontor Automation: triggers, conditions, actions, dry run, logs, recursion protection.",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../sdk"
+        },
+        {
+            "type": "path",
+            "url": "../.."
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Automation\\": "src/",
+            "Kontor\\Automation\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Automation\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}
