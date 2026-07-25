@@ -1,0 +1,15 @@
+{
+    "field.number": "Número",
+    "field.payer": "Pagador",
+    "field.payment_date": "Fecha de pago",
+    "field.amount": "Importe",
+    "field.method": "Método",
+    "field.transaction_reference": "Referencia de transacción",
+    "status.draft": "Borrador",
+    "status.confirmed": "Confirmado",
+    "status.reversed": "Revertido",
+    "method.bank_transfer": "Transferencia bancaria",
+    "method.card": "Tarjeta",
+    "method.cash": "Efectivo",
+    "method.other": "Otro"
+}

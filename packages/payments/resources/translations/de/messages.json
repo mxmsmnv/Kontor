@@ -1,0 +1,15 @@
+{
+    "field.number": "Nummer",
+    "field.payer": "Zahler",
+    "field.payment_date": "Zahlungsdatum",
+    "field.amount": "Betrag",
+    "field.method": "Methode",
+    "field.transaction_reference": "Transaktionsreferenz",
+    "status.draft": "Entwurf",
+    "status.confirmed": "Bestätigt",
+    "status.reversed": "Storniert",
+    "method.bank_transfer": "Überweisung",
+    "method.card": "Karte",
+    "method.cash": "Bargeld",
+    "method.other": "Sonstiges"
+}

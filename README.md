@@ -151,6 +151,15 @@ the same pattern `ComponentManager::update()` uses (see
   parallel table). First package with a real dependency on another
   business component (`kontor/sales`, reusing its shared
   `kontor_document_lines` table directly) — see its own README.
+- [`packages/payments/`](packages/payments/) — `kontor/payments`
+  (Substage 4.4): payments, allocations, partial payments, and reversals.
+  Depends on `kontor/invoices` and is the first package to actually mutate
+  another business component's records — `PaymentAllocationService`
+  recomputes an invoice's `paid`/`due`/`status` (from scratch, on every
+  allocate/reverse) directly through `kontor/invoices`' own
+  `InvoiceRepository`, which is exactly what that package's README left
+  "not actively driven" pending this substage. Closes out Stage 4 — see
+  its own README.
 
 ## Status
 
@@ -159,7 +168,7 @@ database schema, Component Manager, backup and recovery, import and
 export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
 Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), and
-Substage 4.1–4.3 (Sales, Documents, Invoices) per spec section 36. Not yet
-installed against a live ProcessWire instance — see the spec's Definition
-of Done (section 38) for what "complete" means for each subsequent
-milestone.
+all of Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4
+Payments — sales and finance-lite) per spec section 36. Not yet installed
+against a live ProcessWire instance — see the spec's Definition of Done
+(section 38) for what "complete" means for each subsequent milestone.

@@ -1,0 +1,15 @@
+{
+    "field.number": "Number",
+    "field.payer": "Payer",
+    "field.payment_date": "Payment date",
+    "field.amount": "Amount",
+    "field.method": "Method",
+    "field.transaction_reference": "Transaction reference",
+    "status.draft": "Draft",
+    "status.confirmed": "Confirmed",
+    "status.reversed": "Reversed",
+    "method.bank_transfer": "Bank transfer",
+    "method.card": "Card",
+    "method.cash": "Cash",
+    "method.other": "Other"
+}
