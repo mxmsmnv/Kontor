@@ -1,0 +1,19 @@
+{
+    "field.code": "Code",
+    "field.name": "Name",
+    "field.customer": "Customer",
+    "field.start_date": "Start date",
+    "field.end_date": "End date",
+    "field.hourly_rate": "Hourly rate",
+    "field.description": "Description",
+    "field.duration": "Duration",
+    "status.active": "Active",
+    "status.on_hold": "On hold",
+    "status.completed": "Completed",
+    "status.cancelled": "Cancelled",
+    "milestone.pending": "Pending",
+    "milestone.completed": "Completed",
+    "action.start_timer": "Start timer",
+    "action.stop_timer": "Stop timer",
+    "action.generate_invoice": "Generate invoice"
+}

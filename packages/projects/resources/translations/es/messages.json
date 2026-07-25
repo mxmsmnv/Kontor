@@ -1,0 +1,19 @@
+{
+    "field.code": "Código",
+    "field.name": "Nombre",
+    "field.customer": "Cliente",
+    "field.start_date": "Fecha de inicio",
+    "field.end_date": "Fecha de fin",
+    "field.hourly_rate": "Tarifa por hora",
+    "field.description": "Descripción",
+    "field.duration": "Duración",
+    "status.active": "Activo",
+    "status.on_hold": "En espera",
+    "status.completed": "Completado",
+    "status.cancelled": "Cancelado",
+    "milestone.pending": "Pendiente",
+    "milestone.completed": "Completado",
+    "action.start_timer": "Iniciar cronómetro",
+    "action.stop_timer": "Detener cronómetro",
+    "action.generate_invoice": "Generar factura"
+}

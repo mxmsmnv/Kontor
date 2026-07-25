@@ -1,0 +1,19 @@
+{
+    "field.code": "Code",
+    "field.name": "Name",
+    "field.customer": "Kunde",
+    "field.start_date": "Startdatum",
+    "field.end_date": "Enddatum",
+    "field.hourly_rate": "Stundensatz",
+    "field.description": "Beschreibung",
+    "field.duration": "Dauer",
+    "status.active": "Aktiv",
+    "status.on_hold": "Pausiert",
+    "status.completed": "Abgeschlossen",
+    "status.cancelled": "Storniert",
+    "milestone.pending": "Ausstehend",
+    "milestone.completed": "Abgeschlossen",
+    "action.start_timer": "Timer starten",
+    "action.stop_timer": "Timer stoppen",
+    "action.generate_invoice": "Rechnung erstellen"
+}

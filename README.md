@@ -215,6 +215,14 @@ the same pattern `ComponentManager::update()` uses (see
   `supplier_uid` stay loose references toward `kontor/files`/
   `kontor/purchasing` — depends only on `kontor/core` — see its own
   README.
+- [`packages/projects/`](packages/projects/) — `kontor/projects`
+  (Substage 6.4): projects, milestones, time tracking, billable items, and
+  invoicing integration. Depends on `kontor/sales` and `kontor/invoices` —
+  `ProjectInvoicingService::generateInvoice()` actually creates a draft
+  invoice from a project's uninvoiced time entries and billable items
+  (not deferred, same choice `kontor/purchasing` made for its own
+  inventory integration), left in `draft` for review before issuing.
+  Closes out Stage 6 — see its own README.
 
 ## Status
 
@@ -226,7 +234,8 @@ Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
-productivity), and Substage 6.1–6.3 (Inventory, Purchasing, Expenses) per
-spec section 36. Not yet installed against a live ProcessWire instance —
-see the spec's Definition of Done (section 38) for what "complete" means
-for each subsequent milestone.
+productivity), and all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
+6.3 Expenses, 6.4 Projects — operations) per spec section 36. Not yet
+installed against a live ProcessWire instance — see the spec's Definition
+of Done (section 38) for what "complete" means for each subsequent
+milestone.
