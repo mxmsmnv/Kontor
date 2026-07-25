@@ -1,0 +1,9 @@
+{
+    "field.type_name": "Type",
+    "field.field": "Champ",
+    "field.scope": "Portée",
+    "error.unknown_resource": "Ressource inconnue",
+    "error.missing_scope": "Portée manquante",
+    "error.complexity_exceeded": "Requête trop complexe",
+    "action.view_schema": "Voir le schéma"
+}

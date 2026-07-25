@@ -286,6 +286,23 @@ two existing packages rather than a new one (spec section 5.6 rules out
   hook over a fully unit-tested, DTO-only `ApiRequestHandler`. First real
   consumer of `Kontor\Core\Testing\DatabaseTestCase` outside `kontor/core`
   itself. Depends only on `kontor/core` — see its own README.
+- [`packages/graphql/`](packages/graphql/) — `kontor/graphql` (Substage
+  8.2, second component of Stage 8): schema registry, component types,
+  permission enforcement, complexity limits. Depends on `kontor/core`
+  **and `kontor/api`** — the first Stage 8 package to depend on another
+  Stage 8 package, reusing `kontor/api`'s own `ApiResourceRegistry`
+  directly rather than a parallel resource system, so a resource
+  registered once is queryable through both REST and GraphQL. Hand-rolled
+  query parser (no third-party GraphQL library, same call
+  `kontor/documents` made for its own template engine) supporting a
+  deliberately narrow subset: `uid`/`page`/`pageSize` arguments only, no
+  nested filter objects. Permission enforcement reuses `ApiToken::hasScope()`
+  directly; complexity limiting rejects an overly expensive query
+  (`fieldCount × pageSize` per selection) before touching any resource.
+  Served at its own `/graphql` path — deliberately not nested under
+  `kontor/api`'s prefix, avoiding any collision with its already-shipped
+  hook. Second real consumer of `Kontor\Core\Testing\DatabaseTestCase`
+  outside `kontor/core` — see its own README.
 
 ## Status
 
@@ -300,8 +317,8 @@ Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
 6.3 Expenses, 6.4 Projects — operations), all of Stage 7 (Substage
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
-scaffolding — extensibility), and Substage 8.1 (REST API, first
-component of Stage 8 — API and external ecosystem) per spec section 36.
-Not yet installed against a live ProcessWire instance — see the spec's
+scaffolding — extensibility), and Substage 8.1-8.2 (REST API, GraphQL —
+Stage 8, API and external ecosystem) per spec section 36. Not yet
+installed against a live ProcessWire instance — see the spec's
 Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.

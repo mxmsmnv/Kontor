@@ -1,0 +1,9 @@
+{
+    "field.type_name": "Typ",
+    "field.field": "Feld",
+    "field.scope": "Berechtigung",
+    "error.unknown_resource": "Unbekannte Ressource",
+    "error.missing_scope": "Fehlende Berechtigung",
+    "error.complexity_exceeded": "Abfrage zu komplex",
+    "action.view_schema": "Schema anzeigen"
+}

@@ -1,0 +1,9 @@
+{
+    "field.type_name": "Tipo",
+    "field.field": "Campo",
+    "field.scope": "Ámbito",
+    "error.unknown_resource": "Recurso desconocido",
+    "error.missing_scope": "Ámbito faltante",
+    "error.complexity_exceeded": "Consulta demasiado compleja",
+    "action.view_schema": "Ver esquema"
+}
