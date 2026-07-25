@@ -160,6 +160,13 @@ the same pattern `ComponentManager::update()` uses (see
   `InvoiceRepository`, which is exactly what that package's README left
   "not actively driven" pending this substage. Closes out Stage 4 — see
   its own README.
+- [`packages/tasks/`](packages/tasks/) — `kontor/tasks` (Substage 5.1):
+  tasks, reminders, recurrence (completing a recurring task spawns its
+  next occurrence), a `dueBetween()` query backing the "calendar"
+  milestone, and entity relations. First component of Stage 5, and the
+  first real consumer of a new `kontor/core` gap-fill,
+  `RelationRepository` over `kontor_relations` (existed since Substage 1.2
+  with no service) — see its own README.
 
 ## Status
 
@@ -167,8 +174,9 @@ Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
 export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
-Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), and
-all of Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4
-Payments — sales and finance-lite) per spec section 36. Not yet installed
-against a live ProcessWire instance — see the spec's Definition of Done
-(section 38) for what "complete" means for each subsequent milestone.
+Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
+Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
+sales and finance-lite), and Substage 5.1 (Tasks) per spec section 36. Not
+yet installed against a live ProcessWire instance — see the spec's
+Definition of Done (section 38) for what "complete" means for each
+subsequent milestone.

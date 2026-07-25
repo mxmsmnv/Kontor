@@ -1,0 +1,21 @@
+{
+    "field.title": "Titel",
+    "field.description": "Beschreibung",
+    "field.priority": "Priorität",
+    "field.assigned_to": "Zugewiesen an",
+    "field.start_at": "Start",
+    "field.due_at": "Fällig",
+    "field.recurrence": "Wiederholung",
+    "status.open": "Offen",
+    "status.in_progress": "In Bearbeitung",
+    "status.done": "Erledigt",
+    "status.cancelled": "Storniert",
+    "priority.low": "Niedrig",
+    "priority.normal": "Normal",
+    "priority.high": "Hoch",
+    "priority.urgent": "Dringend",
+    "recurrence.daily": "Täglich",
+    "recurrence.weekly": "Wöchentlich",
+    "recurrence.monthly": "Monatlich",
+    "recurrence.yearly": "Jährlich"
+}

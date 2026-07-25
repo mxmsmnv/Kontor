@@ -19,6 +19,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   until `kontor/sales` needed quotation/order numbers (Substage 4.1).
   Locks the sequence row for the duration of an increment, the same
   technique `kontor/queue`'s `JobRepository::reserveNext()` uses.
+- `RelationRepository`, generic CRUD + lookup over `kontor_relations`
+  (kontor.md#11.7) — a table created in Substage 1.2 that had no service
+  until `kontor/tasks`' "entity relations" milestone became its first real
+  consumer (Substage 5.1). `relatedTo()` returns every active relation
+  touching an entity: always as the relation's source, plus as the target
+  when the relation was recorded `'bidirectional'`.
 - Service container (`Kontor\Core\Support\Container`).
 - Capability registry, event dispatcher, route registry and translation
   registry (`Kontor\Core\Infrastructure\Registry`, `Infrastructure\Events`).
