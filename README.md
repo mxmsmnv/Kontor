@@ -109,12 +109,18 @@ the same pattern `ComponentManager::update()` uses (see
   namespaced, tag-invalidated caching over a swappable store (in-memory,
   ProcessWire, Redis). Registers itself as the `cache` capability. No
   database table — see its own README.
+- [`packages/search/`](packages/search/) — `kontor/search` (Substage 2.4):
+  provider registry, federated global search, a reusable SQL full-text
+  provider, and an indexing queue built on `kontor/queue`. Registers
+  itself as the `search` capability. No database table of its own — see
+  its own README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
-export), Substage 2.1 (Queue), Substage 2.2 (Files) and Substage 2.3
-(Cache) per spec section 36. Not yet installed against a live ProcessWire
-instance — see the spec's Definition of Done (section 38) for what
-"complete" means for each subsequent milestone.
+export), and all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
+2.4 Search — platform infrastructure) per spec section 36. Not yet
+installed against a live ProcessWire instance — see the spec's Definition
+of Done (section 38) for what "complete" means for each subsequent
+milestone.
