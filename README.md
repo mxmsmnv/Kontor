@@ -270,6 +270,23 @@ two existing packages rather than a new one (spec section 5.6 rules out
   own conventions. See
   [`packages/sdk/docs/COMPONENT-GUIDE.md`](packages/sdk/docs/COMPONENT-GUIDE.md).
 
+- [`packages/api/`](packages/api/) — `kontor/api` (Substage 8.1, first
+  component of Stage 8): authentication (scoped API tokens, one-time
+  plaintext reveal), a `ApiResourceRegistry` CRUD-resource extension
+  point (inverted dependency, same shape as every other registry in this
+  monorepo) with one built-in demonstrator resource over Core's own
+  organizations table, filtering/pagination/sparse-fields/include,
+  OpenAPI generation, webhooks (HMAC signature, exponential backoff,
+  mutable delivery log, auto-disable, replay — subscribed onto
+  `kontor/core`'s real `EventDispatcher`, same "distinct triggers"
+  approach `kontor/automation` established), and idempotency
+  (`Idempotency-Key` response caching, distinct from
+  `kontor/inventory`'s own per-record idempotency column). The real
+  `/api/kontor/v1/` HTTP entry point is a thin `ProcessPageView::execute`
+  hook over a fully unit-tested, DTO-only `ApiRequestHandler`. First real
+  consumer of `Kontor\Core\Testing\DatabaseTestCase` outside `kontor/core`
+  itself. Depends only on `kontor/core` — see its own README.
+
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
@@ -281,8 +298,10 @@ Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
-6.3 Expenses, 6.4 Projects — operations), and all of Stage 7 (Substage
+6.3 Expenses, 6.4 Projects — operations), all of Stage 7 (Substage
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
-scaffolding — extensibility) per spec section 36. Not yet installed
-against a live ProcessWire instance — see the spec's Definition of Done
+scaffolding — extensibility), and Substage 8.1 (REST API, first
+component of Stage 8 — API and external ecosystem) per spec section 36.
+Not yet installed against a live ProcessWire instance — see the spec's
+Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.

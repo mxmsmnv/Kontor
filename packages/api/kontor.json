@@ -1,0 +1,80 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorAPI",
+    "title": "Kontor REST API",
+    "description": "Authentication, CRUD resource registry, filtering, OpenAPI, webhooks, idempotency.",
+    "version": "0.1.0",
+    "type": "platform",
+    "category": "integration",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorAPI",
+    "package": "kontor/api",
+    "namespace": "Kontor\\API",
+    "processWireModule": "KontorAPI",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-api-token-manage",
+        "kontor-api-webhook-manage"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "api",
+                "title": "API",
+                "icon": "plug",
+                "order": 800
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": ["*"]
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\API\\Health\\ApiHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_api_tokens",
+            "kontor_webhook_subscriptions",
+            "kontor_webhook_deliveries",
+            "kontor_idempotency_keys"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": ["webhook subscriber URLs (outbound HTTP POST)"],
+        "sensitiveData": ["API token hashes", "webhook signing secrets"]
+    }
+}
