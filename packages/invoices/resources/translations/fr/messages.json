@@ -1,0 +1,22 @@
+{
+    "field.number": "Numéro",
+    "field.customer": "Client",
+    "field.issue_date": "Date d'émission",
+    "field.due_date": "Date d'échéance",
+    "field.subtotal": "Sous-total",
+    "field.discount": "Remise",
+    "field.tax": "Taxe",
+    "field.total": "Total",
+    "field.paid": "Payé",
+    "field.due": "Solde dû",
+    "status.draft": "Brouillon",
+    "status.issued": "Émise",
+    "status.sent": "Envoyée",
+    "status.partially_paid": "Partiellement payée",
+    "status.paid": "Payée",
+    "status.overdue": "En retard",
+    "status.cancelled": "Annulée",
+    "status.credited": "Créditée",
+    "kind.invoice": "Facture",
+    "kind.credit_note": "Avoir"
+}

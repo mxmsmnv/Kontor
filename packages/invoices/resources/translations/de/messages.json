@@ -1,0 +1,22 @@
+{
+    "field.number": "Nummer",
+    "field.customer": "Kunde",
+    "field.issue_date": "Ausstellungsdatum",
+    "field.due_date": "Fälligkeitsdatum",
+    "field.subtotal": "Zwischensumme",
+    "field.discount": "Rabatt",
+    "field.tax": "Steuer",
+    "field.total": "Gesamt",
+    "field.paid": "Bezahlt",
+    "field.due": "Offener Betrag",
+    "status.draft": "Entwurf",
+    "status.issued": "Ausgestellt",
+    "status.sent": "Gesendet",
+    "status.partially_paid": "Teilweise bezahlt",
+    "status.paid": "Bezahlt",
+    "status.overdue": "Überfällig",
+    "status.cancelled": "Storniert",
+    "status.credited": "Gutgeschrieben",
+    "kind.invoice": "Rechnung",
+    "kind.credit_note": "Gutschrift"
+}

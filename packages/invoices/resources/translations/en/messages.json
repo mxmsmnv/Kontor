@@ -1,0 +1,22 @@
+{
+    "field.number": "Number",
+    "field.customer": "Customer",
+    "field.issue_date": "Issue date",
+    "field.due_date": "Due date",
+    "field.subtotal": "Subtotal",
+    "field.discount": "Discount",
+    "field.tax": "Tax",
+    "field.total": "Total",
+    "field.paid": "Paid",
+    "field.due": "Due",
+    "status.draft": "Draft",
+    "status.issued": "Issued",
+    "status.sent": "Sent",
+    "status.partially_paid": "Partially paid",
+    "status.paid": "Paid",
+    "status.overdue": "Overdue",
+    "status.cancelled": "Cancelled",
+    "status.credited": "Credited",
+    "kind.invoice": "Invoice",
+    "kind.credit_note": "Credit note"
+}

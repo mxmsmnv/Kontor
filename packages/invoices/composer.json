@@ -1,0 +1,48 @@
+{
+    "name": "kontor/invoices",
+    "description": "Kontor Invoices: invoices, issue workflow, numbering, overdue state, credit notes.",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1",
+        "kontor/sales": "^0.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../sdk"
+        },
+        {
+            "type": "path",
+            "url": "../.."
+        },
+        {
+            "type": "path",
+            "url": "../sales"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Invoices\\": "src/",
+            "Kontor\\Invoices\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Invoices\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}

@@ -1,0 +1,22 @@
+{
+    "field.number": "Número",
+    "field.customer": "Cliente",
+    "field.issue_date": "Fecha de emisión",
+    "field.due_date": "Fecha de vencimiento",
+    "field.subtotal": "Subtotal",
+    "field.discount": "Descuento",
+    "field.tax": "Impuesto",
+    "field.total": "Total",
+    "field.paid": "Pagado",
+    "field.due": "Saldo pendiente",
+    "status.draft": "Borrador",
+    "status.issued": "Emitida",
+    "status.sent": "Enviada",
+    "status.partially_paid": "Parcialmente pagada",
+    "status.paid": "Pagada",
+    "status.overdue": "Vencida",
+    "status.cancelled": "Cancelada",
+    "status.credited": "Abonada",
+    "kind.invoice": "Factura",
+    "kind.credit_note": "Nota de crédito"
+}
