@@ -303,6 +303,21 @@ two existing packages rather than a new one (spec section 5.6 rules out
   `kontor/api`'s prefix, avoiding any collision with its already-shipped
   hook. Second real consumer of `Kontor\Core\Testing\DatabaseTestCase`
   outside `kontor/core` — see its own README.
+- [`packages/marketplace/`](packages/marketplace/) — `kontor/marketplace`
+  (Substage 8.3, third and final component of Stage 8): official
+  registry, custom registry, component metadata, advisories, publisher
+  model. Depends only on `kontor/core` — reuses its own
+  `ComponentManifest::fromArray()`/`DependencyChecker`/`VersionConstraint`
+  directly rather than a parallel implementation. Instance-wide, same
+  reasoning as `kontor_components`. `RegistrySyncService` fetches one
+  registry payload (`{"components": [...], "advisories": [...]}`, each
+  component a real kontor.json) and ingests both in one pass; a
+  publisher only ever becomes verified via a **trusted** registry sync
+  and is never un-verified by an untrusted one. `InstallabilityChecker`
+  recommends (dependencies satisfied + no open critical advisory) but
+  never installs — that stays `ComponentManager`'s own job. Third real
+  consumer of `Kontor\Core\Testing\DatabaseTestCase` outside
+  `kontor/core` — see its own README.
 
 ## Status
 
@@ -317,8 +332,8 @@ Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
 6.3 Expenses, 6.4 Projects — operations), all of Stage 7 (Substage
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
-scaffolding — extensibility), and Substage 8.1-8.2 (REST API, GraphQL —
-Stage 8, API and external ecosystem) per spec section 36. Not yet
-installed against a live ProcessWire instance — see the spec's
-Definition of Done
+scaffolding — extensibility), and all of Stage 8 (Substage 8.1 REST API,
+8.2 GraphQL, 8.3 Marketplace — API and external ecosystem) per spec
+section 36. Not yet installed against a live ProcessWire instance — see
+the spec's Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.

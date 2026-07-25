@@ -1,0 +1,15 @@
+{
+    "field.registry": "Registro",
+    "field.publisher": "Editor",
+    "field.version": "Versión",
+    "field.severity": "Gravedad",
+    "status.verified": "Verificado",
+    "status.unverified": "No verificado",
+    "severity.low": "Baja",
+    "severity.medium": "Media",
+    "severity.high": "Alta",
+    "severity.critical": "Crítica",
+    "action.sync_registry": "Sincronizar registro",
+    "action.add_registry": "Añadir registro",
+    "action.view_advisories": "Ver avisos de seguridad"
+}
