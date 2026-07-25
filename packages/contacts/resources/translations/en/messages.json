@@ -1,0 +1,16 @@
+{
+    "contact.display_name.required": "Enter a first name, last name, or display name.",
+    "contact.email.invalid": "Enter a valid email address.",
+    "company.legal_name.required": "Enter the company's legal name.",
+    "company.email.invalid": "Enter a valid email address.",
+    "field.first_name": "First name",
+    "field.last_name": "Last name",
+    "field.display_name": "Display name",
+    "field.email": "Email",
+    "field.phone": "Phone",
+    "field.mobile": "Mobile",
+    "field.job_title": "Job title",
+    "field.legal_name": "Legal name",
+    "field.trading_name": "Trading name",
+    "field.tags": "Tags"
+}

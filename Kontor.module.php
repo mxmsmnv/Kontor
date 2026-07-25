@@ -10,6 +10,7 @@ use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
+use Kontor\Core\Infrastructure\Persistence\ExtensionRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Recovery\RecoveryModeManager;
 use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
@@ -103,6 +104,7 @@ class Kontor extends WireData implements Module
         $container->bind(TranslationRegistry::class, static fn (): TranslationRegistry => new TranslationRegistry());
         $container->bind(ComponentRegistry::class, static fn (): ComponentRegistry => new ComponentRegistry($pdo));
         $container->bind(OrganizationRepository::class, static fn (): OrganizationRepository => new OrganizationRepository($pdo));
+        $container->bind(ExtensionRepository::class, static fn (): ExtensionRepository => new ExtensionRepository($pdo));
         $container->bind(AuditLogger::class, static fn (): AuditLogger => new AuditLogger($pdo));
         $container->bind(ComponentManager::class, static function (Container $c): ComponentManager {
             $organizations = $c->get(OrganizationRepository::class);

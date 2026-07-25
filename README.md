@@ -114,13 +114,19 @@ the same pattern `ComponentManager::update()` uses (see
   provider, and an indexing queue built on `kontor/queue`. Registers
   itself as the `search` capability. No database table of its own — see
   its own README.
+- [`packages/contacts/`](packages/contacts/) — `kontor/contacts`
+  (Substage 3.1): the first business component. Contacts, companies,
+  addresses, memberships, tags, duplicate detection, import/export. Unlike
+  the platform components, it *consumes* Core/Search rather than providing
+  a capability — see its own README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
-export), and all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
-2.4 Search — platform infrastructure) per spec section 36. Not yet
+export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
+2.4 Search — platform infrastructure), and Substage 3.1 (Contacts — the
+first foundational business component) per spec section 36. Not yet
 installed against a live ProcessWire instance — see the spec's Definition
 of Done (section 38) for what "complete" means for each subsequent
 milestone.
