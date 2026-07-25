@@ -191,6 +191,15 @@ the same pattern `ComponentManager::update()` uses (see
   Core's existing format writers, PDF via `kontor/documents`'
   `PdfRenderer`), and scheduled reports (same recurrence math as
   `kontor/tasks`). Closes out Stage 5 — see its own README.
+- [`packages/inventory/`](packages/inventory/) — `kontor/inventory`
+  (Substage 6.1): warehouses, stock balances, movements, reservations,
+  transfers, and barcode support. `InventoryMovementService` implements
+  kontor.md diagram 17.3 exactly — validate warehouse, lock balance
+  row(s) `FOR UPDATE` in a transaction (consistent lock order for
+  transfers), check available stock, update, commit, emit
+  `inventory.movement.completed` — idempotent via a repeat-safe
+  `idempotencyKey`. First component of Stage 6 (Operations); depends only
+  on `kontor/core` — see its own README.
 
 ## Status
 
@@ -200,8 +209,9 @@ export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
 Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
-sales and finance-lite), and all of Stage 5 (Substage 5.1 Tasks, 5.2
+sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
-productivity) per spec section 36. Not yet installed against a live
-ProcessWire instance — see the spec's Definition of Done (section 38) for
-what "complete" means for each subsequent milestone.
+productivity), and Substage 6.1 (Inventory) per spec section 36. Not yet
+installed against a live ProcessWire instance — see the spec's Definition
+of Done (section 38) for what "complete" means for each subsequent
+milestone.

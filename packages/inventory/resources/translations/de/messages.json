@@ -1,0 +1,15 @@
+{
+    "field.code": "Code",
+    "field.name": "Name",
+    "field.warehouse": "Lager",
+    "field.quantity_on_hand": "Bestand",
+    "field.quantity_reserved": "Reserviert",
+    "field.quantity_available": "Verfügbar",
+    "status.active": "Aktiv",
+    "status.inactive": "Inaktiv",
+    "movement.receive": "Wareneingang",
+    "movement.transfer": "Umlagerung",
+    "movement.adjust": "Bestandskorrektur",
+    "movement.reserve": "Reservierung",
+    "movement.release": "Freigabe"
+}
