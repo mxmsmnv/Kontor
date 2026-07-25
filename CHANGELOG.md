@@ -14,6 +14,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   existed in the SDK since Substage 0.2 but had no registry until
   `kontor/crm`'s `PipelineReportProvider` became its first real consumer
   (Substage 3.3).
+- `SequenceService`, atomic document numbering over `kontor_sequences`
+  (kontor.md#11.9) — a table created in Substage 1.2 that had no service
+  until `kontor/sales` needed quotation/order numbers (Substage 4.1).
+  Locks the sequence row for the duration of an increment, the same
+  technique `kontor/queue`'s `JobRepository::reserveNext()` uses.
 - Service container (`Kontor\Core\Support\Container`).
 - Capability registry, event dispatcher, route registry and translation
   registry (`Kontor\Core\Infrastructure\Registry`, `Infrastructure\Events`).

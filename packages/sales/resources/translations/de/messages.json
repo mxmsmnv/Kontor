@@ -1,0 +1,22 @@
+{
+    "field.number": "Nummer",
+    "field.customer": "Kunde",
+    "field.issue_date": "Ausstellungsdatum",
+    "field.valid_until": "Gültig bis",
+    "field.expected_delivery_date": "Voraussichtliches Lieferdatum",
+    "field.subtotal": "Zwischensumme",
+    "field.discount": "Rabatt",
+    "field.tax": "Steuer",
+    "field.shipping": "Versand",
+    "field.total": "Gesamt",
+    "status.draft": "Entwurf",
+    "status.issued": "Ausgestellt",
+    "status.sent": "Gesendet",
+    "status.accepted": "Angenommen",
+    "status.rejected": "Abgelehnt",
+    "status.expired": "Abgelaufen",
+    "status.cancelled": "Storniert",
+    "status.pending": "Ausstehend",
+    "status.confirmed": "Bestätigt",
+    "status.completed": "Abgeschlossen"
+}

@@ -132,14 +132,19 @@ the same pattern `ComponentManager::update()` uses (see
   substage's milestones allow. First real consumer of
   `ReportProviderInterface`, which had no registry in Core until now — see
   its own README.
+- [`packages/sales/`](packages/sales/) — `kontor/sales` (Substage 4.1):
+  quotations, orders, a document-lines table shared with future invoices,
+  quotation-to-order conversion, and status workflows. Leanest dependency
+  graph so far (`kontor/core` only). First real consumer of the new
+  `SequenceService` (document numbering) — see its own README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
 export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
-2.4 Search — platform infrastructure), and all of Stage 3
-(Substage 3.1 Contacts, 3.2 Catalog, 3.3 CRM — foundational business
-components) per spec section 36. Not yet installed against a live
+2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
+Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), and
+Substage 4.1 (Sales) per spec section 36. Not yet installed against a live
 ProcessWire instance — see the spec's Definition of Done (section 38) for
 what "complete" means for each subsequent milestone.

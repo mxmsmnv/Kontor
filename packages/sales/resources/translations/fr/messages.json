@@ -1,0 +1,22 @@
+{
+    "field.number": "Numéro",
+    "field.customer": "Client",
+    "field.issue_date": "Date d'émission",
+    "field.valid_until": "Valable jusqu'au",
+    "field.expected_delivery_date": "Date de livraison prévue",
+    "field.subtotal": "Sous-total",
+    "field.discount": "Remise",
+    "field.tax": "Taxe",
+    "field.shipping": "Livraison",
+    "field.total": "Total",
+    "status.draft": "Brouillon",
+    "status.issued": "Émis",
+    "status.sent": "Envoyé",
+    "status.accepted": "Accepté",
+    "status.rejected": "Rejeté",
+    "status.expired": "Expiré",
+    "status.cancelled": "Annulé",
+    "status.pending": "En attente",
+    "status.confirmed": "Confirmé",
+    "status.completed": "Terminé"
+}
