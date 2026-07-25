@@ -1,0 +1,16 @@
+{
+    "field.name": "Name",
+    "field.entity_key": "Schlüssel",
+    "field.label": "Bezeichnung",
+    "field.field_type": "Typ",
+    "field.required": "Erforderlich",
+    "type.string": "Text",
+    "type.int": "Zahl",
+    "type.decimal": "Dezimalzahl",
+    "type.bool": "Ja/Nein",
+    "type.date": "Datum",
+    "type.datetime": "Datum und Uhrzeit",
+    "action.add_field": "Feld hinzufügen",
+    "action.new_record": "Neuer Datensatz",
+    "action.save_view": "Ansicht speichern"
+}

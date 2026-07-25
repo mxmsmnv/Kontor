@@ -1,0 +1,16 @@
+{
+    "field.name": "Name",
+    "field.entity_key": "Key",
+    "field.label": "Label",
+    "field.field_type": "Type",
+    "field.required": "Required",
+    "type.string": "Text",
+    "type.int": "Number",
+    "type.decimal": "Decimal",
+    "type.bool": "Yes/No",
+    "type.date": "Date",
+    "type.datetime": "Date and time",
+    "action.add_field": "Add field",
+    "action.new_record": "New record",
+    "action.save_view": "Save view"
+}

@@ -241,6 +241,16 @@ the same pattern `ComponentManager::update()` uses (see
   instance depth counter, since Core's dispatcher is fully synchronous
   with no call-depth concept of its own. Depends only on `kontor/core` —
   see its own README.
+- [`packages/entities/`](packages/entities/) — `kontor/entities`
+  (Substage 7.3): entity builder, fields, relations, views, permissions,
+  and API exposure. Custom entity records live in one generic
+  `kontor_entity_records` table (`data_json`), validated for real against
+  their definition's declared fields. "Relations" reuses `kontor/core`'s
+  `RelationRepository` directly rather than a parallel table — the same
+  reuse `kontor/tasks` established. "API exposure" shapes the data
+  contract a future Stage 8 REST/GraphQL layer would consume, without
+  building endpoints itself yet. Depends only on `kontor/core` — see its
+  own README.
 
 ## Status
 
@@ -253,7 +263,7 @@ Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
-6.3 Expenses, 6.4 Projects — operations), and Substage 7.1–7.2 (Workflow,
-Automation) per spec section 36. Not yet installed against a live
-ProcessWire instance — see the spec's Definition of Done (section 38) for
-what "complete" means for each subsequent milestone.
+6.3 Expenses, 6.4 Projects — operations), and Substage 7.1–7.3 (Workflow,
+Automation, Custom Entities) per spec section 36. Not yet installed
+against a live ProcessWire instance — see the spec's Definition of Done
+(section 38) for what "complete" means for each subsequent milestone.
