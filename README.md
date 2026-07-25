@@ -223,6 +223,14 @@ the same pattern `ComponentManager::update()` uses (see
   (not deferred, same choice `kontor/purchasing` made for its own
   inventory integration), left in `draft` for review before issuing.
   Closes out Stage 6 — see its own README.
+- [`packages/workflow/`](packages/workflow/) — `kontor/workflow`
+  (Substage 7.1): state machine, transition permissions, approvals, and
+  history. A standalone, entity-agnostic engine (`WorkflowEngine`), not
+  retrofitted into any already-shipped component's own hardcoded workflow
+  service — kontor.md#18 requires every component to keep a safe default
+  workflow even when this package isn't installed. First component of
+  Stage 7 (Extensibility); depends only on `kontor/core` — see its own
+  README.
 
 ## Status
 
@@ -234,8 +242,8 @@ Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
-productivity), and all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
-6.3 Expenses, 6.4 Projects — operations) per spec section 36. Not yet
-installed against a live ProcessWire instance — see the spec's Definition
-of Done (section 38) for what "complete" means for each subsequent
-milestone.
+productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
+6.3 Expenses, 6.4 Projects — operations), and Substage 7.1 (Workflow) per
+spec section 36. Not yet installed against a live ProcessWire instance —
+see the spec's Definition of Done (section 38) for what "complete" means
+for each subsequent milestone.

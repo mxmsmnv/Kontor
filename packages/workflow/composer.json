@@ -1,0 +1,43 @@
+{
+    "name": "kontor/workflow",
+    "description": "Kontor Workflow: state machine, transition permissions, approvals, history.",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../sdk"
+        },
+        {
+            "type": "path",
+            "url": "../.."
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Workflow\\": "src/",
+            "Kontor\\Workflow\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Workflow\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}
