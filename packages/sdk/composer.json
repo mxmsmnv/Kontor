@@ -3,7 +3,7 @@
     "description": "Canonical contracts, DTOs, event envelope and value objects shared by all Kontor components.",
     "type": "library",
     "license": "MIT",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "authors": [
         {
             "name": "Maxim Semenov",

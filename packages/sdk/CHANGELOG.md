@@ -3,7 +3,15 @@
 All notable changes to `kontor/sdk` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.2.0] - Unreleased
+## [0.2.1] - Unreleased
+
+### Added
+
+- `CacheInterface` and `CacheStoreInterface` (codex rule #15 references
+  "Kontor Cache contracts" but the specification never defines them —
+  same situation as `JobInterface`). `kontor/cache` is the first consumer.
+
+## [0.2.0]
 
 ### Changed
 

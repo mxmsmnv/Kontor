@@ -105,12 +105,16 @@ the same pattern `ComponentManager::update()` uses (see
   local private storage, file metadata, signed URLs, versions. Registers
   itself as the `storage` capability. Same independent-package structure
   as `kontor/queue` — see its own README.
+- [`packages/cache/`](packages/cache/) — `kontor/cache` (Substage 2.3):
+  namespaced, tag-invalidated caching over a swappable store (in-memory,
+  ProcessWire, Redis). Registers itself as the `cache` capability. No
+  database table — see its own README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
-export), Substage 2.1 (Queue) and Substage 2.2 (Files) per spec section 36.
-Not yet installed against a live ProcessWire instance — see the spec's
-Definition of Done (section 38) for what "complete" means for each
-subsequent milestone.
+export), Substage 2.1 (Queue), Substage 2.2 (Files) and Substage 2.3
+(Cache) per spec section 36. Not yet installed against a live ProcessWire
+instance — see the spec's Definition of Done (section 38) for what
+"complete" means for each subsequent milestone.
