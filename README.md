@@ -183,6 +183,14 @@ the same pattern `ComponentManager::update()` uses (see
   personal default, falling back to their role's default. Ships one
   trivial built-in widget proving the pipeline end-to-end; depends only on
   `kontor/core` — see its own README.
+- [`packages/reports/`](packages/reports/) — `kontor/reports`
+  (Substage 5.4): the orchestration layer on top of `kontor/core`'s
+  already-existing `ReportProviderRegistry` (Substage 3.3) — a report
+  builder that validates filters/`groupBy` against each provider's own
+  declared schema, chart-ready data mapping, exports (CSV/JSON/XLSX via
+  Core's existing format writers, PDF via `kontor/documents`'
+  `PdfRenderer`), and scheduled reports (same recurrence math as
+  `kontor/tasks`). Closes out Stage 5 — see its own README.
 
 ## Status
 
@@ -192,7 +200,8 @@ export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
 Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
-sales and finance-lite), and Substage 5.1–5.3 (Tasks, Collaboration,
-Dashboard) per spec section 36. Not yet installed against a live
+sales and finance-lite), and all of Stage 5 (Substage 5.1 Tasks, 5.2
+Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
+productivity) per spec section 36. Not yet installed against a live
 ProcessWire instance — see the spec's Definition of Done (section 38) for
 what "complete" means for each subsequent milestone.
