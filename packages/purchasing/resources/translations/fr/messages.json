@@ -1,0 +1,19 @@
+{
+    "field.code": "Code",
+    "field.legal_name": "Raison sociale",
+    "field.supplier": "Fournisseur",
+    "field.number": "Numéro",
+    "field.issue_date": "Date d'émission",
+    "field.expected_date": "Date prévue",
+    "field.subtotal": "Sous-total",
+    "field.tax": "Taxe",
+    "field.total": "Total",
+    "status.draft": "Brouillon",
+    "status.issued": "Émis",
+    "status.partially_received": "Partiellement reçu",
+    "status.received": "Reçu",
+    "status.cancelled": "Annulé",
+    "action.issue": "Émettre",
+    "action.receive": "Réceptionner",
+    "action.cancel": "Annuler"
+}

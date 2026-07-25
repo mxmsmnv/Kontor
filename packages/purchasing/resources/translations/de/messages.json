@@ -1,0 +1,19 @@
+{
+    "field.code": "Code",
+    "field.legal_name": "Firmenname",
+    "field.supplier": "Lieferant",
+    "field.number": "Nummer",
+    "field.issue_date": "Ausstellungsdatum",
+    "field.expected_date": "Erwartetes Datum",
+    "field.subtotal": "Zwischensumme",
+    "field.tax": "Steuer",
+    "field.total": "Gesamt",
+    "status.draft": "Entwurf",
+    "status.issued": "Ausgestellt",
+    "status.partially_received": "Teilweise erhalten",
+    "status.received": "Erhalten",
+    "status.cancelled": "Storniert",
+    "action.issue": "Ausstellen",
+    "action.receive": "Wareneingang buchen",
+    "action.cancel": "Stornieren"
+}

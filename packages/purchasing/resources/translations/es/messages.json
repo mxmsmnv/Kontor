@@ -1,0 +1,19 @@
+{
+    "field.code": "Código",
+    "field.legal_name": "Razón social",
+    "field.supplier": "Proveedor",
+    "field.number": "Número",
+    "field.issue_date": "Fecha de emisión",
+    "field.expected_date": "Fecha prevista",
+    "field.subtotal": "Subtotal",
+    "field.tax": "Impuesto",
+    "field.total": "Total",
+    "status.draft": "Borrador",
+    "status.issued": "Emitida",
+    "status.partially_received": "Parcialmente recibida",
+    "status.received": "Recibida",
+    "status.cancelled": "Cancelada",
+    "action.issue": "Emitir",
+    "action.receive": "Recepcionar",
+    "action.cancel": "Cancelar"
+}

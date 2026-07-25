@@ -200,6 +200,14 @@ the same pattern `ComponentManager::update()` uses (see
   `inventory.movement.completed` — idempotent via a repeat-safe
   `idempotencyKey`. First component of Stage 6 (Operations); depends only
   on `kontor/core` — see its own README.
+- [`packages/purchasing/`](packages/purchasing/) — `kontor/purchasing`
+  (Substage 6.2): suppliers, purchase orders, goods receipt, and inventory
+  integration. Depends on both `kontor/sales` (shared document lines) and
+  `kontor/inventory` — `GoodsReceiptService::receive()` validates against
+  what's still outstanding, records the receipt, and actually calls
+  `InventoryMovementService::receive()` per line (not deferred, unlike
+  most cross-component wiring elsewhere in this monorepo), all in one
+  shared transaction — see its own README.
 
 ## Status
 
@@ -211,7 +219,7 @@ Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
 sales and finance-lite), all of Stage 5 (Substage 5.1 Tasks, 5.2
 Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
-productivity), and Substage 6.1 (Inventory) per spec section 36. Not yet
-installed against a live ProcessWire instance — see the spec's Definition
-of Done (section 38) for what "complete" means for each subsequent
-milestone.
+productivity), and Substage 6.1–6.2 (Inventory, Purchasing) per spec
+section 36. Not yet installed against a live ProcessWire instance — see
+the spec's Definition of Done (section 38) for what "complete" means for
+each subsequent milestone.
