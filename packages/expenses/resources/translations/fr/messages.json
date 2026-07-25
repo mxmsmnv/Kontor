@@ -1,0 +1,18 @@
+{
+    "field.category": "Catégorie",
+    "field.description": "Description",
+    "field.amount": "Montant",
+    "field.expense_date": "Date de la dépense",
+    "field.receipt": "Justificatif",
+    "field.rejection_reason": "Motif de rejet",
+    "status.draft": "Brouillon",
+    "status.submitted": "Soumise",
+    "status.approved": "Approuvée",
+    "status.rejected": "Rejetée",
+    "status.reimbursed": "Remboursée",
+    "status.cancelled": "Annulée",
+    "action.submit": "Soumettre pour approbation",
+    "action.approve": "Approuver",
+    "action.reject": "Rejeter",
+    "action.reimburse": "Marquer comme remboursée"
+}
