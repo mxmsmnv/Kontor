@@ -101,11 +101,16 @@ the same pattern `ComponentManager::update()` uses (see
   capability in Core's `CapabilityRegistry` rather than being depended on
   directly. Has its own `composer.json`, `kontor.json`, tests and
   `docker-compose.test.yml`-based integration tests — see its own README.
+- [`packages/files/`](packages/files/) — `kontor/files` (Substage 2.2):
+  local private storage, file metadata, signed URLs, versions. Registers
+  itself as the `storage` capability. Same independent-package structure
+  as `kontor/queue` — see its own README.
 
 ## Status
 
 Stage 0 (SDK contracts), Substage 1.1–1.5 (Core: module bootstrap, core
 database schema, Component Manager, backup and recovery, import and
-export), and Substage 2.1 (Queue) per spec section 36. Not yet installed
-against a live ProcessWire instance — see the spec's Definition of Done
-(section 38) for what "complete" means for each subsequent milestone.
+export), Substage 2.1 (Queue) and Substage 2.2 (Files) per spec section 36.
+Not yet installed against a live ProcessWire instance — see the spec's
+Definition of Done (section 38) for what "complete" means for each
+subsequent milestone.
