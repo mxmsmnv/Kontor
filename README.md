@@ -137,6 +137,13 @@ the same pattern `ComponentManager::update()` uses (see
   quotation-to-order conversion, and status workflows. Leanest dependency
   graph so far (`kontor/core` only). First real consumer of the new
   `SequenceService` (document numbering) — see its own README.
+- [`packages/documents/`](packages/documents/) — `kontor/documents`
+  (Substage 4.2): document templates (versioned like `kontor/files`), a
+  small placeholder/loop/conditional template engine ("document designer
+  v1"), PDF rendering via `dompdf/dompdf`, multilingual template
+  resolution with an English fallback, and immutable issued-document
+  snapshots. Same lean dependency graph as Sales (`kontor/core` only) — see
+  its own README.
 
 ## Status
 
@@ -145,6 +152,6 @@ database schema, Component Manager, backup and recovery, import and
 export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
 Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), and
-Substage 4.1 (Sales) per spec section 36. Not yet installed against a live
-ProcessWire instance — see the spec's Definition of Done (section 38) for
-what "complete" means for each subsequent milestone.
+Substage 4.1–4.2 (Sales, Documents) per spec section 36. Not yet installed
+against a live ProcessWire instance — see the spec's Definition of Done
+(section 38) for what "complete" means for each subsequent milestone.

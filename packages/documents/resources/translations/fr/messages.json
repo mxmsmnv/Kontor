@@ -1,0 +1,13 @@
+{
+    "field.template_key": "Clé du modèle",
+    "field.document_type": "Type de document",
+    "field.language": "Langue",
+    "field.name": "Nom",
+    "field.body_html": "Contenu",
+    "field.custom_css": "CSS personnalisé",
+    "field.version": "Version",
+    "action.publish": "Publier",
+    "action.preview": "Aperçu",
+    "action.render_pdf": "Télécharger le PDF",
+    "action.archive": "Archiver"
+}

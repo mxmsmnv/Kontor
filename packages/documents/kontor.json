@@ -1,0 +1,86 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorDocuments",
+    "title": "Kontor Documents",
+    "description": "Document templates, HTML/PDF rendering, multilingual output, immutable issued-document snapshots.",
+    "version": "0.1.0",
+    "type": "business",
+    "category": "documents",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorDocuments",
+    "package": "kontor/documents",
+    "namespace": "Kontor\\Documents",
+    "processWireModule": "KontorDocuments",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1"
+    },
+    "suggests": {
+        "kontor/sales": "^0.1",
+        "kontor/invoices": "^0.1"
+    },
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-documents-template-view",
+        "kontor-documents-template-create",
+        "kontor-documents-template-edit",
+        "kontor-documents-template-archive",
+        "kontor-documents-render"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "documents",
+                "title": "Documents",
+                "icon": "file-pdf-o",
+                "order": 310
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [
+            "document_template.published",
+            "document_template.version_published"
+        ],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Documents\\Health\\DocumentsHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_documents_templates"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

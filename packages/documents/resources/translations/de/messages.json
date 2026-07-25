@@ -1,0 +1,13 @@
+{
+    "field.template_key": "Vorlagenschlüssel",
+    "field.document_type": "Dokumenttyp",
+    "field.language": "Sprache",
+    "field.name": "Name",
+    "field.body_html": "Inhalt",
+    "field.custom_css": "Benutzerdefiniertes CSS",
+    "field.version": "Version",
+    "action.publish": "Veröffentlichen",
+    "action.preview": "Vorschau",
+    "action.render_pdf": "PDF herunterladen",
+    "action.archive": "Archivieren"
+}
