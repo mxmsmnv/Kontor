@@ -167,6 +167,13 @@ the same pattern `ComponentManager::update()` uses (see
   first real consumer of a new `kontor/core` gap-fill,
   `RelationRepository` over `kontor_relations` (existed since Substage 1.2
   with no service) — see its own README.
+- [`packages/collaboration/`](packages/collaboration/) — `kontor/collaboration`
+  (Substage 5.2): notes, comments (with reply threading), mentions
+  (`@123`-style parsing), followers (idempotent), and unread states
+  (computed from comments since a per-user/per-thread `last_read_at`, not
+  a denormalized counter). `CommentService::post()` ties mentions and
+  followers together — posting auto-follows the thread for its author.
+  Depends only on `kontor/core` — see its own README.
 
 ## Status
 
@@ -176,7 +183,7 @@ export), all of Stage 2 (Substage 2.1 Queue, 2.2 Files, 2.3 Cache,
 2.4 Search — platform infrastructure), all of Stage 3 (Substage 3.1
 Contacts, 3.2 Catalog, 3.3 CRM — foundational business components), all of
 Stage 4 (Substage 4.1 Sales, 4.2 Documents, 4.3 Invoices, 4.4 Payments —
-sales and finance-lite), and Substage 5.1 (Tasks) per spec section 36. Not
-yet installed against a live ProcessWire instance — see the spec's
-Definition of Done (section 38) for what "complete" means for each
-subsequent milestone.
+sales and finance-lite), and Substage 5.1–5.2 (Tasks, Collaboration) per
+spec section 36. Not yet installed against a live ProcessWire instance —
+see the spec's Definition of Done (section 38) for what "complete" means
+for each subsequent milestone.
