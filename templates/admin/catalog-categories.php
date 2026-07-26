@@ -2,6 +2,7 @@
 
 /** @var \Kontor\Catalog\Domain\Category[] $categories */
 /** @var array<string, string> $categoryNames */
+/** @var string $displayLanguage */
 /** @var string $query */
 /** @var bool $showArchived */
 /** @var int $page */
@@ -70,7 +71,7 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
               <td>
                 <strong>
                   <a href="<?= $e($adminUrl) ?>catalog-category/?id=<?= $e(rawurlencode($category->uid->toString())) ?>">
-                    <?= $e($category->nameIn('en') ?? reset($category->name) ?: 'Untitled category') ?>
+                    <?= $e($category->nameIn($displayLanguage) ?? $category->nameIn('en') ?? reset($category->name) ?: 'Untitled category') ?>
                   </a>
                 </strong>
               </td>

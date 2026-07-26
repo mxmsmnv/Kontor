@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Multilingual Catalog category editing for English, French, German, and
+  Spanish names, including default-language list rendering.
 - Multilingual Catalog item editing for English, French, German, and Spanish
   titles and descriptions, with the organization language marked and required.
 - Bulk archive/restore controls for Catalog items, with select-all behavior,

@@ -12,7 +12,7 @@
     </a>
     <p class="kontor-eyebrow">Catalog structure</p>
     <h2><?= $e($title) ?></h2>
-    <p>Name, hierarchy, display order, and lifecycle status.</p>
+    <p>Localized names, hierarchy, display order, and lifecycle status.</p>
   </header>
 
   <?= $form->render() ?>

@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '035',
+            'version' => '036',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -701,6 +701,7 @@ class ProcessKontor extends Process
         return $this->renderTemplate('catalog-categories', [
             'categories' => $categories,
             'categoryNames' => $categoryNames,
+            'displayLanguage' => $this->organization()->defaultLanguage,
             'query' => $query,
             'showArchived' => $showArchived,
             'page' => $page,
@@ -2039,14 +2040,22 @@ class ProcessKontor extends Process
         $form->action = './' . ($category ? '?id=' . rawurlencode($category->uid->toString()) : '');
         $form->addClass('InputfieldFormFocusFirst kontor-entity-form');
         $language = $this->organization()->defaultLanguage;
-        $this->addTextField(
-            $form,
-            'name',
-            sprintf($this->_('Name (%s)'), strtoupper($language)),
-            $category?->nameIn($language),
-            true,
-            50,
-        );
+
+        foreach ($this->catalogFormLanguages() as $locale => $label) {
+            $this->addTextField(
+                $form,
+                'name_' . $locale,
+                sprintf(
+                    $locale === $language
+                        ? $this->_('Name (%s) · Default')
+                        : $this->_('Name (%s)'),
+                    strtoupper($locale)
+                ),
+                $category?->name[$locale] ?? null,
+                $locale === $language,
+                50,
+            );
+        }
 
         /** @var InputfieldSelect $parent */
         $parent = $this->wire()->modules->get('InputfieldSelect');
@@ -2478,16 +2487,26 @@ class ProcessKontor extends Process
 
     private function saveCatalogCategoryFromForm(InputfieldForm $form, ?Category $category): Category
     {
-        $language = $this->organization()->defaultLanguage;
+        $names = $category?->name ?? [];
+
+        foreach ($this->catalogFormLanguages() as $locale => $label) {
+            $name = $this->formValue($form, 'name_' . $locale);
+
+            if ($name === null) {
+                unset($names[$locale]);
+            } else {
+                $names[$locale] = $name;
+            }
+        }
 
         if ($category === null) {
             $category = Category::create(
                 $this->organizationUid(),
-                [$language => $this->requiredFormValue($form, 'name')],
+                $names,
             );
         }
 
-        $category->name[$language] = $this->requiredFormValue($form, 'name');
+        $category->name = $names;
         $category->parentUid = $this->formValue($form, 'parent_uid');
         $category->sortOrder = (int) $this->requiredFormValue($form, 'sort_order');
         $category->status = $this->requiredFormValue($form, 'status');
