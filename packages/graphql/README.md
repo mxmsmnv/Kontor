@@ -13,8 +13,8 @@ cross-package reuse, the same kind `kontor/invoices` made of
 `kontor/graphql` never maintains its own resource list. Every type in
 its schema, and every record it can resolve, comes straight from
 `kontor/api`'s own `ApiResourceRegistry` — a resource registered once
-(whether that's `kontor/api`'s own built-in `OrganizationResource` or a
-business component's future resource) is queryable through both REST and
+(whether that's `kontor/api`'s built-in `OrganizationResource` or
+`kontor/contacts`'s `ContactResource`) is queryable through both REST and
 GraphQL with no extra registration step. `SchemaRegistry` (the "schema
 registry" milestone) turns each registered resource's `ApiResourceSchema`
 into a `GraphQLObjectType` via `GraphQLTypeMapper` (the "component types"
@@ -42,6 +42,11 @@ ignored — see the parser's own doc comment.
   }
 }
 ```
+
+The first real business-resource vertical is `contacts`: installing and
+enabling `KontorContacts` adds the `Contact` type and `contacts:read` scope
+to the admin schema explorer and makes organization-scoped contact list/find
+queries available at `/graphql` automatically.
 
 ## Permission enforcement and complexity limits
 
@@ -74,8 +79,9 @@ same "not retrofitted" discipline used throughout this monorepo).
 `GraphQLRequestHandler::handle(ApiHttpRequest): ApiHttpResponse` — reusing
 `kontor/api`'s own request/response DTOs — is the single true,
 plain-data entry point; `KontorGraphQL::hookGraphQLRequest()` is the thin
-ProcessWire-glue translator, lint-checked only in this sandbox like every
-other ProcessWire-specific hook here.
+ProcessWire-glue translator. The live local ProcessWire stack is exercised
+with HTTPS POST requests using a persisted scoped API token and real MySQL
+contact data in addition to the package's DTO-level integration tests.
 
 ## Contents
 

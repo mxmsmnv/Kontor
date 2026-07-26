@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Contacts is the first external business component proven end to end through
+  the shared registry: its `Contact` type appears automatically in the admin
+  schema explorer and live `/graphql` queries enforce `contacts:read`.
 - First ProcessKontor admin vertical: shared resource/type and SDL explorer
   plus an authenticated query bench exposing permission and complexity errors.
 - Initial alpha (Substage 8.2): `GraphQLQueryParser` (hand-rolled

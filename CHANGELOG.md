@@ -27,6 +27,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Contacts now flows through the shared API registry into GraphQL: the admin
+  schema explorer discovers the `Contact` type and live scoped queries read
+  real organization-owned contact records.
 - Contacts now registers the first business API resource with live
   bearer-authenticated REST CRUD, filters, pagination, sparse fields,
   idempotent create, and soft delete.

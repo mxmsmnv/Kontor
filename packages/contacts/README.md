@@ -46,7 +46,9 @@ building parallel infrastructure.
 - API: registers `ContactResource` into the shared API registry. The real
   `/api/kontor/v1/contacts` endpoint supports organization-scoped list/find/
   create/update/soft-delete, pagination, `filter[query]`, `filter[status]`,
-  sparse fields, and the standard bearer-token/idempotency flow.
+  sparse fields, and the standard bearer-token/idempotency flow. Because
+  GraphQL consumes that same registry, the resource also appears automatically
+  as the `Contact` type at `/graphql`, guarded by `contacts:read`.
 
 ## A SQL-injection risk caught before shipping
 
