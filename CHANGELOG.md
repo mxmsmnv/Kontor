@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First REST API admin vertical: one-time scoped token issuance and revocation,
+  registered-resource/OpenAPI inspection, webhook subscription management,
+  and delivery-log observability.
 - First Custom Entities admin vertical: schema definition, typed fields,
   dynamic records, reusable filtered/sorted views, relation links, permission
   gates, and API-exposure visibility.

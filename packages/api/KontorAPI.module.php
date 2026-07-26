@@ -50,7 +50,7 @@ class KontorAPI extends WireData implements Module
         return [
             'title' => 'Kontor API',
             'summary' => 'Authentication, CRUD resource registry, filtering, OpenAPI, webhooks, idempotency.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorAPI',
             'icon' => 'plug',
@@ -252,6 +252,13 @@ class KontorAPI extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('api', self::getModuleInfo()['version'], 'api');
+        $components->enable('api');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('api', self::getModuleInfo()['version'], 'api');
         $components->enable('api');
     }

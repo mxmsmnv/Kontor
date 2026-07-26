@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: one-time token issuance, revocation,
+  resource/OpenAPI discovery, webhook subscription management, and recent
+  delivery observability.
 - Initial alpha (Substage 8.1): `kontor_api_tokens`,
   `kontor_webhook_subscriptions`, `kontor_webhook_deliveries`,
   `kontor_idempotency_keys` migrations (kontor.md#20, full gap-fill —

@@ -155,4 +155,22 @@ final class WebhookDeliveryServiceTest extends DatabaseTestCase
         $this->assertSame(1, $http->calls);
         $this->assertSame('delivered', $deliveries->require($delivery->uid->toString())->status);
     }
+
+    public function test_archived_subscriptions_are_omitted_from_organization_listing(): void
+    {
+        $subscriptions = new WebhookSubscriptionRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $subscription = WebhookSubscription::create(
+            $this->organizationUid,
+            'https://example.com/hook',
+            'invoice.issued',
+            'shh-secret',
+        );
+        $subscriptions->save($subscription);
+
+        $this->assertCount(1, $subscriptions->forOrganization($this->organizationUid));
+
+        $subscriptions->archive($subscription->uid->toString());
+
+        $this->assertSame([], $subscriptions->forOrganization($this->organizationUid));
+    }
 }

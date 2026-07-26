@@ -120,7 +120,11 @@ final class WebhookSubscriptionRepository implements RepositoryInterface
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_webhook_subscriptions WHERE organization_id = :organization_id ORDER BY created_at DESC');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_webhook_subscriptions
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY created_at DESC'
+        );
         $statement->execute(['organization_id' => $organizationId]);
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));

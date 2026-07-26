@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '101',
+            'version' => '102',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -171,6 +171,12 @@ class ProcessKontor extends Process
                     'label' => 'Custom entities',
                     'icon' => 'cube',
                     'permission' => 'kontor-entities-record-view',
+                ],
+                [
+                    'url' => 'api/',
+                    'label' => 'API',
+                    'icon' => 'plug',
+                    'permission' => 'kontor-api-token-manage',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3959,6 +3965,146 @@ class ProcessKontor extends Process
             count($matched),
         ));
         $this->redirectToAutomation($rule->uid->toString());
+    }
+
+    public function ___executeApi(): string
+    {
+        $this->requireApi();
+        $this->requirePermission('kontor-api-token-manage');
+        $module = $this->apiModule();
+        $subscriptions = $this->can('kontor-api-webhook-manage')
+            ? $module->webhookSubscriptionRepository()->forOrganization($this->organizationUid())
+            : [];
+        $deliveries = [];
+        foreach ($subscriptions as $subscription) {
+            foreach ($module->webhookDeliveryRepository()->forSubscription(
+                $subscription->uid->toString()
+            ) as $delivery) {
+                $deliveries[] = $delivery;
+            }
+        }
+        usort(
+            $deliveries,
+            static fn ($left, $right): int => $right->createdAt <=> $left->createdAt,
+        );
+        $secret = $this->wire()->session->get('kontorApiOneTimeSecret');
+        $this->wire()->session->set('kontorApiOneTimeSecret', null);
+        $this->setPageTitle($this->_('Kontor · API'));
+
+        return $this->renderTemplate('api', [
+            'tokens' => $module->tokenRepository()->forOrganization($this->organizationUid()),
+            'subscriptions' => $subscriptions,
+            'deliveries' => array_slice($deliveries, 0, 25),
+            'resources' => $module->resourceRegistry()->all(),
+            'openApi' => $module->openApiGenerator()->generate(),
+            'oneTimeSecret' => is_array($secret) ? $secret : null,
+            'canManageWebhooks' => $this->can('kontor-api-webhook-manage'),
+        ]);
+    }
+
+    public function ___executeApiToken(): void
+    {
+        $this->requirePost();
+        $this->requireApi();
+        $this->requirePermission('kontor-api-token-manage');
+        $name = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        $scopes = array_values(array_unique(array_filter(array_map(
+            static fn (string $scope): string => trim(strtolower($scope)),
+            explode(',', (string) $this->wire()->input->post('scopes')),
+        ))));
+        $expires = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('expires_at')
+        ));
+        if ($name === '') {
+            throw new WireException($this->_('Token name is required.'));
+        }
+        try {
+            $expiresAt = $expires !== '' ? new \DateTimeImmutable($expires) : null;
+        } catch (\Exception) {
+            throw new WireException($this->_('Token expiry is invalid.'));
+        }
+        $issued = $this->apiModule()->authenticator()->issue(
+            $this->organizationUid(),
+            mb_substr($name, 0, 255),
+            $scopes,
+            $expiresAt,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('api', 'token', $issued->token->uid->toString(), 'issued');
+        $this->wire()->session->set('kontorApiOneTimeSecret', [
+            'kind' => 'token',
+            'label' => $issued->token->name,
+            'value' => $issued->plaintext,
+        ]);
+        $this->message($this->_('API token issued.'));
+        $this->wire()->session->redirect('../api/');
+    }
+
+    public function ___executeApiTokenRevoke(): void
+    {
+        $this->requirePost();
+        $this->requireApi();
+        $this->requirePermission('kontor-api-token-manage');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('token_uid')
+        );
+        $token = $this->apiModule()->tokenRepository()->require($uid);
+        $this->requireSameOrganization($token->organizationId);
+        $this->apiModule()->authenticator()->revoke($uid);
+        $this->audit('api', 'token', $uid, 'revoked');
+        $this->message($this->_('API token revoked.'));
+        $this->wire()->session->redirect('../api/');
+    }
+
+    public function ___executeApiWebhook(): void
+    {
+        $this->requirePost();
+        $this->requireApi();
+        $this->requirePermission('kontor-api-webhook-manage');
+        $url = trim((string) $this->wire()->input->post('url'));
+        $event = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('event_pattern')
+        ));
+        if (filter_var($url, FILTER_VALIDATE_URL) === false
+            || !in_array((string) parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)
+            || preg_match('/^[a-z][a-z0-9._-]{1,149}$/', $event) !== 1) {
+            throw new WireException($this->_('A valid HTTP URL and event name are required.'));
+        }
+        $secret = 'whsec_' . bin2hex(random_bytes(24));
+        $subscription = \Kontor\API\Domain\WebhookSubscription::create(
+            $this->organizationUid(),
+            mb_substr($url, 0, 2048),
+            $event,
+            $secret,
+            (int) $this->wire()->user->id,
+        );
+        $this->apiModule()->webhookSubscriptionRepository()->save($subscription);
+        $this->audit('api', 'webhook', $subscription->uid->toString(), 'created');
+        $this->wire()->session->set('kontorApiOneTimeSecret', [
+            'kind' => 'webhook',
+            'label' => $event,
+            'value' => $secret,
+        ]);
+        $this->message($this->_('Webhook subscription created.'));
+        $this->wire()->session->redirect('../api/');
+    }
+
+    public function ___executeApiWebhookArchive(): void
+    {
+        $this->requirePost();
+        $this->requireApi();
+        $this->requirePermission('kontor-api-webhook-manage');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('subscription_uid')
+        );
+        $subscription = $this->apiModule()->webhookSubscriptionRepository()->require($uid);
+        $this->requireSameOrganization($subscription->organizationId);
+        $this->apiModule()->webhookSubscriptionRepository()->archive($uid);
+        $this->audit('api', 'webhook', $uid, 'archived');
+        $this->message($this->_('Webhook subscription archived.'));
+        $this->wire()->session->redirect('../api/');
     }
 
     public function ___executeCustomEntities(): string
@@ -7770,6 +7916,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorEntities');
     }
 
+    private function apiReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorAPI');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -7879,6 +8030,13 @@ class ProcessKontor extends Process
     {
         if (!$this->entitiesReady()) {
             throw new WireException($this->_('The Kontor Custom Entities component is not installed.'));
+        }
+    }
+
+    private function requireApi(): void
+    {
+        if (!$this->apiReady()) {
+            throw new WireException($this->_('The Kontor API component is not installed.'));
         }
     }
 
@@ -8009,6 +8167,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorEntities $module */
         $module = $this->wire()->modules->get('KontorEntities');
+
+        return $module;
+    }
+
+    private function apiModule(): KontorAPI
+    {
+        /** @var KontorAPI $module */
+        $module = $this->wire()->modules->get('KontorAPI');
 
         return $module;
     }
