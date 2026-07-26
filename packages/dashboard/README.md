@@ -63,13 +63,18 @@ runs for real. Everything under `tests/Integration/` needs real MySQL (see
 `../../docker-compose.test.yml`) and is skipped otherwise, same
 `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The root `ProcessKontor` home now renders the resolved personal dashboard and
+its registered widgets. Users can create a personal default, add/remove the
+built-in widget, and persist simple width and horizontal-position changes.
+
 ## Not in scope for this substage
 
 Organization-scoped dashboards (kontor.md#29's fuller feature list, not a
 Substage 5.3 milestone) — `kontor_dashboards.scope` only supports
-`'personal'`/`'role'`. No drag-and-drop (an admin-UI concern — no admin UI
-is built anywhere in this monorepo yet); `moveWidget()`/`resizeWidget()`
-are the position-persisting backend a drag-and-drop front-end would call.
+`'personal'`/`'role'`. No drag-and-drop; the first admin vertical exposes
+explicit layout controls backed by `moveWidget()`/`resizeWidget()`.
 No configurable refresh intervals or cache policies — `render()` always
 computes fresh; wiring a widget's render through `kontor/cache` is left to
 a future change. No widgets from other components — see above.

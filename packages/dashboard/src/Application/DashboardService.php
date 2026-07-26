@@ -10,6 +10,7 @@ use Kontor\Dashboard\Infrastructure\Persistence\DashboardRepository;
 use Kontor\Dashboard\Infrastructure\Persistence\DashboardWidgetRepository;
 use Kontor\Dashboard\Infrastructure\Registry\WidgetRegistry;
 use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Ties the "widget registry", "layouts", "personal dashboards" and "role
@@ -82,6 +83,10 @@ final class DashboardService
         if (!$this->widgetRegistry->has($widgetKey)) {
             throw new InvalidArgumentException("\"{$widgetKey}\" is not a registered widget.");
         }
+        $dashboard = $this->dashboards->require($dashboardUid);
+        if (!hash_equals($dashboard->organizationId, $organizationUid)) {
+            throw new RuntimeException('Dashboard and widget must belong to the same organization.');
+        }
 
         $widget = DashboardWidget::create($organizationUid, $dashboardUid, $widgetKey, $positionX, $positionY, $width, $height, $config, $sortOrder);
         $this->widgets->save($widget);
@@ -133,6 +138,9 @@ final class DashboardService
     public function render(string $dashboardUid, string $organizationUid, ?int $userId): array
     {
         $dashboard = $this->dashboards->require($dashboardUid);
+        if (!hash_equals($dashboard->organizationId, $organizationUid)) {
+            throw new RuntimeException('Dashboard does not belong to this organization.');
+        }
         $rendered = [];
 
         foreach ($this->widgets->forDashboard($dashboardUid) as $layout) {

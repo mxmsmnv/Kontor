@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard package integration on the existing Kontor home: personal default
+  dashboard creation, registered widget placement, persisted layout controls,
+  and live widget rendering.
 - First Collaboration admin vertical: recent notes/comments, task-attached
   discussion, auto-following, unread-state reads, and archive actions.
 - First Tasks admin vertical: organization-scoped listing and filters,

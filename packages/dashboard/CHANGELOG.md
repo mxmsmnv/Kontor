@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: create a default personal dashboard, add/remove
+  registered widgets, persist width and horizontal position, and render the
+  saved layout on the existing Kontor home dashboard.
 - Initial alpha (Substage 5.3): `kontor_dashboards` and
   `kontor_dashboard_widgets` migrations (schema gap-fill);
   `WidgetProviderInterface` (own extension point, not an SDK contract) and
@@ -22,3 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   widget's rendered data); `WelcomeWidgetProvider`, a trivial built-in
   widget proving the pipeline end-to-end; `DashboardHealthCheck`;
   permissions; en/fr/de/es translations. Third component of Stage 5.
+
+### Fixed
+
+- Widget placement and rendering now reject cross-organization dashboards.

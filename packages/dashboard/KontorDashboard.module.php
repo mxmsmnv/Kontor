@@ -30,7 +30,7 @@ class KontorDashboard extends WireData implements Module
         return [
             'title' => 'Kontor Dashboard',
             'summary' => 'Widget registry, layouts, personal dashboards, role dashboards.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorDashboard',
             'icon' => 'th-large',
@@ -124,6 +124,13 @@ class KontorDashboard extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('dashboard', self::getModuleInfo()['version'], 'dashboard');
+        $components->enable('dashboard');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('dashboard', self::getModuleInfo()['version'], 'dashboard');
         $components->enable('dashboard');
     }

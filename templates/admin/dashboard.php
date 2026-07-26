@@ -19,6 +19,13 @@
 /** @var bool $canViewQueue */
 /** @var \Kontor\Core\Domain\AuditEvent[] $recentActivity */
 /** @var array<string, int> $queueCounts */
+/** @var bool $dashboardReady */
+/** @var bool $canViewPersonalDashboard */
+/** @var bool $canCreatePersonalDashboard */
+/** @var bool $canEditPersonalDashboard */
+/** @var \Kontor\Dashboard\Domain\Dashboard|null $personalDashboard */
+/** @var array{dashboard: \Kontor\Dashboard\Domain\Dashboard, widgets: array<int, array{layout: \Kontor\Dashboard\Domain\DashboardWidget, title: string, data: array<string, mixed>}>}|null $renderedPersonalDashboard */
+/** @var array<string, \Kontor\Dashboard\Contracts\WidgetProviderInterface> $availableDashboardWidgets */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -52,6 +59,68 @@ $enabledComponents = count(array_filter(
       </div>
     <?php endif; ?>
   </section>
+
+  <?php if ($dashboardReady && $canViewPersonalDashboard): ?>
+    <section class="kontor-card kontor-panel">
+      <header class="kontor-panel__head">
+        <div>
+          <p class="kontor-eyebrow">Personal layout</p>
+          <h3><?= $e($personalDashboard?->name ?? 'Your dashboard') ?></h3>
+        </div>
+      </header>
+      <?php if ($personalDashboard === null): ?>
+        <?php if ($canCreatePersonalDashboard): ?>
+          <form method="post" action="<?= $e($adminUrl) ?>dashboard-save/">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <label>Dashboard name <input name="name" value="My dashboard" required></label>
+            <button class="kontor-button" type="submit">Create personal dashboard</button>
+          </form>
+        <?php else: ?>
+          <p>No personal or role dashboard is configured for you yet.</p>
+        <?php endif; ?>
+      <?php else: ?>
+        <div class="kontor-grid">
+          <?php foreach ($renderedPersonalDashboard['widgets'] ?? [] as $renderedWidget): ?>
+            <?php $layout = $renderedWidget['layout']; ?>
+            <article class="kontor-card kontor-panel" style="grid-column: span <?= $e(max(2, min(12, $layout->width))) ?>;">
+              <header class="kontor-panel__head"><h3><?= $e($renderedWidget['title']) ?></h3></header>
+              <?php if ($layout->widgetKey === 'welcome'): ?>
+                <p>Welcome to your saved Kontor workspace.</p>
+                <small>Generated <?= $e($renderedWidget['data']['generatedAt'] ?? '') ?></small>
+              <?php else: ?>
+                <pre><?= $e(json_encode($renderedWidget['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
+              <?php endif; ?>
+              <?php if ($canEditPersonalDashboard): ?>
+                <form method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
+                  <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                  <input type="hidden" name="dashboard_uid" value="<?= $e($personalDashboard->uid->toString()) ?>">
+                  <input type="hidden" name="widget_uid" value="<?= $e($layout->uid->toString()) ?>">
+                  <button name="action" value="move_left" type="submit">←</button>
+                  <button name="action" value="move_right" type="submit">→</button>
+                  <button name="action" value="narrower" type="submit">Narrower</button>
+                  <button name="action" value="wider" type="submit">Wider</button>
+                  <button name="action" value="remove" type="submit">Remove</button>
+                </form>
+              <?php endif; ?>
+            </article>
+          <?php endforeach; ?>
+        </div>
+        <?php if (($renderedPersonalDashboard['widgets'] ?? []) === []): ?><p>No widgets yet.</p><?php endif; ?>
+        <?php if ($canEditPersonalDashboard && $availableDashboardWidgets !== []): ?>
+          <form method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <input type="hidden" name="dashboard_uid" value="<?= $e($personalDashboard->uid->toString()) ?>">
+            <label>Widget
+              <select name="widget_key">
+                <?php foreach ($availableDashboardWidgets as $key => $provider): ?><option value="<?= $e($key) ?>"><?= $e($provider->title()) ?></option><?php endforeach; ?>
+              </select>
+            </label>
+            <button class="kontor-button" name="action" value="add" type="submit">Add widget</button>
+          </form>
+        <?php endif; ?>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
 
   <?php if ($canViewCatalog): ?>
     <section class="kontor-card kontor-catalogoverview">

@@ -70,7 +70,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '092',
+            'version' => '093',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -197,7 +197,8 @@ class ProcessKontor extends Process
         $components = $this->componentRegistry()->all();
         $contactsReady = $this->contactsReady();
         $catalogReady = $this->catalogReady();
-        $organizationUid = $contactsReady || $catalogReady ? $this->organizationUid() : null;
+        $dashboardReady = $this->dashboardReady();
+        $organizationUid = $contactsReady || $catalogReady || $dashboardReady ? $this->organizationUid() : null;
         $contacts = $contactsReady ? $this->contactRepository()->countActive($organizationUid) : 0;
         $companies = $contactsReady ? $this->companyRepository()->countActive($organizationUid) : 0;
         $recentContacts = $contactsReady ? $this->contactRepository()->findAll($organizationUid, '', 6) : [];
@@ -229,6 +230,27 @@ class ProcessKontor extends Process
         $canViewActivity = $user->isSuperuser() || $user->hasPermission('kontor-audit-view');
         $canViewQueue = $user->isSuperuser() || $user->hasPermission('kontor-queue-view');
         $queueReady = $this->queueReady();
+        $canViewPersonalDashboard = $dashboardReady
+            && ($user->isSuperuser() || $user->hasPermission('kontor-dashboard-view'));
+        $personalDashboard = null;
+        $renderedPersonalDashboard = null;
+        $availableDashboardWidgets = [];
+
+        if ($canViewPersonalDashboard) {
+            $dashboardModule = $this->dashboardModule();
+            $personalDashboard = $dashboardModule->dashboardService()->dashboardFor(
+                $organizationUid,
+                (int) $user->id,
+            );
+            if ($personalDashboard !== null) {
+                $renderedPersonalDashboard = $dashboardModule->dashboardService()->render(
+                    $personalDashboard->uid->toString(),
+                    $organizationUid,
+                    (int) $user->id,
+                );
+            }
+            $availableDashboardWidgets = $dashboardModule->widgetRegistry()->all();
+        }
 
         return $this->renderTemplate('dashboard', [
             'components' => $components,
@@ -259,7 +281,116 @@ class ProcessKontor extends Process
             'queueCounts' => $queueReady && $canViewQueue
                 ? $this->jobRepository()->summaryCounts()
                 : [],
+            'dashboardReady' => $dashboardReady,
+            'canViewPersonalDashboard' => $canViewPersonalDashboard,
+            'canCreatePersonalDashboard' => $dashboardReady
+                && ($user->isSuperuser() || $user->hasPermission('kontor-dashboard-create')),
+            'canEditPersonalDashboard' => $dashboardReady
+                && ($user->isSuperuser() || $user->hasPermission('kontor-dashboard-edit')),
+            'personalDashboard' => $personalDashboard,
+            'renderedPersonalDashboard' => $renderedPersonalDashboard,
+            'availableDashboardWidgets' => $availableDashboardWidgets,
         ]);
+    }
+
+    public function ___executeDashboardSave(): void
+    {
+        $this->requirePost();
+        $this->requireDashboard();
+        $this->requirePermission('kontor-dashboard-create');
+        $name = trim($this->wire()->sanitizer->text((string) $this->wire()->input->post('name')));
+        if ($name === '') {
+            throw new WireException($this->_('Dashboard name is required.'));
+        }
+        $dashboard = $this->dashboardModule()->dashboardService()->createPersonalDashboard(
+            $this->organizationUid(),
+            (int) $this->wire()->user->id,
+            mb_substr($name, 0, 191),
+            isDefault: true,
+            createdBy: (int) $this->wire()->user->id,
+        );
+        $this->audit(
+            'dashboard',
+            'dashboard',
+            $dashboard->uid->toString(),
+            'created',
+            current: ['name' => $dashboard->name, 'scope' => 'personal', 'isDefault' => true],
+        );
+        $this->message($this->_('Personal dashboard created.'));
+        $this->wire()->session->redirect('../');
+    }
+
+    public function ___executeDashboardWidgetAction(): void
+    {
+        $this->requirePost();
+        $this->requireDashboard();
+        $this->requirePermission('kontor-dashboard-edit');
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['add', 'remove', 'move_left', 'move_right', 'wider', 'narrower']
+        );
+        $this->requireAction($action, ['add', 'remove', 'move_left', 'move_right', 'wider', 'narrower']);
+        $dashboardUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('dashboard_uid')
+        );
+        $module = $this->dashboardModule();
+        $dashboard = $module->dashboardRepository()->require($dashboardUid);
+        if (
+            !hash_equals($dashboard->organizationId, $this->organizationUid())
+            || !$dashboard->isPersonal()
+            || $dashboard->ownerUserId !== (int) $this->wire()->user->id
+        ) {
+            throw new WirePermissionException($this->_('This dashboard does not belong to the current user.'));
+        }
+
+        if ($action === 'add') {
+            $widgetKey = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('widget_key')
+            );
+            $widget = $module->dashboardService()->addWidget(
+                $this->organizationUid(),
+                $dashboardUid,
+                $widgetKey,
+                sortOrder: count($module->widgetRepository()->forDashboard($dashboardUid)),
+            );
+        } else {
+            $widgetUid = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('widget_uid')
+            );
+            $widget = $module->widgetRepository()->require($widgetUid);
+            if (
+                !hash_equals($widget->organizationId, $this->organizationUid())
+                || !hash_equals($widget->dashboardUid, $dashboardUid)
+            ) {
+                throw new WirePermissionException($this->_('Widget does not belong to this dashboard.'));
+            }
+
+            if ($action === 'remove') {
+                $module->dashboardService()->removeWidget($widgetUid);
+            } elseif ($action === 'move_left' || $action === 'move_right') {
+                $module->dashboardService()->moveWidget(
+                    $widgetUid,
+                    max(0, min(8, $widget->positionX + ($action === 'move_left' ? -1 : 1))),
+                    $widget->positionY,
+                );
+            } else {
+                $module->dashboardService()->resizeWidget(
+                    $widgetUid,
+                    max(2, min(12, $widget->width + ($action === 'narrower' ? -1 : 1))),
+                    $widget->height,
+                );
+            }
+        }
+
+        $this->audit(
+            'dashboard',
+            'widget',
+            $widget->uid->toString(),
+            $action,
+            current: ['dashboardUid' => $dashboardUid, 'widgetKey' => $widget->widgetKey],
+        );
+        $this->message($this->_('Dashboard layout updated.'));
+        $this->wire()->session->redirect('../');
     }
 
     public function ___executeContacts(): string
@@ -5389,6 +5520,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorCollaboration');
     }
 
+    private function dashboardReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorDashboard');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -5435,6 +5571,13 @@ class ProcessKontor extends Process
     {
         if (!$this->collaborationReady()) {
             throw new WireException($this->_('The Kontor Collaboration component is not installed.'));
+        }
+    }
+
+    private function requireDashboard(): void
+    {
+        if (!$this->dashboardReady()) {
+            throw new WireException($this->_('The Kontor Dashboard component is not installed.'));
         }
     }
 
@@ -5493,6 +5636,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorCollaboration $module */
         $module = $this->wire()->modules->get('KontorCollaboration');
+
+        return $module;
+    }
+
+    private function dashboardModule(): KontorDashboard
+    {
+        /** @var KontorDashboard $module */
+        $module = $this->wire()->modules->get('KontorDashboard');
 
         return $module;
     }
