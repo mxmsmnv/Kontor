@@ -44,7 +44,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '015',
+            'version' => '016',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -355,14 +355,29 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-audit-view');
         $this->setPageTitle($this->_('Kontor · Activity'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $organizationId = $this->organizationInternalId();
+        $options = $this->auditEventRepository()->filterOptions($organizationId);
+        $component = $this->wire()->sanitizer->text((string) $this->wire()->input->get('component'));
+        $entityType = $this->wire()->sanitizer->text((string) $this->wire()->input->get('entity_type'));
+        $action = $this->wire()->sanitizer->text((string) $this->wire()->input->get('action'));
+        $component = in_array($component, $options['components'], true) ? $component : null;
+        $entityType = in_array($entityType, $options['entityTypes'], true) ? $entityType : null;
+        $action = in_array($action, $options['actions'], true) ? $action : null;
 
         return $this->renderTemplate('activity', [
             'events' => $this->auditEventRepository()->findRecent(
-                $this->organizationInternalId(),
+                $organizationId,
                 $query,
-                150
+                150,
+                $component,
+                $entityType,
+                $action,
             ),
             'query' => $query,
+            'filterOptions' => $options,
+            'selectedComponent' => $component,
+            'selectedEntityType' => $entityType,
+            'selectedAction' => $action,
         ]);
     }
 

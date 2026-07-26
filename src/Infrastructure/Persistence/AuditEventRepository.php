@@ -15,8 +15,14 @@ final class AuditEventRepository
     /**
      * @return AuditEvent[]
      */
-    public function findRecent(int $organizationId, string $query = '', int $limit = 100): array
-    {
+    public function findRecent(
+        int $organizationId,
+        string $query = '',
+        int $limit = 100,
+        ?string $component = null,
+        ?string $entityType = null,
+        ?string $action = null,
+    ): array {
         $query = trim($query);
         $limit = max(1, min($limit, 250));
         $sql = 'SELECT * FROM kontor_audit_events WHERE organization_id = :organization_id';
@@ -31,12 +37,36 @@ final class AuditEventRepository
             )';
         }
 
+        if ($component !== null) {
+            $sql .= ' AND component = :component';
+        }
+
+        if ($entityType !== null) {
+            $sql .= ' AND entity_type = :entity_type';
+        }
+
+        if ($action !== null) {
+            $sql .= ' AND action = :action';
+        }
+
         $sql .= ' ORDER BY occurred_at DESC, id DESC LIMIT :limit';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
 
         if ($query !== '') {
             $statement->bindValue(':query', '%' . $query . '%');
+        }
+
+        if ($component !== null) {
+            $statement->bindValue(':component', $component);
+        }
+
+        if ($entityType !== null) {
+            $statement->bindValue(':entity_type', $entityType);
+        }
+
+        if ($action !== null) {
+            $statement->bindValue(':action', $action);
         }
 
         $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
@@ -46,6 +76,38 @@ final class AuditEventRepository
             fn (array $row): AuditEvent => $this->hydrate($row),
             $statement->fetchAll(\PDO::FETCH_ASSOC)
         );
+    }
+
+    /**
+     * @return array{components: string[], entityTypes: string[], actions: string[]}
+     */
+    public function filterOptions(int $organizationId): array
+    {
+        return [
+            'components' => $this->distinctValues($organizationId, 'component'),
+            'entityTypes' => $this->distinctValues($organizationId, 'entity_type'),
+            'actions' => $this->distinctValues($organizationId, 'action'),
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    private function distinctValues(int $organizationId, string $column): array
+    {
+        if (!in_array($column, ['component', 'entity_type', 'action'], true)) {
+            throw new \InvalidArgumentException('Unsupported audit facet.');
+        }
+
+        $statement = $this->pdo->prepare(
+            "SELECT DISTINCT {$column}
+             FROM kontor_audit_events
+             WHERE organization_id = :organization_id
+             ORDER BY {$column}"
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map('strval', $statement->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     private function hydrate(array $row): AuditEvent

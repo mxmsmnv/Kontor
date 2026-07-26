@@ -38,6 +38,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   path containment, CSRF protection, and download audit events.
 - Dashboard operational context with recent audited activity and live Queue
   active/dead-letter status, respecting the viewer's permissions.
+- Faceted Activity filtering by component, entity type, and exact action,
+  composable with the existing free-text search.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

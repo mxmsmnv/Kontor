@@ -2,6 +2,10 @@
 
 /** @var \Kontor\Core\Domain\AuditEvent[] $events */
 /** @var string $query */
+/** @var array{components: string[], entityTypes: string[], actions: string[]} $filterOptions */
+/** @var string|null $selectedComponent */
+/** @var string|null $selectedEntityType */
+/** @var string|null $selectedAction */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -18,6 +22,10 @@ $eventDetails = static function (\Kontor\Core\Domain\AuditEvent $event): string 
         JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
     );
 };
+$hasFilters = $query !== ''
+    || $selectedComponent !== null
+    || $selectedEntityType !== null
+    || $selectedAction !== null;
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -28,15 +36,31 @@ $eventDetails = static function (\Kontor\Core\Domain\AuditEvent $event): string 
     </div>
   </header>
 
-  <form class="kontor-toolbar" method="get" action="./">
+  <form class="kontor-toolbar kontor-activityfilters" method="get" action="./">
     <label class="kontor-searchfield">
       <i class="fa fa-search"></i>
       <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Action, component, entity or ID">
     </label>
-    <button class="kontor-button" type="submit">Search</button>
-    <?php if ($query !== ''): ?>
-      <a class="kontor-button kontor-button--secondary" href="./">Clear</a>
-    <?php endif; ?>
+    <select name="component" aria-label="Component">
+      <option value="">All components</option>
+      <?php foreach ($filterOptions['components'] as $component): ?>
+        <option value="<?= $e($component) ?>"<?= $selectedComponent === $component ? ' selected' : '' ?>><?= $e($component) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <select name="entity_type" aria-label="Entity type">
+      <option value="">All entity types</option>
+      <?php foreach ($filterOptions['entityTypes'] as $entityType): ?>
+        <option value="<?= $e($entityType) ?>"<?= $selectedEntityType === $entityType ? ' selected' : '' ?>><?= $e(ucfirst($entityType)) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <select name="action" aria-label="Action">
+      <option value="">All actions</option>
+      <?php foreach ($filterOptions['actions'] as $action): ?>
+        <option value="<?= $e($action) ?>"<?= $selectedAction === $action ? ' selected' : '' ?>><?= $e($actionLabel($action)) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
   </form>
 
   <?php if ($events): ?>
@@ -82,8 +106,8 @@ $eventDetails = static function (\Kontor\Core\Domain\AuditEvent $event): string 
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-history"></i>
-      <h3><?= $query === '' ? 'No activity yet' : 'No matching events' ?></h3>
-      <p><?= $query === '' ? 'Changes made in Kontor will appear here.' : 'Try another action, component, entity type, or ID.' ?></p>
+      <h3><?= !$hasFilters ? 'No activity yet' : 'No matching events' ?></h3>
+      <p><?= !$hasFilters ? 'Changes made in Kontor will appear here.' : 'Try another action, component, entity type, or ID.' ?></p>
     </div>
   <?php endif; ?>
 </div>

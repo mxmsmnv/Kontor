@@ -44,5 +44,21 @@ final class AuditEventRepositoryTest extends DatabaseTestCase
         $this->assertSame('contact_01', $events[0]->entityUid);
         $this->assertSame(['displayName' => 'Ada'], $events[0]->current);
         $this->assertSame(['source' => 'admin'], $events[0]->metadata);
+
+        $repository = new AuditEventRepository($this->pdo);
+        $filtered = $repository->findRecent(
+            $organizationId,
+            limit: 10,
+            component: 'KontorContacts',
+            entityType: 'company',
+            action: 'updated',
+        );
+        $options = $repository->filterOptions($organizationId);
+
+        $this->assertCount(1, $filtered);
+        $this->assertSame('company_01', $filtered[0]->entityUid);
+        $this->assertSame(['KontorContacts'], $options['components']);
+        $this->assertSame(['company', 'contact'], $options['entityTypes']);
+        $this->assertSame(['created', 'updated'], $options['actions']);
     }
 }
