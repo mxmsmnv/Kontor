@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Dashboard directory groups now stack vertically with compact responsive
+  launch tiles, preserving complete section names without equal-height gaps.
 - ProcessWire navigation caches are now invalidated per user whenever the
   Kontor navigation definition changes, preventing the top menu from being
   stuck on an old four-item component list.
