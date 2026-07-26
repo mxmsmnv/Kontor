@@ -36,6 +36,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `KontorDemo`, an executable order-to-cash reference workflow that
+  creates and connects real Contacts, CRM, Catalog, Sales, Workflow,
+  Tasks, Collaboration, Files, Mail, Projects, Invoices, Ledger and
+  Payments records with an explicit approval gate and full traceability.
+- The Health screen now discovers and runs health checks for every
+  installed Kontor component rather than only the original five.
 - Issued quotations now flow through Mail with linked outbound history and a
   delivery-gated transition to `sent`.
 - Invoice issuance, credit notes, and cancellation now flow into Ledger as

@@ -50,6 +50,8 @@
             "Kontor\\Dashboard\\Migrations\\": "packages/dashboard/migrations/",
             "Kontor\\Documents\\": "packages/documents/src/",
             "Kontor\\Documents\\Migrations\\": "packages/documents/migrations/",
+            "Kontor\\Demo\\": "packages/demo/src/",
+            "Kontor\\Demo\\Migrations\\": "packages/demo/migrations/",
             "Kontor\\Entities\\": "packages/entities/src/",
             "Kontor\\Entities\\Migrations\\": "packages/entities/migrations/",
             "Kontor\\Expenses\\": "packages/expenses/src/",

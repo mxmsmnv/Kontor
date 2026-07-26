@@ -92,7 +92,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '134',
+            'version' => '135',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -104,6 +104,12 @@ class ProcessKontor extends Process
             'useNavJSON' => false,
             'nav' => [
                 ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
+                [
+                    'url' => 'demo/',
+                    'label' => 'Demo',
+                    'icon' => 'play-circle',
+                    'permission' => 'kontor-demo-view',
+                ],
                 ['url' => 'search/', 'label' => 'Search', 'icon' => 'search'],
                 [
                     'url' => 'activity/',
@@ -4422,6 +4428,139 @@ class ProcessKontor extends Process
         ]);
     }
 
+    public function ___executeDemo(): string
+    {
+        $this->requireDemo();
+        $this->requirePermission('kontor-demo-view');
+        $module = $this->demoModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $scenarios = $module->scenarioRepository()->forOrganization($this->organizationUid());
+        $scenario = $id !== ''
+            ? $module->scenarioRepository()->require($id)
+            : ($scenarios[0] ?? null);
+        if ($scenario !== null) {
+            $this->requireSameOrganization($scenario->organizationId);
+        }
+        $pendingApproval = $scenario?->pendingApprovalUid !== null
+            ? $this->workflowModule()->approvalRequestRepository()->require(
+                $scenario->pendingApprovalUid
+            )
+            : null;
+        $history = $scenario !== null
+            ? $this->workflowModule()->engine()->history(
+                'demo_scenario',
+                $scenario->uid->toString(),
+            )
+            : [];
+        $this->setPageTitle($this->_('Kontor · Connected demo'));
+
+        return $this->renderTemplate('demo', [
+            'scenario' => $scenario,
+            'scenarios' => $scenarios,
+            'pendingApproval' => $pendingApproval,
+            'history' => $history,
+            'nextAction' => $scenario !== null ? $module->scenarios()->nextAction($scenario) : null,
+            'componentChecks' => $module->componentChecks(),
+            'canRun' => $this->can('kontor-demo-run'),
+            'canApprove' => $this->can('kontor-demo-approve'),
+            'entityLinks' => $scenario !== null ? $this->demoEntityLinks($scenario->entities) : [],
+        ]);
+    }
+
+    public function ___executeDemoStart(): void
+    {
+        $this->requirePost();
+        $this->requireDemo();
+        $this->requirePermission('kontor-demo-run');
+
+        try {
+            $scenario = $this->demoModule()->startScenario(
+                $this->organizationUid(),
+                (int) $this->wire()->user->id,
+            );
+            $this->audit(
+                'demo',
+                'demo_scenario',
+                $scenario->uid->toString(),
+                'started',
+                current: ['state' => $scenario->currentState, 'entities' => $scenario->entities],
+            );
+            $this->message($this->_('Connected demo started with real customer, CRM and task records.'));
+            $this->wire()->session->redirect(
+                '../demo/?id=' . rawurlencode($scenario->uid->toString())
+            );
+        } catch (\Throwable $exception) {
+            $this->error($exception->getMessage());
+            $this->wire()->session->redirect('../demo/');
+        }
+    }
+
+    public function ___executeDemoAction(): void
+    {
+        $this->requirePost();
+        $this->requireDemo();
+        $scenarioUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('scenario_uid')
+        );
+        $scenario = $this->demoModule()->scenarioRepository()->require($scenarioUid);
+        $this->requireSameOrganization($scenario->organizationId);
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['prepare_proposal', 'request_approval', 'approve', 'reject', 'start_delivery', 'issue_invoice', 'settle']
+        );
+        $this->requireAction($action, [
+            'prepare_proposal', 'request_approval', 'approve', 'reject',
+            'start_delivery', 'issue_invoice', 'settle',
+        ]);
+        $this->requirePermission(in_array($action, ['approve', 'reject'], true)
+            ? 'kontor-demo-approve'
+            : 'kontor-demo-run');
+
+        try {
+            if ($action === 'approve') {
+                $updated = $this->demoModule()->approveScenario(
+                    $scenarioUid,
+                    (int) $this->wire()->user->id,
+                );
+            } elseif ($action === 'reject') {
+                $reason = trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('reason')
+                ));
+                if ($reason === '') {
+                    throw new WireException($this->_('A rejection reason is required.'));
+                }
+                $updated = $this->demoModule()->scenarios()->reject(
+                    $scenarioUid,
+                    (int) $this->wire()->user->id,
+                    $reason,
+                );
+            } else {
+                $updated = $this->demoModule()->advanceScenario(
+                    $scenarioUid,
+                    $action,
+                    (int) $this->wire()->user->id,
+                );
+            }
+            $this->audit(
+                'demo',
+                'demo_scenario',
+                $scenarioUid,
+                $action,
+                current: ['state' => $updated->currentState, 'entities' => $updated->entities],
+            );
+            $this->message(sprintf(
+                $this->_('Demo action completed. Current state: %s.'),
+                $updated->currentState,
+            ));
+        } catch (\Throwable $exception) {
+            $this->error($exception->getMessage());
+        }
+
+        $this->wire()->session->redirect(
+            '../demo/?id=' . rawurlencode($scenarioUid)
+        );
+    }
+
     public function ___executeWorkflow(): string
     {
         $this->requireWorkflow();
@@ -8005,7 +8144,16 @@ class ProcessKontor extends Process
             ['ok', 'warning', 'critical']
         ) ?? '';
 
-        foreach (['KontorCatalog', 'KontorContacts', 'KontorDashboard', 'KontorQueue', 'KontorSearch'] as $moduleName) {
+        foreach ([
+            'KontorQueue', 'KontorFiles', 'KontorSearch', 'KontorAPI',
+            'KontorContacts', 'KontorCatalog', 'KontorCRM', 'KontorSales',
+            'KontorInvoices', 'KontorPayments', 'KontorTasks', 'KontorCollaboration',
+            'KontorDashboard', 'KontorReports', 'KontorInventory', 'KontorPurchasing',
+            'KontorExpenses', 'KontorProjects', 'KontorWorkflow', 'KontorAutomation',
+            'KontorEntities', 'KontorGraphQL', 'KontorMarketplace', 'KontorMail',
+            'KontorPortal', 'KontorCache', 'KontorDocuments', 'KontorAI',
+            'KontorLedger', 'KontorDemo',
+        ] as $moduleName) {
             if (!$this->wire()->modules->isInstalled($moduleName)) {
                 continue;
             }
@@ -10246,6 +10394,39 @@ class ProcessKontor extends Process
         return $bytes;
     }
 
+    /**
+     * @param array<string, string> $entities
+     * @return array<string, string>
+     */
+    private function demoEntityLinks(array $entities): array
+    {
+        $routes = [
+            'contact' => 'contact/',
+            'company' => 'company/',
+            'lead' => 'crm-lead/',
+            'deal' => 'crm-deal/',
+            'catalog_item' => 'catalog-item/',
+            'quotation' => 'sales-quotation/',
+            'order' => 'sales-order/',
+            'task' => 'task/',
+            'project' => 'project/',
+            'invoice' => 'invoice/',
+            'payment' => 'payment/',
+            'mail_message' => 'mail/',
+            'file' => 'files/',
+        ];
+        $links = [];
+        foreach ($entities as $type => $uid) {
+            if (isset($routes[$type])) {
+                $links[$type] = $this->wire()->config->urls->admin
+                    . 'kontor/' . $routes[$type]
+                    . '?id=' . rawurlencode($uid);
+            }
+        }
+
+        return $links;
+    }
+
     private function renderTemplate(string $name, array $variables): string
     {
         $variables['adminUrl'] = $this->wire()->config->urls->admin . 'kontor/';
@@ -10412,6 +10593,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorWorkflow');
     }
 
+    private function demoReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorDemo');
+    }
+
     private function automationReady(): bool
     {
         return $this->wire()->modules->isInstalled('KontorAutomation');
@@ -10572,6 +10758,13 @@ class ProcessKontor extends Process
     {
         if (!$this->workflowReady()) {
             throw new WireException($this->_('The Kontor Workflow component is not installed.'));
+        }
+    }
+
+    private function requireDemo(): void
+    {
+        if (!$this->demoReady()) {
+            throw new WireException($this->_('The Kontor Demo component is not installed.'));
         }
     }
 
@@ -10926,6 +11119,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorWorkflow $module */
         $module = $this->wire()->modules->get('KontorWorkflow');
+
+        return $module;
+    }
+
+    private function demoModule(): KontorDemo
+    {
+        /** @var KontorDemo $module */
+        $module = $this->wire()->modules->get('KontorDemo');
 
         return $module;
     }

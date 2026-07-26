@@ -2177,6 +2177,39 @@
   width: 100%;
 }
 
+.kontor-demo-flow {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.kontor-demo-stage {
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.kontor-demo-stage--current {
+  border-color: var(--pw-main-color);
+}
+
+.kontor-demo-stage--done .kontor-demo-stage__marker,
+.kontor-demo-stage--current .kontor-demo-stage__marker {
+  color: var(--pw-main-color);
+}
+
+.kontor-demo-stage strong {
+  color: var(--pw-text-color);
+}
+
+.kontor-demo-stage small {
+  color: var(--pw-muted-color);
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components,
@@ -2200,6 +2233,10 @@
   }
 
   .kontor-relationform {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-demo-flow {
     grid-template-columns: 1fr;
   }
 

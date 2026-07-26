@@ -26,6 +26,12 @@ tests/                       Core unit/integration/migration tests
 
 ## Every other package
 
+- [`packages/demo/`](../packages/demo/) — `kontor/demo`: an executable
+  order-to-cash reference vertical. It is the first configured consumer
+  of the generic Workflow engine and coordinates real customer, CRM,
+  catalog, quotation, approval, order, project, file, simulated-mail,
+  invoice, ledger and payment records. Every transition is transactional
+  and the scenario persists a traceable map of all linked entity UIDs.
 - [`packages/queue/`](../packages/queue/) — `kontor/queue` (Substage 2.1):
   asynchronous/delayed jobs, retries with backoff, dead-letter queue,
   priorities, progress, and a CLI worker. Registers itself as the `queue`

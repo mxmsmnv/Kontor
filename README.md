@@ -32,6 +32,9 @@ own independently installable component sharing one core.
   an optional AI layer (summaries, drafting, extraction) with an
   approval workflow, and double-entry ledger foundations with a
   Germany localization package
+- **Connected demo** — an executable order-to-cash reference vertical
+  that creates real records across Contacts, CRM, Catalog, Workflow,
+  Sales, Projects, Files, Mail, Invoices, Ledger and Payments
 
 Every component is its own Composer package under `packages/`, each
 independently versioned and — per the target architecture — destined
