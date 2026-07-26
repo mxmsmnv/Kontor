@@ -37,6 +37,11 @@ $enabledComponents = count(array_filter(
 ));
 $activeJobs = ($queueCounts['pending'] ?? 0) + ($queueCounts['reserved'] ?? 0);
 $dashboardWidgets = $renderedPersonalDashboard['widgets'] ?? [];
+$catalogIssues = array_filter([
+    'Missing sales price' => (int) $catalogSummary['unpriced'],
+    'Uncategorized' => (int) $catalogSummary['uncategorized'],
+    'Expired price lists' => (int) ($catalogSummary['expiredPriceLists'] ?? 0),
+], static fn (int $count): bool => $count > 0);
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
@@ -186,37 +191,75 @@ $dashboardWidgets = $renderedPersonalDashboard['widgets'] ?? [];
         <div>
           <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Commercial catalog</p>
           <h2 class="uk-h3 uk-margin-small-top uk-margin-remove-bottom">Catalog overview</h2>
+          <p class="uk-text-muted uk-margin-small-top uk-margin-remove-bottom">Products, services, inventory and pricing readiness.</p>
         </div>
-        <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>catalog/">Open catalog</a>
+        <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>catalog/"><span class="uk-visible@s">Open </span>Catalog</a>
       </header>
 
       <dl class="uk-grid-small uk-grid-divider uk-child-width-1-2 uk-child-width-1-4@m uk-margin-remove" uk-grid>
-        <div><dt class="uk-text-meta"><i class="fa fa-cube uk-text-primary"></i> Products</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['products']) ?></dd></div>
-        <div><dt class="uk-text-meta"><i class="fa fa-wrench uk-text-primary"></i> Services</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['services']) ?></dd></div>
-        <div><dt class="uk-text-meta"><i class="fa fa-archive uk-text-primary"></i> Archived</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['archived']) ?></dd></div>
-        <div><dt class="uk-text-meta"><i class="fa fa-tags uk-text-primary"></i> Price lists</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['priceLists'] ?? 0) ?></dd></div>
+        <div>
+          <dt class="uk-text-meta"><i class="fa fa-cube uk-text-primary"></i> Products</dt>
+          <dd class="uk-h2 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['products']) ?></dd>
+        </div>
+        <div>
+          <dt class="uk-text-meta"><i class="fa fa-wrench uk-text-primary"></i> Services</dt>
+          <dd class="uk-h2 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['services']) ?></dd>
+        </div>
+        <div>
+          <dt class="uk-text-meta"><i class="fa fa-cubes uk-text-primary"></i> Inventory tracked</dt>
+          <dd class="uk-h2 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['inventoryTracked']) ?></dd>
+        </div>
+        <div>
+          <dt class="uk-text-meta"><i class="fa fa-tags uk-text-primary"></i> Price lists</dt>
+          <dd class="uk-h2 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['priceLists'] ?? 0) ?></dd>
+        </div>
       </dl>
 
-      <ul class="uk-subnav uk-subnav-divider uk-margin-top uk-margin-remove-bottom" aria-label="Catalog diagnostics">
-        <li><span><strong><?= $e($catalogSummary['unpriced']) ?></strong> without sales price</span></li>
-        <li><span><strong><?= $e($catalogSummary['uncategorized']) ?></strong> uncategorized</span></li>
-        <li><span><strong><?= $e($catalogSummary['inventoryTracked']) ?></strong> track inventory</span></li>
-        <li><span><strong><?= $e($catalogSummary['expiredPriceLists'] ?? 0) ?></strong> expired price lists</span></li>
-        <li><span><strong><?= $e($catalogSummary['upcomingPriceLists'] ?? 0) ?></strong> upcoming price lists</span></li>
-      </ul>
+      <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-margin-top">
+        <div class="uk-flex uk-flex-wrap uk-grid-small uk-text-meta" uk-grid>
+          <span><strong><?= $e($catalogSummary['archived']) ?></strong> archived items</span>
+          <span><strong><?= $e($catalogSummary['upcomingPriceLists'] ?? 0) ?></strong> scheduled price lists</span>
+        </div>
+        <?php if ($catalogIssues === []): ?>
+          <span class="uk-label uk-label-success"><i class="fa fa-check"></i> Catalog ready</span>
+        <?php endif; ?>
+      </div>
+
+      <?php if ($catalogIssues !== []): ?>
+        <div class="uk-alert-warning uk-margin-top uk-margin-remove-bottom" uk-alert>
+          <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap">
+            <strong><i class="fa fa-exclamation-triangle"></i> Needs attention</strong>
+            <ul class="uk-subnav uk-subnav-divider uk-margin-remove">
+              <?php foreach ($catalogIssues as $label => $count): ?>
+                <li><span><strong><?= $e($count) ?></strong> <?= $e(strtolower($label)) ?></span></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        </div>
+      <?php endif; ?>
 
       <?php if ($recentCatalogItems): ?>
-        <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-margin-top">
-          <span class="uk-text-meta">Recently updated</span>
-          <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
-            <?php foreach ($recentCatalogItems as $item): ?>
-              <div>
-                <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>catalog-item/?id=<?= $e(rawurlencode($item->uid->toString())) ?>">
-                  <?= $e($item->titleIn($catalogLanguage) ?? $item->titleIn('en') ?? reset($item->title) ?: 'Untitled item') ?>
-                </a>
-              </div>
-            <?php endforeach; ?>
+        <div class="uk-background-muted uk-padding-small uk-margin-top">
+          <div class="uk-flex uk-flex-between uk-flex-middle">
+            <strong>Recently updated</strong>
+            <span class="uk-text-meta"><?= $e(count($recentCatalogItems)) ?> item<?= count($recentCatalogItems) === 1 ? '' : 's' ?></span>
           </div>
+          <ul class="uk-list uk-list-divider uk-margin-small-top uk-margin-remove-bottom">
+            <?php foreach ($recentCatalogItems as $item): ?>
+              <li class="uk-flex uk-flex-between uk-flex-middle">
+                <div>
+                  <a href="<?= $e($adminUrl) ?>catalog-item/?id=<?= $e(rawurlencode($item->uid->toString())) ?>">
+                    <strong><?= $e($item->titleIn($catalogLanguage) ?? $item->titleIn('en') ?? reset($item->title) ?: 'Untitled item') ?></strong>
+                  </a>
+                  <div class="uk-text-meta">
+                    <?= $e(ucfirst($item->itemType)) ?> · <?= $e(ucfirst($item->status)) ?>
+                    <?= $item->salesPrice === null ? ' · No sales price' : '' ?>
+                  </div>
+                </div>
+                <i class="fa fa-chevron-right uk-text-muted" aria-hidden="true"></i>
+              </li>
+            <?php endforeach; ?>
+          </ul>
         </div>
       <?php endif; ?>
     </section>

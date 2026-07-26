@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Dashboard Catalog overview now separates primary inventory metrics, lifecycle
+  context, actionable data-quality issues and recently updated items into a
+  clearer responsive UIkit hierarchy.
 - ProcessWire and native UIkit forms now provide accessible field descriptions
   plus practical completion notes without adding a second page-introduction
   layer or disrupting the existing section headers.
