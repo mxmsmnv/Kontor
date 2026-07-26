@@ -96,6 +96,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       action="<?= $e($adminUrl) ?>catalog-bulk-action/"
       data-kontor-bulk-form
       data-action-label="<?= $showArchived ? 'Restore' : 'Archive' ?>"
+      data-entity-label="catalog item"
     >
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">

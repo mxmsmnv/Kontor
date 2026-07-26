@@ -71,6 +71,7 @@ forms expose localized item titles/descriptions and category names for English,
 French, German, and Spanish, with the organization's default language required.
 Price lists can be duplicated transactionally with all quantity tiers, and
 copies always start inactive so existing commercial pricing is unaffected.
+Item and category lists both support tenant-scoped bulk archive and restore.
 The package itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

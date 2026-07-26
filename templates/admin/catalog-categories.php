@@ -60,18 +60,58 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
   </form>
 
   <?php if ($categories): ?>
+    <form
+      class="kontor-bulkactions"
+      id="catalog-category-bulk-form"
+      method="post"
+      action="<?= $e($adminUrl) ?>catalog-category-bulk-action/"
+      data-kontor-bulk-form
+      data-action-label="<?= $showArchived ? 'Restore' : 'Archive' ?>"
+      data-entity-label="catalog category"
+    >
+      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+      <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">
+      <input type="hidden" name="return_q" value="<?= $e($query) ?>">
+      <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
+      <input type="hidden" name="return_page" value="<?= $e($page) ?>">
+      <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
+      <button class="kontor-button kontor-button--ghost" type="submit">
+        <i class="fa fa-<?= $showArchived ? 'undo' : 'archive' ?>"></i>
+        <?= $showArchived ? 'Restore selected' : 'Archive selected' ?>
+      </button>
+    </form>
     <section class="kontor-card kontor-tablewrap">
       <table class="kontor-table">
         <thead>
-          <tr><th>Category</th><th>Parent</th><th>Order</th><th>Status</th><th><span class="kontor-visually-hidden">Actions</span></th></tr>
+          <tr>
+            <th class="kontor-selectcell">
+              <input
+                type="checkbox"
+                data-kontor-select-all="catalog-category-bulk-form"
+                aria-label="Select all shown catalog categories"
+              >
+            </th>
+            <th>Category</th><th>Parent</th><th>Order</th><th>Status</th><th><span class="kontor-visually-hidden">Actions</span></th>
+          </tr>
         </thead>
         <tbody>
           <?php foreach ($categories as $category): ?>
+            <?php $categoryLabel = $category->nameIn($displayLanguage) ?? $category->nameIn('en') ?? reset($category->name) ?: 'Untitled category'; ?>
             <tr>
+              <td class="kontor-selectcell">
+                <input
+                  type="checkbox"
+                  name="ids[]"
+                  value="<?= $e($category->uid->toString()) ?>"
+                  form="catalog-category-bulk-form"
+                  data-kontor-select-item="catalog-category-bulk-form"
+                  aria-label="Select <?= $e($categoryLabel) ?>"
+                >
+              </td>
               <td>
                 <strong>
                   <a href="<?= $e($adminUrl) ?>catalog-category/?id=<?= $e(rawurlencode($category->uid->toString())) ?>">
-                    <?= $e($category->nameIn($displayLanguage) ?? $category->nameIn('en') ?? reset($category->name) ?: 'Untitled category') ?>
+                    <?= $e($categoryLabel) ?>
                   </a>
                 </strong>
               </td>

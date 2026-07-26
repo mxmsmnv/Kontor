@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '039',
+            'version' => '040',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -833,6 +833,50 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect(
             '../catalog-categories/' . ($action === 'restore' ? '?archived=1' : '')
         );
+    }
+
+    public function ___executeCatalogCategoryBulkAction(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-category-edit');
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $ids = $this->wire()->sanitizer->arrayVal(
+            $this->wire()->input->post('ids'),
+            ['maxItems' => 100, 'sanitizer' => 'text']
+        );
+        $redirect = $this->catalogCategoryListRedirect();
+
+        if ($ids === []) {
+            $this->warning($this->_('Select at least one catalog category.'));
+            $this->wire()->session->redirect($redirect);
+        }
+
+        $changedIds = $action === 'restore'
+            ? $this->categoryRepository()->restoreMany($this->organizationUid(), $ids)
+            : $this->categoryRepository()->archiveMany($this->organizationUid(), $ids);
+
+        foreach ($changedIds as $id) {
+            $this->audit(
+                'catalog',
+                'catalog_category',
+                $id,
+                $action === 'restore' ? 'restored' : 'archived',
+                metadata: ['bulk' => true],
+            );
+        }
+
+        $this->message(sprintf(
+            $action === 'restore'
+                ? $this->_('%d catalog category(s) restored.')
+                : $this->_('%d catalog category(s) archived.'),
+            count($changedIds),
+        ));
+        $this->wire()->session->redirect($redirect);
     }
 
     public function ___executeCatalogPriceLists(): string
@@ -3551,6 +3595,22 @@ class ProcessKontor extends Process
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
 
         return '../catalog/' . ($parameters === [] ? '' : '?' . http_build_query($parameters));
+    }
+
+    private function catalogCategoryListRedirect(): string
+    {
+        $query = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('return_q')
+        );
+        $archived = (string) $this->wire()->input->post('return_archived') === '1';
+        $page = max(1, (int) $this->wire()->input->post('return_page'));
+        $parameters = array_filter([
+            'q' => $query,
+            'archived' => $archived ? 1 : null,
+            'page' => $page > 1 ? $page : null,
+        ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
+
+        return '../catalog-categories/' . ($parameters === [] ? '' : '?' . http_build_query($parameters));
     }
 
     /**

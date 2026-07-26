@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAll = document.querySelector(`[data-kontor-select-all="${formId}"]`);
     const checkboxes = Array.from(document.querySelectorAll(`[data-kontor-select-item="${formId}"]`));
     const count = form.querySelector('[data-kontor-selected-count]');
+    const entityLabel = form.dataset.entityLabel || 'item';
 
     const update = () => {
       const selected = checkboxes.filter((checkbox) => checkbox.checked).length;
@@ -31,13 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (selected === 0) {
         event.preventDefault();
-        window.alert('Select at least one catalog item.');
+        window.alert(`Select at least one ${entityLabel}.`);
         return;
       }
 
       const action = form.dataset.actionLabel || 'change';
 
-      if (!window.confirm(`${action} ${selected} selected catalog item(s)?`)) {
+      if (!window.confirm(`${action} ${selected} selected ${entityLabel}(s)?`)) {
         event.preventDefault();
       }
     });

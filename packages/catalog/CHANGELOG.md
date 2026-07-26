@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Transactional, tenant-scoped bulk archive and restore operations for up to
+  100 Catalog categories.
 - Transactional price-list duplication that copies every quantity tier into
   a new inactive draft.
 - Organization-scoped aggregate Catalog summary counts for dashboards.
