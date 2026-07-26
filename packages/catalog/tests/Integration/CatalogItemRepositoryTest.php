@@ -267,6 +267,24 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
                 status: 'inactive',
             )[0]->uid->toString(),
         );
+
+        $tracked = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Tracked item'],
+            trackInventory: true,
+        );
+        $repository->save($tracked);
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            trackInventory: true,
+        ));
+        $this->assertSame(
+            $tracked->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                trackInventory: true,
+            )[0]->uid->toString(),
+        );
     }
 
     public function test_category_filter_and_usage_counts_only_active_items(): void

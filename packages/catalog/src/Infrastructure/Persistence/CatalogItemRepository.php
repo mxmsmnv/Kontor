@@ -179,6 +179,7 @@ final class CatalogItemRepository implements RepositoryInterface
         int $limit = 100,
         int $offset = 0,
         ?string $status = null,
+        ?bool $trackInventory = null,
     ): array {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -187,6 +188,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $archived,
             $categoryUid,
             $status,
+            $trackInventory,
         );
         $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
@@ -212,6 +214,7 @@ final class CatalogItemRepository implements RepositoryInterface
         bool $archived = false,
         ?string $categoryUid = null,
         ?string $status = null,
+        ?bool $trackInventory = null,
     ): int {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -220,6 +223,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $archived,
             $categoryUid,
             $status,
+            $trackInventory,
             true,
         );
         $statement = $this->pdo->prepare($sql);
@@ -318,6 +322,7 @@ final class CatalogItemRepository implements RepositoryInterface
         bool $archived,
         ?string $categoryUid,
         ?string $status,
+        ?bool $trackInventory,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -341,6 +346,11 @@ final class CatalogItemRepository implements RepositoryInterface
         if ($status !== null) {
             $sql .= ' AND status = :status';
             $params['status'] = $status;
+        }
+
+        if ($trackInventory !== null) {
+            $sql .= ' AND track_inventory = :track_inventory';
+            $params['track_inventory'] = $trackInventory ? 1 : 0;
         }
 
         if ($query !== '') {

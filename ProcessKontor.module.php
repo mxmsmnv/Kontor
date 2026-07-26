@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '049',
+            'version' => '050',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -494,6 +494,11 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('status'),
             ['active', 'inactive', 'discontinued']
         );
+        $inventory = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('inventory'),
+            ['tracked', 'untracked']
+        );
+        $trackInventory = $inventory === null ? null : $inventory === 'tracked';
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
         $organizationUid = $this->organizationUid();
         $pageSize = 25;
@@ -504,6 +509,7 @@ class ProcessKontor extends Process
             archived: $showArchived,
             categoryUid: $categoryUid,
             status: $status,
+            trackInventory: $trackInventory,
         );
         $totalPages = max(1, (int) ceil($totalItems / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
@@ -516,6 +522,7 @@ class ProcessKontor extends Process
             limit: $pageSize,
             offset: ($page - 1) * $pageSize,
             status: $status,
+            trackInventory: $trackInventory,
         );
         $categoryOptions = [];
         $categoryNames = [];
@@ -547,6 +554,7 @@ class ProcessKontor extends Process
             'selectedType' => $itemType,
             'selectedCategory' => $categoryUid,
             'selectedStatus' => $status,
+            'selectedInventory' => $inventory,
             'categoryOptions' => $categoryOptions,
             'categoryNames' => $categoryNames,
             'showArchived' => $showArchived,
@@ -3749,6 +3757,10 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('return_status'),
             ['active', 'inactive', 'discontinued']
         );
+        $inventory = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_inventory'),
+            ['tracked', 'untracked']
+        );
         $archived = (string) $this->wire()->input->post('return_archived') === '1';
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
@@ -3756,6 +3768,7 @@ class ProcessKontor extends Process
             'type' => $type,
             'category' => $categoryUid,
             'status' => $status,
+            'inventory' => $inventory,
             'archived' => $archived ? 1 : null,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');

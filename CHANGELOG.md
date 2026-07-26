@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog inventory-tracking filtering, preserved across pagination and bulk
+  actions.
 - Bulk Activate/Deactivate/Discontinue controls for Catalog items, preserving
   filters and recording tenant-scoped audit events.
 - Bulk Activate/Deactivate controls for Catalog categories, preserving filters

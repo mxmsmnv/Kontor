@@ -86,6 +86,7 @@ New price tiers can be started directly from an item with the item preselected.
 Catalog filters include an explicit Uncategorized view for finding items that
 still need classification.
 Catalog items can also be filtered by active, inactive, or discontinued status.
+Inventory-tracked and untracked items can be filtered independently.
 The package itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

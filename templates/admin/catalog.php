@@ -5,6 +5,7 @@
 /** @var string|null $selectedType */
 /** @var string|null $selectedCategory */
 /** @var string|null $selectedStatus */
+/** @var string|null $selectedInventory */
 /** @var array<string, string> $categoryOptions */
 /** @var array<string, string> $categoryNames */
 /** @var bool $showArchived */
@@ -17,12 +18,13 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 
-$url = static function (int $targetPage, bool $archived) use ($query, $selectedType, $selectedCategory, $selectedStatus): string {
+$url = static function (int $targetPage, bool $archived) use ($query, $selectedType, $selectedCategory, $selectedStatus, $selectedInventory): string {
     $parameters = http_build_query(array_filter([
         'q' => $query,
         'type' => $selectedType,
         'category' => $selectedCategory,
         'status' => $selectedStatus,
+        'inventory' => $selectedInventory,
         'archived' => $archived ? 1 : '',
         'page' => $targetPage > 1 ? $targetPage : '',
     ], static fn (string|int|null $value): bool => $value !== null && $value !== ''));
@@ -93,6 +95,11 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
       <option value="discontinued"<?= $selectedStatus === 'discontinued' ? ' selected' : '' ?>>Discontinued</option>
     </select>
+    <select name="inventory" aria-label="Inventory tracking">
+      <option value="">All inventory modes</option>
+      <option value="tracked"<?= $selectedInventory === 'tracked' ? ' selected' : '' ?>>Tracked</option>
+      <option value="untracked"<?= $selectedInventory === 'untracked' ? ' selected' : '' ?>>Not tracked</option>
+    </select>
     <button class="kontor-button" type="submit">Filter</button>
     <a class="kontor-viewtoggle" href="<?= $e($adminUrl) ?>export/?entity=catalog_item&amp;format=csv">
       <i class="fa fa-download"></i> Export CSV
@@ -121,6 +128,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <input type="hidden" name="return_type" value="<?= $e($selectedType) ?>">
       <input type="hidden" name="return_category" value="<?= $e($selectedCategory ?? '') ?>">
       <input type="hidden" name="return_status" value="<?= $e($selectedStatus ?? '') ?>">
+      <input type="hidden" name="return_inventory" value="<?= $e($selectedInventory ?? '') ?>">
       <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
@@ -227,8 +235,8 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-cubes"></i>
-      <h3><?= $query !== '' || $selectedType !== null || $selectedCategory !== null || $selectedStatus !== null || $showArchived ? 'No matching items' : 'Your catalog is empty' ?></h3>
-      <p><?= $query !== '' || $selectedType !== null || $selectedCategory !== null || $selectedStatus !== null || $showArchived ? 'Try another search, type, category, status, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>
+      <h3><?= $query !== '' || $selectedType !== null || $selectedCategory !== null || $selectedStatus !== null || $selectedInventory !== null || $showArchived ? 'No matching items' : 'Your catalog is empty' ?></h3>
+      <p><?= $query !== '' || $selectedType !== null || $selectedCategory !== null || $selectedStatus !== null || $selectedInventory !== null || $showArchived ? 'Try another search, type, category, status, inventory mode, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>
     </div>
   <?php endif; ?>
 </div>
