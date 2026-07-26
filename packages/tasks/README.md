@@ -3,7 +3,8 @@
 `kontor/tasks` — tasks, reminders, recurrence, calendar, and entity
 relations. First business component of Stage 5 (kontor.md#36). Depends
 on `kontor/core`, plus Automation for `tasks.create`, and Queue/Mail for
-delayed email reminder delivery.
+delayed email reminder delivery. Dashboard remains optional; when installed,
+Tasks registers its own `tasks.my_open` widget.
 
 ## A fourth Core gap, filled here
 
@@ -50,6 +51,9 @@ Sections 11–16 of kontor.md never gave Tasks a schema section, so
   interpolates `{{ dot.path }}` values from the trigger payload, creates the
   organization-scoped task, optionally links it to the triggering entity, and
   can schedule the existing Queue → Mail reminder path.
+- `MyOpenTasksWidgetProvider` is the first business provider plugged into
+  Dashboard's registry. It renders only the current user's active assignments,
+  with due dates, priorities and overdue state; Dashboard owns layout and Cache.
 - `TaskRepository::dueBetween()` — the "calendar" milestone's actual query
   surface: tasks with a due date inside a range. This is the data a future
   calendar view would render.

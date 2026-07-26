@@ -87,6 +87,21 @@ $enabledComponents = count(array_filter(
               <?php if ($layout->widgetKey === 'welcome'): ?>
                 <p>Welcome to your saved Kontor workspace.</p>
                 <small>Generated <?= $e($renderedWidget['data']['generatedAt'] ?? '') ?></small>
+              <?php elseif ($layout->widgetKey === 'tasks.my_open'): ?>
+                <p><strong><?= $e((string) ($renderedWidget['data']['count'] ?? 0)) ?></strong> open · <?= $e((string) ($renderedWidget['data']['overdueCount'] ?? 0)) ?> overdue</p>
+                <?php if (($renderedWidget['data']['tasks'] ?? []) !== []): ?>
+                  <ul class="kontor-list">
+                    <?php foreach ($renderedWidget['data']['tasks'] as $task): ?>
+                      <li>
+                        <a href="<?= $e($adminUrl) ?>task/?id=<?= $e(rawurlencode((string) $task['uid'])) ?>"><?= $e((string) $task['title']) ?></a>
+                        <span class="kontor-pill<?= !empty($task['overdue']) ? ' kontor-pill--danger' : '' ?>"><?= $e((string) $task['priority']) ?><?= !empty($task['dueAt']) ? ' · ' . $e(substr((string) $task['dueAt'], 0, 10)) : '' ?></span>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                <?php else: ?>
+                  <p>No open tasks assigned to you.</p>
+                <?php endif; ?>
+                <a href="<?= $e($adminUrl) ?>tasks/">Open tasks</a>
               <?php else: ?>
                 <pre><?= $e(json_encode($renderedWidget['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
               <?php endif; ?>

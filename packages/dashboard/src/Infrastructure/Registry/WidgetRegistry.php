@@ -11,8 +11,7 @@ use RuntimeException;
  * The "widget registry" milestone. Mirrors Kontor\Core\Infrastructure\
  * Registry\ReportProviderRegistry's register/has/get-throws/all shape.
  * Other components register their own widgets here by depending on
- * kontor/dashboard and calling register() during their own module init —
- * none are built in this substage; see the README.
+ * kontor/dashboard and calling register() during their own module init.
  */
 final class WidgetRegistry
 {

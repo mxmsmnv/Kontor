@@ -183,6 +183,32 @@ final class TaskRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return Task[]
+     */
+    public function openForAssignee(string $organizationUid, int $userId, int $limit = 8): array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_tasks
+             WHERE organization_id = :organization_id
+               AND assigned_to = :assigned_to
+               AND status IN ('open', 'in_progress')
+               AND archived_at IS NULL
+             ORDER BY due_at IS NULL, due_at ASC, updated_at DESC, id DESC
+             LIMIT :limit"
+        );
+        $statement->bindValue(
+            ':organization_id',
+            $this->organizations->internalIdOf($organizationUid),
+            \PDO::PARAM_INT,
+        );
+        $statement->bindValue(':assigned_to', $userId, \PDO::PARAM_INT);
+        $statement->bindValue(':limit', max(1, min(50, $limit)), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): Task
     {
         return new Task(

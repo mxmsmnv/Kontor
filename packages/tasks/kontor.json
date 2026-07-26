@@ -25,7 +25,9 @@
         "kontor/mail": "^0.1",
         "kontor/queue": "^0.1"
     },
-    "suggests": {},
+    "suggests": {
+        "kontor/dashboard": "^0.1"
+    },
     "conflicts": {},
     "capabilities": [],
     "permissions": [

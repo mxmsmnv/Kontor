@@ -27,6 +27,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Tasks now registers the first component-owned Dashboard widget: each user can
+  add a cached, linked view of their own open and overdue assignments.
 - Expenses is the first Workflow adopter: its safe business lifecycle now
   mirrors into `expenses.standard` with approval requests, generic history,
   and state visibility in the expense workspace.

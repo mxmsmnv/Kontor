@@ -27,7 +27,7 @@ package (`src/Contracts/`) rather than in the SDK, and so does
 capability every component is assumed to know about. Other components
 register their own widgets by depending on `kontor/dashboard` and calling
 `KontorDashboard::widgetRegistry()->register()` during their own module
-`init()` — none do in this substage; see "Not in scope".
+`init()`. Tasks is the first adopter with `tasks.my_open`.
 
 ## Contents
 
@@ -39,10 +39,8 @@ register their own widgets by depending on `kontor/dashboard` and calling
   placed on a dashboard — position, size, per-widget JSON config).
 - `src/Widgets/WelcomeWidgetProvider.php` — a trivial, dependency-free
   built-in widget proving the registry/render pipeline end-to-end. Real
-  per-component widgets (a Sales revenue widget, a CRM pipeline widget, a
-  Tasks "my open tasks" widget, …) are future work for *those* packages to
-  build once `kontor/dashboard` exists to depend on, not the other way —
-  keeping this package itself dependency-free.
+  per-component widgets live in their owning packages so Dashboard stays
+  dependency-free. Tasks now provides the first one: `tasks.my_open`.
 - `src/Application/DashboardService.php` — ties every milestone together:
   `addWidget()` validates its `widgetKey` is actually registered before
   it can be placed on a layout; `dashboardFor()` resolves a user's
@@ -80,4 +78,5 @@ Substage 5.3 milestone) — `kontor_dashboards.scope` only supports
 explicit layout controls backed by `moveWidget()`/`resizeWidget()`.
 The admin does not yet expose a refresh-interval editor; providers can use a
 widget's `refreshSeconds` config and the UI shows whether a payload was fresh
-or served from Cache. No widgets from other components — see above.
+or served from Cache. Tasks supplies the first external provider; further
+business widgets remain component-owned future work.

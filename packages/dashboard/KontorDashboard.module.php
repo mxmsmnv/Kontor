@@ -20,8 +20,8 @@ use Kontor\Dashboard\Widgets\WelcomeWidgetProvider;
  * is exposed so other components can
  * fetch it and register their own WidgetProviderInterface implementations
  * during their own module init (mirroring how kontor/search's
- * SearchProviderRegistry is reached the same way) — none register in this
- * substage; see the README.
+ * SearchProviderRegistry is reached the same way). Tasks is the first
+ * component-owned provider.
  */
 class KontorDashboard extends WireData implements Module
 {

@@ -15,6 +15,7 @@ use Kontor\Tasks\Health\TasksHealthCheck;
 use Kontor\Tasks\Infrastructure\Persistence\TaskReminderRepository;
 use Kontor\Tasks\Infrastructure\Persistence\TaskRepository;
 use Kontor\Tasks\Infrastructure\Automation\CreateTaskActionHandler;
+use Kontor\Tasks\Infrastructure\Dashboard\MyOpenTasksWidgetProvider;
 use Kontor\Tasks\Infrastructure\Queue\TaskReminderDeliveryJob;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
@@ -32,7 +33,7 @@ class KontorTasks extends WireData implements Module
         return [
             'title' => 'Kontor Tasks',
             'summary' => 'Tasks, reminders, recurrence, calendar, entity relations.',
-            'version' => '004',
+            'version' => '005',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorTasks',
             'icon' => 'check-square-o',
@@ -83,6 +84,14 @@ class KontorTasks extends WireData implements Module
             $this->relations(),
             $this->reminderDispatcher(),
         ));
+
+        if ($this->wire()->modules->isInstalled('KontorDashboard')) {
+            /** @var KontorDashboard $dashboard */
+            $dashboard = $this->wire()->modules->get('KontorDashboard');
+            $dashboard->widgetRegistry()->register(
+                new MyOpenTasksWidgetProvider($this->taskRepository())
+            );
+        }
     }
 
     private function registerTranslations(TranslationRegistry $translations): void

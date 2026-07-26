@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Optional Dashboard integration with a `tasks.my_open` widget that lists the
+  current user's open assignments, due dates, priorities and overdue count.
 - `tasks.create` Automation action with payload interpolation, optional trigger
   relation, and optional delayed Queue → Mail reminder scheduling.
 - Assigned tasks can schedule delayed email reminders through Queue; workers

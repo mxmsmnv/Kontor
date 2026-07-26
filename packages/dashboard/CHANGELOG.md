@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Tasks is the first external widget provider: `tasks.my_open` plugs real
+  assignments into saved layouts and the existing Cache-backed render path.
 - Widget rendering now consumes Kontor Cache with organization/user/layout
   scoped keys, configurable TTLs, cache hit visibility, and tag invalidation
   after layout mutations.
