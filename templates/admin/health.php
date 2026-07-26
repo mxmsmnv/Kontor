@@ -1,21 +1,24 @@
 <?php
 
 /** @var array<int, array{key: string, result: \Kontor\SDK\DTO\HealthCheckResult}> $checks */
+/** @var array{ok: int, warning: int, critical: int} $counts */
+/** @var string $overall */
+/** @var string $query */
+/** @var string $selectedStatus */
 /** @var DateTimeImmutable $checkedAt */
+/** @var string $adminUrl */
 /** @var callable $e */
 
-$counts = ['ok' => 0, 'warning' => 0, 'critical' => 0];
-
-foreach ($checks as $check) {
-    $counts[$check['result']->status]++;
-}
-
-$overall = $counts['critical'] > 0 ? 'critical' : ($counts['warning'] > 0 ? 'warning' : 'ok');
 $overallLabel = [
     'ok' => 'All systems ready',
     'warning' => 'Attention recommended',
     'critical' => 'Action required',
 ][$overall];
+$hasFilters = $query !== '' || $selectedStatus !== '';
+$refreshQuery = http_build_query(array_filter([
+    'q' => $query,
+    'status' => $selectedStatus,
+], static fn (string $value): bool => $value !== ''));
 $displayValue = static function (mixed $value): string {
     if (is_bool($value)) {
         return $value ? 'Yes' : 'No';
@@ -35,7 +38,9 @@ $displayValue = static function (mixed $value): string {
       <h2>System health</h2>
       <p>Live checks across Core and every installed component that exposes diagnostics.</p>
     </div>
-    <a class="kontor-button" href="./"><i class="fa fa-refresh"></i> Run checks again</a>
+    <a class="kontor-button" href="./<?= $refreshQuery !== '' ? '?' . $e($refreshQuery) : '' ?>">
+      <i class="fa fa-refresh"></i> Run checks again
+    </a>
   </header>
 
   <section class="kontor-healthsummary kontor-healthsummary--<?= $e($overall) ?>">
@@ -53,33 +58,60 @@ $displayValue = static function (mixed $value): string {
     </time>
   </section>
 
-  <section class="kontor-healthgrid">
-    <?php foreach ($checks as $check): ?>
-      <?php $result = $check['result']; ?>
-      <article class="kontor-card kontor-healthcheck kontor-healthcheck--<?= $e($result->status) ?>">
-        <header>
-          <span class="kontor-healthcheck__icon">
-            <i class="fa fa-<?= $result->status === 'ok' ? 'check' : ($result->status === 'warning' ? 'exclamation' : 'times') ?>"></i>
-          </span>
-          <div>
-            <p class="kontor-eyebrow">Component check</p>
-            <h3><?= $e(ucwords(str_replace(['-', '_'], ' ', $check['key']))) ?></h3>
-          </div>
-          <span class="kontor-pill kontor-pill--<?= $e($result->status) ?>"><?= $e($result->status) ?></span>
-        </header>
-        <p class="kontor-healthcheck__message"><?= $e($result->message) ?></p>
+  <form class="kontor-toolbar kontor-healthfilters" method="get" action="./">
+    <label class="kontor-searchfield">
+      <i class="fa fa-search"></i>
+      <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Component, message or detail">
+    </label>
+    <select name="status" aria-label="Health status">
+      <option value="">All results</option>
+      <option value="ok"<?= $selectedStatus === 'ok' ? ' selected' : '' ?>>Healthy</option>
+      <option value="warning"<?= $selectedStatus === 'warning' ? ' selected' : '' ?>>Warning</option>
+      <option value="critical"<?= $selectedStatus === 'critical' ? ' selected' : '' ?>>Critical</option>
+    </select>
+    <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
+  </form>
 
-        <?php if ($result->details): ?>
-          <dl>
-            <?php foreach ($result->details as $name => $value): ?>
-              <div>
-                <dt><?= $e(ucwords(preg_replace('/(?<!^)[A-Z]/', ' $0', (string) $name) ?? (string) $name)) ?></dt>
-                <dd><?= $e($displayValue($value)) ?></dd>
-              </div>
-            <?php endforeach; ?>
-          </dl>
-        <?php endif; ?>
-      </article>
-    <?php endforeach; ?>
-  </section>
+  <?php if ($checks): ?>
+    <section class="kontor-healthgrid">
+      <?php foreach ($checks as $check): ?>
+        <?php $result = $check['result']; ?>
+        <article class="kontor-card kontor-healthcheck kontor-healthcheck--<?= $e($result->status) ?>">
+          <header>
+            <span class="kontor-healthcheck__icon">
+              <i class="fa fa-<?= $result->status === 'ok' ? 'check' : ($result->status === 'warning' ? 'exclamation' : 'times') ?>"></i>
+            </span>
+            <div>
+              <p class="kontor-eyebrow">Component check</p>
+              <h3>
+                <a href="<?= $e($adminUrl) ?>components/?q=<?= $e(rawurlencode($check['key'])) ?>">
+                  <?= $e(ucwords(str_replace(['-', '_'], ' ', $check['key']))) ?>
+                </a>
+              </h3>
+            </div>
+            <span class="kontor-pill kontor-pill--<?= $e($result->status) ?>"><?= $e($result->status) ?></span>
+          </header>
+          <p class="kontor-healthcheck__message"><?= $e($result->message) ?></p>
+
+          <?php if ($result->details): ?>
+            <dl>
+              <?php foreach ($result->details as $name => $value): ?>
+                <div>
+                  <dt><?= $e(ucwords(preg_replace('/(?<!^)[A-Z]/', ' $0', (string) $name) ?? (string) $name)) ?></dt>
+                  <dd><?= $e($displayValue($value)) ?></dd>
+                </div>
+              <?php endforeach; ?>
+            </dl>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+    </section>
+  <?php else: ?>
+    <div class="kontor-card kontor-empty">
+      <i class="fa fa-heartbeat"></i>
+      <h3>No matching checks</h3>
+      <p>The overall summary still reflects every health check from this run.</p>
+    </div>
+  <?php endif; ?>
 </div>

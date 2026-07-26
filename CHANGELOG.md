@@ -52,6 +52,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   dependency metadata, status totals, search, and attention filtering.
 - CSRF-protected component registry synchronization against installed
   ProcessWire module versions, permission-gated and fully audited.
+- Searchable Health results with status filtering, an unfiltered overall
+  summary, preserved refresh filters, and component drill-down links.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

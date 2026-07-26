@@ -19,6 +19,7 @@ use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ComponentOverviewBuilder;
 use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\HealthCheckRunner;
+use Kontor\Core\Application\HealthOverviewBuilder;
 use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Domain\ImportBatchResult;
 use Kontor\Core\Domain\Organization;
@@ -47,7 +48,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '022',
+            'version' => '023',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -465,6 +466,11 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-health-view');
         $this->setPageTitle($this->_('Kontor · Health'));
         $checks = [$this->coreHealthCheck()];
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['ok', 'warning', 'critical']
+        ) ?? '';
 
         foreach (['KontorContacts', 'KontorDashboard', 'KontorQueue', 'KontorSearch'] as $moduleName) {
             if (!$this->wire()->modules->isInstalled($moduleName)) {
@@ -478,8 +484,18 @@ class ProcessKontor extends Process
             }
         }
 
+        $overview = (new HealthOverviewBuilder())->build(
+            $this->healthCheckRunner()->run($checks),
+            $query,
+            $status,
+        );
+
         return $this->renderTemplate('health', [
-            'checks' => $this->healthCheckRunner()->run($checks),
+            'checks' => $overview['checks'],
+            'counts' => $overview['counts'],
+            'overall' => $overview['overall'],
+            'query' => $query,
+            'selectedStatus' => $status,
             'checkedAt' => new \DateTimeImmutable(),
         ]);
     }
