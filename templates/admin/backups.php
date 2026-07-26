@@ -34,6 +34,15 @@ $pageUrl = static function (int $targetPage) use ($query, $selectedComponent, $s
 
     return $parameters === '' ? './' : './?' . $parameters;
 };
+$filterUrl = static function (string $component, string $status) use ($query): string {
+    $parameters = http_build_query(array_filter([
+        'q' => $query,
+        'component' => $component,
+        'status' => $status,
+    ], static fn (string $value): bool => $value !== ''));
+
+    return $parameters === '' ? './' : './?' . $parameters;
+};
 $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== '';
 ?>
 <div class="kontor-shell">
@@ -90,10 +99,14 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
           <span class="kontor-backup__icon"><i class="fa fa-archive"></i></span>
           <div class="kontor-backup__body">
             <div>
-              <strong><?= $e(ucfirst((string) $backup['component'])) ?> <?= $e((string) $backup['kind']) ?></strong>
-              <span class="kontor-pill<?= $backup['verified'] ? '' : ' kontor-pill--danger' ?>">
+              <strong>
+                <a class="kontor-backup__facet" href="<?= $e($filterUrl((string) $backup['component'], $selectedStatus)) ?>">
+                  <?= $e(ucfirst((string) $backup['component'])) ?> <?= $e((string) $backup['kind']) ?>
+                </a>
+              </strong>
+              <a class="kontor-pill<?= $backup['verified'] ? '' : ' kontor-pill--danger' ?>" href="<?= $e($filterUrl($selectedComponent, $backup['verified'] ? 'verified' : 'failed')) ?>">
                 <?= $backup['verified'] ? 'Verified' : 'Verification failed' ?>
-              </span>
+              </a>
             </div>
             <code><?= $e((string) $backup['id']) ?></code>
             <p>

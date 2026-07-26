@@ -1327,12 +1327,16 @@
 }
 
 .kontor-activity__facet,
+.kontor-backup__facet,
+.kontor-backup__body .kontor-pill,
 .kontor-dashboardactivity__list a {
   color: inherit;
   text-decoration: none;
 }
 
 .kontor-activity__facet:hover,
+.kontor-backup__facet:hover,
+.kontor-backup__body .kontor-pill:hover,
 .kontor-dashboardactivity__list a:hover {
   color: var(--kontor-brand);
   text-decoration: underline;

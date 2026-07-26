@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Composable Backups result facets on component names and verification states.
 - Direct Dashboard summary-card drill-down for contacts, companies, enabled
   components, and active Queue jobs.
 - Composable Queue table facets on queue names and job statuses.
