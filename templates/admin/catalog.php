@@ -9,6 +9,7 @@
 /** @var string|null $selectedUnit */
 /** @var string|null $selectedTax */
 /** @var string|null $selectedCurrency */
+/** @var string|null $selectedPricing */
 /** @var array<string, string> $unitOptions */
 /** @var array<string, string> $taxOptions */
 /** @var string[] $currencyOptions */
@@ -24,7 +25,7 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 
-$url = static function (int $targetPage, bool $archived) use ($query, $selectedType, $selectedCategory, $selectedStatus, $selectedInventory, $selectedUnit, $selectedTax, $selectedCurrency): string {
+$url = static function (int $targetPage, bool $archived) use ($query, $selectedType, $selectedCategory, $selectedStatus, $selectedInventory, $selectedUnit, $selectedTax, $selectedCurrency, $selectedPricing): string {
     $parameters = http_build_query(array_filter([
         'q' => $query,
         'type' => $selectedType,
@@ -34,6 +35,7 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedT
         'unit' => $selectedUnit,
         'tax' => $selectedTax,
         'currency' => $selectedCurrency,
+        'pricing' => $selectedPricing,
         'archived' => $archived ? 1 : '',
         'page' => $targetPage > 1 ? $targetPage : '',
     ], static fn (string|int|null $value): bool => $value !== null && $value !== ''));
@@ -47,7 +49,8 @@ $hasFilters = $query !== ''
     || $selectedInventory !== null
     || $selectedUnit !== null
     || $selectedTax !== null
-    || $selectedCurrency !== null;
+    || $selectedCurrency !== null
+    || $selectedPricing !== null;
 $clearFiltersUrl = $showArchived ? './?archived=1' : './';
 $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     if ($value === null) {
@@ -136,6 +139,11 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         <option value="<?= $e($code) ?>"<?= $selectedCurrency === $code ? ' selected' : '' ?>><?= $e($code) ?></option>
       <?php endforeach; ?>
     </select>
+    <select name="pricing" aria-label="Sales pricing">
+      <option value="">All pricing states</option>
+      <option value="priced"<?= $selectedPricing === 'priced' ? ' selected' : '' ?>>With sales price</option>
+      <option value="unpriced"<?= $selectedPricing === 'unpriced' ? ' selected' : '' ?>>Without sales price</option>
+    </select>
     <button class="kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
@@ -173,6 +181,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <input type="hidden" name="return_unit" value="<?= $e($selectedUnit ?? '') ?>">
       <input type="hidden" name="return_tax" value="<?= $e($selectedTax ?? '') ?>">
       <input type="hidden" name="return_currency" value="<?= $e($selectedCurrency ?? '') ?>">
+      <input type="hidden" name="return_pricing" value="<?= $e($selectedPricing ?? '') ?>">
       <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
@@ -280,7 +289,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     <div class="kontor-card kontor-empty">
       <i class="fa fa-cubes"></i>
       <h3><?= $hasFilters || $showArchived ? 'No matching items' : 'Your catalog is empty' ?></h3>
-      <p><?= $hasFilters || $showArchived ? 'Try another search, type, category, status, inventory mode, unit, tax code, currency, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>
+      <p><?= $hasFilters || $showArchived ? 'Try another search, type, category, status, inventory mode, unit, tax code, currency, pricing state, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>
     </div>
   <?php endif; ?>
 </div>

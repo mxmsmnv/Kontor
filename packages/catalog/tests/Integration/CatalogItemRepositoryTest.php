@@ -270,6 +270,7 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         $euro->salesPrice = Money::ofMinor(1000, 'EUR');
         $dollar = CatalogItem::create($this->organizationUid, ['en' => 'Dollar item']);
         $dollar->salesPrice = Money::ofMinor(1200, 'USD');
+        $unpriced = CatalogItem::create($this->organizationUid, ['en' => 'Unpriced item']);
         $otherOrganization = Organization::createDefault('GB', 'en', 'GBP');
         $otherOrganization->name = 'Other organization';
         $organizations->save($otherOrganization);
@@ -280,6 +281,7 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         );
         $repository->save($euro);
         $repository->save($dollar);
+        $repository->save($unpriced);
         $repository->save($pound);
 
         $this->assertSame(['EUR', 'USD'], $repository->salesCurrencies($this->organizationUid));
@@ -292,6 +294,17 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
             $repository->findAll(
                 $this->organizationUid,
                 salesCurrency: 'USD',
+            )[0]->uid->toString(),
+        );
+        $this->assertSame(2, $repository->countMatching(
+            $this->organizationUid,
+            hasSalesPrice: true,
+        ));
+        $this->assertSame(
+            $unpriced->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                hasSalesPrice: false,
             )[0]->uid->toString(),
         );
     }

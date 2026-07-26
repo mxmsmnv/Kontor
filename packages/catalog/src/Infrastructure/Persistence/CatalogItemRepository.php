@@ -183,6 +183,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $unitCode = null,
         ?string $taxCode = null,
         ?string $salesCurrency = null,
+        ?bool $hasSalesPrice = null,
     ): array {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -195,6 +196,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $unitCode,
             $taxCode,
             $salesCurrency,
+            $hasSalesPrice,
         );
         $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
@@ -224,6 +226,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $unitCode = null,
         ?string $taxCode = null,
         ?string $salesCurrency = null,
+        ?bool $hasSalesPrice = null,
     ): int {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -236,6 +239,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $unitCode,
             $taxCode,
             $salesCurrency,
+            $hasSalesPrice,
             true,
         );
         $statement = $this->pdo->prepare($sql);
@@ -358,6 +362,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $unitCode,
         ?string $taxCode,
         ?string $salesCurrency,
+        ?bool $hasSalesPrice,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -401,6 +406,10 @@ final class CatalogItemRepository implements RepositoryInterface
         if ($salesCurrency !== null) {
             $sql .= ' AND sales_currency = :sales_currency';
             $params['sales_currency'] = $salesCurrency;
+        }
+
+        if ($hasSalesPrice !== null) {
+            $sql .= ' AND sales_price_minor IS ' . ($hasSalesPrice ? 'NOT NULL' : 'NULL');
         }
 
         if ($query !== '') {

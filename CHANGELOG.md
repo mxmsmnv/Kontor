@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog item filtering for positions with or without a configured sales price.
 - Organization-scoped sales-currency filtering for Catalog items, preserved
   across pagination, archive views, and bulk actions.
 - Unit-of-measure and tax-code filters for Catalog items, including direct
