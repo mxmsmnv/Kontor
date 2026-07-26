@@ -525,6 +525,22 @@
   margin: 0 0 0.35rem;
 }
 
+.kontor-priceactions,
+.kontor-priceactions form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.kontor-priceactions form {
+  margin: 0;
+}
+
+.kontor-priceactions select {
+  min-height: 40px;
+}
+
 .kontor-formhead p:last-child {
   color: var(--kontor-muted);
   margin: 0;

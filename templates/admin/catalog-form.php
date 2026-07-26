@@ -61,9 +61,22 @@ $coveredPriceLists = count(array_unique(array_map(
         <h2>Price-list tiers</h2>
         <p><?= $e(count($priceEntries)) ?> tier(s) across <?= $e($coveredPriceLists) ?> price list(s).</p>
       </div>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
-        <i class="fa fa-tags"></i> Open price lists
-      </a>
+      <div class="kontor-priceactions">
+        <?php if ($canEditPriceLists && $priceListDetails): ?>
+          <form method="get" action="<?= $e($adminUrl) ?>catalog-price-entry/">
+            <input type="hidden" name="item" value="<?= $e($item->uid->toString()) ?>">
+            <select name="list" aria-label="Price list for new tier" required>
+              <?php foreach ($priceListDetails as $uid => $details): ?>
+                <option value="<?= $e($uid) ?>"><?= $e($details['name']) ?><?= $details['status'] !== 'active' ? ' · ' . $e($details['status']) : '' ?></option>
+              <?php endforeach; ?>
+            </select>
+            <button class="kontor-button" type="submit"><i class="fa fa-plus"></i> Add price tier</button>
+          </form>
+        <?php endif; ?>
+        <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
+          <i class="fa fa-tags"></i> Open price lists
+        </a>
+      </div>
     </header>
 
     <?php if ($priceEntries): ?>

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct new-tier flow from a Catalog item with the item preselected in the
+  pricing form.
 - Organization-scoped price-tier lookup across all price lists for a Catalog
   item.
 - Organization-scoped Catalog item filtering and active-item usage counts by

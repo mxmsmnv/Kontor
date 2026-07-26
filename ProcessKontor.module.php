@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '043',
+            'version' => '044',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1114,13 +1114,20 @@ class ProcessKontor extends Process
         $this->requireSameOrganization($priceList->organizationId);
         $itemUid = $this->wire()->sanitizer->text((string) $this->wire()->input->get('item'));
         $quantityText = $this->wire()->sanitizer->text((string) $this->wire()->input->get('quantity'));
-        $entry = $itemUid !== '' && $quantityText !== ''
+        $prefillItemUid = $itemUid !== '' ? $itemUid : null;
+
+        if ($prefillItemUid !== null) {
+            $prefillItem = $this->catalogItemRepository()->require($prefillItemUid);
+            $this->requireSameOrganization($prefillItem->organizationId);
+        }
+
+        $entry = $prefillItemUid !== null && $quantityText !== ''
             ? $this->findPriceEntry($priceListUid, $itemUid, (float) $quantityText)
             : null;
         $this->setPageTitle($entry === null
             ? $this->_('Kontor · New price tier')
             : $this->_('Kontor · Edit price tier'));
-        $form = $this->buildCatalogPriceEntryForm($priceList, $entry);
+        $form = $this->buildCatalogPriceEntryForm($priceList, $entry, $prefillItemUid);
         $previous = $entry === null ? null : $this->catalogPriceEntryAuditSnapshot($entry);
 
         if ($this->wire()->input->post('submit_save')) {
@@ -2367,6 +2374,7 @@ class ProcessKontor extends Process
     private function buildCatalogPriceEntryForm(
         PriceList $priceList,
         ?PriceListEntry $entry,
+        ?string $prefillItemUid = null,
     ): InputfieldForm {
         /** @var InputfieldForm $form */
         $form = $this->wire()->modules->get('InputfieldForm');
@@ -2375,6 +2383,8 @@ class ProcessKontor extends Process
         if ($entry !== null) {
             $query['item'] = $entry->itemUid;
             $query['quantity'] = $this->quantityFormValue($entry->minQuantity);
+        } elseif ($prefillItemUid !== null) {
+            $query['item'] = $prefillItemUid;
         }
 
         $form->action = './?' . http_build_query($query);
@@ -2386,14 +2396,16 @@ class ProcessKontor extends Process
         $item->required = true;
         $itemNames = $this->catalogItemNames();
 
-        if ($entry !== null && !isset($itemNames[$entry->itemUid])) {
-            $assignedItem = $this->catalogItemRepository()->find($entry->itemUid);
+        $selectedItemUid = $entry?->itemUid ?? $prefillItemUid;
+
+        if ($selectedItemUid !== null && !isset($itemNames[$selectedItemUid])) {
+            $assignedItem = $this->catalogItemRepository()->find($selectedItemUid);
 
             if (
                 $assignedItem !== null
                 && hash_equals($assignedItem->organizationId, $this->organizationUid())
             ) {
-                $itemNames[$entry->itemUid] = $this->catalogItemTitle($assignedItem) . ' · archived';
+                $itemNames[$selectedItemUid] = $this->catalogItemTitle($assignedItem) . ' · archived';
             }
         }
 
@@ -2401,7 +2413,7 @@ class ProcessKontor extends Process
             $item->addOption($uid, $name);
         }
 
-        $item->value = $entry?->itemUid ?? '';
+        $item->value = $selectedItemUid ?? '';
         $item->columnWidth = 50;
         $form->add($item);
         $this->addTextField(
