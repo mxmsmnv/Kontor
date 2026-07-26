@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- Organization-scoped lead search, status filtering, archive listing, exact
+  counts, and pagination support for the Core admin workflow.
+
 ### Fixed
 
 - Register CRM import and export providers with the entity-type keys required

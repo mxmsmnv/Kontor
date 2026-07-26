@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First CRM admin vertical: Lead listing, search, status/archive filters,
+  contact/company linking, and create/edit/archive/restore lifecycle.
 - Root Composer autoload coverage for every bundled Kontor component namespace
   and migration namespace, enabling dependency-ordered ProcessWire installs.
 - Query-, facet-, archive-, and page-preserving returns after individual

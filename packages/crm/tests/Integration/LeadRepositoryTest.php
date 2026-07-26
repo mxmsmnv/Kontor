@@ -75,4 +75,32 @@ final class LeadRepositoryTest extends DatabaseTestCase
         $this->assertCount(2, $repository->forOrganization($this->organizationUid));
         $this->assertCount(1, $repository->forOrganization($this->organizationUid, 'qualified'));
     }
+
+    public function test_matching_combines_search_status_archive_and_count(): void
+    {
+        $repository = $this->repository();
+        $active = Lead::create($this->organizationUid, 'Website renewal', source: 'Referral');
+        $active->status = 'qualified';
+        $repository->save($active);
+        $archived = Lead::create($this->organizationUid, 'Archived renewal', source: 'Referral');
+        $archived->status = 'qualified';
+        $repository->save($archived);
+        $repository->archive($archived->uid->toString());
+
+        $this->assertSame(
+            ['Website renewal'],
+            array_map(
+                static fn (Lead $lead): string => $lead->title,
+                $repository->findMatching($this->organizationUid, 'renewal', 'qualified')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'renewal', 'qualified'));
+        $this->assertSame(
+            ['Archived renewal'],
+            array_map(
+                static fn (Lead $lead): string => $lead->title,
+                $repository->findMatching($this->organizationUid, 'renewal', 'qualified', true)
+            )
+        );
+    }
 }

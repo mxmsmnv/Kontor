@@ -566,6 +566,47 @@
   padding: 0.35rem;
 }
 
+.kontor-nativeform {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 1.2rem;
+}
+
+.kontor-nativefield {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kontor-nativefield > span {
+  color: var(--kontor-ink);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.kontor-nativefield input,
+.kontor-nativefield select,
+.kontor-nativefield textarea {
+  background: #fff;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.kontor-nativefield--wide,
+.kontor-nativeform__actions {
+  grid-column: 1 / -1;
+}
+
+.kontor-nativeform__actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
 .kontor-warning {
   align-items: flex-start;
   background: #fff8e6;

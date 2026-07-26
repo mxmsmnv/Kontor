@@ -23,6 +23,7 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\CRM\Domain\Lead;
 use Kontor\Core\Application\AuditChangePresenter;
 use Kontor\Core\Application\AuditCsvExporter;
 use Kontor\Core\Application\AuditLogger;
@@ -61,7 +62,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '085',
+            'version' => '086',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -121,6 +122,12 @@ class ProcessKontor extends Process
                     'label' => 'Companies',
                     'icon' => 'building',
                     'permission' => 'kontor-contacts-company-view',
+                ],
+                [
+                    'url' => 'crm/',
+                    'label' => 'CRM',
+                    'icon' => 'handshake-o',
+                    'permission' => 'kontor-crm-lead-view',
                 ],
                 [
                     'url' => 'components/',
@@ -387,6 +394,225 @@ class ProcessKontor extends Process
             'totalPages' => $totalPages,
             'totalRecords' => $totalRecords,
         ]);
+    }
+
+    public function ___executeCrm(): string
+    {
+        $this->requirePermission('kontor-crm-lead-view');
+        $this->requireCrm();
+        $this->setPageTitle($this->_('Kontor · CRM'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['new', 'contacted', 'qualified', 'converted', 'lost']
+        );
+        $showArchived = (string) $this->wire()->input->get('archived') === '1';
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $repository = $crm->leadRepository();
+        $pageSize = 25;
+        $totalRecords = $repository->countMatching(
+            $this->organizationUid(),
+            $query,
+            $status,
+            $showArchived,
+        );
+        $totalPages = max(1, (int) ceil($totalRecords / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
+
+        return $this->renderTemplate('crm', [
+            'leads' => $repository->findMatching(
+                $this->organizationUid(),
+                $query,
+                $status,
+                $showArchived,
+                $pageSize,
+                ($page - 1) * $pageSize,
+            ),
+            'query' => $query,
+            'selectedStatus' => $status,
+            'showArchived' => $showArchived,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalRecords' => $totalRecords,
+        ]);
+    }
+
+    public function ___executeCrmLead(): string
+    {
+        $this->requireCrm();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $lead = $id !== '' ? $crm->leadRepository()->require($id) : null;
+
+        if ($lead !== null) {
+            $this->requireSameOrganization($lead->organizationId);
+        }
+
+        $this->requirePermission($lead === null
+            ? 'kontor-crm-lead-create'
+            : 'kontor-crm-lead-edit');
+        $this->setPageTitle($lead === null
+            ? $this->_('Kontor · New lead')
+            : sprintf($this->_('Kontor · %s'), $lead->title));
+        $values = [
+            'title' => $lead?->title ?? '',
+            'contactUid' => $lead?->contactUid ?? '',
+            'companyUid' => $lead?->companyUid ?? '',
+            'source' => $lead?->source ?? '',
+            'status' => $lead?->status ?? 'new',
+            'priority' => $lead?->priority ?? 'medium',
+            'estimatedAmount' => $lead?->estimatedValue !== null
+                ? number_format($lead->estimatedValue->amountMinor() / 100, 2, '.', '')
+                : '',
+            'currency' => $lead?->estimatedValue?->currencyCode() ?? 'EUR',
+            'nextActionAt' => $lead?->nextActionAt?->format('Y-m-d\TH:i') ?? '',
+            'description' => $lead?->description ?? '',
+        ];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'title' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('title')),
+                'contactUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('contact_uid')),
+                'companyUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('company_uid')),
+                'source' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('source')),
+                'status' => $this->wire()->sanitizer->option(
+                    (string) $this->wire()->input->post('status'),
+                    ['new', 'contacted', 'qualified', 'converted', 'lost']
+                ) ?? 'new',
+                'priority' => $this->wire()->sanitizer->option(
+                    (string) $this->wire()->input->post('priority'),
+                    ['low', 'medium', 'high', 'urgent']
+                ) ?? 'medium',
+                'estimatedAmount' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('estimated_amount')
+                ),
+                'currency' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency')
+                )),
+                'nextActionAt' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('next_action_at')
+                ),
+                'description' => $this->wire()->sanitizer->textarea(
+                    (string) $this->wire()->input->post('description')
+                ),
+            ];
+
+            if ($values['title'] === '') {
+                $error = $this->_('Lead title is required.');
+            } elseif ($values['estimatedAmount'] !== ''
+                && !is_numeric(str_replace(',', '.', $values['estimatedAmount']))) {
+                $error = $this->_('Estimated value must be a number.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currency']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            }
+
+            if ($error === '' && $values['contactUid'] !== '') {
+                $contact = $this->contactRepository()->find($values['contactUid']);
+                if ($contact === null || !hash_equals($this->organizationUid(), $contact->organizationId)) {
+                    $error = $this->_('Selected contact is invalid.');
+                }
+            }
+
+            if ($error === '' && $values['companyUid'] !== '') {
+                $company = $this->companyRepository()->find($values['companyUid']);
+                if ($company === null || !hash_equals($this->organizationUid(), $company->organizationId)) {
+                    $error = $this->_('Selected company is invalid.');
+                }
+            }
+
+            $estimatedValue = null;
+            $nextActionAt = null;
+
+            if ($error === '' && $values['estimatedAmount'] !== '') {
+                $estimatedValue = Money::ofMinor(
+                    (int) round((float) str_replace(',', '.', $values['estimatedAmount']) * 100),
+                    $values['currency']
+                );
+            }
+
+            if ($error === '' && $values['nextActionAt'] !== '') {
+                try {
+                    $nextActionAt = new \DateTimeImmutable($values['nextActionAt']);
+                } catch (\Throwable) {
+                    $error = $this->_('Next action date is invalid.');
+                }
+            }
+
+            if ($error === '') {
+                $isNew = $lead === null;
+                $lead ??= Lead::create($this->organizationUid(), $values['title']);
+                $lead->title = $values['title'];
+                $lead->contactUid = $values['contactUid'] ?: null;
+                $lead->companyUid = $values['companyUid'] ?: null;
+                $lead->source = $values['source'] ?: null;
+                $lead->status = $values['status'];
+                $lead->priority = $values['priority'];
+                $lead->estimatedValue = $estimatedValue;
+                $lead->nextActionAt = $nextActionAt;
+                $lead->description = $values['description'] ?: null;
+                $crm->leadRepository()->save($lead);
+                $this->audit(
+                    'crm',
+                    'lead',
+                    $lead->uid->toString(),
+                    $isNew ? 'created' : 'updated',
+                    current: [
+                        'title' => $lead->title,
+                        'status' => $lead->status,
+                        'priority' => $lead->priority,
+                    ],
+                );
+                $this->message($this->_('Lead saved.'));
+                $this->wire()->session->redirect(
+                    '../crm-lead/?id=' . rawurlencode($lead->uid->toString())
+                );
+            }
+        }
+
+        return $this->renderTemplate('crm-lead', [
+            'lead' => $lead,
+            'values' => $values,
+            'error' => $error,
+            'contacts' => $this->contactRepository()->findAll($this->organizationUid(), limit: 250),
+            'companies' => $this->companyRepository()->findAll($this->organizationUid(), limit: 250),
+        ]);
+    }
+
+    public function ___executeCrmLeadAction(): void
+    {
+        $this->requirePost();
+        $this->requireCrm();
+        $this->requirePermission('kontor-crm-lead-archive');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $lead = $crm->leadRepository()->require($id);
+        $this->requireSameOrganization($lead->organizationId);
+        $action === 'restore'
+            ? $crm->leadRepository()->restore($id)
+            : $crm->leadRepository()->archive($id);
+        $this->audit('crm', 'lead', $id, $action === 'restore' ? 'restored' : 'archived');
+        $this->message($action === 'restore' ? $this->_('Lead restored.') : $this->_('Lead archived.'));
+        $parameters = array_filter([
+            'q' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('return_q')),
+            'status' => $this->wire()->sanitizer->option(
+                (string) $this->wire()->input->post('return_status'),
+                ['new', 'contacted', 'qualified', 'converted', 'lost']
+            ),
+            'archived' => (string) $this->wire()->input->post('return_archived') === '1' ? 1 : null,
+        ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
+        $this->wire()->session->redirect(
+            '../crm/' . ($parameters === [] ? '' : '?' . http_build_query($parameters))
+        );
     }
 
     public function ___executeCompany(): string
@@ -3810,10 +4036,22 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorCatalog');
     }
 
+    private function crmReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorCRM');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
             throw new WireException($this->_('The Kontor Catalog component is not installed.'));
+        }
+    }
+
+    private function requireCrm(): void
+    {
+        if (!$this->crmReady()) {
+            throw new WireException($this->_('The Kontor CRM component is not installed.'));
         }
     }
 

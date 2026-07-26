@@ -103,9 +103,28 @@ final class LeadRepository implements RepositoryInterface
      */
     public function forOrganization(string $organizationUid, ?string $status = null): array
     {
-        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        return $this->findMatching($organizationUid, '', $status);
+    }
 
-        $sql = 'SELECT * FROM kontor_crm_leads WHERE organization_id = :organization_id';
+    /**
+     * @return array<int, Lead>
+     */
+    public function findMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+        int $limit = 100,
+        int $offset = 0,
+    ): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $query = trim($query);
+        $limit = max(1, min($limit, 250));
+        $offset = max(0, $offset);
+        $sql = 'SELECT * FROM kontor_crm_leads
+            WHERE organization_id = :organization_id
+              AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
         $params = ['organization_id' => $organizationId];
 
         if ($status !== null) {
@@ -113,10 +132,59 @@ final class LeadRepository implements RepositoryInterface
             $params['status'] = $status;
         }
 
+        if ($query !== '') {
+            $sql .= ' AND (
+                title LIKE :query
+                OR source LIKE :query
+                OR description LIKE :query
+            )';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        $sql .= ' ORDER BY updated_at DESC, title ASC LIMIT :limit OFFSET :offset';
+        $statement = $this->pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+        $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(fn (array $row): Lead => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+    ): int
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $query = trim($query);
+        $sql = 'SELECT COUNT(*) FROM kontor_crm_leads
+            WHERE organization_id = :organization_id
+              AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
+        $params = ['organization_id' => $organizationId];
+
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
+
+        if ($query !== '') {
+            $sql .= ' AND (
+                title LIKE :query
+                OR source LIKE :query
+                OR description LIKE :query
+            )';
+            $params['query'] = '%' . $query . '%';
+        }
+
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params);
 
-        return array_map(fn (array $row): Lead => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+        return (int) $statement->fetchColumn();
     }
 
     private function hydrate(array $row): Lead
