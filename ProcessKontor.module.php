@@ -67,6 +67,7 @@ use Kontor\SDK\DTO\SearchQuery;
 use Kontor\SDK\ValueObjects\Money;
 use Kontor\SDK\ValueObjects\Uid;
 use Kontor\Tasks\Domain\Task;
+use Kontor\Workflow\Domain\ApprovalRequest;
 
 /**
  * The single Kontor admin application. Business components provide the
@@ -79,7 +80,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '098',
+            'version' => '099',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -151,6 +152,12 @@ class ProcessKontor extends Process
                     'label' => 'Projects',
                     'icon' => 'tasks',
                     'permission' => 'kontor-projects-project-view',
+                ],
+                [
+                    'url' => 'workflows/',
+                    'label' => 'Workflows',
+                    'icon' => 'sitemap',
+                    'permission' => 'kontor-workflow-definition-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3446,6 +3453,303 @@ class ProcessKontor extends Process
         $this->message($this->_('Draft invoice generated from project work.'));
         $this->wire()->session->redirect(
             '../invoice/?id=' . rawurlencode($invoice->uid->toString())
+        );
+    }
+
+    public function ___executeWorkflows(): string
+    {
+        $this->requireWorkflow();
+        $this->requirePermission('kontor-workflow-definition-view');
+        $module = $this->workflowModule();
+        $pending = $module->approvalRequestRepository()->pendingFor($this->organizationUid());
+        $approvalInstances = [];
+        foreach ($pending as $request) {
+            $approvalInstances[$request->uid->toString()] = $module->instanceRepository()
+                ->require($request->instanceUid);
+        }
+        $this->setPageTitle($this->_('Kontor · Workflows'));
+
+        return $this->renderTemplate('workflows', [
+            'definitions' => $module->definitionRepository()->forOrganization(
+                $this->organizationUid()
+            ),
+            'pendingApprovals' => $pending,
+            'approvalInstances' => $approvalInstances,
+            'canManage' => $this->can('kontor-workflow-definition-manage'),
+            'canApprove' => $this->can('kontor-workflow-approve'),
+        ]);
+    }
+
+    public function ___executeWorkflow(): string
+    {
+        $this->requireWorkflow();
+        $module = $this->workflowModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $definition = $id !== '' ? $module->definitionRepository()->require($id) : null;
+        if ($definition !== null) {
+            $this->requireSameOrganization($definition->organizationId);
+            $this->requirePermission('kontor-workflow-definition-view');
+        } else {
+            $this->requirePermission('kontor-workflow-definition-manage');
+        }
+        $values = [
+            'workflowKey' => '',
+            'entityType' => '',
+            'name' => '',
+            'initialState' => 'draft',
+            'states' => 'draft, review, approved, rejected',
+        ];
+        $error = '';
+
+        if ($definition === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'workflowKey' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('workflow_key')
+                )),
+                'entityType' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('entity_type')
+                )),
+                'name' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('name')
+                )),
+                'initialState' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('initial_state')
+                )),
+                'states' => (string) $this->wire()->input->post('states'),
+            ];
+            $states = array_values(array_unique(array_filter(array_map(
+                static fn (string $state): string => strtolower(trim($state)),
+                explode(',', $values['states']),
+            ))));
+            if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $values['workflowKey']) !== 1) {
+                $error = $this->_('Workflow key must be a lowercase identifier.');
+            } elseif (preg_match('/^[a-z][a-z0-9_.-]{0,127}$/', $values['entityType']) !== 1) {
+                $error = $this->_('Entity type must be a lowercase identifier.');
+            } elseif ($values['name'] === '') {
+                $error = $this->_('Workflow name is required.');
+            } elseif ($states === [] || array_filter(
+                $states,
+                static fn (string $state): bool => preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $state) !== 1,
+            ) !== []) {
+                $error = $this->_('States must be comma-separated lowercase identifiers.');
+            } elseif (!in_array($values['initialState'], $states, true)) {
+                $error = $this->_('Initial state must appear in the state list.');
+            }
+            if ($error === '') {
+                try {
+                    $definition = $module->definitions()->defineWorkflow(
+                        $this->organizationUid(),
+                        $values['workflowKey'],
+                        $values['entityType'],
+                        mb_substr($values['name'], 0, 191),
+                        $values['initialState'],
+                        $states,
+                        (int) $this->wire()->user->id,
+                    );
+                } catch (\InvalidArgumentException|\PDOException $exception) {
+                    $error = $exception instanceof \PDOException && $exception->getCode() === '23000'
+                        ? $this->_('That workflow key is already in use.')
+                        : $exception->getMessage();
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'workflow',
+                        'definition',
+                        $definition->uid->toString(),
+                        'created',
+                        current: ['key' => $definition->workflowKey, 'states' => $definition->states],
+                    );
+                    $this->message($this->_('Workflow definition created.'));
+                    $this->wire()->session->redirect(
+                        '../workflow/?id=' . rawurlencode($definition->uid->toString())
+                    );
+                }
+            }
+        }
+
+        $this->setPageTitle($definition === null
+            ? $this->_('Kontor · New workflow')
+            : sprintf($this->_('Kontor · %s'), $definition->name));
+
+        return $this->renderTemplate('workflow', [
+            'definition' => $definition,
+            'values' => $values,
+            'error' => $error,
+            'transitions' => $definition !== null
+                ? $module->transitionRepository()->forDefinition($definition->uid->toString())
+                : [],
+            'instances' => $definition !== null
+                ? $module->instanceRepository()->forDefinition($definition->uid->toString())
+                : [],
+            'canManage' => $this->can('kontor-workflow-definition-manage'),
+            'canTransition' => $this->can('kontor-workflow-transition'),
+        ]);
+    }
+
+    public function ___executeWorkflowTransition(): void
+    {
+        $this->requirePost();
+        $this->requireWorkflow();
+        $this->requirePermission('kontor-workflow-definition-manage');
+        $definition = $this->requireWorkflowDefinitionFromPost();
+        $actionKey = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action_key')
+        ));
+        $fromState = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('from_state')
+        ));
+        $toState = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('to_state')
+        ));
+        $permission = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('required_permission')
+        ));
+        if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $actionKey) !== 1) {
+            throw new WireException($this->_('Action key must be a lowercase identifier.'));
+        }
+        $transition = $this->workflowModule()->definitions()->addTransition(
+            $definition->uid->toString(),
+            $actionKey,
+            $fromState,
+            $toState,
+            $permission !== '' ? $permission : null,
+            (bool) $this->wire()->input->post('requires_approval'),
+        );
+        $this->audit(
+            'workflow',
+            'transition',
+            $transition->uid->toString(),
+            'created',
+            current: ['action' => $actionKey, 'from' => $fromState, 'to' => $toState],
+        );
+        $this->message($this->_('Workflow transition added.'));
+        $this->redirectToWorkflow($definition->uid->toString());
+    }
+
+    public function ___executeWorkflowInstance(): string
+    {
+        $this->requireWorkflow();
+        $module = $this->workflowModule();
+        if ($this->wire()->input->post('submit_start')) {
+            $this->requirePost();
+            $this->requirePermission('kontor-workflow-transition');
+            $definition = $this->requireWorkflowDefinitionFromPost();
+            $entityUid = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('entity_uid')
+            ));
+            if ($entityUid === '') {
+                throw new WireException($this->_('Entity UID is required.'));
+            }
+            $instance = $module->engine()->start(
+                $this->organizationUid(),
+                $definition->uid->toString(),
+                $definition->entityType,
+                mb_substr($entityUid, 0, 191),
+            );
+            $this->audit('workflow', 'instance', $instance->uid->toString(), 'started');
+            $this->message($this->_('Workflow instance started.'));
+            $this->wire()->session->redirect(
+                '../workflow-instance/?id=' . rawurlencode($instance->uid->toString())
+            );
+        }
+        $this->requirePermission('kontor-workflow-definition-view');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $instance = $module->instanceRepository()->require($id);
+        $this->requireSameOrganization($instance->organizationId);
+        $definition = $module->definitionRepository()->require($instance->definitionUid);
+        $transitions = $module->transitionRepository()->fromState(
+            $definition->uid->toString(),
+            $instance->currentState,
+        );
+        $this->setPageTitle(sprintf($this->_('Kontor · %s'), $instance->entityUid));
+
+        return $this->renderTemplate('workflow-instance', [
+            'instance' => $instance,
+            'definition' => $definition,
+            'transitions' => $transitions,
+            'history' => $module->engine()->history($instance->entityType, $instance->entityUid),
+            'canTransition' => $this->can('kontor-workflow-transition'),
+        ]);
+    }
+
+    public function ___executeWorkflowInstanceAction(): void
+    {
+        $this->requirePost();
+        $this->requireWorkflow();
+        $this->requirePermission('kontor-workflow-transition');
+        $module = $this->workflowModule();
+        $instanceUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('instance_uid')
+        );
+        $instance = $module->instanceRepository()->require($instanceUid);
+        $this->requireSameOrganization($instance->organizationId);
+        $actionKey = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action_key')
+        ));
+        $transition = $module->transitionRepository()->findByFromStateAndAction(
+            $instance->definitionUid,
+            $instance->currentState,
+            $actionKey,
+        );
+        if ($transition === null) {
+            throw new WireException($this->_('That transition is no longer available.'));
+        }
+        $result = $module->engine()->transition(
+            $this->organizationUid(),
+            $instance->entityType,
+            $instance->entityUid,
+            $actionKey,
+            (int) $this->wire()->user->id,
+            $transition->requiredPermission === null || $this->can($transition->requiredPermission),
+        );
+        $this->audit(
+            'workflow',
+            'instance',
+            $instanceUid,
+            $result instanceof ApprovalRequest ? 'approval_requested' : 'transitioned',
+            current: ['action' => $actionKey],
+        );
+        $this->message($result instanceof ApprovalRequest
+            ? $this->_('Approval requested. The state has not changed yet.')
+            : $this->_('Workflow transition completed.'));
+        $this->wire()->session->redirect(
+            '../workflow-instance/?id=' . rawurlencode($instanceUid)
+        );
+    }
+
+    public function ___executeWorkflowApprovalAction(): void
+    {
+        $this->requirePost();
+        $this->requireWorkflow();
+        $this->requirePermission('kontor-workflow-approve');
+        $module = $this->workflowModule();
+        $requestUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('request_uid')
+        );
+        $request = $module->approvalRequestRepository()->require($requestUid);
+        $this->requireSameOrganization($request->organizationId);
+        $instance = $module->instanceRepository()->require($request->instanceUid);
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['approve', 'reject']
+        );
+        $this->requireAction($action, ['approve', 'reject']);
+        if ($action === 'approve') {
+            $module->engine()->approve($requestUid, (int) $this->wire()->user->id);
+        } else {
+            $reason = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('reason')
+            ));
+            if ($reason === '') {
+                throw new WireException($this->_('A rejection reason is required.'));
+            }
+            $module->engine()->reject($requestUid, (int) $this->wire()->user->id, $reason);
+        }
+        $this->audit('workflow', 'approval', $requestUid, $action);
+        $this->message($this->_('Approval request decided.'));
+        $this->wire()->session->redirect(
+            '../workflow-instance/?id=' . rawurlencode($instance->uid->toString())
         );
     }
 
@@ -6930,6 +7234,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorProjects');
     }
 
+    private function workflowReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorWorkflow');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -7018,6 +7327,13 @@ class ProcessKontor extends Process
     {
         if (!$this->projectsReady()) {
             throw new WireException($this->_('The Kontor Projects component is not installed.'));
+        }
+    }
+
+    private function requireWorkflow(): void
+    {
+        if (!$this->workflowReady()) {
+            throw new WireException($this->_('The Kontor Workflow component is not installed.'));
         }
     }
 
@@ -7128,6 +7444,14 @@ class ProcessKontor extends Process
         return $module;
     }
 
+    private function workflowModule(): KontorWorkflow
+    {
+        /** @var KontorWorkflow $module */
+        $module = $this->wire()->modules->get('KontorWorkflow');
+
+        return $module;
+    }
+
     private function can(string $permission): bool
     {
         return $this->wire()->user->isSuperuser()
@@ -7161,6 +7485,24 @@ class ProcessKontor extends Process
     {
         $this->wire()->session->redirect(
             '../project/?id=' . rawurlencode($projectUid)
+        );
+    }
+
+    private function requireWorkflowDefinitionFromPost(): \Kontor\Workflow\Domain\WorkflowDefinition
+    {
+        $id = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('definition_uid')
+        );
+        $definition = $this->workflowModule()->definitionRepository()->require($id);
+        $this->requireSameOrganization($definition->organizationId);
+
+        return $definition;
+    }
+
+    private function redirectToWorkflow(string $definitionUid): void
+    {
+        $this->wire()->session->redirect(
+            '../workflow/?id=' . rawurlencode($definitionUid)
         );
     }
 

@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Workflow admin vertical: state-machine designer, transition graph,
+  runtime instances, approval decisions, and transition history.
 - First Projects admin vertical: customer-backed projects, milestones,
   billable time and items, and generation of real draft invoices.
 - First Expenses admin vertical: category creation, expense drafts, optional

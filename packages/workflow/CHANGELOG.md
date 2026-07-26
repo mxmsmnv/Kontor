@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: workflow definition and transition
+  authoring, runtime instances, permission-aware actions, approval inbox,
+  decisions, and immutable transition history.
 - Initial alpha (Substage 7.1): `kontor_workflow_definitions`,
   `kontor_workflow_transitions`, `kontor_workflow_instances`,
   `kontor_workflow_approval_requests`, `kontor_workflow_history`

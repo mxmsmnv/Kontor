@@ -76,6 +76,21 @@ final class InstanceRepository
             ?? throw new RuntimeException("No workflow instance for {$entityType} \"{$entityUid}\".");
     }
 
+    /**
+     * @return WorkflowInstance[]
+     */
+    public function forDefinition(string $definitionUid): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_workflow_instances
+             WHERE definition_uid = :definition_uid
+             ORDER BY updated_at DESC'
+        );
+        $statement->execute(['definition_uid' => $definitionUid]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): WorkflowInstance
     {
         return new WorkflowInstance(

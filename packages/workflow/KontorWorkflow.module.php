@@ -33,7 +33,7 @@ class KontorWorkflow extends WireData implements Module
         return [
             'title' => 'Kontor Workflow',
             'summary' => 'State machine, transition permissions, approvals, history.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorWorkflow',
             'icon' => 'sitemap',
@@ -149,6 +149,13 @@ class KontorWorkflow extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('workflow', self::getModuleInfo()['version'], 'workflow');
+        $components->enable('workflow');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('workflow', self::getModuleInfo()['version'], 'workflow');
         $components->enable('workflow');
     }

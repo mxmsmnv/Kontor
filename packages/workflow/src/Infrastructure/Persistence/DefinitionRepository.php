@@ -46,6 +46,25 @@ final class DefinitionRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    /**
+     * @return WorkflowDefinition[]
+     */
+    public function forOrganization(string $organizationUid, int $limit = 100): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_workflow_definitions
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY updated_at DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue('organization_id', $organizationId, \PDO::PARAM_INT);
+        $statement->bindValue('limit', max(1, min($limit, 500)), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     public function save(object $entity): void
     {
         if (!$entity instanceof WorkflowDefinition) {
