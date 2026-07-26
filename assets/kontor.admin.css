@@ -1742,6 +1742,21 @@
   margin-top: 0.2rem;
 }
 
+.kontor-queuefacet,
+.kontor-queuetable .kontor-pill {
+  text-decoration: none;
+}
+
+.kontor-queuefacet {
+  color: var(--kontor-brand);
+  font-weight: 700;
+}
+
+.kontor-queuefacet:hover,
+.kontor-queuetable .kontor-pill:hover {
+  text-decoration: underline;
+}
+
 .kontor-queuetable time,
 .kontor-queuetable small {
   color: var(--kontor-muted);

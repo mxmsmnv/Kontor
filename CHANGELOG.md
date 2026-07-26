@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Composable Queue table facets on queue names and job statuses.
 - Direct Queue summary-card drill-down for all, active, completed, and
   dead-letter jobs, including a combined pending/reserved active filter.
 - Exact matching-result feedback for Components and Health filters.

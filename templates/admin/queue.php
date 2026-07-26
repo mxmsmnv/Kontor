@@ -30,6 +30,14 @@ $pageUrl = static function (int $targetPage) use ($selectedQueue, $selectedStatu
 
     return $query === '' ? './' : './?' . $query;
 };
+$filterUrl = static function (?string $queue, ?string $status): string {
+    $query = http_build_query(array_filter([
+        'queue' => $queue,
+        'status' => $status,
+    ], static fn (?string $value): bool => $value !== null && $value !== ''));
+
+    return $query === '' ? './' : './?' . $query;
+};
 $refreshUrl = $pageUrl($page);
 $statusClass = static fn (string $status): string => match ($status) {
     'completed' => '',
@@ -117,8 +125,16 @@ $statusClass = static fn (string $status): string => match ($status) {
                   </details>
                 <?php endif; ?>
               </td>
-              <td><span class="kontor-secondary"><?= $e((string) $job['queue']) ?></span></td>
-              <td><span class="kontor-pill<?= $statusClass($status) ?>"><?= $e($status) ?></span></td>
+              <td>
+                <a class="kontor-queuefacet" href="<?= $e($filterUrl((string) $job['queue'], $selectedStatus)) ?>">
+                  <?= $e((string) $job['queue']) ?>
+                </a>
+              </td>
+              <td>
+                <a class="kontor-pill<?= $statusClass($status) ?>" href="<?= $e($filterUrl($selectedQueue, $status)) ?>">
+                  <?= $e($status) ?>
+                </a>
+              </td>
               <td>
                 <div class="kontor-progress" title="<?= $e((int) $job['progress']) ?>%">
                   <span style="width: <?= $e((int) $job['progress']) ?>%"></span>
