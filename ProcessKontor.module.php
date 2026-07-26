@@ -48,6 +48,8 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Inventory\Domain\Warehouse;
 use Kontor\Payments\Domain\Payment;
+use Kontor\Purchasing\Domain\PurchaseOrder;
+use Kontor\Purchasing\Domain\Supplier;
 use Kontor\Queue\Infrastructure\Persistence\JobRepository;
 use Kontor\Sales\Domain\DocumentLine;
 use Kontor\Sales\Domain\Quotation;
@@ -72,7 +74,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '095',
+            'version' => '096',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -126,6 +128,12 @@ class ProcessKontor extends Process
                     'label' => 'Inventory',
                     'icon' => 'cube',
                     'permission' => 'kontor-inventory-stock-view',
+                ],
+                [
+                    'url' => 'purchasing/',
+                    'label' => 'Purchasing',
+                    'icon' => 'truck',
+                    'permission' => 'kontor-purchasing-po-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -2495,6 +2503,389 @@ class ProcessKontor extends Process
                 static fn (Warehouse $warehouse): bool => $warehouse->isActive(),
             )),
             'items' => $items,
+        ]);
+    }
+
+    public function ___executePurchasing(): string
+    {
+        $this->requirePurchasing();
+        $this->requirePermission('kontor-purchasing-po-view');
+        $this->setPageTitle($this->_('Kontor · Purchasing'));
+        $module = $this->purchasingModule();
+        $suppliers = $module->supplierRepository()->forOrganization($this->organizationUid());
+
+        return $this->renderTemplate('purchasing', [
+            'suppliers' => $suppliers,
+            'supplierLabels' => array_column(array_map(
+                static fn (Supplier $supplier): array => [
+                    $supplier->uid->toString(),
+                    $supplier->code . ' · ' . $supplier->legalName,
+                ],
+                $suppliers,
+            ), 1, 0),
+            'orders' => $module->purchaseOrderRepository()->forOrganization($this->organizationUid()),
+            'canCreateSupplier' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-purchasing-supplier-create'),
+            'canCreateOrder' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-purchasing-po-create'),
+        ]);
+    }
+
+    public function ___executePurchasingSupplier(): string
+    {
+        $this->requirePurchasing();
+        $this->requirePermission('kontor-purchasing-supplier-create');
+        $this->setPageTitle($this->_('Kontor · New supplier'));
+        $values = [
+            'code' => '',
+            'legalName' => '',
+            'email' => '',
+            'phone' => '',
+            'currencyCode' => $this->organization()->defaultCurrency,
+            'paymentTermsDays' => '30',
+        ];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'code' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('code')
+                )),
+                'legalName' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('legal_name')
+                )),
+                'email' => trim($this->wire()->sanitizer->email(
+                    (string) $this->wire()->input->post('email')
+                )),
+                'phone' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('phone')
+                )),
+                'currencyCode' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency_code')
+                )),
+                'paymentTermsDays' => $this->wire()->sanitizer->digits(
+                    (string) $this->wire()->input->post('payment_terms_days')
+                ),
+            ];
+            if ($values['code'] === '' || preg_match('/^[A-Z0-9_-]{1,50}$/', $values['code']) !== 1) {
+                $error = $this->_('Supplier code must use letters, numbers, hyphens, or underscores.');
+            } elseif ($values['legalName'] === '') {
+                $error = $this->_('Supplier legal name is required.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currencyCode']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            }
+
+            if ($error === '') {
+                $supplier = Supplier::create(
+                    $this->organizationUid(),
+                    $values['code'],
+                    mb_substr($values['legalName'], 0, 191),
+                    $values['currencyCode'],
+                    $values['email'] ?: null,
+                    $values['phone'] ?: null,
+                    min(365, max(0, (int) $values['paymentTermsDays'])),
+                    (int) $this->wire()->user->id,
+                );
+                try {
+                    $this->purchasingModule()->supplierRepository()->save($supplier);
+                } catch (\PDOException $exception) {
+                    $error = $exception->getCode() === '23000'
+                        ? $this->_('That supplier code is already in use.')
+                        : $this->_('Supplier could not be saved.');
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'purchasing',
+                        'supplier',
+                        $supplier->uid->toString(),
+                        'created',
+                        current: ['code' => $supplier->code, 'legalName' => $supplier->legalName],
+                    );
+                    $this->message($this->_('Supplier created.'));
+                    $this->wire()->session->redirect('../purchasing/');
+                }
+            }
+        }
+
+        return $this->renderTemplate('purchasing-supplier', [
+            'values' => $values,
+            'error' => $error,
+        ]);
+    }
+
+    public function ___executePurchaseOrder(): string
+    {
+        $this->requirePurchasing();
+        $module = $this->purchasingModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $order = $id !== '' ? $module->purchaseOrderRepository()->require($id) : null;
+        if ($order !== null) {
+            $this->requireSameOrganization($order->organizationId);
+            $this->requirePermission('kontor-purchasing-po-view');
+        } else {
+            $this->requirePermission('kontor-purchasing-po-create');
+        }
+        $suppliers = array_values(array_filter(
+            $module->supplierRepository()->forOrganization($this->organizationUid()),
+            static fn (Supplier $supplier): bool => $supplier->isActive(),
+        ));
+        $warehouses = array_values(array_filter(
+            $this->inventoryModule()->warehouseRepository()->forOrganization($this->organizationUid()),
+            static fn (Warehouse $warehouse): bool => $warehouse->isActive(),
+        ));
+        $items = $this->inventoryItemOptions();
+        $values = [
+            'supplierUid' => '',
+            'warehouseUid' => '',
+            'itemUid' => '',
+            'quantity' => '1',
+            'unitPrice' => '',
+            'currencyCode' => $this->organization()->defaultCurrency,
+            'expectedDate' => '',
+        ];
+        $error = '';
+
+        if ($order === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'supplierUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('supplier_uid')
+                ),
+                'warehouseUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('warehouse_uid')
+                ),
+                'itemUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('item_uid')
+                ),
+                'quantity' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('quantity')
+                ),
+                'unitPrice' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('unit_price')
+                ),
+                'currencyCode' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency_code')
+                )),
+                'expectedDate' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('expected_date')
+                ),
+            ];
+            $supplierMap = [];
+            foreach ($suppliers as $supplier) {
+                $supplierMap[$supplier->uid->toString()] = $supplier;
+            }
+            $warehouseMap = [];
+            foreach ($warehouses as $warehouse) {
+                $warehouseMap[$warehouse->uid->toString()] = $warehouse;
+            }
+            $quantity = (float) str_replace(',', '.', $values['quantity']);
+            $unitPrice = str_replace(',', '.', $values['unitPrice']);
+            if (!isset($supplierMap[$values['supplierUid']])) {
+                $error = $this->_('Select an active supplier.');
+            } elseif (!isset($warehouseMap[$values['warehouseUid']])) {
+                $error = $this->_('Select an active receiving warehouse.');
+            } elseif (!isset($items[$values['itemUid']])) {
+                $error = $this->_('Select an active inventory-tracked item.');
+            } elseif ($quantity <= 0) {
+                $error = $this->_('Quantity must be greater than zero.');
+            } elseif ($unitPrice === '' || !is_numeric($unitPrice) || (float) $unitPrice < 0) {
+                $error = $this->_('Unit price must be zero or greater.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currencyCode']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            }
+            $expectedDate = null;
+            if ($error === '' && $values['expectedDate'] !== '') {
+                try {
+                    $expectedDate = new \DateTimeImmutable($values['expectedDate']);
+                } catch (\Throwable) {
+                    $error = $this->_('Expected date is invalid.');
+                }
+            }
+
+            if ($error === '') {
+                $order = PurchaseOrder::create(
+                    $this->organizationUid(),
+                    $values['supplierUid'],
+                    $values['currencyCode'],
+                    $values['warehouseUid'],
+                    $expectedDate,
+                );
+                $module->purchaseOrderRepository()->save($order);
+                $item = $items[$values['itemUid']];
+                $module->documentLineRepository()->save(DocumentLine::create(
+                    $this->organizationUid(),
+                    'purchase_order',
+                    $order->uid->toString(),
+                    $item['label'],
+                    $quantity,
+                    Money::ofMinor((int) round((float) $unitPrice * 100), $values['currencyCode']),
+                    itemUid: $values['itemUid'],
+                    itemType: 'product',
+                    unitCode: $item['unitCode'],
+                ));
+                $this->audit(
+                    'purchasing',
+                    'purchase_order',
+                    $order->uid->toString(),
+                    'created',
+                    current: ['supplierUid' => $order->supplierUid, 'warehouseUid' => $order->warehouseUid],
+                );
+                $this->message($this->_('Purchase order created.'));
+                $this->wire()->session->redirect(
+                    '../purchase-order/?id=' . rawurlencode($order->uid->toString())
+                );
+            }
+        }
+        $lines = $order !== null
+            ? $module->documentLineRepository()->forDocument('purchase_order', $order->uid->toString())
+            : [];
+        $this->setPageTitle($order === null
+            ? $this->_('Kontor · New purchase order')
+            : sprintf($this->_('Kontor · %s'), $order->number ?? 'Draft purchase order'));
+
+        return $this->renderTemplate('purchase-order', [
+            'order' => $order,
+            'values' => $values,
+            'error' => $error,
+            'suppliers' => $suppliers,
+            'warehouses' => $warehouses,
+            'items' => $items,
+            'lines' => $lines,
+            'receipts' => $order !== null
+                ? $module->receiptRepository()->forPurchaseOrder($order->uid->toString())
+                : [],
+            'canIssue' => $order !== null && $order->isDraft()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-purchasing-po-issue')),
+            'canReceive' => $order !== null && $order->isReceivable()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-purchasing-receipt-create')),
+            'canCancel' => $order !== null && $order->isCancellable()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-purchasing-po-cancel')),
+        ]);
+    }
+
+    public function ___executePurchaseOrderAction(): void
+    {
+        $this->requirePost();
+        $this->requirePurchasing();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['issue', 'cancel']
+        );
+        $this->requireAction($action, ['issue', 'cancel']);
+        $this->requirePermission($action === 'issue'
+            ? 'kontor-purchasing-po-issue'
+            : 'kontor-purchasing-po-cancel');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $order = $this->purchasingModule()->purchaseOrderRepository()->require($id);
+        $this->requireSameOrganization($order->organizationId);
+        $order = $action === 'issue'
+            ? $this->purchasingModule()->purchaseOrderWorkflow()->issue($id)
+            : $this->purchasingModule()->purchaseOrderWorkflow()->cancel($id);
+        $this->audit(
+            'purchasing',
+            'purchase_order',
+            $id,
+            $action === 'issue' ? 'issued' : 'cancelled',
+            current: ['number' => $order->number, 'status' => $order->status],
+        );
+        $this->message($action === 'issue'
+            ? $this->_('Purchase order issued.')
+            : $this->_('Purchase order cancelled.'));
+        $this->wire()->session->redirect('../purchase-order/?id=' . rawurlencode($id));
+    }
+
+    public function ___executePurchasingReceipt(): string
+    {
+        $this->requirePurchasing();
+        $this->requirePermission('kontor-purchasing-receipt-create');
+        $module = $this->purchasingModule();
+        $orderUid = $this->wire()->sanitizer->text(
+            (string) ($this->wire()->input->post('order_uid') ?: $this->wire()->input->get('order'))
+        );
+        $order = $module->purchaseOrderRepository()->require($orderUid);
+        $this->requireSameOrganization($order->organizationId);
+        if (!$order->isReceivable()) {
+            throw new WireException($this->_('This purchase order is not receivable.'));
+        }
+        $lines = $module->documentLineRepository()->forDocument('purchase_order', $orderUid);
+        $warehouses = array_values(array_filter(
+            $this->inventoryModule()->warehouseRepository()->forOrganization($this->organizationUid()),
+            static fn (Warehouse $warehouse): bool => $warehouse->isActive(),
+        ));
+        $warehouseUid = $order->warehouseUid ?? '';
+        $quantities = [];
+        $error = '';
+        foreach ($lines as $line) {
+            $quantities[$line->uid->toString()] = max(
+                0,
+                $line->quantity - $module->receiptLineRepository()->totalReceivedFor($line->uid->toString()),
+            );
+        }
+
+        if ($this->wire()->input->post('submit_receive')) {
+            $this->requirePost();
+            $warehouseUid = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('warehouse_uid')
+            );
+            $warehouse = $this->inventoryModule()->warehouseRepository()->find($warehouseUid);
+            if ($warehouse === null
+                || !hash_equals($warehouse->organizationId, $this->organizationUid())
+                || !$warehouse->isActive()) {
+                $error = $this->_('Select an active receiving warehouse.');
+            }
+            $requested = [];
+            foreach ($lines as $line) {
+                $value = $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('quantity_' . $line->uid->toString())
+                );
+                $quantity = (float) str_replace(',', '.', $value);
+                if ($quantity > 0) {
+                    $requested[] = ['poLineUid' => $line->uid->toString(), 'quantity' => $quantity];
+                }
+            }
+            if ($error === '' && $requested === []) {
+                $error = $this->_('Enter a received quantity for at least one line.');
+            }
+            if ($error === '') {
+                try {
+                    $receipt = $module->goodsReceipt()->receive(
+                        $this->organizationUid(),
+                        $orderUid,
+                        $warehouseUid,
+                        $requested,
+                        (int) $this->wire()->user->id,
+                    );
+                } catch (\InvalidArgumentException|\RuntimeException $exception) {
+                    $error = $exception->getMessage();
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'purchasing',
+                        'goods_receipt',
+                        $receipt->uid->toString(),
+                        'received',
+                        current: ['purchaseOrderUid' => $orderUid, 'warehouseUid' => $warehouseUid],
+                    );
+                    $this->message($this->_('Goods receipt recorded and inventory updated.'));
+                    $this->wire()->session->redirect(
+                        '../purchase-order/?id=' . rawurlencode($orderUid)
+                    );
+                }
+            }
+        }
+        $this->setPageTitle($this->_('Kontor · Goods receipt'));
+
+        return $this->renderTemplate('purchasing-receipt', [
+            'order' => $order,
+            'lines' => $lines,
+            'warehouses' => $warehouses,
+            'warehouseUid' => $warehouseUid,
+            'outstanding' => $quantities,
+            'error' => $error,
         ]);
     }
 
@@ -5964,6 +6355,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorInventory');
     }
 
+    private function purchasingReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorPurchasing');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -6031,6 +6427,13 @@ class ProcessKontor extends Process
     {
         if (!$this->inventoryReady()) {
             throw new WireException($this->_('The Kontor Inventory component is not installed.'));
+        }
+    }
+
+    private function requirePurchasing(): void
+    {
+        if (!$this->purchasingReady()) {
+            throw new WireException($this->_('The Kontor Purchasing component is not installed.'));
         }
     }
 
@@ -6113,6 +6516,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorInventory $module */
         $module = $this->wire()->modules->get('KontorInventory');
+
+        return $module;
+    }
+
+    private function purchasingModule(): KontorPurchasing
+    {
+        /** @var KontorPurchasing $module */
+        $module = $this->wire()->modules->get('KontorPurchasing');
 
         return $module;
     }

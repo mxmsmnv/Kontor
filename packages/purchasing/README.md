@@ -65,9 +65,16 @@ runs for real. Everything under `tests/Integration/` needs real MySQL (see
 `../../docker-compose.test.yml`) and is skipped otherwise, same
 `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The main Kontor Process module now exposes supplier creation, purchase-order
+drafting and issue, and goods receipt entry. The first workflow uses a real
+inventory-tracked Catalog item and active Inventory warehouse, so completing
+the receipt exercises the package's atomic cross-component stock update.
+
 ## Not in scope for this substage
 
 No supplier price lists or lead times — a purchase order's line prices are
 entered directly, the same way `kontor/sales`' quotations work. No
 approval workflow for issuing a purchase order — there's no workflow
-engine yet (kontor.md#18). No admin UI/API endpoints.
+engine yet (kontor.md#18). No API endpoints.

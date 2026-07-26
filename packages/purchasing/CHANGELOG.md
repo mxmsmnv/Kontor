@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: supplier directory and creation, organization-scoped
+  purchase-order listing, one-line drafts, issue/cancel controls, and goods
+  receipt entry that updates Inventory atomically.
 - Initial alpha (Substage 6.2): `kontor_purchasing_suppliers`,
   `kontor_purchasing_orders`, `kontor_purchasing_receipts`,
   `kontor_purchasing_receipt_lines` migrations (full schema gap-fill, no

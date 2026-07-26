@@ -33,7 +33,7 @@ class KontorPurchasing extends WireData implements Module
         return [
             'title' => 'Kontor Purchasing',
             'summary' => 'Suppliers, purchase orders, goods receipt, inventory integration.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPurchasing',
             'icon' => 'truck',
@@ -168,6 +168,13 @@ class KontorPurchasing extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('purchasing', self::getModuleInfo()['version'], 'purchasing');
+        $components->enable('purchasing');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('purchasing', self::getModuleInfo()['version'], 'purchasing');
         $components->enable('purchasing');
     }

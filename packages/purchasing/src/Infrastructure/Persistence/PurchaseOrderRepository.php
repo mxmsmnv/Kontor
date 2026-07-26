@@ -96,6 +96,24 @@ final class PurchaseOrderRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
+    /**
+     * @return PurchaseOrder[]
+     */
+    public function forOrganization(string $organizationUid, int $limit = 100): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $limit = max(1, min(500, $limit));
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_purchasing_orders
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY created_at DESC
+             LIMIT {$limit}"
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): PurchaseOrder
     {
         return new PurchaseOrder(

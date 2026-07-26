@@ -83,6 +83,23 @@ final class SupplierRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
+    /**
+     * @return Supplier[]
+     */
+    public function forOrganization(string $organizationUid, bool $archived = false): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_purchasing_suppliers
+             WHERE organization_id = :organization_id
+               AND ' . ($archived ? 'archived_at IS NOT NULL' : 'archived_at IS NULL') . '
+             ORDER BY legal_name ASC'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): Supplier
     {
         return new Supplier(

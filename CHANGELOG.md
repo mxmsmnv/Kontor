@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Purchasing admin vertical: supplier creation, one-line purchase-order
+  drafting and issue, goods receipts, cumulative receipt status, and atomic
+  Inventory stock updates.
 - First Inventory admin vertical: warehouse lifecycle, catalog-backed item
   selection, stock receipts/transfers/adjustments/reservations/releases,
   balance visibility, and the movement ledger.
