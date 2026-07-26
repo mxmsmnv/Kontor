@@ -25,6 +25,7 @@
     },
     "suggests": {
         "kontor/documents": "^0.1",
+        "kontor/mail": "^0.1",
         "kontor/payments": "^0.1"
     },
     "conflicts": {},

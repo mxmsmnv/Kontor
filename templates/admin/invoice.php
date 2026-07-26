@@ -11,6 +11,9 @@
 /** @var \Kontor\Documents\Domain\DocumentTemplate|null $invoiceTemplate */
 /** @var \Kontor\Documents\Domain\DocumentTemplate|null $creditNoteTemplate */
 /** @var array<string, mixed>|null $issuedFile */
+/** @var bool $mailReady */
+/** @var \Kontor\Mail\Domain\Mailbox[] $mailboxes */
+/** @var string $customerEmail */
 /** @var callable $e */
 
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
@@ -90,7 +93,20 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     <?php elseif ($invoice->status === 'issued'): ?>
       <form method="post" action="<?= $e($adminUrl) ?>invoice-action/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($invoice->uid->toString()) ?>">
-        <button class="kontor-button" name="action" value="send" type="submit">Mark sent</button>
+        <?php if ($mailReady && $mailboxes !== []): ?>
+          <label>From
+            <select name="mailbox_uid" required>
+              <?php foreach ($mailboxes as $mailbox): ?><option value="<?= $e($mailbox->uid->toString()) ?>"><?= $e($mailbox->name . ' · ' . $mailbox->emailAddress) ?></option><?php endforeach; ?>
+            </select>
+          </label>
+          <label>Recipient <input type="email" name="recipient" value="<?= $e($customerEmail) ?>" required></label>
+          <label><input type="checkbox" name="dry_run" value="1" checked> Simulate delivery</label>
+          <button class="kontor-button" name="action" value="send" type="submit">Send via Mail</button>
+        <?php elseif ($mailReady): ?>
+          <a class="kontor-button" href="<?= $e($adminUrl) ?>mail/">Create an active mailbox first</a>
+        <?php else: ?>
+          <a class="kontor-button" href="<?= $e($adminUrl) ?>components/">Enable Kontor Mail first</a>
+        <?php endif; ?>
         <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
         <?php if ($invoice->kind === 'invoice' && $creditNoteTemplate !== null): ?><button class="kontor-button kontor-button--ghost" name="action" value="credit" type="submit">Issue credit note + PDF</button><?php endif; ?>
       </form>

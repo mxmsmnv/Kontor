@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Sending an issued invoice now runs through Mail, records outbound history,
+  links the message back to the invoice, and only advances after delivery.
 - Reimbursed Expenses now post idempotent debit Expense / credit Bank entries
   into Ledger and expose the immutable posting from expense detail.
 - Payments now closes the finance loop into Ledger: invoice allocations create

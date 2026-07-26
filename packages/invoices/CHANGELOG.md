@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Issued invoices can now be delivered through an active Mail mailbox;
+  outbound history is retained and linked back to the invoice.
 - Invoice and credit-note issuance now resolve their standard Documents
   templates, persist immutable snapshots, and store confidential PDFs through
   Files in the same database transaction.

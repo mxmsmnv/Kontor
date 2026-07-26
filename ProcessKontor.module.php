@@ -91,7 +91,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '127',
+            'version' => '128',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1669,6 +1669,14 @@ class ProcessKontor extends Process
             'allocations' => $this->paymentsReady()
                 ? $this->paymentModule()->allocationRepository()->forDocument('invoice', $id)
                 : [],
+            'mailReady' => $this->mailReady(),
+            'mailboxes' => $this->mailReady()
+                ? array_values(array_filter(
+                    $this->mailModule()->mailboxRepository()->forOrganization($invoice->organizationId),
+                    static fn (\Kontor\Mail\Domain\Mailbox $mailbox): bool => $mailbox->isActive(),
+                ))
+                : [],
+            'customerEmail' => $this->invoiceCustomerEmail($invoice),
         ]);
     }
 
@@ -1774,7 +1782,82 @@ class ProcessKontor extends Process
             }
             $this->message($this->_('Invoice issued with an immutable snapshot and private PDF.'));
         } elseif ($action === 'send') {
+            $this->requireMail();
+            $mailboxUid = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('mailbox_uid')
+            );
+            $recipient = strtolower(trim((string) $this->wire()->input->post('recipient')));
+            $mailbox = $this->mailModule()->mailboxRepository()->require($mailboxUid);
+            $this->requireSameOrganization($mailbox->organizationId);
+            if (!$mailbox->isActive()) {
+                throw new WireException($this->_('Select an active mailbox.'));
+            }
+            if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
+                throw new WireException($this->_('A valid invoice recipient is required.'));
+            }
+            $number = $invoice->number ?? $this->_('Invoice');
+            $subject = sprintf($this->_('Invoice %s'), $number);
+            $body = sprintf(
+                $this->_("Hello,\n\nplease find invoice %s for %s %s. Payment is due %s.\n\nRegards"),
+                $number,
+                number_format($invoice->total->amountMinor() / 100, 2, '.', ''),
+                $invoice->total->currencyCode(),
+                $invoice->dueDate?->format('Y-m-d') ?? $this->_('on receipt'),
+            );
+            $dryRun = (bool) $this->wire()->input->post('dry_run');
+            $outbound = $dryRun
+                ? $this->mailModule()->outboundWithSender(
+                    new class implements \Kontor\Mail\Contracts\MailSenderInterface {
+                        public function send(
+                            string $fromAddress,
+                            array $toAddresses,
+                            array $ccAddresses,
+                            string $subject,
+                            string $bodyText,
+                        ): void {
+                        }
+                    }
+                )
+                : $this->mailModule()->outbound();
+            $message = $outbound->send(
+                $invoice->organizationId,
+                $mailbox->uid->toString(),
+                $mailbox->emailAddress,
+                [$recipient],
+                [],
+                $subject,
+                $body,
+                (int) $this->wire()->user->id,
+            );
+            $this->mailModule()->entityLinking()->link(
+                $invoice->organizationId,
+                $message->uid->toString(),
+                'invoice',
+                $invoice->uid->toString(),
+                (int) $this->wire()->user->id,
+            );
+            $this->audit('mail', 'message', $message->uid->toString(), 'invoice_delivery', metadata: [
+                'invoiceUid' => $invoice->uid->toString(),
+                'dryRun' => $dryRun,
+                'status' => $message->status,
+            ]);
+            if ($message->status !== 'sent') {
+                throw new WireException(sprintf(
+                    $this->_('Invoice delivery failed: %s'),
+                    $message->error ?? $this->_('unknown transport error'),
+                ));
+            }
             $module->workflow()->send($id);
+            $this->audit('invoices', 'invoice', $id, 'send', metadata: [
+                'mailMessageUid' => $message->uid->toString(),
+                'recipient' => $recipient,
+                'dryRun' => $dryRun,
+            ]);
+            $this->message($dryRun
+                ? $this->_('Invoice delivery simulated, recorded in Mail, and marked sent.')
+                : $this->_('Invoice sent, recorded in Mail, and marked sent.'));
+            $this->wire()->session->redirect('../invoice/?id=' . rawurlencode($id));
+            return;
         } elseif ($action === 'cancel') {
             $module->workflow()->cancel($id);
         } elseif ($action === 'restore') {
@@ -10243,6 +10326,22 @@ class ProcessKontor extends Process
         }
 
         return $labels;
+    }
+
+    private function invoiceCustomerEmail(Invoice $invoice): string
+    {
+        if (!$this->contactsReady()) {
+            return '';
+        }
+
+        $customer = $invoice->customerType === 'contact'
+            ? $this->contactRepository()->find($invoice->customerUid)
+            : $this->companyRepository()->find($invoice->customerUid);
+
+        return $customer !== null
+            && hash_equals($customer->organizationId, $invoice->organizationId)
+            ? (string) ($customer->email ?? '')
+            : '';
     }
 
     /**

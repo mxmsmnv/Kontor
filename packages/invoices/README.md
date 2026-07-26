@@ -8,6 +8,11 @@ and Sales' `DocumentLine`/`DocumentLineRepository` classes directly rather
 than duplicating that table and those classes into a parallel copy — the
 Sales README predicted this exact reuse back in Substage 4.1.
 
+Mail is optional. When installed, ProcessKontor delivers an issued invoice
+through an active shared mailbox, records the outbound message, and creates a
+`mail_link` relation back to the invoice. Delivery defaults to a safe
+simulation until the transport is deliberately enabled.
+
 ## A second schema gap, filled inside this package
 
 kontor.md#15.3 gives `kontor_invoices` a column list, and kontor.md#19.6 /
