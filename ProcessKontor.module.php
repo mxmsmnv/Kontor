@@ -102,7 +102,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '149',
+            'version' => '150',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -10735,9 +10735,8 @@ class ProcessKontor extends Process
         extract($variables, EXTR_SKIP);
         ob_start();
         include __DIR__ . '/templates/admin/' . $name . '.php';
-        $content = (string) ob_get_clean();
 
-        return $this->addSectionGuide($content, $name);
+        return (string) ob_get_clean();
     }
 
     private function addFormGuidance(InputfieldForm $form): void
@@ -10863,153 +10862,6 @@ class ProcessKontor extends Process
         }
 
         return [$description, $notes];
-    }
-
-    private function addSectionGuide(string $content, string $name): string
-    {
-        [$description, $actions] = $this->sectionGuide($name);
-        $guide = sprintf(
-            '<aside class="uk-alert-primary kontor-section-guide" aria-label="%s">'
-            . '<div class="uk-grid-small uk-flex-top" uk-grid>'
-            . '<div class="uk-width-auto"><span uk-icon="icon: info"></span></div>'
-            . '<div class="uk-width-expand"><strong>%s</strong><p>%s</p>'
-            . '<p class="uk-text-meta"><strong>%s</strong> %s</p></div></div></aside>',
-            $this->escapeHtml($this->_('About this section')),
-            $this->escapeHtml($this->_('About this section')),
-            $this->escapeHtml($description),
-            $this->escapeHtml($this->_('Use this page to:')),
-            $this->escapeHtml($actions),
-        );
-
-        $headerEnd = strpos($content, '</header>');
-        if ($headerEnd !== false) {
-            $insertAt = $headerEnd + strlen('</header>');
-
-            return substr($content, 0, $insertAt) . $guide . substr($content, $insertAt);
-        }
-
-        $wrapperEnd = strpos($content, '>');
-        if ($wrapperEnd === false) {
-            return $guide . $content;
-        }
-
-        $insertAt = $wrapperEnd + 1;
-
-        return substr($content, 0, $insertAt) . $guide . substr($content, $insertAt);
-    }
-
-    /**
-     * @return array{0: string, 1: string}
-     */
-    private function sectionGuide(string $name): array
-    {
-        return match (true) {
-            $name === 'dashboard' => [
-                $this->_('Dashboard brings the most important operational signals and your personal widgets into one starting point.'),
-                $this->_('review work that needs attention, launch common actions and arrange a useful personal overview.'),
-            ],
-            $name === 'sections' => [
-                $this->_('The workspace directory is the complete map of installed Kontor capabilities.'),
-                $this->_('open any section, find tools by name and choose which sections appear in quick access.'),
-            ],
-            in_array($name, ['contacts', 'companies', 'entity-form'], true) => [
-                $this->_('Customer records provide the shared identity and relationship data used across Kontor.'),
-                $this->_('create and maintain people or companies, connect relationships and keep useful internal context.'),
-            ],
-            str_starts_with($name, 'crm') => [
-                $this->_('CRM turns customer interest into a traceable pipeline from lead qualification to a won deal.'),
-                $this->_('qualify leads, move opportunities through stages and continue successful deals into Sales.'),
-            ],
-            str_starts_with($name, 'catalog') => [
-                $this->_('Catalog is the commercial source of truth for products, services, categories and price rules.'),
-                $this->_('maintain sellable items, organize them, control pricing and prepare consistent downstream documents.'),
-            ],
-            str_starts_with($name, 'sales') => [
-                $this->_('Sales connects quotations and orders into an auditable order-to-cash workflow.'),
-                $this->_('prepare customer documents, manage approval and delivery states and continue accepted work to invoicing.'),
-            ],
-            in_array($name, ['invoices', 'invoice', 'payments', 'payment'], true) => [
-                $this->_('Billing records what customers owe, what has been paid and how balances move through the workflow.'),
-                $this->_('issue invoices, allocate or reverse payments and follow settlement back to the originating sale.'),
-            ],
-            in_array($name, ['tasks', 'task', 'collaboration'], true) => [
-                $this->_('Work management keeps responsibilities, deadlines and team discussion attached to business records.'),
-                $this->_('assign work, track progress, link dependencies and preserve decisions alongside the relevant entity.'),
-            ],
-            str_starts_with($name, 'inventory') => [
-                $this->_('Inventory tracks physical stock by warehouse with reservations and an immutable movement history.'),
-                $this->_('review availability, create warehouses and record controlled stock movements.'),
-            ],
-            str_starts_with($name, 'purchas') || $name === 'purchase-order' => [
-                $this->_('Purchasing manages suppliers, purchase orders and receipts that replenish inventory.'),
-                $this->_('maintain supplier data, order goods and confirm what was actually received.'),
-            ],
-            str_starts_with($name, 'expense') => [
-                $this->_('Expenses captures business spending from submission through approval, reimbursement and ledger posting.'),
-                $this->_('classify costs, collect evidence and move each expense through a controlled review workflow.'),
-            ],
-            str_starts_with($name, 'project') => [
-                $this->_('Projects groups delivery work, milestones, time and billable items around a customer outcome.'),
-                $this->_('plan work, record delivery effort and convert approved billable activity into invoices.'),
-            ],
-            str_starts_with($name, 'workflow') || str_starts_with($name, 'automation') => [
-                $this->_('Workflow and automation make repeatable business processes explicit, traceable and testable.'),
-                $this->_('design steps and transitions, run instances and automate safe actions from business events.'),
-            ],
-            in_array($name, ['reports', 'search', 'activity'], true) => [
-                $this->_('Operational insight combines cross-component discovery, audit history and reporting views.'),
-                $this->_('find records, investigate changes and turn current business data into actionable summaries.'),
-            ],
-            in_array($name, ['documents', 'files', 'mail'], true) => [
-                $this->_('Content services keep files, generated documents and communication connected to business records.'),
-                $this->_('manage versions and templates, exchange messages and retain a traceable entity history.'),
-            ],
-            in_array($name, ['organization', 'germany'], true) => [
-                $this->_('Organization and localization settings define the legal, regional and formatting defaults used by Kontor.'),
-                $this->_('maintain company defaults and validate country-specific business requirements.'),
-            ],
-            in_array($name, ['api', 'graphql', 'components', 'marketplace'], true) => [
-                $this->_('Platform tools expose and extend Kontor through installed components and controlled integration interfaces.'),
-                $this->_('inspect capabilities, manage extensions and test authenticated API access.'),
-            ],
-            in_array($name, ['health', 'queue', 'cache', 'backups'], true) => [
-                $this->_('Operations tools show whether Kontor is healthy, recoverable and processing background work correctly.'),
-                $this->_('inspect diagnostics, manage queued work, refresh cached data and create or restore backups.'),
-            ],
-            in_array($name, ['custom-entities', 'custom-entity', 'custom-entity-record'], true) => [
-                $this->_('Custom entities add structured business records without requiring a dedicated component.'),
-                $this->_('define a schema, create validated records and connect them to the rest of the business graph.'),
-            ],
-            $name === 'ai' => [
-                $this->_('AI tools turn selected business context into assisted summaries and structured suggestions.'),
-                $this->_('configure providers, test prompts safely and review generated output before using it in a workflow.'),
-            ],
-            $name === 'demo' => [
-                $this->_('KontorDemo demonstrates the complete connected system through a real order-to-cash scenario.'),
-                $this->_('run each workflow stage, inspect created entities and verify traceability across components.'),
-            ],
-            $name === 'import' => [
-                $this->_('Import converts external tabular or structured data into validated Kontor records.'),
-                $this->_('upload a source file, preview mapping and errors, then confirm only the rows you intend to create.'),
-            ],
-            $name === 'portal' => [
-                $this->_('Portal provides controlled customer access to their profile and connected business information.'),
-                $this->_('create access, test authentication and review exactly what a customer account can see or update.'),
-            ],
-            $name === 'ledger' => [
-                $this->_('Ledger records balanced, auditable financial postings created by operational workflows.'),
-                $this->_('review accounts and journal entries, trace their source and verify that every posting remains balanced.'),
-            ],
-            default => [
-                $this->_('This section is part of the connected Kontor operations workspace.'),
-                $this->_('review the available records, complete supported actions and follow links to related work.'),
-            ],
-        };
-    }
-
-    private function escapeHtml(string $value): string
-    {
-        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private function setPageTitle(string $title): void

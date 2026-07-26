@@ -632,20 +632,6 @@
   margin-bottom: 1rem;
 }
 
-.kontor-section-guide {
-  margin: 0 0 1.5rem;
-  padding: 1rem 1.2rem;
-}
-
-.kontor-section-guide p {
-  margin: 0.2rem 0 0;
-}
-
-.kontor-section-guide .uk-text-meta {
-  color: inherit;
-  opacity: 0.8;
-}
-
 .kontor-warning > i {
   margin-top: 0.18rem;
 }
