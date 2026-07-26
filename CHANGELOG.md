@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Root Composer autoload coverage for every bundled Kontor component namespace
+  and migration namespace, enabling dependency-ordered ProcessWire installs.
 - Query-, facet-, archive-, and page-preserving returns after individual
   Catalog item archive and restore actions.
 - Direct currency and status drill-downs from Catalog item pricing coverage to

@@ -33,7 +33,10 @@ final class FileRepositoryTest extends DatabaseTestCase
 
         $this->assertSame('report.csv', $row['original_name']);
         $this->assertSame(1, (int) $row['version_number']);
-        $this->assertSame('{"source":"export"}', $row['metadata_json']);
+        $this->assertSame(
+            ['source' => 'export'],
+            json_decode((string) $row['metadata_json'], true, flags: JSON_THROW_ON_ERROR)
+        );
         $this->assertNull($row['archived_at']);
     }
 

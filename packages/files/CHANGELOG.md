@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Use ProcessWire's general-purpose `tableSalt` (falling back to
+  `userAuthSalt`) for signed URLs instead of the undefined `authSalt`
+  configuration property.
+- Keep the component registry version synchronized during module upgrades.
+
 ### Added
 
 - Initial alpha (Substage 2.2): `kontor_files` migration; `LocalPrivateStorage`

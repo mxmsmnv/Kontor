@@ -47,7 +47,7 @@ class KontorCRM extends WireData implements Module
         return [
             'title' => 'Kontor CRM',
             'summary' => 'Leads, pipelines, stages, deals, conversion, Kanban board data and pipeline reports.',
-            'version' => '001',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCRM',
             'icon' => 'handshake-o',
@@ -92,13 +92,25 @@ class KontorCRM extends WireData implements Module
             component: 'KontorCRM',
         );
 
-        $kontor->container()->get(ImportProviderRegistry::class)->register(new LeadImportProvider($this->leadRepository()));
-        $kontor->container()->get(ImportProviderRegistry::class)->register(new DealImportProvider($this->dealRepository()));
+        $kontor->container()->get(ImportProviderRegistry::class)->register(
+            'lead',
+            new LeadImportProvider($this->leadRepository())
+        );
+        $kontor->container()->get(ImportProviderRegistry::class)->register(
+            'deal',
+            new DealImportProvider($this->dealRepository())
+        );
 
         $organizations = $kontor->container()->get(OrganizationRepository::class);
 
-        $kontor->container()->get(ExportProviderRegistry::class)->register(new LeadExportProvider($this->pdo(), $organizations));
-        $kontor->container()->get(ExportProviderRegistry::class)->register(new DealExportProvider($this->pdo(), $organizations));
+        $kontor->container()->get(ExportProviderRegistry::class)->register(
+            'lead',
+            new LeadExportProvider($this->pdo(), $organizations)
+        );
+        $kontor->container()->get(ExportProviderRegistry::class)->register(
+            'deal',
+            new DealExportProvider($this->pdo(), $organizations)
+        );
 
         $kontor->container()->get(RepositoryRegistry::class)->register('lead', $this->leadRepository());
         $kontor->container()->get(RepositoryRegistry::class)->register('deal', $this->dealRepository());
@@ -226,6 +238,13 @@ class KontorCRM extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('crm', self::getModuleInfo()['version'], 'crm');
+        $components->enable('crm');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('crm', self::getModuleInfo()['version'], 'crm');
         $components->enable('crm');
     }

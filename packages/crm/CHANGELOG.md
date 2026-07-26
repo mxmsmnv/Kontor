@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Register CRM import and export providers with the entity-type keys required
+  by the current Core registry API.
+- Yield associative export rows so sparse field selections do not include
+  duplicate numeric PDO indexes.
+- Keep the component registry version synchronized during module upgrades.
+
 ### Added
 
 - Initial alpha (Substage 3.3), following kontor.md#22.1's canonical

@@ -28,7 +28,7 @@ class KontorFiles extends WireData implements Module
         return [
             'title' => 'Kontor Files',
             'summary' => 'Local private storage, file metadata, signed URLs and versions.',
-            'version' => '001',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorFiles',
             'icon' => 'folder-open',
@@ -68,8 +68,19 @@ class KontorFiles extends WireData implements Module
             return $this->storage;
         }
 
+        $secret = (string) (
+            $this->wire()->config->tableSalt
+            ?: $this->wire()->config->userAuthSalt
+        );
+
+        if ($secret === '') {
+            throw new WireException($this->_(
+                'Kontor Files requires ProcessWire tableSalt or userAuthSalt for signed download URLs.'
+            ));
+        }
+
         $signer = new SignedUrlSigner(
-            secret: $this->wire()->config->authSalt,
+            secret: $secret,
             // Placeholder until ProcessKontor grows a real download route (Substage 2.2 note):
             baseUrl: $this->wire()->config->urls->admin . 'kontor/files/download',
         );
@@ -116,6 +127,13 @@ class KontorFiles extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('files', self::getModuleInfo()['version'], 'files');
+        $components->enable('files');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('files', self::getModuleInfo()['version'], 'files');
         $components->enable('files');
     }
