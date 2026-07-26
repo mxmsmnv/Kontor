@@ -26,6 +26,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   mutations, exports, imports, and backup creation.
 - A Backups screen for creating, listing, and verifying Core and Contacts
   snapshots without exposing destructive restore controls.
+- A Health screen that runs Core and installed-component diagnostics and
+  contains individual probe failures without hiding the remaining results.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

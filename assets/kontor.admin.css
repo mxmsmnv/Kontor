@@ -436,6 +436,17 @@
   color: #667085;
 }
 
+.kontor-pill--warning {
+  background: #fff7e6;
+  color: #b45309;
+}
+
+.kontor-pill--critical,
+.kontor-pill--danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .kontor-empty {
   color: var(--kontor-muted);
   padding: 3.25rem 1.5rem;
@@ -1108,6 +1119,149 @@
   border: 1px solid var(--kontor-line);
 }
 
+.kontor-healthsummary {
+  align-items: center;
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.kontor-healthsummary > span {
+  color: var(--kontor-success);
+  font-size: 1.65rem;
+}
+
+.kontor-healthsummary strong {
+  color: var(--kontor-ink);
+}
+
+.kontor-healthsummary p {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0;
+}
+
+.kontor-healthsummary time {
+  color: var(--kontor-muted);
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.kontor-healthsummary--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.kontor-healthsummary--warning > span {
+  color: #b45309;
+}
+
+.kontor-healthsummary--critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.kontor-healthsummary--critical > span {
+  color: #b91c1c;
+}
+
+.kontor-healthgrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kontor-healthcheck {
+  border-top: 3px solid #22c55e;
+  padding: 1.15rem;
+}
+
+.kontor-healthcheck--warning {
+  border-top-color: #f59e0b;
+}
+
+.kontor-healthcheck--critical {
+  border-top-color: #ef4444;
+}
+
+.kontor-healthcheck header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.kontor-healthcheck header .kontor-pill {
+  margin-left: auto;
+}
+
+.kontor-healthcheck h3 {
+  color: var(--kontor-ink);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.kontor-healthcheck header .kontor-eyebrow {
+  font-size: 0.62rem;
+  margin-bottom: 0.15rem;
+}
+
+.kontor-healthcheck__icon {
+  align-items: center;
+  background: #ecfdf3;
+  border-radius: 9px;
+  color: var(--kontor-success);
+  display: flex;
+  flex: 0 0 auto;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.kontor-healthcheck--warning .kontor-healthcheck__icon {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.kontor-healthcheck--critical .kontor-healthcheck__icon {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.kontor-healthcheck__message {
+  color: var(--kontor-muted);
+  min-height: 2.7em;
+}
+
+.kontor-healthcheck dl {
+  border-top: 1px solid var(--kontor-line);
+  margin: 1rem 0 0;
+  padding-top: 0.7rem;
+}
+
+.kontor-healthcheck dl div {
+  display: flex;
+  font-size: 0.75rem;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+}
+
+.kontor-healthcheck dt {
+  color: var(--kontor-muted);
+}
+
+.kontor-healthcheck dd {
+  color: var(--kontor-ink);
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components {
@@ -1138,6 +1292,19 @@
   .kontor-import > form,
   .kontor-previewstats {
     grid-template-columns: 1fr;
+  }
+
+  .kontor-healthgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-healthsummary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .kontor-healthsummary time {
+    margin-left: 2.65rem;
   }
 
   .kontor-addressform__wide {

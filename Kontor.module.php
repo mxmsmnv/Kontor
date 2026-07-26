@@ -6,7 +6,9 @@ use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ComponentManager;
 use Kontor\Core\Application\ExportManager;
+use Kontor\Core\Application\HealthCheckRunner;
 use Kontor\Core\Application\ImportManager;
+use Kontor\Core\Health\CoreHealthCheck;
 use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
@@ -48,7 +50,7 @@ class Kontor extends WireData implements Module
         return [
             'title' => 'Kontor',
             'summary' => 'Open-source modular ERP, CRM and business operations platform.',
-            'version' => '009',
+            'version' => '010',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'cubes',
@@ -115,6 +117,14 @@ class Kontor extends WireData implements Module
         $container->bind(SequenceService::class, static fn (Container $c): SequenceService => new SequenceService($pdo, $c->get(OrganizationRepository::class)));
         $container->bind(RelationRepository::class, static fn (Container $c): RelationRepository => new RelationRepository($pdo, $c->get(OrganizationRepository::class)));
         $container->bind(AuditLogger::class, static fn (): AuditLogger => new AuditLogger($pdo));
+        $container->bind(HealthCheckRunner::class, static fn (): HealthCheckRunner => new HealthCheckRunner());
+        $container->bind(
+            CoreHealthCheck::class,
+            fn (): CoreHealthCheck => new CoreHealthCheck(
+                $pdo,
+                $this->wire()->config->paths->assets . 'kontor/backups'
+            )
+        );
         $container->bind(ComponentManager::class, static function (Container $c): ComponentManager {
             $organizations = $c->get(OrganizationRepository::class);
             $organization = $organizations->defaultOrganization('US', 'en', 'EUR');

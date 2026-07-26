@@ -15,8 +15,10 @@ use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ExportManager;
+use Kontor\Core\Application\HealthCheckRunner;
 use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Domain\ImportBatchResult;
+use Kontor\Core\Health\CoreHealthCheck;
 use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
@@ -39,7 +41,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '009',
+            'version' => '010',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -63,6 +65,12 @@ class ProcessKontor extends Process
                     'label' => 'Backups',
                     'icon' => 'database',
                     'permission' => 'kontor-backups-view',
+                ],
+                [
+                    'url' => 'health/',
+                    'label' => 'Health',
+                    'icon' => 'heartbeat',
+                    'permission' => 'kontor-health-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -115,6 +123,8 @@ class ProcessKontor extends Process
                 || $this->wire()->user->hasPermission('kontor-audit-view'),
             'canViewBackups' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-backups-view'),
+            'canViewHealth' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-health-view'),
         ]);
     }
 
@@ -338,6 +348,30 @@ class ProcessKontor extends Process
 
         return $this->renderTemplate('backups', [
             'backups' => $this->backupSummaries(),
+        ]);
+    }
+
+    public function ___executeHealth(): string
+    {
+        $this->requirePermission('kontor-health-view');
+        $this->setPageTitle($this->_('Kontor · Health'));
+        $checks = [$this->coreHealthCheck()];
+
+        foreach (['KontorContacts', 'KontorDashboard', 'KontorQueue', 'KontorSearch'] as $moduleName) {
+            if (!$this->wire()->modules->isInstalled($moduleName)) {
+                continue;
+            }
+
+            $module = $this->wire()->modules->get($moduleName);
+
+            if (is_object($module) && method_exists($module, 'healthCheck')) {
+                $checks[] = $module->healthCheck();
+            }
+        }
+
+        return $this->renderTemplate('health', [
+            'checks' => $this->healthCheckRunner()->run($checks),
+            'checkedAt' => new \DateTimeImmutable(),
         ]);
     }
 
@@ -1485,6 +1519,22 @@ class ProcessKontor extends Process
         $kontor = $this->wire()->modules->get('Kontor');
 
         return $kontor->container()->get(AuditEventRepository::class);
+    }
+
+    private function healthCheckRunner(): HealthCheckRunner
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(HealthCheckRunner::class);
+    }
+
+    private function coreHealthCheck(): CoreHealthCheck
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(CoreHealthCheck::class);
     }
 
     private function exportManager(): ExportManager
