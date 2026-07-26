@@ -9,9 +9,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 - Organization-scoped lead search, status filtering, archive listing, exact
   counts, and pagination support for the Core admin workflow.
+- Organization-scoped deal search/count/archive queries for the admin board,
+  including active/archived stage loading.
 
 ### Fixed
 
+- Reject moves to stages belonging to a different pipeline and keep only one
+  default pipeline per organization/entity type.
 - Register CRM import and export providers with the entity-type keys required
   by the current Core registry API.
 - Yield associative export rows so sparse field selections do not include

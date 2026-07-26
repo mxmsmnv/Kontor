@@ -23,7 +23,10 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\CRM\Domain\Deal;
 use Kontor\CRM\Domain\Lead;
+use Kontor\CRM\Domain\Pipeline;
+use Kontor\CRM\Domain\Stage;
 use Kontor\Core\Application\AuditChangePresenter;
 use Kontor\Core\Application\AuditCsvExporter;
 use Kontor\Core\Application\AuditLogger;
@@ -62,7 +65,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '086',
+            'version' => '087',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -612,6 +615,314 @@ class ProcessKontor extends Process
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
         $this->wire()->session->redirect(
             '../crm/' . ($parameters === [] ? '' : '?' . http_build_query($parameters))
+        );
+    }
+
+    public function ___executeCrmDeals(): string
+    {
+        $this->requireCrm();
+        $this->requirePermission('kontor-crm-deal-view');
+        $this->setPageTitle($this->_('Kontor · CRM deals'));
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $pipelines = $crm->pipelineRepository()->forOrganization($this->organizationUid());
+        $pipelineId = $this->wire()->sanitizer->text((string) $this->wire()->input->get('pipeline'));
+        $pipeline = null;
+
+        if ($pipelineId !== '') {
+            $pipeline = $crm->pipelineRepository()->require($pipelineId);
+            $this->requireSameOrganization($pipeline->organizationId);
+        } elseif ($pipelines !== []) {
+            $pipeline = $pipelines[0];
+        }
+
+        return $this->renderTemplate('crm-deals', [
+            'pipelines' => $pipelines,
+            'pipeline' => $pipeline,
+            'columns' => $pipeline !== null
+                ? $crm->kanbanBoard()->board($pipeline->uid->toString())
+                : [],
+        ]);
+    }
+
+    public function ___executeCrmPipeline(): string
+    {
+        $this->requireCrm();
+        $this->requirePermission('kontor-crm-pipeline-admin');
+        $this->setPageTitle($this->_('Kontor · New CRM pipeline'));
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $values = [
+            'name' => '',
+            'isDefault' => $crm->pipelineRepository()->forOrganization($this->organizationUid()) === [],
+        ];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'name' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('name')),
+                'isDefault' => (string) $this->wire()->input->post('is_default') === '1',
+            ];
+
+            if ($values['name'] === '') {
+                $error = $this->_('Pipeline name is required.');
+            }
+
+            if ($error === '') {
+                $pipeline = Pipeline::create(
+                    $this->organizationUid(),
+                    $values['name'],
+                    isDefault: $values['isDefault'],
+                );
+                $crm->pipelineRepository()->save($pipeline);
+                $stages = [
+                    ['incoming', 'Incoming', 10, 'open', '#6b7280'],
+                    ['qualified', 'Qualified', 30, 'open', '#2563eb'],
+                    ['proposal', 'Proposal', 65, 'open', '#7c3aed'],
+                    ['won', 'Won', 100, 'won', '#15803d'],
+                    ['lost', 'Lost', 0, 'lost', '#b91c1c'],
+                ];
+                foreach ($stages as $sortOrder => [$key, $label, $probability, $stateType, $color]) {
+                    $crm->stageRepository()->save(Stage::create(
+                        $pipeline->uid->toString(),
+                        $key,
+                        ['en' => $label],
+                        $probability,
+                        $sortOrder + 1,
+                        $stateType,
+                        $color,
+                    ));
+                }
+                $this->audit(
+                    'crm',
+                    'pipeline',
+                    $pipeline->uid->toString(),
+                    'created',
+                    current: ['name' => $pipeline->name, 'stages' => count($stages)],
+                );
+                $this->message($this->_('Pipeline created with five standard stages.'));
+                $this->wire()->session->redirect(
+                    '../crm-deals/?pipeline=' . rawurlencode($pipeline->uid->toString())
+                );
+            }
+        }
+
+        return $this->renderTemplate('crm-pipeline', [
+            'values' => $values,
+            'error' => $error,
+        ]);
+    }
+
+    public function ___executeCrmDeal(): string
+    {
+        $this->requireCrm();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $deal = $id !== '' ? $crm->dealRepository()->require($id) : null;
+
+        if ($deal !== null) {
+            $this->requireSameOrganization($deal->organizationId);
+        }
+
+        $this->requirePermission($deal === null
+            ? 'kontor-crm-deal-create'
+            : 'kontor-crm-deal-edit');
+        $pipelines = $crm->pipelineRepository()->forOrganization($this->organizationUid());
+        $requestedPipeline = $this->wire()->sanitizer->text(
+            (string) ($this->wire()->input->post('pipeline_uid') ?: $this->wire()->input->get('pipeline'))
+        );
+        $pipelineUid = $deal?->pipelineUid
+            ?? ($requestedPipeline !== ''
+                ? $requestedPipeline
+                : (($pipelines[0] ?? null)?->uid->toString() ?? ''));
+        $stages = $pipelineUid !== '' ? $crm->stageRepository()->forPipeline($pipelineUid) : [];
+        $values = [
+            'title' => $deal?->title ?? '',
+            'pipelineUid' => $pipelineUid,
+            'stageUid' => $deal?->stageUid ?? ($stages[0]?->uid->toString() ?? ''),
+            'contactUid' => $deal?->contactUid ?? '',
+            'companyUid' => $deal?->companyUid ?? '',
+            'source' => $deal?->source ?? '',
+            'valueAmount' => $deal?->value !== null
+                ? number_format($deal->value->amountMinor() / 100, 2, '.', '')
+                : '',
+            'currency' => $deal?->value?->currencyCode() ?? 'EUR',
+            'probability' => $deal?->probability !== null ? (string) $deal->probability : '',
+            'expectedCloseDate' => $deal?->expectedCloseDate?->format('Y-m-d') ?? '',
+            'description' => $deal?->description ?? '',
+        ];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'title' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('title')),
+                'pipelineUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('pipeline_uid')),
+                'stageUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('stage_uid')),
+                'contactUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('contact_uid')),
+                'companyUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('company_uid')),
+                'source' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('source')),
+                'valueAmount' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('value_amount')),
+                'currency' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency')
+                )),
+                'probability' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('probability')),
+                'expectedCloseDate' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('expected_close_date')
+                ),
+                'description' => $this->wire()->sanitizer->textarea(
+                    (string) $this->wire()->input->post('description')
+                ),
+            ];
+
+            $pipeline = $crm->pipelineRepository()->find($values['pipelineUid']);
+            $stage = $crm->stageRepository()->find($values['stageUid']);
+            if ($values['title'] === '') {
+                $error = $this->_('Deal title is required.');
+            } elseif ($pipeline === null || !hash_equals($this->organizationUid(), $pipeline->organizationId)) {
+                $error = $this->_('Selected pipeline is invalid.');
+            } elseif ($deal !== null && !hash_equals($deal->pipelineUid, $values['pipelineUid'])) {
+                $error = $this->_('An existing deal cannot be moved to another pipeline.');
+            } elseif ($stage === null || !hash_equals($values['pipelineUid'], $stage->pipelineUid)) {
+                $error = $this->_('Selected stage is invalid.');
+            } elseif (($deal === null || $deal->isOpen()) && $stage->stateType !== 'open') {
+                $error = $this->_('Open deals must use an open pipeline stage.');
+            } elseif ($values['valueAmount'] !== ''
+                && !is_numeric(str_replace(',', '.', $values['valueAmount']))) {
+                $error = $this->_('Deal value must be a number.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currency']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            } elseif ($values['probability'] !== ''
+                && (!ctype_digit($values['probability'])
+                    || (int) $values['probability'] < 0
+                    || (int) $values['probability'] > 100)) {
+                $error = $this->_('Probability must be between 0 and 100.');
+            }
+
+            if ($error === '' && $values['contactUid'] !== '') {
+                $contact = $this->contactRepository()->find($values['contactUid']);
+                if ($contact === null || !hash_equals($this->organizationUid(), $contact->organizationId)) {
+                    $error = $this->_('Selected contact is invalid.');
+                }
+            }
+            if ($error === '' && $values['companyUid'] !== '') {
+                $company = $this->companyRepository()->find($values['companyUid']);
+                if ($company === null || !hash_equals($this->organizationUid(), $company->organizationId)) {
+                    $error = $this->_('Selected company is invalid.');
+                }
+            }
+
+            $value = null;
+            $expectedCloseDate = null;
+            if ($error === '' && $values['valueAmount'] !== '') {
+                $value = Money::ofMinor(
+                    (int) round((float) str_replace(',', '.', $values['valueAmount']) * 100),
+                    $values['currency']
+                );
+            }
+            if ($error === '' && $values['expectedCloseDate'] !== '') {
+                try {
+                    $expectedCloseDate = new \DateTimeImmutable($values['expectedCloseDate']);
+                } catch (\Throwable) {
+                    $error = $this->_('Expected close date is invalid.');
+                }
+            }
+
+            if ($error === '') {
+                $isNew = $deal === null;
+                $deal ??= Deal::create(
+                    $this->organizationUid(),
+                    $values['pipelineUid'],
+                    $values['stageUid'],
+                    $values['title'],
+                );
+                $deal->pipelineUid = $values['pipelineUid'];
+                $deal->stageUid = $values['stageUid'];
+                $deal->title = $values['title'];
+                $deal->contactUid = $values['contactUid'] ?: null;
+                $deal->companyUid = $values['companyUid'] ?: null;
+                $deal->source = $values['source'] ?: null;
+                $deal->value = $value;
+                $deal->probability = $values['probability'] !== '' ? (int) $values['probability'] : null;
+                $deal->expectedCloseDate = $expectedCloseDate;
+                $deal->description = $values['description'] ?: null;
+                $crm->dealRepository()->save($deal);
+                $this->audit(
+                    'crm',
+                    'deal',
+                    $deal->uid->toString(),
+                    $isNew ? 'created' : 'updated',
+                    current: ['title' => $deal->title, 'stageUid' => $deal->stageUid],
+                );
+                $this->message($this->_('Deal saved.'));
+                $this->wire()->session->redirect(
+                    '../crm-deal/?id=' . rawurlencode($deal->uid->toString())
+                );
+            }
+            $pipelineUid = $values['pipelineUid'];
+            $stages = $pipelineUid !== '' ? $crm->stageRepository()->forPipeline($pipelineUid) : [];
+        }
+
+        $this->setPageTitle($deal === null
+            ? $this->_('Kontor · New deal')
+            : sprintf($this->_('Kontor · %s'), $deal->title));
+
+        return $this->renderTemplate('crm-deal', [
+            'deal' => $deal,
+            'values' => $values,
+            'pipelines' => $pipelines,
+            'stages' => $stages,
+            'contacts' => $this->contactRepository()->findAll($this->organizationUid(), limit: 250),
+            'companies' => $this->companyRepository()->findAll($this->organizationUid(), limit: 250),
+            'error' => $error,
+        ]);
+    }
+
+    public function ___executeCrmDealAction(): void
+    {
+        $this->requirePost();
+        $this->requireCrm();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['move', 'won', 'lost', 'archive', 'restore']
+        );
+        $this->requireAction($action, ['move', 'won', 'lost', 'archive', 'restore']);
+        $permissions = [
+            'move' => 'kontor-crm-deal-move',
+            'won' => 'kontor-crm-deal-close-won',
+            'lost' => 'kontor-crm-deal-close-lost',
+            'archive' => 'kontor-crm-deal-edit',
+            'restore' => 'kontor-crm-deal-edit',
+        ];
+        $this->requirePermission($permissions[$action]);
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $deal = $crm->dealRepository()->require($id);
+        $this->requireSameOrganization($deal->organizationId);
+
+        if ($action === 'move') {
+            $stageUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('stage_uid'));
+            $crm->crmService()->moveDealToStage($id, $stageUid);
+        } elseif ($action === 'won') {
+            $crm->crmService()->closeDealWon($id);
+        } elseif ($action === 'lost') {
+            $crm->crmService()->closeDealLost(
+                $id,
+                $this->wire()->sanitizer->text((string) $this->wire()->input->post('lost_reason')) ?: null,
+            );
+        } elseif ($action === 'restore') {
+            $crm->dealRepository()->restore($id);
+        } else {
+            $crm->dealRepository()->archive($id);
+        }
+
+        $this->audit('crm', 'deal', $id, $action);
+        $this->message($this->_('Deal updated.'));
+        $this->wire()->session->redirect(
+            '../crm-deals/?pipeline=' . rawurlencode($deal->pipelineUid)
         );
     }
 

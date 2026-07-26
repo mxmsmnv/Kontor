@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First CRM deal vertical: standard pipeline creation, stage-based deal entry,
+  Kanban movement, won/lost closure, and deal archiving.
 - First CRM admin vertical: Lead listing, search, status/archive filters,
   contact/company linking, and create/edit/archive/restore lifecycle.
 - Root Composer autoload coverage for every bundled Kontor component namespace

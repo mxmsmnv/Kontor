@@ -40,4 +40,19 @@ final class PipelineRepositoryTest extends DatabaseTestCase
 
         $this->assertNull($repository->defaultForEntityType($this->organizationUid, 'deal'));
     }
+
+    public function test_saving_a_new_default_unsets_the_previous_default(): void
+    {
+        $repository = new PipelineRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $previous = Pipeline::create($this->organizationUid, 'Previous', isDefault: true);
+        $repository->save($previous);
+        $current = Pipeline::create($this->organizationUid, 'Current', isDefault: true);
+        $repository->save($current);
+
+        $this->assertSame(
+            $current->uid->toString(),
+            $repository->defaultForEntityType($this->organizationUid, 'deal')?->uid->toString()
+        );
+        $this->assertFalse($repository->require($previous->uid->toString())->isDefault);
+    }
 }

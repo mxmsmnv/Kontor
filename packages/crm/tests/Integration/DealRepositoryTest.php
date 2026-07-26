@@ -48,6 +48,80 @@ final class DealRepositoryTest extends DatabaseTestCase
         $this->assertCount(1, $repository->forStage($stage->uid->toString()));
     }
 
+    public function test_matching_search_status_archive_and_count_are_organization_scoped(): void
+    {
+        $fixture = $this->createDefaultPipeline();
+        $stage = $fixture['stages'][0];
+        $repository = $this->repository();
+        $matching = Deal::create(
+            $this->organizationUid,
+            $fixture['pipeline']->uid->toString(),
+            $stage->uid->toString(),
+            'Northwind renewal',
+            source: 'Partner',
+        );
+        $other = Deal::create(
+            $this->organizationUid,
+            $fixture['pipeline']->uid->toString(),
+            $stage->uid->toString(),
+            'Different opportunity',
+        );
+        $repository->save($matching);
+        $repository->save($other);
+
+        $this->assertSame(
+            [$matching->uid->toString()],
+            array_map(
+                static fn (Deal $deal): string => $deal->uid->toString(),
+                $repository->findMatching(
+                    $this->organizationUid,
+                    $fixture['pipeline']->uid->toString(),
+                    'Northwind',
+                    'open',
+                )
+            )
+        );
+        $this->assertSame(
+            1,
+            $repository->countMatching(
+                $this->organizationUid,
+                $fixture['pipeline']->uid->toString(),
+                'Northwind',
+                'open',
+            )
+        );
+
+        $repository->archive($matching->uid->toString());
+
+        $this->assertSame(0, $repository->countMatching(
+            $this->organizationUid,
+            $fixture['pipeline']->uid->toString(),
+            'Northwind',
+            'open',
+        ));
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            $fixture['pipeline']->uid->toString(),
+            'Northwind',
+            'open',
+            true,
+        ));
+        $this->assertSame(
+            [$other->uid->toString()],
+            array_map(
+                static fn (Deal $deal): string => $deal->uid->toString(),
+                $repository->forStage($stage->uid->toString())
+            )
+        );
+        $this->assertSame(
+            [$matching->uid->toString()],
+            array_map(
+                static fn (Deal $deal): string => $deal->uid->toString(),
+                $repository->forStage($stage->uid->toString(), true)
+            )
+        );
+    }
+
     public function test_require_throws_for_unknown_uid(): void
     {
         $this->expectException(\RuntimeException::class);

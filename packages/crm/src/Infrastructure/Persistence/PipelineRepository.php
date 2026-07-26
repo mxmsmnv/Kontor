@@ -24,6 +24,21 @@ final class PipelineRepository
     {
         $organizationId = $this->organizations->internalIdOf($pipeline->organizationId);
 
+        if ($pipeline->isDefault) {
+            $statement = $this->pdo->prepare(
+                'UPDATE kontor_crm_pipelines
+                 SET is_default = 0
+                 WHERE organization_id = :organization_id
+                   AND entity_type = :entity_type
+                   AND uid <> :uid'
+            );
+            $statement->execute([
+                'organization_id' => $organizationId,
+                'entity_type' => $pipeline->entityType,
+                'uid' => $pipeline->uid->toString(),
+            ]);
+        }
+
         $statement = $this->pdo->prepare(
             'INSERT INTO kontor_crm_pipelines
                 (uid, organization_id, name, entity_type, is_default, status, settings_json)
@@ -83,7 +98,11 @@ final class PipelineRepository
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_crm_pipelines WHERE organization_id = :organization_id');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_crm_pipelines
+             WHERE organization_id = :organization_id
+             ORDER BY is_default DESC, name ASC'
+        );
         $statement->execute(['organization_id' => $organizationId]);
 
         return array_map(fn (array $row): Pipeline => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));

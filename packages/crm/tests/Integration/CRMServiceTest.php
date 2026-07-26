@@ -72,6 +72,30 @@ final class CRMServiceTest extends DatabaseTestCase
         $this->service->moveDealToStage($deal->uid->toString(), $fixture['stages'][1]->uid->toString());
     }
 
+    public function test_move_deal_to_stage_refuses_a_stage_from_another_pipeline(): void
+    {
+        $fixture = $this->createDefaultPipeline();
+        $otherPipeline = \Kontor\CRM\Domain\Pipeline::create($this->organizationUid, 'Other');
+        (new PipelineRepository($this->pdo, new OrganizationRepository($this->pdo)))->save($otherPipeline);
+        $otherStage = \Kontor\CRM\Domain\Stage::create(
+            $otherPipeline->uid->toString(),
+            'incoming',
+            ['en' => 'Incoming'],
+        );
+        $this->stages->save($otherStage);
+        $deal = Deal::create(
+            $this->organizationUid,
+            $fixture['pipeline']->uid->toString(),
+            $fixture['stages'][0]->uid->toString(),
+            'Big deal'
+        );
+        $this->deals->save($deal);
+
+        $this->expectException(\RuntimeException::class);
+
+        $this->service->moveDealToStage($deal->uid->toString(), $otherStage->uid->toString());
+    }
+
     public function test_close_deal_won_moves_to_the_won_stage(): void
     {
         $fixture = $this->createDefaultPipeline();

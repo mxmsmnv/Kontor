@@ -105,12 +105,114 @@ final class DealRepository implements RepositoryInterface
     /**
      * @return array<int, Deal>
      */
-    public function forStage(string $stageUid): array
+    public function forStage(string $stageUid, bool $archived = false): array
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_crm_deals WHERE stage_uid = :stage_uid ORDER BY id ASC');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_crm_deals
+             WHERE stage_uid = :stage_uid
+               AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL') . '
+             ORDER BY id ASC'
+        );
         $statement->execute(['stage_uid' => $stageUid]);
 
         return array_map(fn (array $row): Deal => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @return array<int, Deal>
+     */
+    public function findMatching(
+        string $organizationUid,
+        ?string $pipelineUid = null,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+        int $limit = 50,
+        int $offset = 0,
+    ): array
+    {
+        [$where, $params] = $this->matchingConditions(
+            $organizationUid,
+            $pipelineUid,
+            $query,
+            $status,
+            $archived,
+        );
+        $statement = $this->pdo->prepare(
+            'SELECT d.* FROM kontor_crm_deals d
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY d.updated_at DESC, d.title ASC
+             LIMIT :limit OFFSET :offset'
+        );
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(fn (array $row): Deal => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    public function countMatching(
+        string $organizationUid,
+        ?string $pipelineUid = null,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+    ): int
+    {
+        [$where, $params] = $this->matchingConditions(
+            $organizationUid,
+            $pipelineUid,
+            $query,
+            $status,
+            $archived,
+        );
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM kontor_crm_deals d WHERE ' . implode(' AND ', $where)
+        );
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, int|string>}
+     */
+    private function matchingConditions(
+        string $organizationUid,
+        ?string $pipelineUid,
+        string $query,
+        ?string $status,
+        bool $archived,
+    ): array
+    {
+        $where = [
+            'd.organization_id = :organization_id',
+            'd.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL'),
+        ];
+        $params = [
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ];
+
+        if ($pipelineUid !== null) {
+            $where[] = 'd.pipeline_uid = :pipeline_uid';
+            $params['pipeline_uid'] = $pipelineUid;
+        }
+
+        if ($status !== null) {
+            $where[] = 'd.status = :status';
+            $params['status'] = $status;
+        }
+
+        $query = trim($query);
+        if ($query !== '') {
+            $where[] = '(d.title LIKE :query OR d.source LIKE :query OR d.description LIKE :query)';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        return [$where, $params];
     }
 
     private function hydrate(array $row): Deal

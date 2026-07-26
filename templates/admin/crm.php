@@ -37,9 +37,14 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <h2>CRM · Leads</h2>
       <p>Capture opportunities, qualify them, and connect them to customers.</p>
     </div>
-    <a class="kontor-button" href="<?= $e($adminUrl) ?>crm-lead/">
-      <i class="fa fa-plus"></i> New lead
-    </a>
+    <div class="kontor-pagehead__actions">
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/">
+        <i class="fa fa-columns"></i> Deals
+      </a>
+      <a class="kontor-button" href="<?= $e($adminUrl) ?>crm-lead/">
+        <i class="fa fa-plus"></i> New lead
+      </a>
+    </div>
   </header>
 
   <form class="kontor-toolbar" method="get" action="./">

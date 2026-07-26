@@ -44,7 +44,13 @@ final class CRMService implements CRMServiceInterface
             throw new RuntimeException("Deal \"{$dealUid}\" is not open and cannot be moved between stages.");
         }
 
-        $this->stages->require($stageUid);
+        $stage = $this->stages->require($stageUid);
+
+        if (!hash_equals($deal->pipelineUid, $stage->pipelineUid)) {
+            throw new RuntimeException(
+                "Stage \"{$stageUid}\" does not belong to deal \"{$dealUid}\" pipeline."
+            );
+        }
 
         $deal->stageUid = $stageUid;
         $this->deals->save($deal);

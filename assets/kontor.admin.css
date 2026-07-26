@@ -2083,6 +2083,124 @@
   text-decoration: none;
 }
 
+.kontor-nativecheck {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.kontor-nativecheck input {
+  height: 18px;
+  width: 18px;
+}
+
+.kontor-pipelinenav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kontor-pipelinenav a {
+  background: #fff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 999px;
+  color: var(--kontor-muted);
+  padding: 0.55rem 0.85rem;
+  text-decoration: none;
+}
+
+.kontor-pipelinenav a[aria-current="page"] {
+  background: var(--kontor-ink);
+  border-color: var(--kontor-ink);
+  color: #fff;
+}
+
+.kontor-kanban {
+  display: grid;
+  gap: 0.8rem;
+  grid-auto-columns: minmax(240px, 1fr);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding-bottom: 0.8rem;
+}
+
+.kontor-kanban__column {
+  background: #f5f7fb;
+  border: 1px solid var(--kontor-line);
+  border-radius: 12px;
+  min-height: 260px;
+}
+
+.kontor-kanban__column > header {
+  align-items: center;
+  border-top: 4px solid var(--kontor-stage-color);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem;
+}
+
+.kontor-kanban__column > header span {
+  background: #e8ebf2;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.kontor-kanban__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0 0.65rem 0.65rem;
+}
+
+.kontor-dealcard {
+  background: #fff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+}
+
+.kontor-dealcard > span {
+  color: var(--kontor-muted);
+  font-size: 0.78rem;
+}
+
+.kontor-dealcard form {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.kontor-dealcard select {
+  min-width: 0;
+  width: 100%;
+}
+
+.kontor-dealcard button {
+  border-radius: 7px;
+  cursor: pointer;
+  min-height: 34px;
+}
+
+.kontor-dealcard__actions,
+.kontor-dealcard__actions form {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.kontor-kanban__empty {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 0.5rem;
+  text-align: center;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components,
