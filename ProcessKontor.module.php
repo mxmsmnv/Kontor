@@ -49,6 +49,7 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Expenses\Domain\Expense;
 use Kontor\Expenses\Domain\ExpenseCategory;
+use Kontor\Expenses\Application\LedgerExpensePostingService;
 use Kontor\Inventory\Domain\Warehouse;
 use Kontor\Invoices\Domain\Invoice;
 use Kontor\Germany\DTO\LocalizedInvoiceInput;
@@ -90,7 +91,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '126',
+            'version' => '127',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3590,6 +3591,12 @@ class ProcessKontor extends Process
             'configuredWorkflowHistory' => $expense !== null && $workflowCoordinator !== null
                 ? $workflowCoordinator->history($expense)
                 : [],
+            'ledgerEntry' => $expense !== null && $this->ledgerReady()
+                ? $this->ledgerModule()->entryRepository()->findByReference(
+                    LedgerExpensePostingService::REFERENCE_TYPE,
+                    $expense->uid->toString(),
+                )
+                : null,
             'canSubmit' => $expense !== null && $expense->isDraft()
                 && ($this->wire()->user->isSuperuser()
                     || $this->wire()->user->hasPermission('kontor-expenses-expense-submit')),
@@ -3626,23 +3633,33 @@ class ProcessKontor extends Process
         $reason = trim($this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('reason')
         ));
-        $coordinator = $this->expensesModule()->workflowCoordinator();
-        if ($coordinator !== null) {
-            $expense = $coordinator->perform(
-                $id,
-                $action,
-                (int) $this->wire()->user->id,
-                $reason,
-            );
-        } else {
-            $workflow = $this->expensesModule()->workflow();
-            $expense = match ($action) {
-                'submit' => $workflow->submit($id, (int) $this->wire()->user->id),
-                'approve' => $workflow->approve($id, (int) $this->wire()->user->id),
-                'reject' => $workflow->reject($id, (int) $this->wire()->user->id, $reason),
-                'reimburse' => $workflow->reimburse($id),
-                'cancel' => $workflow->cancel($id),
-            };
+        $pdo = $this->wire()->database->pdo();
+        $pdo->beginTransaction();
+        try {
+            $coordinator = $this->expensesModule()->workflowCoordinator();
+            if ($coordinator !== null) {
+                $expense = $coordinator->perform(
+                    $id,
+                    $action,
+                    (int) $this->wire()->user->id,
+                    $reason,
+                );
+            } else {
+                $workflow = $this->expensesModule()->workflow();
+                $expense = match ($action) {
+                    'submit' => $workflow->submit($id, (int) $this->wire()->user->id),
+                    'approve' => $workflow->approve($id, (int) $this->wire()->user->id),
+                    'reject' => $workflow->reject($id, (int) $this->wire()->user->id, $reason),
+                    'reimburse' => $workflow->reimburse($id, (int) $this->wire()->user->id),
+                    'cancel' => $workflow->cancel($id),
+                };
+            }
+            $pdo->commit();
+        } catch (\Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $exception;
         }
         $this->audit(
             'expenses',
@@ -3651,7 +3668,9 @@ class ProcessKontor extends Process
             $action,
             current: ['status' => $expense->status, 'rejectionReason' => $expense->rejectionReason],
         );
-        $this->message($this->_('Expense workflow updated.'));
+        $this->message($action === 'reimburse' && $this->ledgerReady()
+            ? $this->_('Expense reimbursed and posted to the ledger.')
+            : $this->_('Expense workflow updated.'));
         $this->wire()->session->redirect('../expense/?id=' . rawurlencode($id));
     }
 

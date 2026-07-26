@@ -17,8 +17,10 @@ use RuntimeException;
  */
 final class ExpenseWorkflowService
 {
-    public function __construct(private readonly ExpenseRepository $expenses)
-    {
+    public function __construct(
+        private readonly ExpenseRepository $expenses,
+        private readonly ?ExpensePostingInterface $posting = null,
+    ) {
     }
 
     public function submit(string $expenseUid, int $submittedBy): Expense
@@ -74,7 +76,7 @@ final class ExpenseWorkflowService
         return $expense;
     }
 
-    public function reimburse(string $expenseUid): Expense
+    public function reimburse(string $expenseUid, ?int $createdBy = null): Expense
     {
         $expense = $this->expenses->require($expenseUid);
 
@@ -82,9 +84,11 @@ final class ExpenseWorkflowService
             throw new RuntimeException("Expense \"{$expenseUid}\" must be approved before it can be reimbursed.");
         }
 
+        $this->posting?->assertCanPost($expense);
         $expense->status = 'reimbursed';
         $expense->reimbursedAt = new \DateTimeImmutable();
         $this->expenses->save($expense);
+        $this->posting?->postReimbursement($expense, $createdBy);
 
         return $expense;
     }

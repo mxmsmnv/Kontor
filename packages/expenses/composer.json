@@ -16,6 +16,7 @@
         "kontor/core": "^0.1"
     },
     "suggest": {
+        "kontor/ledger": "Posts reimbursed expenses to the general ledger.",
         "kontor/workflow": "Adds configurable state, approval-request and history tracking to the safe built-in expense lifecycle."
     },
     "require-dev": {
@@ -34,6 +35,10 @@
         {
             "type": "path",
             "url": "../workflow"
+        },
+        {
+            "type": "path",
+            "url": "../ledger"
         }
     ],
     "autoload": {

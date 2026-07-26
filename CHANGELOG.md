@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Reimbursed Expenses now post idempotent debit Expense / credit Bank entries
+  into Ledger and expose the immutable posting from expense detail.
 - Payments now closes the finance loop into Ledger: invoice allocations create
   balanced receivable-clearing entries, reversals append inverse entries, and
   payment detail links to the accounting trail.

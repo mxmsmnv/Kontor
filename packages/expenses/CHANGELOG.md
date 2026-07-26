@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Optional Ledger bridge: reimbursing an approved expense now creates one
+  idempotent debit Expense / credit Bank entry and links it from expense detail.
 - Optional Workflow coordination for the full expense lifecycle, including a
   seeded `expenses.standard` definition, approval request, generic history,
   and expense-detail workflow visibility without removing the safe default.

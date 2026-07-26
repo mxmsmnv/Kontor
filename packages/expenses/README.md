@@ -5,7 +5,9 @@ component of Stage 6. No dedicated schema section, permission list, or
 workflow diagram in kontor.md for this substage — full gap-fill, same
 situation Tasks/Collaboration/Dashboard/Reports/Purchasing were in.
 Depends on `kontor/core`; Workflow is optional, preserving the required safe
-default expense lifecycle when the generic engine is absent.
+default expense lifecycle when the generic engine is absent. Ledger is also
+optional; when present, reimbursement posts debit account `4000` (expense)
+against credit account `1200` (bank).
 
 ## Receipts and supplier links stay loose references
 
@@ -36,6 +38,10 @@ it just stores the uid.
   transition, records Workflow history, and turns approval into a real
   requested-and-decided approval record while the built-in expense service
   remains authoritative and usable without Workflow.
+- `LedgerExpensePostingService` closes the approved-expense lifecycle into
+  accounting. It validates active, currency-compatible account roles before
+  changing expense state and uses the expense UID as an idempotent business
+  reference.
 
 ## Testing
 

@@ -7,6 +7,7 @@
 /** @var \Kontor\Purchasing\Domain\Supplier[] $suppliers */
 /** @var string|null $configuredWorkflowState */
 /** @var \Kontor\Workflow\Domain\HistoryEntry[] $configuredWorkflowHistory */
+/** @var \Kontor\Ledger\Domain\LedgerEntry|null $ledgerEntry */
 /** @var bool $canSubmit */
 /** @var bool $canApprove */
 /** @var bool $canReimburse */
@@ -39,6 +40,7 @@
         <div><span>Amount</span><strong><?= $e(number_format($expense->amount->amountMinor() / 100, 2, '.', '') . ' ' . $expense->amount->currencyCode()) ?></strong></div>
         <div><span>Date</span><strong><?= $e($expense->expenseDate->format('Y-m-d')) ?></strong></div>
         <div><span>Receipt</span><strong><?= $e($expense->receiptFileUid ?? '—') ?></strong></div>
+        <?php if ($ledgerEntry !== null): ?><div><span>Ledger</span><strong><a href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($ledgerEntry->uid->toString())) ?>">Reimbursement posting</a></strong></div><?php endif; ?>
       </div>
       <?php if ($configuredWorkflowHistory !== []): ?>
         <details>

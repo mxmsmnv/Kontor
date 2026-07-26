@@ -8,6 +8,7 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Expenses\Application\ExpenseWorkflowService;
 use Kontor\Expenses\Application\ExpenseWorkflowCoordinator;
+use Kontor\Expenses\Application\LedgerExpensePostingService;
 use Kontor\Expenses\Health\ExpensesHealthCheck;
 use Kontor\Expenses\Infrastructure\Persistence\CategoryRepository;
 use Kontor\Expenses\Infrastructure\Persistence\ExpenseRepository;
@@ -27,7 +28,7 @@ class KontorExpenses extends WireData implements Module
         return [
             'title' => 'Kontor Expenses',
             'summary' => 'Expenses, categories, receipts, approvals.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorExpenses',
             'icon' => 'money',
@@ -84,7 +85,18 @@ class KontorExpenses extends WireData implements Module
 
     public function workflow(): ExpenseWorkflowService
     {
-        return new ExpenseWorkflowService($this->expenseRepository());
+        $posting = null;
+        if ($this->wire()->modules->isInstalled('KontorLedger')) {
+            /** @var KontorLedger $ledger */
+            $ledger = $this->wire()->modules->get('KontorLedger');
+            $posting = new LedgerExpensePostingService(
+                $ledger->accountRepository(),
+                $ledger->entryRepository(),
+                $ledger->entries(),
+            );
+        }
+
+        return new ExpenseWorkflowService($this->expenseRepository(), $posting);
     }
 
     public function workflowCoordinator(): ?ExpenseWorkflowCoordinator

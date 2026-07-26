@@ -24,6 +24,7 @@
     },
     "suggests": {
         "kontor/files": "^0.1",
+        "kontor/ledger": "^0.1",
         "kontor/purchasing": "^0.1",
         "kontor/workflow": "^0.1"
     },

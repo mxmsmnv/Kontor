@@ -48,7 +48,7 @@ final class ExpenseWorkflowCoordinator
             'submit' => $this->expenseWorkflow->submit($expenseUid, $actorUserId),
             'approve' => $this->expenseWorkflow->approve($expenseUid, $actorUserId),
             'reject' => $this->expenseWorkflow->reject($expenseUid, $actorUserId, $reason),
-            'reimburse' => $this->expenseWorkflow->reimburse($expenseUid),
+            'reimburse' => $this->expenseWorkflow->reimburse($expenseUid, $actorUserId),
             'cancel' => $this->expenseWorkflow->cancel($expenseUid),
             default => throw new \InvalidArgumentException("\"{$action}\" is not an expense workflow action."),
         };
