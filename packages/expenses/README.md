@@ -4,7 +4,8 @@
 component of Stage 6. No dedicated schema section, permission list, or
 workflow diagram in kontor.md for this substage — full gap-fill, same
 situation Tasks/Collaboration/Dashboard/Reports/Purchasing were in.
-Depends only on `kontor/core`.
+Depends on `kontor/core`; Workflow is optional, preserving the required safe
+default expense lifecycle when the generic engine is absent.
 
 ## Receipts and supplier links stay loose references
 
@@ -30,6 +31,11 @@ it just stores the uid.
   expense has both `approved_at` and `rejected_at` set — `approve()`/
   `reject()` are mutually exclusive terminal decisions from `submitted`),
   not just a count.
+- `ExpenseWorkflowCoordinator` is the first business adopter of the generic
+  Workflow component. It seeds `expenses.standard`, mirrors every admin
+  transition, records Workflow history, and turns approval into a real
+  requested-and-decided approval record while the built-in expense service
+  remains authoritative and usable without Workflow.
 
 ## Testing
 
@@ -49,6 +55,8 @@ The main Kontor Process module now exposes category management, expense
 capture, status views, and the full single-approver lifecycle from draft
 through reimbursement. Supplier and receipt references remain optional and
 loose, matching the package boundary.
+When Workflow is installed, the expense detail also shows the configured
+state and transition history.
 
 ## Not in scope for this substage
 

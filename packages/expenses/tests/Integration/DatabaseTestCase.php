@@ -9,6 +9,11 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
 use Kontor\Expenses\Migrations\Migration0001CreateExpenseCategoriesTable;
 use Kontor\Expenses\Migrations\Migration0002CreateExpensesTable;
+use Kontor\Workflow\Migrations\Migration0001CreateDefinitionsTable;
+use Kontor\Workflow\Migrations\Migration0002CreateTransitionsTable;
+use Kontor\Workflow\Migrations\Migration0003CreateInstancesTable;
+use Kontor\Workflow\Migrations\Migration0004CreateApprovalRequestsTable;
+use Kontor\Workflow\Migrations\Migration0005CreateHistoryTable;
 use PHPUnit\Framework\TestCase;
 
 abstract class DatabaseTestCase extends TestCase
@@ -42,6 +47,11 @@ abstract class DatabaseTestCase extends TestCase
             new Migration0001CreateOrganizationsTable(),
             new Migration0001CreateExpenseCategoriesTable(),
             new Migration0002CreateExpensesTable(),
+            new Migration0001CreateDefinitionsTable(),
+            new Migration0002CreateTransitionsTable(),
+            new Migration0003CreateInstancesTable(),
+            new Migration0004CreateApprovalRequestsTable(),
+            new Migration0005CreateHistoryTable(),
         ]);
 
         $this->organizationUid = (new OrganizationRepository($this->pdo))
@@ -63,6 +73,11 @@ abstract class DatabaseTestCase extends TestCase
             [
                 'kontor_expenses',
                 'kontor_expense_categories',
+                'kontor_workflow_history',
+                'kontor_workflow_approval_requests',
+                'kontor_workflow_instances',
+                'kontor_workflow_transitions',
+                'kontor_workflow_definitions',
                 'kontor_organizations',
                 'kontor_migrations',
             ] as $table

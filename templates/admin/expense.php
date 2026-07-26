@@ -5,6 +5,8 @@
 /** @var string $error */
 /** @var \Kontor\Expenses\Domain\ExpenseCategory[] $categories */
 /** @var \Kontor\Purchasing\Domain\Supplier[] $suppliers */
+/** @var string|null $configuredWorkflowState */
+/** @var \Kontor\Workflow\Domain\HistoryEntry[] $configuredWorkflowHistory */
 /** @var bool $canSubmit */
 /** @var bool $canApprove */
 /** @var bool $canReimburse */
@@ -33,10 +35,21 @@
     <section class="kontor-card">
       <div class="kontor-detailgrid">
         <div><span>Status</span><strong><?= $e($expense->status) ?></strong></div>
+        <div><span>Workflow state</span><strong><?= $e($configuredWorkflowState ?? 'Safe default') ?></strong></div>
         <div><span>Amount</span><strong><?= $e(number_format($expense->amount->amountMinor() / 100, 2, '.', '') . ' ' . $expense->amount->currencyCode()) ?></strong></div>
         <div><span>Date</span><strong><?= $e($expense->expenseDate->format('Y-m-d')) ?></strong></div>
         <div><span>Receipt</span><strong><?= $e($expense->receiptFileUid ?? '—') ?></strong></div>
       </div>
+      <?php if ($configuredWorkflowHistory !== []): ?>
+        <details>
+          <summary>Workflow history · <?= $e((string) count($configuredWorkflowHistory)) ?> transition(s)</summary>
+          <ol>
+            <?php foreach ($configuredWorkflowHistory as $entry): ?>
+              <li><strong><?= $e($entry->actionKey) ?></strong> · <?= $e($entry->fromState) ?> → <?= $e($entry->toState) ?> · <?= $e($entry->occurredAt->format('Y-m-d H:i:s')) ?></li>
+            <?php endforeach; ?>
+          </ol>
+        </details>
+      <?php endif; ?>
       <?php if ($expense->rejectionReason !== null): ?><div class="kontor-warning"><strong>Rejected:</strong> <?= $e($expense->rejectionReason) ?></div><?php endif; ?>
       <div class="kontor-pagehead__actions">
         <?php if ($canSubmit): ?><form method="post" action="<?= $e($adminUrl) ?>expense-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($expense->uid->toString()) ?>"><input type="hidden" name="action" value="submit"><button class="kontor-button" type="submit">Submit</button></form><?php endif; ?>

@@ -7,6 +7,7 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Expenses\Application\ExpenseWorkflowService;
+use Kontor\Expenses\Application\ExpenseWorkflowCoordinator;
 use Kontor\Expenses\Health\ExpensesHealthCheck;
 use Kontor\Expenses\Infrastructure\Persistence\CategoryRepository;
 use Kontor\Expenses\Infrastructure\Persistence\ExpenseRepository;
@@ -26,7 +27,7 @@ class KontorExpenses extends WireData implements Module
         return [
             'title' => 'Kontor Expenses',
             'summary' => 'Expenses, categories, receipts, approvals.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorExpenses',
             'icon' => 'money',
@@ -84,6 +85,25 @@ class KontorExpenses extends WireData implements Module
     public function workflow(): ExpenseWorkflowService
     {
         return new ExpenseWorkflowService($this->expenseRepository());
+    }
+
+    public function workflowCoordinator(): ?ExpenseWorkflowCoordinator
+    {
+        if (!$this->wire()->modules->isInstalled('KontorWorkflow')) {
+            return null;
+        }
+
+        /** @var KontorWorkflow $workflow */
+        $workflow = $this->wire()->modules->get('KontorWorkflow');
+
+        return new ExpenseWorkflowCoordinator(
+            $this->expenseRepository(),
+            $this->workflow(),
+            $workflow->definitionRepository(),
+            $workflow->definitions(),
+            $workflow->instanceRepository(),
+            $workflow->engine(),
+        );
     }
 
     public function healthCheck(): ExpensesHealthCheck

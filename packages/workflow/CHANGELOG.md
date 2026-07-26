@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Expenses is the first business adopter: its safe default lifecycle is
+  mirrored into a configurable `expenses.standard` instance with a real
+  approval request and generic transition history.
 - First ProcessKontor admin vertical: workflow definition and transition
   authoring, runtime instances, permission-aware actions, approval inbox,
   decisions, and immutable transition history.

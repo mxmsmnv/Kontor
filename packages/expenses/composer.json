@@ -15,8 +15,12 @@
         "kontor/sdk": "^0.2.1",
         "kontor/core": "^0.1"
     },
+    "suggest": {
+        "kontor/workflow": "Adds configurable state, approval-request and history tracking to the safe built-in expense lifecycle."
+    },
     "require-dev": {
-        "phpunit/phpunit": "^11.0"
+        "phpunit/phpunit": "^11.0",
+        "kontor/workflow": "^0.1"
     },
     "repositories": [
         {
@@ -26,6 +30,10 @@
         {
             "type": "path",
             "url": "../.."
+        },
+        {
+            "type": "path",
+            "url": "../workflow"
         }
     ],
     "autoload": {

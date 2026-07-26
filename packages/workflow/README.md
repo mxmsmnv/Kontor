@@ -22,9 +22,10 @@ instead — that would mean re-touching six already-released packages for a
 single substage, and it would contradict the "safe default even if not
 installed" requirement (those services must keep working with zero
 knowledge of this package). `kontor/workflow` is a standalone,
-entity-agnostic engine — like `kontor/dashboard`'s `WidgetRegistry`, other
-components could opt an entity into a configured workflow by depending on
-this package and calling into it; none do yet. See "Not in scope".
+entity-agnostic engine — like `kontor/dashboard`'s `WidgetRegistry`. Expenses
+is the first optional adopter: its own safe lifecycle remains authoritative,
+while `ExpenseWorkflowCoordinator` mirrors transitions into a configurable
+`expenses.standard` instance with approval requests and history.
 
 ## Contents
 
@@ -76,5 +77,6 @@ No visual editor UI — see above. No validators/required-fields/hooks/
 events/automatic-actions from kontor.md#18's fuller definition list —
 states, transitions, transition permissions, approvals and history are
 this substage's five actual milestones; the rest is future work on top of
-this same schema shape. No component has been wired to actually use a
-configured workflow instead of its own hardcoded one yet.
+this same schema shape. Expenses now mirrors its safe default lifecycle into
+Workflow when this component is installed; other business components remain
+on their own safe defaults until they opt in.

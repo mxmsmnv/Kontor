@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Optional Workflow coordination for the full expense lifecycle, including a
+  seeded `expenses.standard` definition, approval request, generic history,
+  and expense-detail workflow visibility without removing the safe default.
 - First admin vertical: category creation, organization-scoped status views,
   expense capture, and permission-gated submit, approve/reject, cancel, and
   reimburse actions.

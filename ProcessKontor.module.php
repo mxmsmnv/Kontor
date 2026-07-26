@@ -89,7 +89,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '122',
+            'version' => '123',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3541,12 +3541,20 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New expense')
             : sprintf($this->_('Kontor · %s'), $expense->description));
 
+        $workflowCoordinator = $expense !== null ? $module->workflowCoordinator() : null;
+
         return $this->renderTemplate('expense', [
             'expense' => $expense,
             'values' => $values,
             'error' => $error,
             'categories' => $categories,
             'suppliers' => $suppliers,
+            'configuredWorkflowState' => $expense !== null
+                ? $workflowCoordinator?->currentState($expense)
+                : null,
+            'configuredWorkflowHistory' => $expense !== null && $workflowCoordinator !== null
+                ? $workflowCoordinator->history($expense)
+                : [],
             'canSubmit' => $expense !== null && $expense->isDraft()
                 && ($this->wire()->user->isSuperuser()
                     || $this->wire()->user->hasPermission('kontor-expenses-expense-submit')),
@@ -3580,20 +3588,27 @@ class ProcessKontor extends Process
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
         $expense = $this->expensesModule()->expenseRepository()->require($id);
         $this->requireSameOrganization($expense->organizationId);
-        $workflow = $this->expensesModule()->workflow();
-        $expense = match ($action) {
-            'submit' => $workflow->submit($id, (int) $this->wire()->user->id),
-            'approve' => $workflow->approve($id, (int) $this->wire()->user->id),
-            'reject' => $workflow->reject(
+        $reason = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('reason')
+        ));
+        $coordinator = $this->expensesModule()->workflowCoordinator();
+        if ($coordinator !== null) {
+            $expense = $coordinator->perform(
                 $id,
+                $action,
                 (int) $this->wire()->user->id,
-                trim($this->wire()->sanitizer->text(
-                    (string) $this->wire()->input->post('reason')
-                )),
-            ),
-            'reimburse' => $workflow->reimburse($id),
-            'cancel' => $workflow->cancel($id),
-        };
+                $reason,
+            );
+        } else {
+            $workflow = $this->expensesModule()->workflow();
+            $expense = match ($action) {
+                'submit' => $workflow->submit($id, (int) $this->wire()->user->id),
+                'approve' => $workflow->approve($id, (int) $this->wire()->user->id),
+                'reject' => $workflow->reject($id, (int) $this->wire()->user->id, $reason),
+                'reimburse' => $workflow->reimburse($id),
+                'cancel' => $workflow->cancel($id),
+            };
+        }
         $this->audit(
             'expenses',
             'expense',
