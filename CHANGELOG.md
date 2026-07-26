@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct Components summary-card drill-down for registered, enabled, and
+  attention states.
 - Direct health-summary drill-down for healthy, warning, and critical checks.
 - Clear search action for the global Kontor search workspace.
 - Clear search actions for Contacts and Companies, preserving archive context.

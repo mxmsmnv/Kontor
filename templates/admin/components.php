@@ -22,11 +22,15 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
   </header>
 
   <section class="kontor-componentstats">
-    <article class="kontor-card"><strong><?= $e($counts['total']) ?></strong><span>Registered</span></article>
-    <article class="kontor-card"><strong><?= $e($counts['enabled']) ?></strong><span>Enabled</span></article>
-    <article class="kontor-card<?= $counts['attention'] > 0 ? ' kontor-componentstats--warning' : '' ?>">
+    <a class="kontor-card" href="./">
+      <strong><?= $e($counts['total']) ?></strong><span>Registered</span>
+    </a>
+    <a class="kontor-card" href="./?status=enabled">
+      <strong><?= $e($counts['enabled']) ?></strong><span>Enabled</span>
+    </a>
+    <a class="kontor-card<?= $counts['attention'] > 0 ? ' kontor-componentstats--warning' : '' ?>" href="./?status=attention">
       <strong><?= $e($counts['attention']) ?></strong><span>Need attention</span>
-    </article>
+    </a>
   </section>
 
   <form class="kontor-toolbar kontor-componentfilters" method="get" action="./">
