@@ -87,7 +87,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '114',
+            'version' => '115',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1392,6 +1392,23 @@ class ProcessKontor extends Process
         $existingOrder = $quotation !== null
             ? $sales->orderRepository()->findByQuotation($quotation->uid->toString())
             : null;
+        $quotationTemplate = null;
+        if ($quotation !== null && $this->documentsReady()) {
+            $quotationTemplate = $quotation->templateUid !== null
+                ? $this->documentsModule()->templateRepository()->find($quotation->templateUid)
+                : $this->documentsModule()->templateRepository()->findCurrentVersion(
+                    $quotation->organizationId,
+                    'quotation.standard',
+                    $quotation->documentLanguage,
+                );
+        }
+        $issuedFiles = $quotation !== null && $this->filesReady()
+            ? $this->filesModule()->fileManager()->forEntity(
+                'quotation',
+                $quotation->uid->toString(),
+                $quotation->organizationId,
+            )
+            : [];
         $this->setPageTitle($quotation === null
             ? $this->_('Kontor · New quotation')
             : sprintf($this->_('Kontor · %s'), $quotation->number ?? $this->_('Draft quotation')));
@@ -1400,6 +1417,8 @@ class ProcessKontor extends Process
             'quotation' => $quotation,
             'lines' => $lines,
             'existingOrder' => $existingOrder,
+            'quotationTemplate' => $quotationTemplate,
+            'issuedFile' => $issuedFiles[0] ?? null,
             'values' => $values,
             'customers' => $this->salesCustomerLabels(),
             'error' => $error,
@@ -1431,7 +1450,58 @@ class ProcessKontor extends Process
         $this->requireSameOrganization($quotation->organizationId);
 
         if ($action === 'issue') {
-            $sales->quotationWorkflow()->issue($id);
+            $this->requireDocuments();
+            $this->requireFiles();
+            $template = $this->documentsModule()->templateRepository()->findCurrentVersion(
+                $quotation->organizationId,
+                'quotation.standard',
+                $quotation->documentLanguage,
+            );
+            if ($template === null) {
+                throw new WireException($this->_(
+                    'Publish an active quotation.standard document template before issuing this quotation.'
+                ));
+            }
+
+            $pdo = $this->wire()->database->pdo();
+            $pdo->beginTransaction();
+            try {
+                $issued = $sales->quotationWorkflow()->issue($id);
+                $lines = $sales->documentLineRepository()->forDocument('quotation', $id);
+                $data = $this->quotationDocumentData($issued, $lines);
+                $snapshot = $this->documentsModule()->snapshotBuilder()->build($template, $data);
+                $pdf = $this->documentsModule()->renderService()->renderPdf($template, $data);
+                $issued->attachIssuedDocument($template->uid->toString(), $snapshot);
+                $sales->quotationRepository()->save($issued);
+                $stored = $this->filesModule()->fileManager()->upload(
+                    organizationUid: $issued->organizationId,
+                    originalName: ($issued->number ?? 'quotation-' . $id) . '.pdf',
+                    contents: $pdf,
+                    visibility: 'private',
+                    classification: 'confidential',
+                    entityType: 'quotation',
+                    entityUid: $id,
+                    metadata: [
+                        'source' => 'sales',
+                        'documentType' => 'quotation',
+                        'number' => $issued->number,
+                        'documentSnapshot' => $snapshot,
+                    ],
+                    actorId: (int) $this->wire()->user->id,
+                );
+                $pdo->commit();
+            } catch (\Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $exception;
+            }
+            $this->audit('files', 'file', $stored['uid'], 'generated', metadata: [
+                'sourceComponent' => 'sales',
+                'quotationUid' => $id,
+                'version' => $stored['versionNumber'],
+            ]);
+            $this->message($this->_('Quotation issued with an immutable snapshot and private PDF.'));
         } elseif ($action === 'accept') {
             $sales->quotationWorkflow()->accept($id);
         } elseif ($action === 'convert') {
@@ -9834,6 +9904,40 @@ class ProcessKontor extends Process
         }
 
         return $labels;
+    }
+
+    /**
+     * @param DocumentLine[] $lines
+     * @return array<string, mixed>
+     */
+    private function quotationDocumentData(Quotation $quotation, array $lines): array
+    {
+        $customerKey = $quotation->customerType . ':' . $quotation->customerUid;
+
+        return [
+            'title' => $this->_('Quotation'),
+            'number' => $quotation->number,
+            'issueDate' => $quotation->issueDate?->format('Y-m-d'),
+            'validUntil' => $quotation->validUntil?->format('Y-m-d'),
+            'customer' => [
+                'type' => $quotation->customerType,
+                'uid' => $quotation->customerUid,
+                'name' => $this->salesCustomerLabels()[$customerKey] ?? $quotation->customerUid,
+            ],
+            'currency' => $quotation->currencyCode,
+            'lines' => array_map(static fn (DocumentLine $line): array => [
+                'title' => $line->title,
+                'description' => $line->description,
+                'quantity' => $line->quantity,
+                'unit' => $line->unitCode,
+                'unitPrice' => number_format($line->unitPrice->amountMinor() / 100, 2, '.', ''),
+                'taxRate' => $line->taxRate,
+                'total' => number_format($line->total()->amountMinor() / 100, 2, '.', ''),
+            ], $lines),
+            'subtotal' => number_format($quotation->subtotal->amountMinor() / 100, 2, '.', ''),
+            'tax' => number_format($quotation->tax->amountMinor() / 100, 2, '.', ''),
+            'total' => number_format($quotation->total->amountMinor() / 100, 2, '.', ''),
+        ];
     }
 
     private function invoiceModule(): KontorInvoices

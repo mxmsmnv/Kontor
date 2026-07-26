@@ -17,11 +17,9 @@ use Kontor\Documents\Domain\DocumentTemplate;
  * is edited or archived afterward — issuing never re-renders from a
  * "current" template again.
  *
- * Kontor\Documents doesn't call this itself against any other component's
- * repository — wiring it into Sales'/Invoices' issue workflows is left to
- * those components (deferred integration, see this package's README), so
- * that shipping Documents doesn't require re-touching an already-released
- * package in the same change.
+ * Kontor\Documents does not own another component's repository. Consumers
+ * call this service at their issue boundary; the shared admin now does so
+ * for Sales quotations while invoice and order integrations remain separate.
  */
 final class DocumentSnapshotBuilder
 {

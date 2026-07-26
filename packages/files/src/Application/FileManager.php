@@ -137,9 +137,17 @@ final class FileManager
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function forEntity(string $entityType, string $entityUid): array
+    public function forEntity(
+        string $entityType,
+        string $entityUid,
+        ?string $organizationUid = null,
+    ): array
     {
-        return $this->files->forEntity($entityType, $entityUid);
+        return $this->files->forEntity(
+            $entityType,
+            $entityUid,
+            $organizationUid !== null ? $this->organizations->internalIdOf($organizationUid) : null,
+        );
     }
 
     public function archive(string $uid, string $organizationUid): void

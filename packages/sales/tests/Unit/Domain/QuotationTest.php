@@ -51,4 +51,25 @@ final class QuotationTest extends TestCase
         $this->assertSame(500, $quotation->tax->amountMinor());
         $this->assertSame(3000, $quotation->total->amountMinor());
     }
+
+    public function test_issued_document_snapshot_is_attached_once(): void
+    {
+        $quotation = Quotation::create('org_01', 'contact', 'ct_01', 'EUR');
+        $quotation->status = 'issued';
+        $quotation->attachIssuedDocument('01ARZ3NDEKTSV4RRFFQ69G5FAV', ['html' => '<p>Issued</p>']);
+
+        $this->assertSame('01ARZ3NDEKTSV4RRFFQ69G5FAV', $quotation->templateUid);
+        $this->assertSame(['html' => '<p>Issued</p>'], $quotation->snapshot);
+
+        $this->expectException(\RuntimeException::class);
+        $quotation->attachIssuedDocument('01ARZ3NDEKTSV4RRFFQ69G5FAV', ['html' => '<p>Changed</p>']);
+    }
+
+    public function test_draft_cannot_receive_an_issued_document_snapshot(): void
+    {
+        $quotation = Quotation::create('org_01', 'contact', 'ct_01', 'EUR');
+
+        $this->expectException(\RuntimeException::class);
+        $quotation->attachIssuedDocument('01ARZ3NDEKTSV4RRFFQ69G5FAV', ['html' => '<p>Draft</p>']);
+    }
 }

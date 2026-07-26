@@ -48,6 +48,26 @@ final class QuotationRepositoryTest extends DatabaseTestCase
         $this->assertSame(1, (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_sales_quotations')->fetchColumn());
     }
 
+    public function test_issued_template_and_snapshot_round_trip(): void
+    {
+        $repository = $this->repository();
+        $quotation = Quotation::create($this->organizationUid, 'contact', 'ct_01', 'EUR');
+        $quotation->status = 'issued';
+        $quotation->attachIssuedDocument(
+            '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+            ['templateVersion' => 3, 'html' => '<main>Immutable</main>'],
+        );
+        $repository->save($quotation);
+
+        $found = $repository->require($quotation->uid->toString());
+
+        $this->assertSame('01ARZ3NDEKTSV4RRFFQ69G5FAV', $found->templateUid);
+        $this->assertEquals(
+            ['templateVersion' => 3, 'html' => '<main>Immutable</main>'],
+            $found->snapshot,
+        );
+    }
+
     public function test_archive_then_restore(): void
     {
         $repository = $this->repository();

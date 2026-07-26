@@ -19,9 +19,8 @@ use Kontor\Documents\Migrations\Migration0001CreateDocumentTemplatesTable;
  * KontorDocuments bootstrap module (kontor.md Substage 4.2). No
  * import/export/search milestone this substage, same as Sales — Documents
  * only registers its own translations and provides its services directly.
- * Wiring DocumentSnapshotBuilder into another component's issue workflow
- * (e.g. kontor/sales) is left to that component, not done here — see the
- * README's "Not in scope for this substage".
+ * The shared admin wires DocumentSnapshotBuilder into quotation issuance;
+ * the package itself remains independent and exposes the rendering services.
  */
 class KontorDocuments extends WireData implements Module
 {
@@ -30,7 +29,7 @@ class KontorDocuments extends WireData implements Module
         return [
             'title' => 'Kontor Documents',
             'summary' => 'Document templates, HTML/PDF rendering, multilingual output, immutable issued-document snapshots.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorDocuments',
             'icon' => 'file-pdf-o',

@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Quotation issuance now resolves `quotation.standard`, persists the exact
+  template UID and immutable snapshot, and stores a confidential PDF through
+  Files in the same database transaction.
 - Shared admin integration for quotation and order lifecycle workflows.
 - Organization-scoped quotation and order search, status, archive, count, and
   pagination queries for the shared admin workflow.

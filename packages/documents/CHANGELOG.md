@@ -16,6 +16,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Sales quotation issuance is the first business-document consumer of
+  `DocumentSnapshotBuilder`, resolving the active language-specific
+  `quotation.standard` template.
 - Rendered PDFs now flow into Kontor Files as private, entity-bound versions;
   file metadata retains the immutable template-and-data snapshot and the
   admin preview links directly to the stored output.

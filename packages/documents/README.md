@@ -96,6 +96,5 @@ every earlier component skipping its non-milestone spec features. No admin
 UI/visual designer front-end — "document designer v1" here means the
 template engine's capability set (placeholders, loops, conditionals), not
 a WYSIWYG editor. `DocumentSnapshotBuilder` is wired into generated Files
-output, but not yet into `kontor/sales`' issue workflows — quotation and
-invoice `snapshot_json` columns stay unpopulated until those issue workflows
-call it.
+output and Sales quotation issuance. Order and invoice `snapshot_json`
+columns remain for their own issue integrations.

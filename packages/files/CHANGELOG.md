@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Entity file lookups can now be organization-scoped, preventing unrelated
+  tenant rows from appearing in embedded business-document views.
 - Scope version families, signed links, reads, archives, and restores to the
   owning organization; restoring an older version now archives the current
   version in that tenant only.
@@ -19,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Sales quotation issuance now stores confidential, quotation-bound PDFs.
 - Documents is the first generated-output consumer: each PDF render creates
   an entity-bound private file version with its immutable document snapshot.
 - First Files admin vertical: private uploads, metadata and checksum

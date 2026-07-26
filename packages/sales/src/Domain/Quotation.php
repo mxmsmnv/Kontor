@@ -35,6 +35,9 @@ final class Quotation
         public ?\DateTimeImmutable $issuedAt,
         public ?\DateTimeImmutable $acceptedAt,
         public ?\DateTimeImmutable $rejectedAt,
+        public ?string $templateUid = null,
+        /** @var array<string, mixed> */
+        public array $snapshot = [],
     ) {
     }
 
@@ -69,6 +72,27 @@ final class Quotation
             acceptedAt: null,
             rejectedAt: null,
         );
+    }
+
+    /**
+     * @param array<string, mixed> $snapshot
+     */
+    public function attachIssuedDocument(string $templateUid, array $snapshot): void
+    {
+        if ($this->status !== 'issued') {
+            throw new \RuntimeException('A document snapshot can only be attached while issuing a quotation.');
+        }
+
+        if ($this->templateUid !== null || $this->snapshot !== []) {
+            throw new \RuntimeException('The issued quotation already has an immutable document snapshot.');
+        }
+
+        if ($snapshot === []) {
+            throw new \InvalidArgumentException('The issued document snapshot cannot be empty.');
+        }
+
+        $this->templateUid = $templateUid;
+        $this->snapshot = $snapshot;
     }
 
     public function isDraft(): bool

@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Entity-bound Files lookups can now enforce the owning organization.
 - Search serializes cached result DTOs into WireCache-compatible snapshots
   and validates them while rebuilding the result.
 - Files now enforces organization boundaries across version lookup, sharing,
@@ -24,6 +25,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Issuing a Sales quotation now resolves `quotation.standard`, persists the
+  immutable template snapshot in Sales, and stores a confidential PDF in Files.
 - Documents now persists generated PDFs and immutable render snapshots through
   Files, producing private entity-bound versions linked from the render flow.
 - Search now consumes Cache end to end: organization-scoped query keys,

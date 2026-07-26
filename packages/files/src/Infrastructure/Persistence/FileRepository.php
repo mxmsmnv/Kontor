@@ -190,14 +190,26 @@ final class FileRepository
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function forEntity(string $entityType, string $entityUid): array
+    public function forEntity(
+        string $entityType,
+        string $entityUid,
+        ?int $organizationId = null,
+    ): array
     {
+        $organizationFilter = $organizationId !== null
+            ? ' AND organization_id = :organization_id'
+            : '';
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_files
              WHERE entity_type = :entity_type AND entity_uid = :entity_uid AND archived_at IS NULL
+             ' . $organizationFilter . '
              ORDER BY original_name, version_number DESC'
         );
-        $statement->execute(['entity_type' => $entityType, 'entity_uid' => $entityUid]);
+        $parameters = ['entity_type' => $entityType, 'entity_uid' => $entityUid];
+        if ($organizationId !== null) {
+            $parameters['organization_id'] = $organizationId;
+        }
+        $statement->execute($parameters);
 
         return $statement->fetchAll(\PDO::FETCH_ASSOC);
     }

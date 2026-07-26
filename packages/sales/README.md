@@ -30,6 +30,11 @@ foreign keys"), not a hard dependency on `kontor/contacts`.
   sales order"): copies every quotation line into new order lines (new
   uids, same pricing) rather than referencing the originals, so the order
   survives even if the quotation is later archived.
+- Quotation issuance resolves the active `quotation.standard` Documents
+  template with language fallback, writes its exact UID and immutable render
+  snapshot into Sales, and stores the resulting confidential PDF through
+  Files. The issued quotation links back to that historical template and
+  private file even after newer template versions are published.
 
 ## Filled a third Core gap
 
@@ -58,6 +63,6 @@ packages.
 `payment_status`/`fulfillment_status` on orders are simple descriptive
 fields, not actively driven by Sales — their real lifecycle belongs to
 Payments (Substage 4.4) and Inventory (Substage 6.1). No admin UI/API
-endpoints. `snapshot_json` columns exist but aren't populated yet —
-immutable issued-document snapshots are a Documents (Substage 4.2)
-concern.
+endpoints beyond the shared ProcessKontor workflow. Order `snapshot_json`
+remains reserved for a later order-issuance workflow; quotation snapshots
+are populated at issue time.

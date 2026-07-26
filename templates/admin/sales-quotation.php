@@ -3,6 +3,8 @@
 /** @var \Kontor\Sales\Domain\Quotation|null $quotation */
 /** @var \Kontor\Sales\Domain\DocumentLine[] $lines */
 /** @var \Kontor\Sales\Domain\Order|null $existingOrder */
+/** @var \Kontor\Documents\Domain\DocumentTemplate|null $quotationTemplate */
+/** @var array<string, mixed>|null $issuedFile */
 /** @var array<string, string> $values */
 /** @var array<string, string> $customers */
 /** @var string $error */
@@ -73,6 +75,25 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       <strong><?= $e($money($quotation->total)) ?></strong>
     </section>
 
+    <?php if ($quotation->isDraft() && $quotationTemplate === null): ?>
+      <section class="kontor-card kontor-warning">
+        <div>
+          <strong>Issuance needs a document template</strong>
+          <p>Publish an active <code>quotation.standard</code> template in <?= $e(strtoupper($quotation->documentLanguage)) ?> (or English fallback) first.</p>
+        </div>
+        <a class="kontor-button" href="<?= $e($adminUrl) ?>documents/">Open Documents</a>
+      </section>
+    <?php elseif ($quotationTemplate !== null): ?>
+      <section class="kontor-card">
+        <p class="kontor-eyebrow"><?= $quotation->isDraft() ? 'Issuance template' : 'Immutable issued output' ?></p>
+        <h3><?= $e($quotationTemplate->name) ?> · v<?= $e((string) $quotationTemplate->versionNumber) ?></h3>
+        <p><code><?= $e($quotationTemplate->templateKey) ?></code> · <?= $e(strtoupper($quotationTemplate->language)) ?></p>
+        <?php if ($issuedFile !== null): ?>
+          <a class="kontor-button" href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $issuedFile['uid'])) ?>">Open private PDF</a>
+        <?php endif; ?>
+      </section>
+    <?php endif; ?>
+
     <section class="kontor-card kontor-tablewrap">
       <table class="kontor-table">
         <thead><tr><th>Line</th><th>Quantity</th><th>Unit price</th><th>Tax</th><th>Total</th></tr></thead>
@@ -88,7 +109,9 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       <?php if ($quotation->status === 'draft'): ?>
         <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
-          <button class="kontor-button" name="action" value="issue" type="submit">Issue quotation</button>
+          <?php if ($quotationTemplate !== null): ?>
+            <button class="kontor-button" name="action" value="issue" type="submit">Issue quotation + PDF</button>
+          <?php endif; ?>
           <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
         </form>
       <?php elseif ($quotation->isOpen()): ?>

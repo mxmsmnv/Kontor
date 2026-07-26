@@ -51,11 +51,13 @@ final class QuotationRepository implements RepositoryInterface
             'INSERT INTO kontor_sales_quotations
                 (uid, organization_id, number, customer_type, customer_uid, contact_uid, deal_uid, issue_date,
                  valid_until, document_language, currency_code, subtotal_minor, discount_minor, tax_minor,
-                 total_minor, status, issued_at, accepted_at, rejected_at, created_at, updated_at, version)
+                 total_minor, status, template_uid, snapshot_json, issued_at, accepted_at, rejected_at,
+                 created_at, updated_at, version)
              VALUES
                 (:uid, :organization_id, :number, :customer_type, :customer_uid, :contact_uid, :deal_uid, :issue_date,
                  :valid_until, :document_language, :currency_code, :subtotal_minor, :discount_minor, :tax_minor,
-                 :total_minor, :status, :issued_at, :accepted_at, :rejected_at, :created_at, :updated_at, 1)
+                 :total_minor, :status, :template_uid, :snapshot_json, :issued_at, :accepted_at, :rejected_at,
+                 :created_at, :updated_at, 1)
              ON DUPLICATE KEY UPDATE
                 number = VALUES(number), customer_type = VALUES(customer_type), customer_uid = VALUES(customer_uid),
                 contact_uid = VALUES(contact_uid), deal_uid = VALUES(deal_uid), issue_date = VALUES(issue_date),
@@ -63,6 +65,7 @@ final class QuotationRepository implements RepositoryInterface
                 currency_code = VALUES(currency_code), subtotal_minor = VALUES(subtotal_minor),
                 discount_minor = VALUES(discount_minor), tax_minor = VALUES(tax_minor),
                 total_minor = VALUES(total_minor), status = VALUES(status), issued_at = VALUES(issued_at),
+                template_uid = VALUES(template_uid), snapshot_json = VALUES(snapshot_json),
                 accepted_at = VALUES(accepted_at), rejected_at = VALUES(rejected_at), updated_at = VALUES(updated_at),
                 version = version + 1'
         );
@@ -84,6 +87,10 @@ final class QuotationRepository implements RepositoryInterface
             'tax_minor' => $entity->tax->amountMinor(),
             'total_minor' => $entity->total->amountMinor(),
             'status' => $entity->status,
+            'template_uid' => $entity->templateUid,
+            'snapshot_json' => $entity->snapshot !== []
+                ? json_encode($entity->snapshot, JSON_THROW_ON_ERROR)
+                : null,
             'issued_at' => $entity->issuedAt?->format('Y-m-d H:i:s.u'),
             'accepted_at' => $entity->acceptedAt?->format('Y-m-d H:i:s.u'),
             'rejected_at' => $entity->rejectedAt?->format('Y-m-d H:i:s.u'),
@@ -206,6 +213,10 @@ final class QuotationRepository implements RepositoryInterface
             issuedAt: $row['issued_at'] !== null ? new \DateTimeImmutable($row['issued_at']) : null,
             acceptedAt: $row['accepted_at'] !== null ? new \DateTimeImmutable($row['accepted_at']) : null,
             rejectedAt: $row['rejected_at'] !== null ? new \DateTimeImmutable($row['rejected_at']) : null,
+            templateUid: $row['template_uid'],
+            snapshot: $row['snapshot_json'] !== null
+                ? json_decode($row['snapshot_json'], associative: true, flags: JSON_THROW_ON_ERROR)
+                : [],
         );
     }
 

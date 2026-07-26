@@ -106,4 +106,15 @@ final class FileRepositoryTest extends DatabaseTestCase
         $this->assertCount(1, $active);
         $this->assertSame('a.txt', $active[0]['original_name']);
     }
+
+    public function test_for_entity_can_be_scoped_to_an_organization(): void
+    {
+        $files = new FileRepository($this->pdo);
+        $first = $files->insert(1, 'local', 'p1', 'first.txt', null, 1, 'c1', 'private', null, 'quotation', 'shared_uid', 1, [], null);
+        $files->insert(2, 'local', 'p2', 'second.txt', null, 1, 'c2', 'private', null, 'quotation', 'shared_uid', 1, [], null);
+
+        $scoped = $files->forEntity('quotation', 'shared_uid', 1);
+
+        $this->assertSame([$first], array_column($scoped, 'uid'));
+    }
 }
