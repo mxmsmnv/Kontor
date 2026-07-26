@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Assigned tasks can schedule delayed email reminders through Queue; workers
+  deliver through Mail, preserve outbound history and task links, mark
+  reminders sent once, and leave transport failures retryable.
 - First admin vertical: organization-scoped task list, create/edit form,
   start/complete/cancel lifecycle, recurrence controls, and archive/restore.
 - Initial alpha (Substage 5.1): `kontor_tasks` and `kontor_task_reminders`

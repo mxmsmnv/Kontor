@@ -2,7 +2,7 @@
 
 `kontor/tasks` — tasks, reminders, recurrence, calendar, and entity
 relations. First business component of Stage 5 (kontor.md#36). Depends
-only on `kontor/core`, same lean shape as Sales/Documents.
+on `kontor/core`, plus Queue and Mail for delayed email reminder delivery.
 
 ## A fourth Core gap, filled here
 
@@ -37,7 +37,12 @@ Sections 11–16 of kontor.md never gave Tasks a schema section, so
   due date) rather than just closing the loop.
 - `src/Application/TaskReminderService.php` — the "reminders" milestone:
   `schedule()`/`dueReminders()`/`markSent()`. A task can have more than one
-  reminder. No delivery mechanism is built — see "Not in scope" below.
+  reminder.
+- `src/Application/TaskReminderDispatcher.php` and
+  `TaskReminderDeliveryJob` — scheduling an email reminder persists it and
+  immediately creates a delayed, idempotent `tasks.reminder` job. The worker
+  delivers through Mail, links the message back to the task, and only then
+  sets `sent_at`; transport failures remain eligible for Queue retry.
 - `src/Application/TaskRelationService.php` — the "entity relations"
   milestone, thin wrapper over `RelationRepository`.
 - `TaskRepository::dueBetween()` — the "calendar" milestone's actual query
@@ -61,15 +66,12 @@ MySQL (see `../../docker-compose.test.yml`) and is skipped otherwise, same
 The root `ProcessKontor` module provides a deliberately narrow first task
 workflow: list and filter tasks, create or edit one, start it, complete or
 cancel it, and archive or restore it. Completing a recurring task exposes the
-next occurrence created by the existing workflow service.
+next occurrence created by the existing workflow service. An assigned task can
+also schedule email reminders and shows their scheduled/sent lifecycle.
 
 ## Not in scope for this substage
 
-No reminder delivery — `TaskReminderRepository::due()` is the query a
-future `kontor/queue`-backed dispatcher (plus `kontor/mail` for the email
-channel) would poll, but no dispatcher/job is wired up here, the same
-"deferred cross-component wiring" choice `kontor/documents` made for its
-snapshot builder. No API endpoints or calendar rendering. Task
-assignment (`assigned_to`) stores a plain ProcessWire user id, matching
-`created_by`/`updated_by`'s convention (kontor.md#10.4) — there's no
-notification when a task is assigned.
+No API endpoints or calendar rendering. Task assignment (`assigned_to`) stores
+a plain ProcessWire user id, matching `created_by`/`updated_by`'s convention
+(kontor.md#10.4). Assignment itself does not notify; a reminder must be
+scheduled explicitly.

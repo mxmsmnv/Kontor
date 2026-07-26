@@ -8,6 +8,7 @@ use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
 use Kontor\Core\Migrations\Migration0006CreateRelationsTable;
+use Kontor\Mail\Migrations\Migration0002CreateMessagesTable;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
 use PHPUnit\Framework\TestCase;
@@ -44,6 +45,7 @@ abstract class DatabaseTestCase extends TestCase
             new Migration0006CreateRelationsTable(),
             new Migration0001CreateTasksTable(),
             new Migration0002CreateTaskRemindersTable(),
+            new Migration0002CreateMessagesTable(),
         ]);
 
         $this->organizationUid = (new OrganizationRepository($this->pdo))
@@ -64,6 +66,7 @@ abstract class DatabaseTestCase extends TestCase
         foreach (
             [
                 'kontor_task_reminders',
+                'kontor_mail_messages',
                 'kontor_tasks',
                 'kontor_relations',
                 'kontor_organizations',

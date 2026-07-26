@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Task reminder workers deliver assigned-user email through outbound history
+  and link each message back to its task.
 - Collaboration notification workers deliver mention and follower emails
   through the normal outbound service and history, linking each message back
   to its commented entity.

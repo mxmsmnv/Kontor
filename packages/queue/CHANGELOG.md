@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Task email reminders use delayed, idempotent jobs in the `notifications`
+  queue.
 - Collaboration uses the `notifications` queue for idempotent mention and
   follower delivery jobs.
 - Combined active-job filtering across pending and reserved states for the

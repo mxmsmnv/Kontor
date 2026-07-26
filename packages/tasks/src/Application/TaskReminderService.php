@@ -9,8 +9,6 @@ use Kontor\Tasks\Infrastructure\Persistence\TaskReminderRepository;
 
 /**
  * The "reminders" milestone: scheduling and tracking reminder records.
- * Actually delivering one (push notification, email via kontor/mail) is a
- * future integration — see the README.
  */
 final class TaskReminderService
 {
@@ -32,6 +30,11 @@ final class TaskReminderService
     public function dueReminders(string $organizationUid, ?\DateTimeImmutable $asOf = null): array
     {
         return $this->reminders->due($organizationUid, $asOf);
+    }
+
+    public function reminder(string $reminderUid): TaskReminder
+    {
+        return $this->reminders->require($reminderUid);
     }
 
     public function markSent(string $reminderUid): TaskReminder

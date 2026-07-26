@@ -4,6 +4,8 @@
 /** @var array<string, mixed> $values */
 /** @var string $error */
 /** @var bool $archived */
+/** @var \Kontor\Tasks\Domain\TaskReminder[] $reminders */
+/** @var bool $canManageReminders */
 /** @var bool $collaborationReady */
 /** @var \Kontor\Collaboration\Domain\Note[] $notes */
 /** @var \Kontor\Collaboration\Domain\Comment[] $comments */
@@ -25,7 +27,7 @@
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>tasks/"><i class="fa fa-arrow-left"></i> Back to tasks</a>
     <p class="kontor-eyebrow"><?= $task ? 'Task' : 'New task' ?></p>
     <h2><?= $e($task?->title ?? 'Create task') ?></h2>
-    <p>Define the work now; reminders and calendar views come on later floors.</p>
+    <p>Define the work, schedule reminders, and move it forward.</p>
   </header>
 
   <?php if ($task !== null): ?>
@@ -77,6 +79,35 @@
         <button class="kontor-button kontor-button--ghost" name="action" value="<?= $archived ? 'restore' : 'archive' ?>" type="submit"><?= $archived ? 'Restore' : 'Archive' ?></button>
       </form>
     </div>
+  <?php endif; ?>
+
+  <?php if ($task !== null): ?>
+    <section class="kontor-card">
+      <div class="kontor-pagehead">
+        <div><p class="kontor-eyebrow">Queue + Mail</p><h3>Email reminders</h3></div>
+      </div>
+      <?php if ($reminders): ?>
+        <table class="kontor-table">
+          <thead><tr><th>Remind at</th><th>Channel</th><th>Status</th></tr></thead>
+          <tbody><?php foreach ($reminders as $reminder): ?><tr>
+            <td><?= $e($reminder->remindAt->format('Y-m-d H:i')) ?></td>
+            <td><?= $e($reminder->channel) ?></td>
+            <td><span class="kontor-pill<?= $reminder->isSent() ? '' : ' kontor-pill--warning' ?>"><?= $reminder->isSent() ? 'sent' : 'scheduled' ?></span></td>
+          </tr><?php endforeach; ?></tbody>
+        </table>
+      <?php else: ?>
+        <p>No reminders scheduled.</p>
+      <?php endif; ?>
+      <?php if ($canManageReminders): ?>
+        <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>task-reminder/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <input type="hidden" name="task_uid" value="<?= $e($task->uid->toString()) ?>">
+          <label class="kontor-nativefield"><span>Remind at *</span><input type="datetime-local" name="remind_at" required></label>
+          <div class="kontor-nativeform__actions"><button class="kontor-button" type="submit">Schedule email reminder</button></div>
+        </form>
+        <?php if ($task->assignedTo === null): ?><p class="kontor-secondary">Assign this task before scheduling an email reminder.</p><?php endif; ?>
+      <?php endif; ?>
+    </section>
   <?php endif; ?>
 
   <?php if ($task !== null && $collaborationReady): ?>

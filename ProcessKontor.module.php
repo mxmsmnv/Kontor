@@ -89,7 +89,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '118',
+            'version' => '119',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2066,6 +2066,9 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New task')
             : sprintf($this->_('Kontor · %s'), $task->title));
         $collaborationReady = $task !== null && $this->collaborationReady();
+        $reminders = $task !== null
+            ? $this->taskModule()->reminderRepository()->forTask($task->uid->toString())
+            : [];
         $notes = [];
         $comments = [];
         $following = false;
@@ -2109,6 +2112,9 @@ class ProcessKontor extends Process
             'values' => $values,
             'error' => $error,
             'archived' => $archived,
+            'reminders' => $reminders,
+            'canManageReminders' => $user->isSuperuser()
+                || $user->hasPermission('kontor-tasks-reminder-manage'),
             'collaborationReady' => $collaborationReady,
             'notes' => $notes,
             'comments' => $comments,
@@ -2177,6 +2183,69 @@ class ProcessKontor extends Process
         $this->audit('tasks', 'task', $id, $action);
         $this->message($this->_('Task updated.'));
         $this->wire()->session->redirect('../task/?id=' . rawurlencode($id));
+    }
+
+    public function ___executeTaskReminder(): void
+    {
+        $this->requirePost();
+        $this->requireTasks();
+        $this->requirePermission('kontor-tasks-reminder-manage');
+        $taskUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('task_uid')
+        );
+        $task = $this->taskModule()->taskRepository()->require($taskUid);
+        $this->requireSameOrganization($task->organizationId);
+        if ($task->assignedTo === null) {
+            throw new WireException($this->_('Assign the task before scheduling an email reminder.'));
+        }
+
+        $recipient = $this->wire()->users->get($task->assignedTo);
+        $recipientEmail = strtolower(trim((string) $recipient->email));
+        if (!$recipient->id || filter_var($recipientEmail, FILTER_VALIDATE_EMAIL) === false) {
+            throw new WireException($this->_('The assigned user needs a valid email address.'));
+        }
+
+        $rawRemindAt = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('remind_at')
+        );
+        if ($rawRemindAt === '') {
+            throw new WireException($this->_('Reminder date is required.'));
+        }
+        try {
+            $remindAt = new \DateTimeImmutable($rawRemindAt);
+        } catch (\Throwable) {
+            throw new WireException($this->_('Reminder date is invalid.'));
+        }
+
+        $fromAddress = strtolower(trim((string) $this->wire()->config->adminEmail));
+        if (filter_var($fromAddress, FILTER_VALIDATE_EMAIL) === false) {
+            $fromAddress = 'notifications@kontor.local';
+        }
+        $result = $this->taskModule()->reminderDispatcher()->scheduleEmail(
+            organizationUid: $task->organizationId,
+            taskUid: $task->uid->toString(),
+            taskTitle: $task->title,
+            remindAt: $remindAt,
+            recipientUserId: (int) $recipient->id,
+            recipientEmail: $recipientEmail,
+            fromAddress: $fromAddress,
+            createdBy: (int) $this->wire()->user->id,
+        );
+
+        $this->audit(
+            'tasks',
+            'task_reminder',
+            $result['reminder']->uid->toString(),
+            'scheduled',
+            current: [
+                'taskUid' => $task->uid->toString(),
+                'remindAt' => $remindAt->format(DATE_ATOM),
+                'channel' => 'email',
+                'jobUid' => $result['jobUid'],
+            ],
+        );
+        $this->message($this->_('Email reminder scheduled.'));
+        $this->wire()->session->redirect('../task/?id=' . rawurlencode($task->uid->toString()));
     }
 
     public function ___executeCollaboration(): string

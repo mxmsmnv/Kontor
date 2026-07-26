@@ -8,11 +8,13 @@ use Kontor\Core\Infrastructure\Persistence\RelationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Tasks\Application\TaskReminderService;
+use Kontor\Tasks\Application\TaskReminderDispatcher;
 use Kontor\Tasks\Application\TaskRelationService;
 use Kontor\Tasks\Application\TaskWorkflowService;
 use Kontor\Tasks\Health\TasksHealthCheck;
 use Kontor\Tasks\Infrastructure\Persistence\TaskReminderRepository;
 use Kontor\Tasks\Infrastructure\Persistence\TaskRepository;
+use Kontor\Tasks\Infrastructure\Queue\TaskReminderDeliveryJob;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
 
@@ -29,13 +31,13 @@ class KontorTasks extends WireData implements Module
         return [
             'title' => 'Kontor Tasks',
             'summary' => 'Tasks, reminders, recurrence, calendar, entity relations.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorTasks',
             'icon' => 'check-square-o',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor'],
+            'requires' => ['Kontor', 'KontorQueue', 'KontorMail'],
             'permissions' => [
                 'kontor-tasks-task-view' => 'View tasks',
                 'kontor-tasks-task-create' => 'Create tasks',
@@ -58,6 +60,20 @@ class KontorTasks extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
+
+        /** @var KontorQueue $queue */
+        $queue = $this->wire()->modules->get('KontorQueue');
+        /** @var KontorMail $mail */
+        $mail = $this->wire()->modules->get('KontorMail');
+        $queue->jobRegistry()->register(
+            'tasks.reminder',
+            fn (array $payload): TaskReminderDeliveryJob => new TaskReminderDeliveryJob(
+                $payload,
+                $this->reminders(),
+                $mail->outbound(),
+                $mail->entityLinking(),
+            ),
+        );
     }
 
     private function registerTranslations(TranslationRegistry $translations): void
@@ -92,6 +108,14 @@ class KontorTasks extends WireData implements Module
     public function reminders(): TaskReminderService
     {
         return new TaskReminderService($this->reminderRepository());
+    }
+
+    public function reminderDispatcher(): TaskReminderDispatcher
+    {
+        /** @var KontorQueue $queue */
+        $queue = $this->wire()->modules->get('KontorQueue');
+
+        return new TaskReminderDispatcher($this->reminders(), $queue->queue());
     }
 
     public function relations(): TaskRelationService

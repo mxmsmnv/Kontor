@@ -27,6 +27,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Assigned tasks can schedule delayed Queue reminders; workers deliver through
+  Mail, write task-linked history, and mark reminders sent exactly once.
 - Collaboration comments now queue idempotent mention/follower notifications;
   Queue workers deliver them through Mail with outbound history and entity
   links.
