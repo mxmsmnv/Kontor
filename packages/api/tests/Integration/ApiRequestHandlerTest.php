@@ -141,6 +141,32 @@ final class ApiRequestHandlerTest extends DatabaseTestCase
         $this->assertSame(401, $response->status);
     }
 
+    public function test_a_scoped_token_cannot_cross_access_level(): void
+    {
+        $readOnly = $this->authenticator->issue(
+            $this->organizationUid,
+            'Read-only CI token',
+            ['organizations:read'],
+        );
+
+        $read = $this->handler->handle($this->request(
+            'GET',
+            '/api/kontor/v1/organizations',
+            headers: ['authorization' => "Bearer {$readOnly->plaintext}"],
+        ));
+        $write = $this->handler->handle($this->request(
+            'PATCH',
+            "/api/kontor/v1/organizations/{$this->organizationUid}",
+            body: json_encode(['name' => 'Forbidden'], JSON_THROW_ON_ERROR),
+            headers: ['authorization' => "Bearer {$readOnly->plaintext}"],
+        ));
+
+        $this->assertSame(200, $read->status);
+        $this->assertSame(401, $write->status);
+        $error = json_decode($write->body, associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('organizations:write', $error['error']['message']);
+    }
+
     public function test_create_with_an_idempotency_key_still_reports_unsupported_on_first_and_every_call(): void
     {
         // organizations doesn't support create at all, so the idempotency

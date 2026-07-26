@@ -22,7 +22,10 @@
         "kontor/sdk": "^0.2.1",
         "kontor/core": "^0.1"
     },
-    "suggests": {},
+    "suggests": {
+        "kontor/api": "^0.1",
+        "kontor/graphql": "^0.1"
+    },
     "conflicts": {},
     "capabilities": [],
     "permissions": [

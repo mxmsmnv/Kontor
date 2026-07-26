@@ -53,10 +53,14 @@ identity and lifecycle instead of a bag of key-value pairs.
   call made for `kontor/tasks`'/`kontor/reports`' own recurrence-interval
   tables). `apply()` is the DB-touching convenience wrapper around them.
 - `src/Application/EntitySchemaService.php` — the "API exposure"
-  milestone. Stage 8 (REST API, GraphQL, Marketplace) doesn't exist yet,
-  so this can't mean real HTTP endpoints — `describe()`/`describeExposed()`
-  shape exactly the data contract a future REST/GraphQL schema generator
-  would consume, and mark which entities opt in via `api_exposed`.
+  milestone. `describe()`/`describeExposed()` shape the dynamic contract and
+  mark which entities opt in via `api_exposed`.
+- `src/Infrastructure/API/CustomEntityResource.php` — turns every active,
+  exposed entity key into an `entities_{entity_key}` REST resource. The
+  resource resolves the caller's organization-specific definition, validates
+  writes through `EntityRecordService`, paginates records, and soft-deletes
+  them. GraphQL discovers the same resource automatically through API's shared
+  registry.
 
 ## Testing
 
@@ -74,10 +78,6 @@ other packages.
 
 ## Not in scope for this substage
 
-No actual REST/GraphQL endpoints — that's Stage 8's own job; this package
-only shapes the contract. No visual entity/field builder UI — no admin UI
-is built anywhere in this monorepo yet, same deferral `kontor/workflow`'s
-visual editor and `kontor/dashboard`'s widget layout editor already made.
 No field types beyond the six scalar ones (no file/reference/relation
 field type — cross-entity linking goes through `EntityRelationService`
 instead of a field).

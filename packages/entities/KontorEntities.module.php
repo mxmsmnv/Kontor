@@ -17,6 +17,7 @@ use Kontor\Entities\Infrastructure\Persistence\EntityDefinitionRepository;
 use Kontor\Entities\Infrastructure\Persistence\EntityFieldRepository;
 use Kontor\Entities\Infrastructure\Persistence\EntityRecordRepository;
 use Kontor\Entities\Infrastructure\Persistence\EntityViewRepository;
+use Kontor\Entities\Infrastructure\API\CustomEntityResource;
 use Kontor\Entities\Migrations\Migration0001CreateDefinitionsTable;
 use Kontor\Entities\Migrations\Migration0002CreateFieldsTable;
 use Kontor\Entities\Migrations\Migration0003CreateRecordsTable;
@@ -35,7 +36,7 @@ class KontorEntities extends WireData implements Module
         return [
             'title' => 'Kontor Custom Entities',
             'summary' => 'Entity builder, fields, relations, views, permissions, API exposure.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorEntities',
             'icon' => 'cube',
@@ -62,6 +63,36 @@ class KontorEntities extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
+
+        if ($this->wire()->modules->isInstalled('KontorAPI')) {
+            /** @var KontorAPI $api */
+            $api = $this->wire()->modules->get('KontorAPI');
+            foreach ($this->apiResourceFields() as $entityKey => $fields) {
+                $api->resourceRegistry()->register(new CustomEntityResource(
+                    $entityKey,
+                    $fields,
+                    $this->definitionRepository(),
+                    $this->recordRepository(),
+                    $this->records(),
+                ));
+            }
+        }
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function apiResourceFields(): array
+    {
+        $resources = [];
+        foreach ($this->definitionRepository()->activeExposed() as $definition) {
+            foreach ($this->fieldRepository()->forDefinition($definition->uid->toString()) as $field) {
+                $resources[$definition->entityKey][$field->fieldKey] = $field->fieldType;
+            }
+            $resources[$definition->entityKey] ??= [];
+        }
+
+        return $resources;
     }
 
     private function registerTranslations(TranslationRegistry $translations): void

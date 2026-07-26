@@ -29,6 +29,18 @@ final class EntityRecordRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function findActive(string $id): ?EntityRecord
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_entity_records WHERE uid = :uid AND archived_at IS NULL'
+        );
+        $statement->execute(['uid' => $id]);
+
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function require(string $id): EntityRecord
     {
         return $this->find($id) ?? throw new RuntimeException("Entity record \"{$id}\" was not found.");
@@ -81,6 +93,36 @@ final class EntityRecordRepository implements RepositoryInterface
         $statement->execute(['definition_uid' => $definitionUid]);
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @return EntityRecord[]
+     */
+    public function forDefinitionPage(string $definitionUid, int $limit, int $offset): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_entity_records
+             WHERE definition_uid = :definition_uid AND archived_at IS NULL
+             ORDER BY created_at ASC, id ASC
+             LIMIT :limit OFFSET :offset'
+        );
+        $statement->bindValue(':definition_uid', $definitionUid);
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    public function countForDefinition(string $definitionUid): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM kontor_entity_records
+             WHERE definition_uid = :definition_uid AND archived_at IS NULL'
+        );
+        $statement->execute(['definition_uid' => $definitionUid]);
+
+        return (int) $statement->fetchColumn();
     }
 
     /**

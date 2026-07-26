@@ -5,8 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- REST authentication now enforces `{resource}:read` for list/find and
+  `{resource}:write` for create/update/delete instead of only validating the
+  bearer secret.
+
 ### Added
 
+- Custom Entities now supplies dynamic `entities_{entity_key}` resources to
+  the shared registry, using the existing authentication and CRUD pipeline.
 - Contacts is the first external business-resource adopter, registering full
   `/contacts` CRUD, pagination, filters, sparse fields, and soft delete.
 - First ProcessKontor admin vertical: one-time token issuance, revocation,

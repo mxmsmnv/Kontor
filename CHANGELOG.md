@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- REST tokens now enforce resource-specific read/write scopes on every CRUD
+  route.
 - Dashboard hashes scoped widget cache identities so WireCache never truncates
   otherwise valid organization, layout, configuration, and tag dimensions.
 - Entity-bound Files lookups can now enforce the owning organization.
@@ -27,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- API-exposed Custom Entities now register real dynamic REST resources and
+  automatically become queryable through the shared GraphQL schema.
 - Tasks now registers the first component-owned Dashboard widget: each user can
   add a cached, linked view of their own open and overdue assignments.
 - Expenses is the first Workflow adopter: its safe business lifecycle now

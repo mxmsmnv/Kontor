@@ -48,7 +48,11 @@ final class ApiRequestHandler
         }
 
         try {
-            $token = $this->authenticator->authenticate($this->bearerToken($request));
+            $access = in_array($route->action, ['list', 'find'], true) ? 'read' : 'write';
+            $token = $this->authenticator->authenticate(
+                $this->bearerToken($request),
+                "{$route->resourceKey}:{$access}",
+            );
         } catch (AuthenticationFailedException $e) {
             return $this->error(401, 'unauthenticated', $e->getMessage(), $requestId);
         }

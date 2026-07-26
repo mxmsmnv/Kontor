@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- API-exposed Custom Entities now appear automatically as typed
+  `entities_{entity_key}` root queries through the shared API registry.
 - Contacts is the first external business component proven end to end through
   the shared registry: its `Contact` type appears automatically in the admin
   schema explorer and live `/graphql` queries enforce `contacts:read`.

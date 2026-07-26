@@ -46,6 +46,27 @@ final class EntityDefinitionRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function findActiveByKey(string $organizationUid, string $entityKey): ?EntityDefinition
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_entity_definitions
+             WHERE organization_id = :organization_id
+               AND entity_key = :entity_key
+               AND status = 'active'
+               AND archived_at IS NULL"
+        );
+        $statement->execute([
+            'organization_id' => $organizationId,
+            'entity_key' => $entityKey,
+        ]);
+
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function save(object $entity): void
     {
         if (!$entity instanceof EntityDefinition) {
@@ -102,6 +123,20 @@ final class EntityDefinitionRepository implements RepositoryInterface
 
         $statement = $this->pdo->prepare('SELECT * FROM kontor_entity_definitions WHERE organization_id = :organization_id ORDER BY name ASC');
         $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @return EntityDefinition[]
+     */
+    public function activeExposed(): array
+    {
+        $statement = $this->pdo->query(
+            "SELECT * FROM kontor_entity_definitions
+             WHERE api_exposed = 1 AND status = 'active' AND archived_at IS NULL
+             ORDER BY entity_key ASC, organization_id ASC"
+        );
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }

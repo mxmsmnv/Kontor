@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- API-exposed definitions now register `entities_{entity_key}` resources with
+  real REST CRUD, tenant isolation, pagination and automatic GraphQL types.
 - First ProcessKontor admin vertical: entity and typed-field builder, dynamic
   record forms, saved filters and sorting, cross-component relation links,
   permission-aware access, and visible API schema contracts.
