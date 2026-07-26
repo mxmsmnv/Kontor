@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- One-click Catalog item duplication that copies localized content and
+  commercial settings while clearing unique identifiers and creating an
+  inactive, audited draft.
 - Multilingual Catalog category editing for English, French, German, and
   Spanish names, including default-language list rendering.
 - Multilingual Catalog item editing for English, French, German, and Spanish

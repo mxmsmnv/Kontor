@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '036',
+            'version' => '037',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -623,6 +623,30 @@ class ProcessKontor extends Process
             ? $this->_('Catalog item restored.')
             : $this->_('Catalog item archived.'));
         $this->wire()->session->redirect('../catalog/' . ($action === 'restore' ? '?archived=1' : ''));
+    }
+
+    public function ___executeCatalogItemDuplicate(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-item-create');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $source = $this->catalogItemRepository()->require($id);
+        $this->requireSameOrganization($source->organizationId);
+        $duplicate = $source->duplicate($this->_(' (copy)'));
+        $this->catalogItemRepository()->save($duplicate);
+        $this->audit(
+            'catalog',
+            'catalog_item',
+            $duplicate->uid->toString(),
+            'created',
+            current: $this->catalogItemAuditSnapshot($duplicate),
+            metadata: ['duplicatedFrom' => $source->uid->toString()],
+        );
+        $this->message($this->_('Catalog item duplicated as an inactive draft.'));
+        $this->wire()->session->redirect(
+            '../catalog-item/?id=' . rawurlencode($duplicate->uid->toString())
+        );
     }
 
     public function ___executeCatalogBulkAction(): void

@@ -92,4 +92,31 @@ final class CatalogItem
     {
         return $this->itemType === 'service';
     }
+
+    public function duplicate(string $titleSuffix = ' (copy)'): self
+    {
+        $titles = [];
+
+        foreach ($this->title as $locale => $title) {
+            $titles[$locale] = $title . $titleSuffix;
+        }
+
+        return self::create(
+            organizationId: $this->organizationId,
+            title: $titles,
+            itemType: $this->itemType,
+            sku: null,
+            barcode: null,
+            description: $this->description,
+            categoryUid: $this->categoryUid,
+            unitCode: $this->unitCode,
+            taxCode: $this->taxCode,
+            salesPrice: $this->salesPrice,
+            purchasePrice: $this->purchasePrice,
+            costPrice: $this->costPrice,
+            trackInventory: $this->trackInventory,
+            status: 'inactive',
+            metadata: $this->metadata,
+        );
+    }
 }

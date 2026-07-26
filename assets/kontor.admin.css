@@ -506,6 +506,20 @@
   text-decoration: none;
 }
 
+.kontor-formhead__toolbar {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kontor-formhead__toolbar form {
+  margin: 0;
+}
+
+.kontor-formhead__toolbar .kontor-formhead__back {
+  margin-bottom: 1rem;
+}
+
 .kontor-formhead h2 {
   color: var(--kontor-ink);
   margin: 0 0 0.35rem;

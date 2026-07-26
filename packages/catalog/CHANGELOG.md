@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Safe Catalog item duplication with fresh identity, cleared SKU/barcode,
+  copied commercial data, and inactive status.
 - Transactional, tenant-scoped bulk archive and restore operations for up to
   100 Catalog items.
 - Catalog items in global search, covering localized titles/descriptions,
