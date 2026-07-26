@@ -44,7 +44,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '016',
+            'version' => '017',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -363,21 +363,38 @@ class ProcessKontor extends Process
         $component = in_array($component, $options['components'], true) ? $component : null;
         $entityType = in_array($entityType, $options['entityTypes'], true) ? $entityType : null;
         $action = in_array($action, $options['actions'], true) ? $action : null;
+        $pageSize = 50;
+        $totalEvents = $this->auditEventRepository()->countMatching(
+            $organizationId,
+            $query,
+            $component,
+            $entityType,
+            $action,
+        );
+        $totalPages = max(1, (int) ceil($totalEvents / $pageSize));
+        $page = min(
+            $totalPages,
+            max(1, (int) $this->wire()->input->get('page'))
+        );
 
         return $this->renderTemplate('activity', [
             'events' => $this->auditEventRepository()->findRecent(
                 $organizationId,
                 $query,
-                150,
+                $pageSize,
                 $component,
                 $entityType,
                 $action,
+                ($page - 1) * $pageSize,
             ),
             'query' => $query,
             'filterOptions' => $options,
             'selectedComponent' => $component,
             'selectedEntityType' => $entityType,
             'selectedAction' => $action,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalEvents' => $totalEvents,
         ]);
     }
 

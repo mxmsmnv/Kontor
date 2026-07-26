@@ -40,6 +40,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   active/dead-letter status, respecting the viewer's permissions.
 - Faceted Activity filtering by component, entity type, and exact action,
   composable with the existing free-text search.
+- Paginated Activity results with filter-preserving previous/next navigation
+  and an exact matching-event count.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

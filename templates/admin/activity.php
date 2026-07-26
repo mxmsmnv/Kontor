@@ -6,6 +6,9 @@
 /** @var string|null $selectedComponent */
 /** @var string|null $selectedEntityType */
 /** @var string|null $selectedAction */
+/** @var int $page */
+/** @var int $totalPages */
+/** @var int $totalEvents */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -26,6 +29,15 @@ $hasFilters = $query !== ''
     || $selectedComponent !== null
     || $selectedEntityType !== null
     || $selectedAction !== null;
+$pageQuery = array_filter([
+    'q' => $query,
+    'component' => $selectedComponent,
+    'entity_type' => $selectedEntityType,
+    'action' => $selectedAction,
+], static fn (mixed $value): bool => $value !== null && $value !== '');
+$pageUrl = static function (int $targetPage) use ($pageQuery): string {
+    return './?' . http_build_query([...$pageQuery, 'page' => $targetPage]);
+};
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -103,6 +115,23 @@ $hasFilters = $query !== ''
         </article>
       <?php endforeach; ?>
     </section>
+    <?php if ($totalPages > 1): ?>
+      <nav class="kontor-pagination" aria-label="Activity pages">
+        <span><?= $e($totalEvents) ?> events · Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
+        <div>
+          <?php if ($page > 1): ?>
+            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+              <i class="fa fa-chevron-left"></i> Previous
+            </a>
+          <?php endif; ?>
+          <?php if ($page < $totalPages): ?>
+            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+              Next <i class="fa fa-chevron-right"></i>
+            </a>
+          <?php endif; ?>
+        </div>
+      </nav>
+    <?php endif; ?>
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-history"></i>

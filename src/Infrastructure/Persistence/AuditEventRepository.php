@@ -22,9 +22,11 @@ final class AuditEventRepository
         ?string $component = null,
         ?string $entityType = null,
         ?string $action = null,
+        int $offset = 0,
     ): array {
         $query = trim($query);
         $limit = max(1, min($limit, 250));
+        $offset = max(0, $offset);
         $sql = 'SELECT * FROM kontor_audit_events WHERE organization_id = :organization_id';
 
         if ($query !== '') {
@@ -49,7 +51,7 @@ final class AuditEventRepository
             $sql .= ' AND action = :action';
         }
 
-        $sql .= ' ORDER BY occurred_at DESC, id DESC LIMIT :limit';
+        $sql .= ' ORDER BY occurred_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
 
@@ -70,12 +72,69 @@ final class AuditEventRepository
         }
 
         $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $statement->execute();
 
         return array_map(
             fn (array $row): AuditEvent => $this->hydrate($row),
             $statement->fetchAll(\PDO::FETCH_ASSOC)
         );
+    }
+
+    public function countMatching(
+        int $organizationId,
+        string $query = '',
+        ?string $component = null,
+        ?string $entityType = null,
+        ?string $action = null,
+    ): int {
+        $query = trim($query);
+        $sql = 'SELECT COUNT(*) FROM kontor_audit_events WHERE organization_id = :organization_id';
+
+        if ($query !== '') {
+            $sql .= ' AND (
+                action LIKE :query
+                OR component LIKE :query
+                OR entity_type LIKE :query
+                OR entity_uid LIKE :query
+                OR actor_uid LIKE :query
+            )';
+        }
+
+        if ($component !== null) {
+            $sql .= ' AND component = :component';
+        }
+
+        if ($entityType !== null) {
+            $sql .= ' AND entity_type = :entity_type';
+        }
+
+        if ($action !== null) {
+            $sql .= ' AND action = :action';
+        }
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
+
+        if ($query !== '') {
+            $statement->bindValue(':query', '%' . $query . '%');
+        }
+
+        if ($component !== null) {
+            $statement->bindValue(':component', $component);
+        }
+
+        if ($entityType !== null) {
+            $statement->bindValue(':entity_type', $entityType);
+        }
+
+        if ($action !== null) {
+            $statement->bindValue(':action', $action);
+        }
+
+        $statement->execute();
+
+        return (int) $statement->fetchColumn();
     }
 
     /**

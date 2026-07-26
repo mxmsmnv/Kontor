@@ -1050,6 +1050,20 @@
   padding: 0.55rem 2rem 0.55rem 0.7rem;
 }
 
+.kontor-pagination {
+  align-items: center;
+  color: var(--kontor-muted);
+  display: flex;
+  font-size: 0.86rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.kontor-pagination > div {
+  display: flex;
+  gap: 0.55rem;
+}
+
 .kontor-activity__event,
 .kontor-backup {
   align-items: flex-start;
@@ -1654,6 +1668,12 @@
   .kontor-activityfilters .kontor-searchfield {
     flex-basis: auto;
     max-width: none;
+  }
+
+  .kontor-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.7rem;
   }
 
   .kontor-activity__event > time,

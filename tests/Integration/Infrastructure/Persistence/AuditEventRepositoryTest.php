@@ -54,9 +54,23 @@ final class AuditEventRepositoryTest extends DatabaseTestCase
             action: 'updated',
         );
         $options = $repository->filterOptions($organizationId);
+        $secondPage = $repository->findRecent(
+            $organizationId,
+            limit: 1,
+            offset: 1,
+        );
 
         $this->assertCount(1, $filtered);
         $this->assertSame('company_01', $filtered[0]->entityUid);
+        $this->assertCount(1, $secondPage);
+        $this->assertSame('contact_01', $secondPage[0]->entityUid);
+        $this->assertSame(2, $repository->countMatching($organizationId));
+        $this->assertSame(1, $repository->countMatching(
+            $organizationId,
+            component: 'KontorContacts',
+            entityType: 'company',
+            action: 'updated',
+        ));
         $this->assertSame(['KontorContacts'], $options['components']);
         $this->assertSame(['company', 'contact'], $options['entityTypes']);
         $this->assertSame(['created', 'updated'], $options['actions']);
