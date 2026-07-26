@@ -20,6 +20,7 @@ use Kontor\Payments\Migrations\Migration0002CreatePaymentAllocationsTable;
 use Kontor\SDK\ValueObjects\Money;
 use Kontor\Sales\Domain\DocumentLine;
 use Kontor\Sales\Infrastructure\Persistence\DocumentLineRepository;
+use Kontor\Sales\Migrations\Migration0002CreateOrdersTable;
 use Kontor\Sales\Migrations\Migration0003CreateDocumentLinesTable;
 use PHPUnit\Framework\TestCase;
 
@@ -53,6 +54,7 @@ abstract class DatabaseTestCase extends TestCase
         $runner->run([
             new Migration0001CreateOrganizationsTable(),
             new Migration0004CreateSequencesTable(),
+            new Migration0002CreateOrdersTable(),
             new Migration0003CreateDocumentLinesTable(),
             new Migration0001CreateInvoicesTable(),
             new Migration0001CreateAccountsTable(),
@@ -79,13 +81,20 @@ abstract class DatabaseTestCase extends TestCase
      * A sent invoice with a single 100.00 EUR (no tax) line — the fixture
      * every allocation test starts from.
      */
-    protected function sentInvoice(): Invoice
+    protected function sentInvoice(?string $orderUid = null): Invoice
     {
         $organizations = new OrganizationRepository($this->pdo);
         $invoices = new InvoiceRepository($this->pdo, $organizations);
         $lines = new DocumentLineRepository($this->pdo, $organizations);
 
-        $invoice = Invoice::create($this->organizationUid, 'contact', 'ct_01', 'EUR', dueDate: new \DateTimeImmutable('+30 days'));
+        $invoice = Invoice::create(
+            $this->organizationUid,
+            'contact',
+            'ct_01',
+            'EUR',
+            orderUid: $orderUid,
+            dueDate: new \DateTimeImmutable('+30 days'),
+        );
         $invoices->save($invoice);
 
         $lines->save(DocumentLine::create(
@@ -113,6 +122,7 @@ abstract class DatabaseTestCase extends TestCase
                 'kontor_ledger_accounts',
                 'kontor_invoices',
                 'kontor_document_lines',
+                'kontor_sales_orders',
                 'kontor_sequences',
                 'kontor_organizations',
                 'kontor_migrations',

@@ -19,9 +19,8 @@ use Kontor\Payments\Migrations\Migration0002CreatePaymentAllocationsTable;
 
 /**
  * KontorPayments bootstrap module (kontor.md Substage 4.4). Requires
- * KontorInvoices — it's the first real consumer that actually drives
- * Invoice.paid/due/status, which kontor/invoices' own README explicitly
- * left "not actively driven" pending this component.
+ * KontorInvoices and KontorSales — it drives Invoice.paid/due/status and
+ * carries that settlement state back to the originating Sales order.
  */
 class KontorPayments extends WireData implements Module
 {
@@ -30,13 +29,13 @@ class KontorPayments extends WireData implements Module
         return [
             'title' => 'Kontor Payments',
             'summary' => 'Payments, allocations, partial payments, reversals.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPayments',
             'icon' => 'money',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor', 'KontorInvoices'],
+            'requires' => ['Kontor', 'KontorInvoices', 'KontorSales'],
             'permissions' => [
                 'kontor-payments-payment-view' => 'View payments',
                 'kontor-payments-payment-create' => 'Create payments',
@@ -102,11 +101,15 @@ class KontorPayments extends WireData implements Module
             );
         }
 
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+
         return new PaymentAllocationService(
             $this->paymentRepository(),
             $this->allocationRepository(),
             $this->invoiceRepository(),
             $posting,
+            $sales->orderRepository(),
         );
     }
 

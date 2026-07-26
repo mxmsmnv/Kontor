@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Payment allocation and reversal now propagate invoice settlement state back
+  to the originating Sales order.
 - Won CRM deals now open prefilled Sales quotation drafts, persist their source
   deal, and expose linked quotations in both directions.
 - Contacts now adopts AI summaries with an on-demand customer brief built

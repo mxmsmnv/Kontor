@@ -21,7 +21,8 @@
         "processwire": ">=3.0.240",
         "kontor/sdk": "^0.2.1",
         "kontor/core": "^0.1",
-        "kontor/invoices": "^0.1"
+        "kontor/invoices": "^0.1",
+        "kontor/sales": "^0.1"
     },
     "suggests": {
         "kontor/ledger": "^0.1"

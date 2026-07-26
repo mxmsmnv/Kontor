@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Invoice allocations now keep the linked Sales order's payment status in sync
+  as unpaid, partially paid, or paid; reversals recompute it too.
 - Optional Ledger bridge: invoice-payment allocations now post debit Bank /
   credit Trade receivables entries, reversals append the inverse entry, and
   the admin payment detail links to both immutable journal records.

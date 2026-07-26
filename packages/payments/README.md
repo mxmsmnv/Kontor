@@ -2,8 +2,8 @@
 
 `kontor/payments` — payments, allocations, partial payments, and
 reversals. Seventh business component, closing out Stage 4 (Sales and
-finance-lite, kontor.md#36). Depends on `kontor/invoices`, not just
-`kontor/core`.
+finance-lite, kontor.md#36). Depends on `kontor/invoices` and
+`kontor/sales`, not just `kontor/core`.
 
 ## The first cross-package write
 
@@ -41,6 +41,9 @@ mutates another's records rather than just referencing them by uid.
   allocation for the invoice via `totalAllocatedForDocument()` — rather
   than incrementally adding/subtracting, so `paid`/`due`/`status` can never
   drift no matter how many allocate/reverse calls happened before.
+- When the invoice originated from a Sales order, the same recomputation
+  drives `Order.paymentStatus` to `unpaid`, `partially_paid`, or `paid`.
+  Allocation reversals propagate back through Invoice to Sales as well.
 - Only `document_type = 'invoice'` is implemented — the allocations
   table's `document_type`/`document_uid` pair is polymorphic like
   `kontor_document_lines`', but invoices are the only document type this

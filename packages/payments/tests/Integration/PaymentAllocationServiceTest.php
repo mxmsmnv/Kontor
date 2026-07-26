@@ -15,12 +15,15 @@ use Kontor\Payments\Infrastructure\Persistence\PaymentAllocationRepository;
 use Kontor\Payments\Infrastructure\Persistence\PaymentRepository;
 use Kontor\SDK\ValueObjects\Money;
 use Kontor\SDK\ValueObjects\Uid;
+use Kontor\Sales\Domain\Order;
+use Kontor\Sales\Infrastructure\Persistence\OrderRepository;
 
 final class PaymentAllocationServiceTest extends DatabaseTestCase
 {
     private PaymentRepository $payments;
     private PaymentAllocationRepository $allocations;
     private InvoiceRepository $invoices;
+    private OrderRepository $orders;
     private PaymentWorkflowService $paymentWorkflow;
     private PaymentAllocationService $allocationService;
 
@@ -34,7 +37,13 @@ final class PaymentAllocationServiceTest extends DatabaseTestCase
         $this->payments = new PaymentRepository($this->pdo, $organizations);
         $this->allocations = new PaymentAllocationRepository($this->pdo, $organizations);
         $this->invoices = new InvoiceRepository($this->pdo, $organizations);
-        $this->allocationService = new PaymentAllocationService($this->payments, $this->allocations, $this->invoices);
+        $this->orders = new OrderRepository($this->pdo, $organizations);
+        $this->allocationService = new PaymentAllocationService(
+            $this->payments,
+            $this->allocations,
+            $this->invoices,
+            orders: $this->orders,
+        );
         $this->paymentWorkflow = new PaymentWorkflowService($this->payments, $this->allocations, $sequences, $this->allocationService);
     }
 
@@ -83,6 +92,43 @@ final class PaymentAllocationServiceTest extends DatabaseTestCase
         $this->allocationService->allocate($second->uid->toString(), 'invoice', $invoice->uid->toString(), Money::ofMinor(6000, 'EUR'));
 
         $this->assertSame('paid', $this->invoices->require($invoice->uid->toString())->status);
+    }
+
+    public function test_allocations_and_reversal_sync_the_linked_sales_order(): void
+    {
+        $order = Order::create($this->organizationUid, 'contact', 'ct_01', 'EUR');
+        $this->orders->save($order);
+        $invoice = $this->sentInvoice($order->uid->toString());
+        $first = $this->confirmedPayment(4000);
+        $second = $this->confirmedPayment(6000);
+
+        $firstAllocation = $this->allocationService->allocate(
+            $first->uid->toString(),
+            'invoice',
+            $invoice->uid->toString(),
+            Money::ofMinor(4000, 'EUR'),
+        );
+        $this->assertSame(
+            'partially_paid',
+            $this->orders->require($order->uid->toString())->paymentStatus,
+        );
+
+        $secondAllocation = $this->allocationService->allocate(
+            $second->uid->toString(),
+            'invoice',
+            $invoice->uid->toString(),
+            Money::ofMinor(6000, 'EUR'),
+        );
+        $this->assertSame('paid', $this->orders->require($order->uid->toString())->paymentStatus);
+
+        $this->allocationService->reverseAllocation($firstAllocation->uid->toString());
+        $this->assertSame(
+            'partially_paid',
+            $this->orders->require($order->uid->toString())->paymentStatus,
+        );
+
+        $this->allocationService->reverseAllocation($secondAllocation->uid->toString());
+        $this->assertSame('unpaid', $this->orders->require($order->uid->toString())->paymentStatus);
     }
 
     public function test_cannot_allocate_more_than_the_invoice_still_owes(): void

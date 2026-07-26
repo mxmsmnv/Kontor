@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Payment allocations against an order-backed invoice now drive the Sales
+  order's payment status, including partial payments and reversals.
 - Won CRM deals can now prefill quotation drafts; saved quotations retain the
   deal UID and can be discovered from the deal workspace.
 - Quotation issuance now resolves `quotation.standard`, persists the exact

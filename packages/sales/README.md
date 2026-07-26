@@ -33,6 +33,9 @@ foreign keys"), not a hard dependency on `kontor/contacts`.
 - Won CRM deals can seed the shared quotation form with their customer, title,
   value, currency, and source deal UID. Deal and quotation screens then link
   to one another through the organization-scoped `forDeal()` lookup.
+- Payments follows an order-backed invoice to keep the source order's
+  `payment_status` synchronized as unpaid, partially paid, or paid, including
+  reversal recomputation.
 - Quotation issuance resolves the active `quotation.standard` Documents
   template with language fallback, writes its exact UID and immutable render
   snapshot into Sales, and stores the resulting confidential PDF through
@@ -63,9 +66,9 @@ packages.
 
 ## Not in scope for this substage
 
-`payment_status`/`fulfillment_status` on orders are simple descriptive
-fields, not actively driven by Sales — their real lifecycle belongs to
-Payments (Substage 4.4) and Inventory (Substage 6.1). No admin UI/API
-endpoints beyond the shared ProcessKontor workflow. Order `snapshot_json`
-remains reserved for a later order-issuance workflow; quotation snapshots
-are populated at issue time.
+`fulfillment_status` on orders is still a simple descriptive field whose real
+lifecycle belongs to Inventory (Substage 6.1); `payment_status` is now driven
+by Payments through the order's invoice. No admin UI/API endpoints beyond the
+shared ProcessKontor workflow. Order `snapshot_json` remains reserved for a
+later order-issuance workflow; quotation snapshots are populated at issue
+time.
