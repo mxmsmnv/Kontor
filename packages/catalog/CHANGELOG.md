@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Transactional, tenant-scoped bulk activation, deactivation, and
+  discontinuation for up to 100 Catalog items.
 - Transactional, tenant-scoped bulk activation and deactivation for up to
   100 Catalog categories.
 - Category status filtering for active and archived Catalog views.

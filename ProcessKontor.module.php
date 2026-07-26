@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '048',
+            'version' => '049',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -741,12 +741,14 @@ class ProcessKontor extends Process
     {
         $this->requirePost();
         $this->requireCatalog();
-        $this->requirePermission('kontor-catalog-item-archive');
         $action = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->post('action'),
-            ['archive', 'restore']
+            ['archive', 'restore', 'activate', 'deactivate', 'discontinue']
         );
-        $this->requireAction($action, ['archive', 'restore']);
+        $this->requireAction($action, ['archive', 'restore', 'activate', 'deactivate', 'discontinue']);
+        $this->requirePermission(in_array($action, ['archive', 'restore'], true)
+            ? 'kontor-catalog-item-archive'
+            : 'kontor-catalog-item-edit');
         $ids = $this->wire()->sanitizer->arrayVal(
             $this->wire()->input->post('ids'),
             ['maxItems' => 100, 'sanitizer' => 'text']
@@ -758,24 +760,38 @@ class ProcessKontor extends Process
             $this->wire()->session->redirect($redirect);
         }
 
-        $changedIds = $action === 'restore'
-            ? $this->catalogItemRepository()->restoreMany($this->organizationUid(), $ids)
-            : $this->catalogItemRepository()->archiveMany($this->organizationUid(), $ids);
+        $changedIds = match ($action) {
+            'restore' => $this->catalogItemRepository()->restoreMany($this->organizationUid(), $ids),
+            'activate' => $this->catalogItemRepository()->activateMany($this->organizationUid(), $ids),
+            'deactivate' => $this->catalogItemRepository()->deactivateMany($this->organizationUid(), $ids),
+            'discontinue' => $this->catalogItemRepository()->discontinueMany($this->organizationUid(), $ids),
+            default => $this->catalogItemRepository()->archiveMany($this->organizationUid(), $ids),
+        };
 
         foreach ($changedIds as $id) {
             $this->audit(
                 'catalog',
                 'catalog_item',
                 $id,
-                $action === 'restore' ? 'restored' : 'archived',
+                match ($action) {
+                    'restore' => 'restored',
+                    'activate' => 'activated',
+                    'deactivate' => 'deactivated',
+                    'discontinue' => 'discontinued',
+                    default => 'archived',
+                },
                 metadata: ['bulk' => true],
             );
         }
 
         $this->message(sprintf(
-            $action === 'restore'
-                ? $this->_('%d catalog item(s) restored.')
-                : $this->_('%d catalog item(s) archived.'),
+            match ($action) {
+                'restore' => $this->_('%d catalog item(s) restored.'),
+                'activate' => $this->_('%d catalog item(s) activated.'),
+                'deactivate' => $this->_('%d catalog item(s) deactivated.'),
+                'discontinue' => $this->_('%d catalog item(s) discontinued.'),
+                default => $this->_('%d catalog item(s) archived.'),
+            },
             count($changedIds)
         ));
         $this->wire()->session->redirect($redirect);

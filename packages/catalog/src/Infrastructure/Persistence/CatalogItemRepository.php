@@ -141,6 +141,33 @@ final class CatalogItemRepository implements RepositoryInterface
     }
 
     /**
+     * @param string[] $ids
+     * @return string[]
+     */
+    public function activateMany(string $organizationUid, array $ids): array
+    {
+        return $this->setStatusMany($organizationUid, $ids, 'active');
+    }
+
+    /**
+     * @param string[] $ids
+     * @return string[]
+     */
+    public function deactivateMany(string $organizationUid, array $ids): array
+    {
+        return $this->setStatusMany($organizationUid, $ids, 'inactive');
+    }
+
+    /**
+     * @param string[] $ids
+     * @return string[]
+     */
+    public function discontinueMany(string $organizationUid, array $ids): array
+    {
+        return $this->setStatusMany($organizationUid, $ids, 'discontinued');
+    }
+
+    /**
      * @return CatalogItem[]
      */
     public function findAll(
@@ -381,6 +408,71 @@ final class CatalogItemRepository implements RepositoryInterface
                     ? [$this->now(), $organizationId, ...$changedIds]
                     : [$organizationId, ...$changedIds];
                 $update->execute($parameters);
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $changedIds;
+        } catch (\Throwable $exception) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param string[] $ids
+     * @return string[]
+     */
+    private function setStatusMany(string $organizationUid, array $ids, string $status): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            $ids,
+            static fn (mixed $id): bool => is_string($id)
+                && preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/', $id) === 1
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        if (count($ids) > 100) {
+            throw new InvalidArgumentException('At most 100 catalog items can be changed at once.');
+        }
+
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $select = $this->pdo->prepare(
+                "SELECT uid
+                 FROM kontor_catalog_items
+                 WHERE organization_id = ?
+                   AND uid IN ({$placeholders})
+                   AND status <> ?
+                 FOR UPDATE"
+            );
+            $select->execute([$organizationId, ...$ids, $status]);
+            $changedIds = array_map('strval', $select->fetchAll(\PDO::FETCH_COLUMN));
+
+            if ($changedIds !== []) {
+                $changedPlaceholders = implode(', ', array_fill(0, count($changedIds), '?'));
+                $update = $this->pdo->prepare(
+                    "UPDATE kontor_catalog_items
+                     SET status = ?, updated_at = ?
+                     WHERE organization_id = ?
+                       AND uid IN ({$changedPlaceholders})"
+                );
+                $update->execute([$status, $this->now(), $organizationId, ...$changedIds]);
             }
 
             if ($ownsTransaction) {

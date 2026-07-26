@@ -121,6 +121,55 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString()));
     }
 
+    public function test_bulk_status_changes_are_tenant_scoped_and_idempotent(): void
+    {
+        $organizations = new OrganizationRepository($this->pdo);
+        $repository = new CatalogItemRepository($this->pdo, $organizations);
+        $first = CatalogItem::create($this->organizationUid, ['en' => 'First']);
+        $second = CatalogItem::create($this->organizationUid, ['en' => 'Second']);
+        $otherOrganization = Organization::createDefault('DE', 'de', 'EUR');
+        $otherOrganization->name = 'Other organization';
+        $organizations->save($otherOrganization);
+        $other = CatalogItem::create(
+            $otherOrganization->uid->toString(),
+            ['en' => 'Other item'],
+        );
+
+        foreach ([$first, $second, $other] as $item) {
+            $repository->save($item);
+        }
+
+        $discontinued = $repository->discontinueMany($this->organizationUid, [
+            $first->uid->toString(),
+            $second->uid->toString(),
+            $other->uid->toString(),
+            $first->uid->toString(),
+            'invalid',
+        ]);
+
+        $this->assertEqualsCanonicalizing(
+            [$first->uid->toString(), $second->uid->toString()],
+            $discontinued,
+        );
+        $this->assertSame([], $repository->discontinueMany($this->organizationUid, $discontinued));
+        $this->assertSame(2, $repository->countMatching($this->organizationUid, status: 'discontinued'));
+        $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString(), status: 'active'));
+
+        $deactivated = $repository->deactivateMany($this->organizationUid, [
+            $first->uid->toString(),
+            $other->uid->toString(),
+        ]);
+        $this->assertSame([$first->uid->toString()], $deactivated);
+
+        $activated = $repository->activateMany($this->organizationUid, [
+            $first->uid->toString(),
+            $other->uid->toString(),
+        ]);
+        $this->assertSame([$first->uid->toString()], $activated);
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, status: 'active'));
+        $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString(), status: 'active'));
+    }
+
     public function test_require_throws_for_unknown_uid(): void
     {
         $this->expectException(\RuntimeException::class);
