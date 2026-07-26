@@ -12,6 +12,8 @@ use Kontor\Collaboration\Migrations\Migration0005CreateUnreadStatesTable;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
+use Kontor\Core\Migrations\Migration0006CreateRelationsTable;
+use Kontor\Mail\Migrations\Migration0002CreateMessagesTable;
 use PHPUnit\Framework\TestCase;
 
 abstract class DatabaseTestCase extends TestCase
@@ -43,11 +45,13 @@ abstract class DatabaseTestCase extends TestCase
         $runner->ensureLedgerExists();
         $runner->run([
             new Migration0001CreateOrganizationsTable(),
+            new Migration0006CreateRelationsTable(),
             new Migration0001CreateNotesTable(),
             new Migration0002CreateCommentsTable(),
             new Migration0003CreateMentionsTable(),
             new Migration0004CreateFollowersTable(),
             new Migration0005CreateUnreadStatesTable(),
+            new Migration0002CreateMessagesTable(),
         ]);
 
         $this->organizationUid = (new OrganizationRepository($this->pdo))
@@ -68,6 +72,8 @@ abstract class DatabaseTestCase extends TestCase
         foreach (
             [
                 'kontor_unread_states',
+                'kontor_mail_messages',
+                'kontor_relations',
                 'kontor_followers',
                 'kontor_mentions',
                 'kontor_comments',

@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Collaboration notification workers deliver mention and follower emails
+  through the normal outbound service and history, linking each message back
+  to its commented entity.
 - First ProcessKontor admin vertical: shared-mailbox creation, safe outbound
   simulation and history, raw inbound ingestion, message detail, and entity
   linking.

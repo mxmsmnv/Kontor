@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Comment posting now dispatches idempotent Queue jobs for mentioned users and
+  existing followers; workers deliver through Mail and preserve outbound
+  history plus entity links without notifying the author twice, while failed
+  transports remain retryable Queue failures.
 - First admin vertical: recent collaboration activity plus task-attached notes,
   comments, auto-following, unread-state reads, and archive actions.
 - Initial alpha (Substage 5.2): `kontor_notes`, `kontor_comments`,

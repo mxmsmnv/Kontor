@@ -27,6 +27,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Collaboration comments now queue idempotent mention/follower notifications;
+  Queue workers deliver them through Mail with outbound history and entity
+  links.
 - Dashboard widget payloads now flow through Cache with scoped keys, TTLs,
   visible hit/miss state, and layout-driven tag invalidation.
 - Invoice and credit-note issuance now persists exact template snapshots and

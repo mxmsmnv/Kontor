@@ -3,6 +3,7 @@
 namespace ProcessWire;
 
 use Kontor\Collaboration\Application\CommentService;
+use Kontor\Collaboration\Application\CollaborationNotificationDispatcher;
 use Kontor\Collaboration\Application\MentionParser;
 use Kontor\Collaboration\Application\UnreadStateService;
 use Kontor\Collaboration\Health\CollaborationHealthCheck;
@@ -11,6 +12,7 @@ use Kontor\Collaboration\Infrastructure\Persistence\FollowerRepository;
 use Kontor\Collaboration\Infrastructure\Persistence\MentionRepository;
 use Kontor\Collaboration\Infrastructure\Persistence\NoteRepository;
 use Kontor\Collaboration\Infrastructure\Persistence\UnreadStateRepository;
+use Kontor\Collaboration\Infrastructure\Queue\CollaborationNotificationJob;
 use Kontor\Collaboration\Migrations\Migration0001CreateNotesTable;
 use Kontor\Collaboration\Migrations\Migration0002CreateCommentsTable;
 use Kontor\Collaboration\Migrations\Migration0003CreateMentionsTable;
@@ -22,8 +24,8 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 
 /**
- * KontorCollaboration bootstrap module (kontor.md Substage 5.2). Depends
- * only on kontor/core — notes/comments/followers/unread-states are all
+ * KontorCollaboration bootstrap module (kontor.md Substage 5.2).
+ * Notes/comments/followers/unread-states are all
  * polymorphic (entity_type/entity_uid), attachable to any entity from any
  * other component without a hard dependency on it.
  */
@@ -34,13 +36,13 @@ class KontorCollaboration extends WireData implements Module
         return [
             'title' => 'Kontor Collaboration',
             'summary' => 'Notes, comments, mentions, followers, unread states.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCollaboration',
             'icon' => 'comments-o',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor'],
+            'requires' => ['Kontor', 'KontorQueue', 'KontorMail'],
             'permissions' => [
                 'kontor-collaboration-note-view' => 'View notes',
                 'kontor-collaboration-note-create' => 'Create notes',
@@ -67,6 +69,19 @@ class KontorCollaboration extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
+
+        /** @var KontorQueue $queue */
+        $queue = $this->wire()->modules->get('KontorQueue');
+        /** @var KontorMail $mail */
+        $mail = $this->wire()->modules->get('KontorMail');
+        $queue->jobRegistry()->register(
+            'collaboration.notify',
+            static fn (array $payload): CollaborationNotificationJob => new CollaborationNotificationJob(
+                $payload,
+                $mail->outbound(),
+                $mail->entityLinking(),
+            ),
+        );
     }
 
     private function registerTranslations(TranslationRegistry $translations): void
@@ -111,6 +126,14 @@ class KontorCollaboration extends WireData implements Module
     public function commentService(): CommentService
     {
         return new CommentService($this->commentRepository(), $this->mentionRepository(), $this->followerRepository(), new MentionParser());
+    }
+
+    public function notificationDispatcher(): CollaborationNotificationDispatcher
+    {
+        /** @var KontorQueue $queue */
+        $queue = $this->wire()->modules->get('KontorQueue');
+
+        return new CollaborationNotificationDispatcher($queue->queue());
     }
 
     public function unreadStateService(): UnreadStateService

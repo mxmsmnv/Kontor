@@ -2,6 +2,7 @@
 
 namespace ProcessWire;
 
+use Kontor\Collaboration\Domain\Comment;
 use Kontor\Collaboration\Domain\Note;
 use Kontor\Catalog\Application\PriceListDuplicator;
 use Kontor\Catalog\Domain\CatalogItem;
@@ -88,7 +89,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '117',
+            'version' => '118',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2222,6 +2223,7 @@ class ProcessKontor extends Process
         }
         $body = mb_substr($body, 0, 10000);
         $module = $this->collaborationModule();
+        $notificationCount = 0;
 
         if ($kind === 'note') {
             $record = Note::create(
@@ -2254,6 +2256,7 @@ class ProcessKontor extends Process
                 (int) $this->wire()->user->id,
                 $parentUid !== '' ? $parentUid : null,
             );
+            $notificationCount = count($this->queueCollaborationNotifications($record, $task->title));
         }
 
         $this->audit(
@@ -2263,7 +2266,14 @@ class ProcessKontor extends Process
             'created',
             current: ['entityType' => $entityType, 'entityUid' => $entityUid],
         );
-        $this->message($kind === 'note' ? $this->_('Note added.') : $this->_('Comment posted.'));
+        $this->message(match (true) {
+            $kind === 'note' => $this->_('Note added.'),
+            $notificationCount > 0 => sprintf(
+                $this->_('Comment posted; %d notification(s) queued.'),
+                $notificationCount,
+            ),
+            default => $this->_('Comment posted.'),
+        });
         $this->wire()->session->redirect('../task/?id=' . rawurlencode($entityUid));
     }
 
@@ -10718,6 +10728,57 @@ class ProcessKontor extends Process
         }
 
         return $labels;
+    }
+
+    /**
+     * @return string[] dispatched queue job UIDs
+     */
+    private function queueCollaborationNotifications(Comment $comment, string $entityLabel): array
+    {
+        $recipientReasons = [];
+        foreach ($this->collaborationModule()->mentionRepository()->forComment($comment->uid->toString()) as $mention) {
+            $recipientReasons[$mention->mentionedUserId] = 'mention';
+        }
+        foreach ($this->collaborationModule()->followerRepository()->followersOf(
+            $comment->entityType,
+            $comment->entityUid,
+        ) as $follower) {
+            $recipientReasons[$follower->userId] ??= 'follow';
+        }
+
+        $recipients = [];
+        foreach ($recipientReasons as $userId => $reason) {
+            if ((int) $userId === $comment->createdBy) {
+                continue;
+            }
+
+            $user = $this->wire()->users->get((int) $userId);
+            $email = strtolower(trim((string) $user->email));
+            if (!$user->id || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                continue;
+            }
+
+            $recipients[] = ['userId' => (int) $userId, 'email' => $email, 'reason' => $reason];
+        }
+
+        $fromAddress = strtolower(trim((string) $this->wire()->config->adminEmail));
+        if (filter_var($fromAddress, FILTER_VALIDATE_EMAIL) === false) {
+            $fromAddress = 'notifications@kontor.local';
+        }
+        $authorLabel = trim((string) $this->wire()->user->name) ?: 'A Kontor user';
+
+        return $this->collaborationModule()->notificationDispatcher()->dispatch(
+            organizationUid: $comment->organizationId,
+            commentUid: $comment->uid->toString(),
+            entityType: $comment->entityType,
+            entityUid: $comment->entityUid,
+            authorUserId: $comment->createdBy,
+            authorLabel: $authorLabel,
+            fromAddress: $fromAddress,
+            subject: mb_substr("New comment on task: {$entityLabel}", 0, 255),
+            body: "{$authorLabel} posted a comment on “{$entityLabel}”:\n\n{$comment->body}",
+            recipients: $recipients,
+        );
     }
 
     private function requireDataExchangeEntity(string $entityType): void

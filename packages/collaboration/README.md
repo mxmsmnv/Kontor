@@ -1,10 +1,11 @@
 # Kontor Collaboration
 
 `kontor/collaboration` — notes, comments, mentions, followers, and unread
-states. Second component of Stage 5. Depends only on `kontor/core` — every
-entity here is polymorphic (`entity_type`/`entity_uid`), so it can attach
-to a contact, a deal, a task, anything, without a hard dependency on that
-component.
+states. Second component of Stage 5. Depends on `kontor/core`, plus the
+shared Queue and Mail components for asynchronous follower and mention
+notifications. Every entity here is polymorphic (`entity_type`/`entity_uid`),
+so it can attach to a contact, a deal, a task, anything, without a hard
+dependency on that component.
 
 ## Its own schema gap
 
@@ -57,13 +58,16 @@ otherwise, same `KONTOR_TEST_DB_DSN` convention as the other packages.
 The root `ProcessKontor` module now exposes recent collaboration activity and
 task-attached notes/comments. Posting a comment exercises the existing mention
 parser and auto-follow behavior; opening the task marks its thread read.
+Mentioned users and existing followers with valid ProcessWire email addresses
+receive one idempotent `collaboration.notify` Queue job per comment. The worker
+rebuilds that job through `JobRegistry`, delivers it through Mail, and therefore
+keeps the normal outbound history, mail events, and a `mail_link` back to the
+commented entity. The author is excluded and a mention wins over a duplicate
+follower notification. A failed Mail transport fails the job so Queue's normal
+retry and dead-letter policy remains authoritative.
 
 ## Not in scope for this substage
 
-No notification delivery when someone is mentioned or a followed entity
-gets a new comment — `MentionRepository::unreadFor()` and
-`FollowerRepository::followersOf()` are the query surface a future
-`kontor/queue` + `kontor/mail`-backed dispatcher would use, same deferred
-cross-component wiring choice `kontor/tasks` made for reminder delivery.
-No API endpoints or rich text/markdown rendering (`body` is
-stored and returned as plain text).
+No notification preferences, digests, or rich HTML/MIME messages; notification
+delivery is one plain-text email per recipient and comment. No API endpoints or
+rich text/markdown rendering (`body` is stored and returned as plain text).

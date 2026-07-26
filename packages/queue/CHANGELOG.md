@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Collaboration uses the `notifications` queue for idempotent mention and
+  follower delivery jobs.
 - Combined active-job filtering across pending and reserved states for the
   Queue monitor.
 - Paginated recent-job queries with exact queue/status counts for the admin
