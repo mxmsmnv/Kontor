@@ -1,0 +1,15 @@
+{
+    "field.mailbox": "Postfach",
+    "field.from": "Von",
+    "field.to": "An",
+    "field.cc": "Cc",
+    "field.subject": "Betreff",
+    "field.assigned_to": "Zugewiesen an",
+    "status.queued": "In Warteschlange",
+    "status.sent": "Gesendet",
+    "status.failed": "Fehlgeschlagen",
+    "status.received": "Empfangen",
+    "action.compose": "Verfassen",
+    "action.assign": "Zuweisen",
+    "action.link_to_entity": "Mit Datensatz verknüpfen"
+}

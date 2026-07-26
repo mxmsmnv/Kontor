@@ -1,0 +1,15 @@
+{
+    "field.mailbox": "Boîte mail",
+    "field.from": "De",
+    "field.to": "À",
+    "field.cc": "Cc",
+    "field.subject": "Objet",
+    "field.assigned_to": "Assigné à",
+    "status.queued": "En file d'attente",
+    "status.sent": "Envoyé",
+    "status.failed": "Échoué",
+    "status.received": "Reçu",
+    "action.compose": "Composer",
+    "action.assign": "Assigner",
+    "action.link_to_entity": "Lier à un enregistrement"
+}

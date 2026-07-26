@@ -318,6 +318,21 @@ two existing packages rather than a new one (spec section 5.6 rules out
   never installs — that stays `ComponentManager`'s own job. Third real
   consumer of `Kontor\Core\Testing\DatabaseTestCase` outside
   `kontor/core` — see its own README.
+- [`packages/mail/`](packages/mail/) — `kontor/mail` (Substage 9.1,
+  first component of Stage 9 — Advanced capabilities): outbound history,
+  inbound adapters, entity linking, shared mailboxes. Depends only on
+  `kontor/core`. "Entity linking" reuses Core's own `kontor_relations`
+  table directly (`relationType = 'mail_link'`), the same choice
+  `kontor/tasks`/`kontor/entities` already made for their own "relations"
+  milestones. `OutboundMailService`/`InboundMailService` publish real
+  `mail.sent`/`mail.delivery_failed`/`mail.received` events onto Core's
+  event bus, giving `kontor/automation` real new triggers. No third-party
+  mail library — `RawEmailParser` is a small hand-rolled plain-text
+  parser and `NativeMailSender` uses PHP's own `mail()`, both swappable
+  via their own interfaces. `RawEmailForwardAdapter` is the one built-in
+  inbound adapter, simulating an inbound-parse webhook via `pushRaw()`.
+  Fourth real consumer of `Kontor\Core\Testing\DatabaseTestCase` outside
+  `kontor/core` — see its own README.
 
 ## Status
 
@@ -332,8 +347,9 @@ Collaboration, 5.3 Dashboard, 5.4 Reports — collaboration and
 productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
 6.3 Expenses, 6.4 Projects — operations), all of Stage 7 (Substage
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
-scaffolding — extensibility), and all of Stage 8 (Substage 8.1 REST API,
-8.2 GraphQL, 8.3 Marketplace — API and external ecosystem) per spec
-section 36. Not yet installed against a live ProcessWire instance — see
-the spec's Definition of Done
+scaffolding — extensibility), all of Stage 8 (Substage 8.1 REST API,
+8.2 GraphQL, 8.3 Marketplace — API and external ecosystem), and
+Substage 9.1 (Mail, first component of Stage 9 — Advanced capabilities)
+per spec section 36. Not yet installed against a live ProcessWire
+instance — see the spec's Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.

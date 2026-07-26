@@ -1,0 +1,15 @@
+{
+    "field.mailbox": "Buzón",
+    "field.from": "De",
+    "field.to": "Para",
+    "field.cc": "Cc",
+    "field.subject": "Asunto",
+    "field.assigned_to": "Asignado a",
+    "status.queued": "En cola",
+    "status.sent": "Enviado",
+    "status.failed": "Fallido",
+    "status.received": "Recibido",
+    "action.compose": "Redactar",
+    "action.assign": "Asignar",
+    "action.link_to_entity": "Vincular a un registro"
+}
