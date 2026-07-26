@@ -66,4 +66,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     update();
   });
+
+  document.querySelectorAll('[data-kontor-directory]').forEach((directory) => {
+    const search = directory.querySelector('[data-kontor-directory-search]');
+    const items = Array.from(directory.querySelectorAll('[data-kontor-directory-item]'));
+    const toggles = Array.from(directory.querySelectorAll('[data-kontor-quick-toggle]'));
+    const count = directory.querySelector('[data-kontor-quick-count]');
+    const limit = Number.parseInt(directory.dataset.limit || '8', 10);
+
+    const updateQuickAccess = () => {
+      const selected = toggles.filter((toggle) => toggle.checked).length;
+
+      if (count) {
+        count.textContent = String(selected);
+      }
+      toggles.forEach((toggle) => {
+        toggle.disabled = !toggle.checked && selected >= limit;
+      });
+    };
+
+    search?.addEventListener('input', () => {
+      const query = search.value.trim().toLocaleLowerCase();
+
+      items.forEach((item) => {
+        item.hidden = query !== '' && !item.dataset.search.includes(query);
+      });
+      directory.querySelectorAll('.kontor-directory__group').forEach((group) => {
+        group.hidden = !group.querySelector('[data-kontor-directory-item]:not([hidden])');
+      });
+    });
+
+    toggles.forEach((toggle) => toggle.addEventListener('change', updateQuickAccess));
+    updateQuickAccess();
+  });
 });

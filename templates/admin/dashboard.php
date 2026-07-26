@@ -26,6 +26,9 @@
 /** @var \Kontor\Dashboard\Domain\Dashboard|null $personalDashboard */
 /** @var array{dashboard: \Kontor\Dashboard\Domain\Dashboard, widgets: array<int, array{layout: \Kontor\Dashboard\Domain\DashboardWidget, title: string, data: array<string, mixed>, cacheHit: bool}>}|null $renderedPersonalDashboard */
 /** @var array<string, \Kontor\Dashboard\Contracts\WidgetProviderInterface> $availableDashboardWidgets */
+/** @var array<string, array<int, array{key: string, url: string, label: string, icon: string}>> $navigationGroups */
+/** @var string[] $quickNavigationKeys */
+/** @var int $quickNavigationLimit */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -33,6 +36,7 @@ $enabledComponents = count(array_filter(
     $components,
     static fn (array $component): bool => ($component['status'] ?? '') === 'enabled'
 ));
+$navigationCount = array_sum(array_map('count', $navigationGroups));
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <section class="kontor-hero">
@@ -58,6 +62,60 @@ $enabledComponents = count(array_filter(
         <?php endif; ?>
       </div>
     <?php endif; ?>
+  </section>
+
+  <section id="kontor-component-directory" class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-directory" data-kontor-directory data-limit="<?= $e($quickNavigationLimit) ?>">
+    <header class="kontor-sectionhead">
+      <div>
+        <p class="kontor-eyebrow">Workspace directory</p>
+        <h3>All Kontor sections</h3>
+        <p>Everything is available here. Pin only the sections you use often to the top menu.</p>
+      </div>
+      <span class="uk-label"><?= $e($navigationCount) ?> sections</span>
+    </header>
+
+    <div class="kontor-directory__toolbar">
+      <label class="kontor-search">
+        <i class="fa fa-search"></i>
+        <input type="search" aria-label="Find a section" placeholder="Find a section…" data-kontor-directory-search>
+      </label>
+      <span class="kontor-secondary"><strong data-kontor-quick-count><?= $e(count($quickNavigationKeys)) ?></strong>/<?= $e($quickNavigationLimit) ?> in quick access</span>
+    </div>
+
+    <form method="post" action="<?= $e($adminUrl) ?>quick-navigation-save/">
+      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+      <div class="kontor-directory__groups">
+        <?php foreach ($navigationGroups as $group => $items): ?>
+          <section class="kontor-directory__group">
+            <h4><?= $e($group) ?></h4>
+            <div class="kontor-directory__items">
+              <?php foreach ($items as $item): ?>
+                <article class="kontor-directory__item" data-kontor-directory-item data-search="<?= $e(strtolower($group . ' ' . $item['label'])) ?>">
+                  <a href="<?= $e($adminUrl . $item['url']) ?>">
+                    <span class="kontor-directory__icon"><i class="fa fa-<?= $e($item['icon']) ?>"></i></span>
+                    <strong><?= $e($item['label']) ?></strong>
+                  </a>
+                  <?php if ($item['key'] === 'dashboard'): ?>
+                    <span class="uk-label kontor-pill kontor-pill--inactive">Home</span>
+                  <?php else: ?>
+                    <label class="kontor-directory__pin">
+                      <input type="checkbox" name="quick_navigation[]" value="<?= $e($item['key']) ?>" aria-label="Add <?= $e($item['label']) ?> to quick access"<?= in_array($item['key'], $quickNavigationKeys, true) ? ' checked' : '' ?> data-kontor-quick-toggle>
+                      Quick
+                    </label>
+                  <?php endif; ?>
+                </article>
+              <?php endforeach; ?>
+            </div>
+          </section>
+        <?php endforeach; ?>
+      </div>
+      <div class="kontor-directory__actions">
+        <button class="uk-button uk-button-primary kontor-button" type="submit">
+          <i class="fa fa-check"></i> Save quick access
+        </button>
+        <span class="kontor-secondary">Dashboard is always available by clicking “Kontor”.</span>
+      </div>
+    </form>
   </section>
 
   <?php if ($dashboardReady && $canViewPersonalDashboard): ?>
@@ -282,46 +340,19 @@ $enabledComponents = count(array_filter(
     </article>
 
     <aside class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
-      <header class="kontor-panel__head"><h3>Quick access</h3></header>
+      <header class="kontor-panel__head"><h3>Your quick access</h3><a href="#kontor-component-directory">Customize</a></header>
       <div class="kontor-quicklinks">
-        <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>contacts/">
-          <i class="fa fa-address-book"></i><span>Browse contacts</span>
-        </a>
-        <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>companies/">
-          <i class="fa fa-building"></i><span>Browse companies</span>
-        </a>
-        <?php if ($canViewCatalog): ?>
-          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>catalog/">
-            <i class="fa fa-cube"></i><span>Browse catalog</span>
-          </a>
-        <?php endif; ?>
-        <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>components/">
-          <i class="fa fa-cubes"></i><span>Component status</span>
-        </a>
-        <?php if ($canViewActivity): ?>
-          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>activity/">
-            <i class="fa fa-history"></i><span>Recent activity</span>
-          </a>
-        <?php endif; ?>
-        <?php if ($canViewBackups): ?>
-          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>backups/">
-            <i class="fa fa-database"></i><span>Backup snapshots</span>
-          </a>
-        <?php endif; ?>
-        <?php if ($canViewHealth): ?>
-          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>health/">
-            <i class="fa fa-heartbeat"></i><span>System health</span>
-          </a>
-        <?php endif; ?>
-        <?php if ($canManageOrganization): ?>
-          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>organization/">
-            <i class="fa fa-briefcase"></i><span>Organization settings</span>
-          </a>
-        <?php endif; ?>
-        <?php if ($queueReady && $canViewQueue): ?>
-          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>queue/">
-            <i class="fa fa-tasks"></i><span>Queue monitor</span>
-          </a>
+        <?php foreach ($navigationGroups as $items): ?>
+          <?php foreach ($items as $item): ?>
+            <?php if (in_array($item['key'], $quickNavigationKeys, true)): ?>
+              <a class="kontor-quicklink" href="<?= $e($adminUrl . $item['url']) ?>">
+                <i class="fa fa-<?= $e($item['icon']) ?>"></i><span><?= $e($item['label']) ?></span>
+              </a>
+            <?php endif; ?>
+          <?php endforeach; ?>
+        <?php endforeach; ?>
+        <?php if ($quickNavigationKeys === []): ?>
+          <p class="kontor-secondary">No pinned sections yet.</p>
         <?php endif; ?>
       </div>
     </aside>

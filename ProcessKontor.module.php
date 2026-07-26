@@ -87,12 +87,22 @@ use Kontor\Workflow\Domain\ApprovalRequest;
  */
 class ProcessKontor extends Process
 {
+    private const QUICK_NAVIGATION_META = 'kontor.quick_navigation';
+    private const QUICK_NAVIGATION_LIMIT = 8;
+    private const DEFAULT_QUICK_NAVIGATION = [
+        'contacts',
+        'companies',
+        'crm',
+        'sales',
+        'tasks',
+    ];
+
     public static function getModuleInfo(): array
     {
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '137',
+            'version' => '138',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -103,6 +113,40 @@ class ProcessKontor extends Process
             ],
             'useNavJSON' => false,
             'nav' => [
+                ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
+                [
+                    'url' => 'contacts/',
+                    'label' => 'Contacts',
+                    'icon' => 'address-book',
+                    'permission' => 'kontor-contacts-contact-view',
+                ],
+                [
+                    'url' => 'companies/',
+                    'label' => 'Companies',
+                    'icon' => 'building',
+                    'permission' => 'kontor-contacts-company-view',
+                ],
+                [
+                    'url' => 'crm/',
+                    'label' => 'CRM',
+                    'icon' => 'handshake-o',
+                    'permission' => 'kontor-crm-lead-view',
+                ],
+                [
+                    'url' => 'sales/',
+                    'label' => 'Sales',
+                    'icon' => 'file-text-o',
+                    'permission' => 'kontor-sales-quotation-view',
+                ],
+                [
+                    'url' => 'tasks/',
+                    'label' => 'Tasks',
+                    'icon' => 'check-square-o',
+                    'permission' => 'kontor-tasks-task-view',
+                ],
+                ['url' => '#kontor-component-directory', 'label' => 'All sections', 'icon' => 'th-large'],
+            ],
+            'kontorNavigation' => [
                 ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
                 [
                     'url' => 'demo/',
@@ -323,6 +367,11 @@ class ProcessKontor extends Process
     {
         parent::init();
 
+        $this->addHookAfter(
+            'AdminThemeFramework::getPrimaryNavArray',
+            $this,
+            'customizePrimaryNavigation',
+        );
         $this->refreshNavigationCache();
         $moduleUrl = $this->wire()->config->urls->get('ProcessKontor');
         $version = (string) max(
@@ -334,11 +383,50 @@ class ProcessKontor extends Process
         $this->wire()->config->scripts->add($moduleUrl . 'assets/kontor.admin.js?v=' . $version);
     }
 
+    public function customizePrimaryNavigation(HookEvent $event): void
+    {
+        $navigation = $event->return;
+        if (!is_array($navigation)) {
+            return;
+        }
+
+        $adminUrl = $this->wire()->config->urls->admin . 'kontor/';
+        $replace = function (array &$items) use (&$replace, $adminUrl): void {
+            foreach ($items as &$item) {
+                if (
+                    isset($item['url'])
+                    && rtrim((string) $item['url'], '/') === rtrim($adminUrl, '/')
+                ) {
+                    $children = [];
+                    foreach ($this->quickNavigationItems() as $quickItem) {
+                        $children[] = $this->primaryNavigationChild(
+                            $quickItem,
+                            (int) ($item['id'] ?? 0),
+                        );
+                    }
+                    $children[] = $this->primaryNavigationChild([
+                        'url' => '#kontor-component-directory',
+                        'label' => 'All sections & quick access',
+                        'icon' => 'th-large',
+                    ], (int) ($item['id'] ?? 0));
+                    $item['children'] = $children;
+
+                    return;
+                }
+                if (!empty($item['children']) && is_array($item['children'])) {
+                    $replace($item['children']);
+                }
+            }
+        };
+        $replace($navigation);
+        $event->return = $navigation;
+    }
+
     private function refreshNavigationCache(): void
     {
         $moduleInfo = self::getModuleInfo();
         $signature = hash('sha256', json_encode(
-            $moduleInfo['nav'] ?? [],
+            ['mode' => 'personal-quick-access-v2', 'items' => $moduleInfo['kontorNavigation'] ?? []],
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
         ));
         $session = $this->wire()->session;
@@ -347,12 +435,131 @@ class ProcessKontor extends Process
             return;
         }
 
-        $adminTheme = $this->wire()->adminTheme;
-        if (is_object($adminTheme)) {
-            $session->removeFor($adminTheme, 'prnav');
-            $session->removeFor($adminTheme, 'sidenav');
-        }
+        $this->clearPrimaryNavigationCache();
         $session->setFor($this, 'navigationSignature', $signature);
+    }
+
+    private function clearPrimaryNavigationCache(): void
+    {
+        $adminTheme = $this->wire()->adminTheme;
+        if (!is_object($adminTheme)) {
+            return;
+        }
+
+        $session = $this->wire()->session;
+        $session->removeFor($adminTheme, 'prnav');
+        $session->removeFor($adminTheme, 'sidenav');
+    }
+
+    /**
+     * @return array<string, array{url: string, label: string, icon: string, permission?: string}>
+     */
+    private function availableNavigationItems(): array
+    {
+        $items = [];
+        $user = $this->wire()->user;
+        foreach (self::getModuleInfo()['kontorNavigation'] ?? [] as $item) {
+            $permission = (string) ($item['permission'] ?? '');
+            if ($permission !== '' && !$user->isSuperuser() && !$user->hasPermission($permission)) {
+                continue;
+            }
+            $key = $item['url'] === '' ? 'dashboard' : trim((string) $item['url'], '/');
+            $items[$key] = $item;
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function quickNavigationKeys(): array
+    {
+        $stored = $this->wire()->user->meta(self::QUICK_NAVIGATION_META);
+        $keys = is_array($stored) ? $stored : self::DEFAULT_QUICK_NAVIGATION;
+        $available = $this->availableNavigationItems();
+
+        return array_slice(array_values(array_filter(
+            array_unique(array_map('strval', $keys)),
+            static fn (string $key): bool => $key !== 'dashboard' && isset($available[$key]),
+        )), 0, self::QUICK_NAVIGATION_LIMIT);
+    }
+
+    /**
+     * @return array<int, array{url: string, label: string, icon: string, permission?: string}>
+     */
+    private function quickNavigationItems(): array
+    {
+        $available = $this->availableNavigationItems();
+        $items = isset($available['dashboard']) ? [$available['dashboard']] : [];
+        foreach ($this->quickNavigationKeys() as $key) {
+            $items[] = $available[$key];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param array{url: string, label: string, icon: string, permission?: string} $item
+     * @return array<string, mixed>
+     */
+    private function primaryNavigationChild(array $item, int $parentId): array
+    {
+        return [
+            'id' => 0,
+            'parent_id' => $parentId,
+            'title' => $this->wire()->sanitizer->entities1($this->_($item['label'])),
+            'name' => '',
+            'url' => $this->wire()->config->urls->admin . 'kontor/' . $item['url'],
+            'icon' => $item['icon'],
+            'children' => [],
+            'navJSON' => '',
+        ];
+    }
+
+    /**
+     * @return array<string, array<int, array{key: string, url: string, label: string, icon: string, permission?: string}>>
+     */
+    private function navigationGroups(): array
+    {
+        $available = $this->availableNavigationItems();
+        $definitions = [
+            'Start' => ['dashboard', 'demo', 'search'],
+            'Customers & revenue' => [
+                'contacts', 'companies', 'crm', 'sales', 'invoices', 'payments',
+            ],
+            'Operations' => [
+                'catalog', 'inventory', 'purchasing', 'expenses', 'projects',
+                'tasks', 'collaboration', 'reports',
+            ],
+            'Automation & content' => [
+                'workflows', 'automations', 'custom-entities', 'mail', 'portal',
+                'files', 'documents', 'ai',
+            ],
+            'Finance & localization' => ['ledger', 'germany'],
+            'Platform' => [
+                'api', 'graphql', 'marketplace', 'cache', 'activity', 'backups',
+                'health', 'queue', 'organization', 'components',
+            ],
+        ];
+        $groups = [];
+        $assigned = [];
+        foreach ($definitions as $label => $keys) {
+            foreach ($keys as $key) {
+                if (!isset($available[$key])) {
+                    continue;
+                }
+                $groups[$label][] = ['key' => $key, ...$available[$key]];
+                $assigned[$key] = true;
+            }
+        }
+        foreach ($available as $key => $item) {
+            if (!isset($assigned[$key])) {
+                $groups['More'][] = ['key' => $key, ...$item];
+            }
+        }
+
+        return $groups;
     }
 
     public function ___execute(): string
@@ -454,7 +661,36 @@ class ProcessKontor extends Process
             'personalDashboard' => $personalDashboard,
             'renderedPersonalDashboard' => $renderedPersonalDashboard,
             'availableDashboardWidgets' => $availableDashboardWidgets,
+            'navigationGroups' => $this->navigationGroups(),
+            'quickNavigationKeys' => $this->quickNavigationKeys(),
+            'quickNavigationLimit' => self::QUICK_NAVIGATION_LIMIT,
         ]);
+    }
+
+    public function ___executeQuickNavigationSave(): void
+    {
+        $this->requirePost();
+        $raw = $this->wire()->input->post('quick_navigation');
+        $requested = is_array($raw) ? $raw : [];
+        $available = $this->availableNavigationItems();
+        $keys = [];
+        foreach ($requested as $value) {
+            $key = $this->wire()->sanitizer->pageName((string) $value);
+            if ($key !== 'dashboard' && isset($available[$key]) && !in_array($key, $keys, true)) {
+                $keys[] = $key;
+            }
+            if (count($keys) >= self::QUICK_NAVIGATION_LIMIT) {
+                break;
+            }
+        }
+
+        $this->wire()->user->meta()->set(self::QUICK_NAVIGATION_META, $keys);
+        $this->clearPrimaryNavigationCache();
+        $this->message(sprintf(
+            $this->_('Quick access updated: %d section(s).'),
+            count($keys),
+        ));
+        $this->wire()->session->redirect('../#kontor-component-directory');
     }
 
     public function ___executeDashboardSave(): void
