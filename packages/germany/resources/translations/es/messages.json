@@ -1,0 +1,9 @@
+{
+    "field.tax_id": "NIF-IVA (USt-IdNr.)",
+    "field.document_format": "Formato de documento",
+    "format.xrechnung": "XRechnung",
+    "format.zugferd": "ZUGFeRD",
+    "action.seed_chart_of_accounts": "Inicializar plan contable estándar",
+    "action.export_xrechnung": "Exportar como XRechnung",
+    "error.invalid_tax_id": "Este NIF-IVA alemán no es válido."
+}

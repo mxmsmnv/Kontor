@@ -365,6 +365,36 @@ two existing packages rather than a new one (spec section 5.6 rules out
   is withheld and stashed as a `PendingAIAction` instead of returned
   directly. Sixth real consumer of `Kontor\Core\Testing\DatabaseTestCase`
   outside `kontor/core` — see its own README.
+- [`packages/ledger/`](packages/ledger/) — `kontor/ledger` (Substage 9.4,
+  fourth component of Stage 9): double-entry foundations, chart of
+  accounts. Depends only on `kontor/core`. `LedgerBalanceValidator` is
+  the one rule that makes this double-entry at all — an entry's lines
+  must sum to zero net (debits minus credits) per currency, at least two
+  lines, no line with both a debit and a credit, no negative amounts —
+  extracted pure so it's a real unit test, not just a DB-gated one.
+  `LedgerHealthCheck` re-derives the same check directly from the
+  database as defense in depth. Has no knowledge of any specific
+  country's chart — that's `kontor/germany`'s job, built on top.
+  Seventh real consumer of `Kontor\Core\Testing\DatabaseTestCase` outside
+  `kontor/core` — see its own README.
+- [`packages/germany/`](packages/germany/) — `kontor/germany` (Substage
+  9.4, fifth and final component of Stage 9, closing out the entire
+  kontor.md#36 build plan): localization contracts, Germany package,
+  country-specific document formats. Depends on `kontor/core`,
+  `kontor/sdk` (its new `LocalizationProviderInterface`, this package's
+  first consumer), and `kontor/ledger` (to seed its own localized chart
+  of accounts). Registers `GermanyLocalizationProvider` as the
+  `"localization.de"` capability in Core's `CapabilityRegistry` — the
+  same inverted-dependency shape `kontor/cache`/`kontor/files` already
+  use, so neither Core nor any business package ever depends on this
+  package directly. `GermanTaxIdValidator` implements the real BZSt
+  USt-IdNr. checksum algorithm, verified in its own tests against a real,
+  publicly known VAT ID. `XRechnungFormatter` produces a simplified,
+  illustrative UBL-inspired XML export via PHP's own `DOMDocument` — no
+  third-party library, not a certified-compliant XRechnung/EN16931
+  implementation. Eighth and final real consumer of
+  `Kontor\Core\Testing\DatabaseTestCase` in this entire build plan — see
+  its own README.
 
 ## Status
 
@@ -380,8 +410,12 @@ productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
 6.3 Expenses, 6.4 Projects — operations), all of Stage 7 (Substage
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
 scaffolding — extensibility), all of Stage 8 (Substage 8.1 REST API,
-8.2 GraphQL, 8.3 Marketplace — API and external ecosystem), and
-Substage 9.1–9.3 (Mail, Portal, AI — Stage 9, Advanced capabilities) per spec
-section 36. Not yet installed against a live ProcessWire instance — see
-the spec's Definition of Done
-(section 38) for what "complete" means for each subsequent milestone.
+8.2 GraphQL, 8.3 Marketplace — API and external ecosystem), and all of
+Stage 9 (Substage 9.1 Mail, 9.2 Portal, 9.3 AI, 9.4 Ledger and
+localizations — Advanced capabilities) per spec section 36 — every
+stage and substage in the development-stages build plan. Not yet
+installed against a live ProcessWire instance — see the spec's
+Definition of Done (section 38) for what "complete" means from here:
+translation completeness, security review, performance/load testing,
+and the release milestones in section 37 remain, none of which this
+substage-by-substage build was scoped to cover on its own.

@@ -1,0 +1,64 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorGermany",
+    "title": "Kontor Germany",
+    "description": "Localization contracts, Germany package, country-specific document formats.",
+    "version": "0.1.0",
+    "type": "localization",
+    "category": "localization",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorGermany",
+    "package": "kontor/germany",
+    "namespace": "Kontor\\Germany",
+    "processWireModule": "KontorGermany",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1",
+        "kontor/ledger": "^0.1"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": ["localization.de"],
+    "permissions": [],
+    "admin": {
+        "sections": [],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": []
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": null,
+        "supportsRollback": false
+    },
+    "storage": {
+        "tables": [],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "field.tax_id": "VAT ID (USt-IdNr.)",
+    "field.document_format": "Document format",
+    "format.xrechnung": "XRechnung",
+    "format.zugferd": "ZUGFeRD",
+    "action.seed_chart_of_accounts": "Seed standard chart of accounts",
+    "action.export_xrechnung": "Export as XRechnung",
+    "error.invalid_tax_id": "This is not a valid German VAT ID."
+}

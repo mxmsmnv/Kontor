@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `LocalizationProviderInterface` (Substage 9.4's "localization
+  contracts" milestone) — a country package (`kontor/germany`, and any
+  future one) registers one implementation as a
+  `"localization.{countryCode}"` capability in Core's
+  `CapabilityRegistry`, the same inverted-dependency shape
+  `kontor/cache`/`kontor/files` already use. `kontor/germany` is the
+  first consumer.
 - `CacheInterface` and `CacheStoreInterface` (codex rule #15 references
   "Kontor Cache contracts" but the specification never defines them —
   same situation as `JobInterface`). `kontor/cache` is the first consumer.

@@ -1,0 +1,14 @@
+{
+    "field.code": "Code",
+    "field.name": "Nom",
+    "field.type": "Type",
+    "field.balance": "Solde",
+    "type.asset": "Actif",
+    "type.liability": "Passif",
+    "type.equity": "Capitaux propres",
+    "type.revenue": "Produits",
+    "type.expense": "Charges",
+    "action.new_account": "Nouveau compte",
+    "action.record_entry": "Enregistrer une écriture",
+    "error.unbalanced": "Les débits et les crédits ne s'équilibrent pas."
+}

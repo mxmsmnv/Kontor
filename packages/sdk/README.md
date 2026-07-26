@@ -15,7 +15,8 @@ depend on it, never the other way around.
   `ImportProviderInterface`, `ExportProviderInterface`,
   `SearchProviderInterface`, `ReportProviderInterface`, `QueueInterface`,
   `StorageInterface`, `KontorAIProviderInterface`, `HealthCheckInterface`,
-  `JobInterface`.
+  `JobInterface`, `CacheInterface`, `CacheStoreInterface`,
+  `LocalizationProviderInterface`.
 - `DTO/` — request/response objects used by the contracts above.
 - `Events/` — `KontorEvent`, the canonical event envelope (spec section 21).
 - `ValueObjects/` — `Uid` (ULID), `Money` (minor units), `OrganizationId`.
