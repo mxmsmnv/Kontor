@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+  if (document.body.classList.contains('ProcessKontor')) {
+    const contentBody = document.getElementById('pw-content-body');
+    contentBody?.replaceWith(...contentBody.childNodes);
+  }
+
   document.querySelectorAll('.ProcessKontor').forEach((workspace) => {
     workspace.querySelectorAll('input').forEach((input) => {
       const type = (input.getAttribute('type') || 'text').toLowerCase();

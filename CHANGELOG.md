@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Sections now relies on native UIkit cards, grid, search, checkbox, label and
+  button components without custom hover movement or compound borders.
+- ProcessKontor removes AdminThemeUikit's redundant `#pw-content-body`
+  wrapper after initialization while leaving the rest of the admin untouched.
 - Sections now uses a clearer launcher UI with full-card navigation, live
   result counts, accessible pin controls and underline-free links.
 - The complete component directory and per-user quick-access editor now live
