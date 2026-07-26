@@ -25,6 +25,8 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedS
 
     return $parameters === '' ? './' : './?' . $parameters;
 };
+$hasFilters = $query !== '' || $selectedStatus !== null;
+$clearFiltersUrl = $showArchived ? './?archived=1' : './';
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -60,6 +62,11 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedS
       <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
     </select>
     <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?>
+      <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
+        <i class="fa fa-times"></i> Clear filters
+      </a>
+    <?php endif; ?>
     <a class="kontor-viewtoggle" href="<?= $e($url(1, !$showArchived)) ?>">
       <i class="fa fa-<?= $showArchived ? 'folder-open' : 'archive' ?>"></i>
       <?= $showArchived ? 'Active categories' : 'Archive' ?>

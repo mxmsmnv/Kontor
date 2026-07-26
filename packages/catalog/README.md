@@ -87,6 +87,7 @@ Catalog filters include an explicit Uncategorized view for finding items that
 still need classification.
 Catalog items can also be filtered by active, inactive, or discontinued status.
 Inventory-tracked and untracked items can be filtered independently.
+Filtered item, category, and price-list views expose a one-click reset action.
 The package itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

@@ -21,6 +21,7 @@ $url = static function (int $targetPage) use ($query, $selectedStatus): string {
 
     return $parameters === '' ? './' : './?' . $parameters;
 };
+$hasFilters = $query !== '' || $selectedStatus !== null;
 $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d') ?? '—';
 ?>
 <div class="kontor-shell">
@@ -57,6 +58,11 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
       <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
     </select>
     <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?>
+      <a class="kontor-viewtoggle" href="./">
+        <i class="fa fa-times"></i> Clear filters
+      </a>
+    <?php endif; ?>
     <span class="kontor-secondary"><?= $e($totalPriceLists) ?> total · <?= $e(count($priceLists)) ?> shown</span>
   </form>
 

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Context-aware Clear filters actions for Catalog items, categories, and price
+  lists, retaining archive mode where applicable.
 - Catalog inventory-tracking filtering, preserved across pagination and bulk
   actions.
 - Bulk Activate/Deactivate/Discontinue controls for Catalog items, preserving

@@ -31,6 +31,12 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedT
 
     return $parameters === '' ? './' : './?' . $parameters;
 };
+$hasFilters = $query !== ''
+    || $selectedType !== null
+    || $selectedCategory !== null
+    || $selectedStatus !== null
+    || $selectedInventory !== null;
+$clearFiltersUrl = $showArchived ? './?archived=1' : './';
 $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     if ($value === null) {
         return '—';
@@ -101,6 +107,11 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <option value="untracked"<?= $selectedInventory === 'untracked' ? ' selected' : '' ?>>Not tracked</option>
     </select>
     <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?>
+      <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
+        <i class="fa fa-times"></i> Clear filters
+      </a>
+    <?php endif; ?>
     <a class="kontor-viewtoggle" href="<?= $e($adminUrl) ?>export/?entity=catalog_item&amp;format=csv">
       <i class="fa fa-download"></i> Export CSV
     </a>
