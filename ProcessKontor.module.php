@@ -12,6 +12,7 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\Core\Application\AuditChangePresenter;
 use Kontor\Core\Application\AuditCsvExporter;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
@@ -45,7 +46,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '019',
+            'version' => '020',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -393,6 +394,7 @@ class ProcessKontor extends Process
             'page' => $page,
             'totalPages' => $totalPages,
             'totalEvents' => $totalEvents,
+            'changePresenter' => new AuditChangePresenter(),
         ]);
     }
 

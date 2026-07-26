@@ -46,6 +46,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   types, and the Dashboard's recent-activity feed.
 - Permission-aware Activity CSV exports that preserve the current search and
   facet selection and record the export in the audit trail.
+- Human-readable Activity field diffs with before/after values, friendly
+  labels, mobile layout, and a separate metadata section.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

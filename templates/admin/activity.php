@@ -9,19 +9,14 @@
 /** @var int $page */
 /** @var int $totalPages */
 /** @var int $totalEvents */
+/** @var \Kontor\Core\Application\AuditChangePresenter $changePresenter */
 /** @var string $adminUrl */
 /** @var callable $e */
 
 $actionLabel = static fn (string $action): string => ucwords(str_replace(['.', '_'], ' ', $action));
-$eventDetails = static function (\Kontor\Core\Domain\AuditEvent $event): string {
-    $details = array_filter([
-        'Previous' => $event->previous,
-        'Current' => $event->current,
-        'Metadata' => $event->metadata ?: null,
-    ], static fn (mixed $value): bool => $value !== null);
-
+$eventMetadata = static function (\Kontor\Core\Domain\AuditEvent $event): string {
     return (string) json_encode(
-        $details,
+        $event->metadata,
         JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
     );
 };
@@ -87,7 +82,8 @@ $filterUrl = static function (string $facet, string $value): string {
         <?php
         $canLink = in_array($event->entityType, ['contact', 'company'], true)
             && strlen($event->entityUid) === 26;
-        $details = $eventDetails($event);
+        $changes = $changePresenter->changes($event);
+        $metadata = $eventMetadata($event);
         ?>
         <article class="kontor-activity__event">
           <span class="kontor-activity__icon">
@@ -115,10 +111,31 @@ $filterUrl = static function (string $facet, string $value): string {
               <?php endif; ?>
               · <?= $e($event->actorType) ?> <?= $e($event->actorUid ?? 'system') ?>
             </p>
-            <?php if ($details !== '' && $details !== '{}'): ?>
+            <?php if ($changes !== [] || ($metadata !== '' && $metadata !== '{}')): ?>
               <details class="kontor-activity__details">
-                <summary>Event details</summary>
-                <pre><?= $e($details) ?></pre>
+                <summary>
+                  <?= $changes !== []
+                    ? $e(count($changes)) . ' field ' . (count($changes) === 1 ? 'change' : 'changes')
+                    : 'Event details' ?>
+                </summary>
+                <?php if ($changes !== []): ?>
+                  <div class="kontor-changes">
+                    <div class="kontor-changes__head">
+                      <span>Field</span><span>Before</span><span>After</span>
+                    </div>
+                    <?php foreach ($changes as $change): ?>
+                      <div class="kontor-changes__row">
+                        <strong><?= $e($change['field']) ?></strong>
+                        <span><?= $e($change['previous']) ?></span>
+                        <span><?= $e($change['current']) ?></span>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+                <?php if ($metadata !== '' && $metadata !== '{}'): ?>
+                  <h4>Metadata</h4>
+                  <pre><?= $e($metadata) ?></pre>
+                <?php endif; ?>
               </details>
             <?php endif; ?>
           </div>
