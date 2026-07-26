@@ -97,6 +97,8 @@ Pricing-state filtering identifies items with or without a configured sales
 price.
 The main Kontor dashboard surfaces the active unpriced-item count as a direct
 link to that filtered view.
+It also surfaces uncategorized active items as a direct data-readiness
+drill-down.
 Filtered item, category, and price-list views expose a one-click reset action.
 The package itself remains UI-framework agnostic.
 

@@ -8,7 +8,7 @@
 /** @var bool $catalogReady */
 /** @var bool $canViewCatalog */
 /** @var bool $canCreateCatalogItems */
-/** @var array{products: int, services: int, archived: int, inventoryTracked: int, unpriced: int, priceLists?: int, expiredPriceLists?: int, upcomingPriceLists?: int} $catalogSummary */
+/** @var array{products: int, services: int, archived: int, inventoryTracked: int, unpriced: int, uncategorized: int, priceLists?: int, expiredPriceLists?: int, upcomingPriceLists?: int} $catalogSummary */
 /** @var string $catalogLanguage */
 /** @var \Kontor\Catalog\Domain\CatalogItem[] $recentCatalogItems */
 /** @var bool $canViewActivity */
@@ -88,6 +88,10 @@ $enabledComponents = count(array_filter(
         <span class="kontor-secondary">
           <a href="<?= $e($adminUrl) ?>catalog/?pricing=unpriced">
             <?= $e($catalogSummary['unpriced']) ?> item(s) without sales price
+          </a>
+          ·
+          <a href="<?= $e($adminUrl) ?>catalog/?category=uncategorized">
+            <?= $e($catalogSummary['uncategorized']) ?> uncategorized item(s)
           </a>
           ·
           <a href="<?= $e($adminUrl) ?>catalog/?inventory=tracked">

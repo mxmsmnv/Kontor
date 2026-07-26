@@ -444,6 +444,7 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
             'archived' => 1,
             'inventoryTracked' => 1,
             'unpriced' => 2,
+            'uncategorized' => 2,
         ], $repository->summary($this->organizationUid));
     }
 }

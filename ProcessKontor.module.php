@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '061',
+            'version' => '062',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -167,6 +167,7 @@ class ProcessKontor extends Process
                 'archived' => 0,
                 'inventoryTracked' => 0,
                 'unpriced' => 0,
+                'uncategorized' => 0,
             ];
 
         if ($canViewCatalog) {

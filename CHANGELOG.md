@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard visibility for active uncategorized Catalog items with direct
+  drill-down.
 - Explicit Clear filters action in the Catalog References workspace.
 - Dashboard visibility for upcoming Catalog price lists with direct drill-down.
 - Dashboard visibility for expired Catalog price lists with direct drill-down.
