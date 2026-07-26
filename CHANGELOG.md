@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct Queue summary-card drill-down for all, active, completed, and
+  dead-letter jobs, including a combined pending/reserved active filter.
 - Exact matching-result feedback for Components and Health filters.
 - Selected-state styling and accessible current-page semantics for Health
   summary filters.

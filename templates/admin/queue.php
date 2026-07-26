@@ -17,6 +17,10 @@
 
 $total = array_sum($counts);
 $active = ($counts['pending'] ?? 0) + ($counts['reserved'] ?? 0);
+$allSelected = $selectedQueue === null && $selectedStatus === null;
+$activeSelected = $selectedQueue === null && $selectedStatus === 'active';
+$completedSelected = $selectedQueue === null && $selectedStatus === 'completed';
+$deadSelected = $selectedQueue === null && $selectedStatus === 'dead';
 $pageUrl = static function (int $targetPage) use ($selectedQueue, $selectedStatus): string {
     $query = http_build_query(array_filter([
         'queue' => $selectedQueue,
@@ -45,22 +49,22 @@ $statusClass = static fn (string $status): string => match ($status) {
   </header>
 
   <section class="kontor-queuestats">
-    <article class="kontor-card kontor-stat">
+    <a class="kontor-card kontor-stat<?= $allSelected ? ' kontor-card--selected' : '' ?>" href="./"<?= $allSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon"><i class="fa fa-list"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($total) ?></strong><span class="kontor-stat__label">All jobs</span></span>
-    </article>
-    <article class="kontor-card kontor-stat">
+    </a>
+    <a class="kontor-card kontor-stat<?= $activeSelected ? ' kontor-card--selected' : '' ?>" href="./?status=active"<?= $activeSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon kontor-stat__icon--warning"><i class="fa fa-clock-o"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($active) ?></strong><span class="kontor-stat__label">Active</span></span>
-    </article>
-    <article class="kontor-card kontor-stat">
+    </a>
+    <a class="kontor-card kontor-stat<?= $completedSelected ? ' kontor-card--selected' : '' ?>" href="./?status=completed"<?= $completedSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon kontor-stat__icon--success"><i class="fa fa-check"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($counts['completed'] ?? 0) ?></strong><span class="kontor-stat__label">Completed</span></span>
-    </article>
-    <article class="kontor-card kontor-stat">
+    </a>
+    <a class="kontor-card kontor-stat<?= $deadSelected ? ' kontor-card--selected' : '' ?>" href="./?status=dead"<?= $deadSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon kontor-stat__icon--danger"><i class="fa fa-exclamation-triangle"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($counts['dead'] ?? 0) ?></strong><span class="kontor-stat__label">Dead letter</span></span>
-    </article>
+    </a>
   </section>
 
   <form class="kontor-toolbar kontor-queuefilters" method="get" action="./">
@@ -73,7 +77,7 @@ $statusClass = static fn (string $status): string => match ($status) {
       </select>
       <select name="status" aria-label="Status">
         <option value="">All statuses</option>
-        <?php foreach (['pending', 'reserved', 'completed', 'dead', 'cancelled'] as $status): ?>
+        <?php foreach (['active', 'pending', 'reserved', 'completed', 'dead', 'cancelled'] as $status): ?>
           <option value="<?= $e($status) ?>"<?= $selectedStatus === $status ? ' selected' : '' ?>><?= $e(ucfirst($status)) ?></option>
         <?php endforeach; ?>
       </select>

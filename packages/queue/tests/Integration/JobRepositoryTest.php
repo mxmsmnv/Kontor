@@ -183,6 +183,24 @@ final class JobRepositoryTest extends DatabaseTestCase
         $this->assertNotSame($firstPage[0]['uid'], $secondPage[0]['uid']);
     }
 
+    public function test_active_status_combines_pending_and_reserved_jobs(): void
+    {
+        $jobs = new JobRepository($this->pdo);
+        $jobs->enqueue('operations', 'job.pending', [], 0, 3, new \DateTimeImmutable(), null);
+        $jobs->enqueue('operations', 'job.reserved', [], 10, 3, new \DateTimeImmutable(), null);
+        $jobs->reserveNext('operations');
+        $completed = $jobs->enqueue('operations', 'job.completed', [], 0, 3, new \DateTimeImmutable(), null);
+        $jobs->markCompleted($completed);
+
+        $activeJobs = $jobs->findRecent('operations', 'active');
+
+        $this->assertSame(2, $jobs->countMatching('operations', 'active'));
+        $this->assertEqualsCanonicalizing(
+            ['pending', 'reserved'],
+            array_column($activeJobs, 'status'),
+        );
+    }
+
     private function secondConnection(): \PDO
     {
         return new \PDO(

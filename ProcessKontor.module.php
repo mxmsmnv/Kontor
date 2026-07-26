@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '069',
+            'version' => '070',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1559,7 +1559,7 @@ class ProcessKontor extends Process
         $queue = $this->wire()->sanitizer->text((string) $this->wire()->input->get('queue'));
         $status = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('status'),
-            ['pending', 'reserved', 'completed', 'dead', 'cancelled']
+            ['active', 'pending', 'reserved', 'completed', 'dead', 'cancelled']
         );
         $queue = $queue !== '' && in_array($queue, $queues, true) ? $queue : null;
         $pageSize = 25;

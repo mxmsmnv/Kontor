@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Combined active-job filtering across pending and reserved states for the
+  Queue monitor.
 - Paginated recent-job queries with exact queue/status counts for the admin
   monitor.
 - Bounded recent-job queries, status summaries, and queue discovery for the

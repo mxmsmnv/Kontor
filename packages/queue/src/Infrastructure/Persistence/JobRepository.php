@@ -248,7 +248,9 @@ final class JobRepository implements JobRepositoryInterface
             $params['queue'] = $queue;
         }
 
-        if ($status !== null) {
+        if ($status === 'active') {
+            $conditions[] = "status IN ('pending', 'reserved')";
+        } elseif ($status !== null) {
             $conditions[] = 'status = :status';
             $params['status'] = $status;
         }
@@ -287,7 +289,9 @@ final class JobRepository implements JobRepositoryInterface
             $params['queue'] = $queue;
         }
 
-        if ($status !== null) {
+        if ($status === 'active') {
+            $conditions[] = "status IN ('pending', 'reserved')";
+        } elseif ($status !== null) {
             $conditions[] = 'status = :status';
             $params['status'] = $status;
         }
@@ -322,7 +326,9 @@ final class JobRepository implements JobRepositoryInterface
             $params['queue'] = $queue;
         }
 
-        if ($status !== null) {
+        if ($status === 'active') {
+            $conditions[] = "status IN ('pending', 'reserved')";
+        } elseif ($status !== null) {
             $conditions[] = 'status = :status';
             $params['status'] = $status;
         }

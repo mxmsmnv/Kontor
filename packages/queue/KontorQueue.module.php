@@ -27,7 +27,7 @@ class KontorQueue extends WireData implements Module
         return [
             'title' => 'Kontor Queue',
             'summary' => 'Asynchronous and delayed jobs, retries, dead-letter queue, priorities and progress.',
-            'version' => '004',
+            'version' => '005',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorQueue',
             'icon' => 'tasks',
