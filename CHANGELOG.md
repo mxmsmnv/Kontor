@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard visibility for expired Catalog price lists with direct drill-down.
 - Direct dashboard drill-down from the inventory-tracked Catalog count.
 - Dashboard visibility for active Catalog items without a sales price, linking
   directly to the corresponding filtered view.

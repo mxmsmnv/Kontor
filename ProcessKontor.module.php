@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '058',
+            'version' => '059',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -171,6 +171,10 @@ class ProcessKontor extends Process
 
         if ($canViewCatalog) {
             $catalogSummary['priceLists'] = $this->priceListRepository()->countMatching($organizationUid);
+            $catalogSummary['expiredPriceLists'] = $this->priceListRepository()->countMatching(
+                $organizationUid,
+                validity: 'expired',
+            );
         }
         $canViewActivity = $user->isSuperuser() || $user->hasPermission('kontor-audit-view');
         $canViewQueue = $user->isSuperuser() || $user->hasPermission('kontor-queue-view');

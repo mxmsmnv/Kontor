@@ -8,7 +8,7 @@
 /** @var bool $catalogReady */
 /** @var bool $canViewCatalog */
 /** @var bool $canCreateCatalogItems */
-/** @var array{products: int, services: int, archived: int, inventoryTracked: int, unpriced: int, priceLists?: int} $catalogSummary */
+/** @var array{products: int, services: int, archived: int, inventoryTracked: int, unpriced: int, priceLists?: int, expiredPriceLists?: int} $catalogSummary */
 /** @var string $catalogLanguage */
 /** @var \Kontor\Catalog\Domain\CatalogItem[] $recentCatalogItems */
 /** @var bool $canViewActivity */
@@ -92,6 +92,10 @@ $enabledComponents = count(array_filter(
           ·
           <a href="<?= $e($adminUrl) ?>catalog/?inventory=tracked">
             <?= $e($catalogSummary['inventoryTracked']) ?> item(s) track inventory
+          </a>
+          ·
+          <a href="<?= $e($adminUrl) ?>catalog-price-lists/?validity=expired">
+            <?= $e($catalogSummary['expiredPriceLists'] ?? 0) ?> expired price list(s)
           </a>
         </span>
         <?php if ($recentCatalogItems): ?>
