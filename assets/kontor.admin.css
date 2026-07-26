@@ -9,29 +9,6 @@
   box-sizing: border-box;
 }
 
-.kontor-hero {
-  align-items: flex-end;
-  background: var(--pw-blocks-background);
-  border: 1px solid var(--pw-border-color);
-  color: var(--pw-text-color);
-  display: flex;
-  gap: 2rem;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-  padding: var(--pw-spacing);
-  position: relative;
-}
-
-.kontor-hero::after {
-  content: none;
-}
-
-.kontor-hero__content,
-.kontor-hero__actions {
-  position: relative;
-  z-index: 1;
-}
-
 .kontor-eyebrow {
   color: var(--pw-muted-color);
   font-size: 0.72rem;
@@ -41,11 +18,6 @@
   text-transform: uppercase;
 }
 
-.kontor-hero .kontor-eyebrow {
-  color: var(--pw-main-color);
-}
-
-.kontor-hero h2,
 .kontor-pagehead h2 {
   color: inherit;
   font-size: clamp(1.65rem, 3vw, 2.4rem);
@@ -54,14 +26,6 @@
   margin: 0 0 0.65rem;
 }
 
-.kontor-hero p {
-  color: var(--pw-muted-color);
-  font-size: 1rem;
-  margin: 0;
-  max-width: 590px;
-}
-
-.kontor-hero__actions,
 .kontor-pagehead__actions {
   display: flex;
   flex-wrap: wrap;
@@ -85,26 +49,6 @@
 .kontor-button--ghost:hover {
   background: var(--pw-button-hover-background) !important;
   color: var(--pw-button-hover-color) !important;
-}
-
-.kontor-statgrid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 1.25rem;
-}
-
-.kontor-statgrid--four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.kontor-statgrid > a.kontor-card {
-  color: inherit;
-  text-decoration: none;
-}
-
-.kontor-statgrid > a.kontor-card:hover {
-  border-color: var(--pw-main-color);
 }
 
 .kontor-card {
@@ -144,15 +88,11 @@
   font-size: 0.82rem;
 }
 
-.kontor-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1.65fr) minmax(250px, 0.85fr);
-}
-
 .kontor-dashboardwidgets {
+  align-items: stretch;
   display: grid;
   gap: 1rem;
+  grid-auto-flow: row dense;
   grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
@@ -221,19 +161,6 @@
   margin-bottom: 0.25rem;
 }
 
-.kontor-dashboardwidget__empty {
-  color: var(--pw-muted-color);
-  margin: 0.75rem 0;
-}
-
-.kontor-dashboardwidget__link {
-  align-items: center;
-  display: inline-flex;
-  font-size: 0.8rem;
-  font-weight: 700;
-  gap: 0.4rem;
-}
-
 .kontor-dashboardwidget pre {
   max-width: 100%;
   overflow: auto;
@@ -244,7 +171,7 @@
   border-top: 1px solid var(--pw-border-color);
   display: flex;
   gap: 0.35rem;
-  margin-top: 1rem;
+  margin-top: auto;
   padding-top: 0.75rem;
 }
 
@@ -265,34 +192,6 @@
 
 .kontor-dashboardwidget__remove {
   color: var(--pw-error-inline-text-color) !important;
-}
-
-.kontor-dashboardwidgetadd {
-  align-items: end;
-  background: var(--pw-main-background);
-  border: 1px solid var(--pw-border-color);
-  display: flex;
-  gap: 0.65rem;
-  margin-top: 1rem;
-  padding: 0.75rem;
-}
-
-.kontor-dashboardwidgetadd label {
-  display: flex;
-  flex: 1 1 16rem;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.kontor-dashboardwidgetadd label > span {
-  color: var(--pw-muted-color);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.kontor-dashboardwidgetadd select {
-  min-height: 2.5rem;
-  width: 100%;
 }
 
 .kontor-panel {
@@ -371,22 +270,25 @@
 
 .kontor-quicklinks {
   display: grid;
-  gap: 0.75rem;
+  gap: 0;
 }
 
 .kontor-quicklink {
   align-items: center;
-  border: 1px solid var(--pw-border-color);
-  border-radius: var(--pw-input-radius);
+  border-top: 1px solid var(--pw-border-color);
   color: var(--pw-text-color) !important;
   display: flex;
   gap: 0.75rem;
-  padding: 0.8rem;
+  padding: 0.85rem 0;
   text-decoration: none !important;
 }
 
+.kontor-quicklink:first-child {
+  border-top: 0;
+}
+
 .kontor-quicklink:hover {
-  background: var(--pw-main-background);
+  color: var(--pw-main-color) !important;
 }
 
 .kontor-quicklink i {
@@ -1825,15 +1727,6 @@
   color: var(--pw-error-inline-text-color);
 }
 
-.kontor-dashboardactivity {
-  margin-top: 1rem;
-  padding: 1.2rem;
-}
-
-.kontor-dashboardactivity .kontor-panel__head {
-  margin-bottom: 0.5rem;
-}
-
 .kontor-dashboardactivity__list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1901,84 +1794,6 @@
   display: flex;
   gap: 0.6rem;
   padding: 1rem 0 0.2rem;
-}
-
-.kontor-catalogoverview {
-  margin-bottom: 1rem;
-  padding: 1.15rem;
-}
-
-.kontor-catalogoverview .kontor-panel__head {
-  margin-bottom: 0.8rem;
-}
-
-.kontor-catalogoverview .kontor-panel__head h3 {
-  margin: 0.1rem 0 0;
-}
-
-.kontor-catalogmetrics {
-  display: grid;
-  gap: 0.7rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.kontor-catalogmetrics > a {
-  align-items: center;
-  background: var(--pw-main-background);
-  border: 1px solid var(--pw-border-color);
-  border-radius: var(--pw-input-radius);
-  color: var(--pw-text-color);
-  display: grid;
-  gap: 0.1rem 0.65rem;
-  grid-template-columns: auto 1fr;
-  padding: 0.8rem;
-  text-decoration: none;
-}
-
-.kontor-catalogmetrics > a:hover {
-  border-color: var(--pw-border-color);
-  transform: translateY(-1px);
-}
-
-.kontor-catalogmetrics i {
-  color: var(--pw-main-color);
-  grid-row: span 2;
-}
-
-.kontor-catalogmetrics strong {
-  font-size: 1.25rem;
-}
-
-.kontor-catalogmetrics span {
-  color: var(--pw-muted-color);
-  font-size: 0.72rem;
-}
-
-.kontor-catalogrecent {
-  align-items: center;
-  border-top: 1px solid var(--pw-border-color);
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  margin-top: 0.85rem;
-  padding-top: 0.85rem;
-}
-
-.kontor-catalogrecent > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: flex-end;
-}
-
-.kontor-catalogrecent > div a {
-  background: var(--pw-inputs-background);
-  border-radius: 999px;
-  color: var(--pw-main-color);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.3rem 0.55rem;
-  text-decoration: none;
 }
 
 .kontor-nativecheck {
@@ -2185,14 +2000,6 @@
 }
 
 @media (max-width: 850px) {
-  .kontor-statgrid {
-    grid-template-columns: 1fr;
-  }
-
-  .kontor-grid {
-    grid-template-columns: 1fr;
-  }
-
   .kontor-dashboardwidgets {
     grid-template-columns: 1fr;
   }
@@ -2201,20 +2008,10 @@
     grid-column: 1 !important;
   }
 
-  .kontor-dashboardwidgetadd {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .kontor-hero,
   .kontor-pagehead,
   .kontor-toolbar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .kontor-hero {
-    min-height: 0;
   }
 
   .kontor-relationform {
@@ -2248,19 +2045,6 @@
 
   .kontor-dashboardactivity__list {
     grid-template-columns: 1fr;
-  }
-
-  .kontor-catalogmetrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .kontor-catalogrecent {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .kontor-catalogrecent > div {
-    justify-content: flex-start;
   }
 
   .kontor-dashboardactivity__list article:nth-child(odd),

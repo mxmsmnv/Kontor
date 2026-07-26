@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Dashboard now follows one consistent UIkit spacing and grid system, fills
+  personal-layout gaps with the widget picker, presents metrics as plain
+  facts, and keeps links only for explicit navigation and entity opening.
 - Price lists now matches the native UIkit catalog workflow with a focused
   filter card, selection-only bulk actions, plain table facts, and an
   actionable empty state.

@@ -35,61 +35,64 @@ $enabledComponents = count(array_filter(
     $components,
     static fn (array $component): bool => ($component['status'] ?? '') === 'enabled'
 ));
+$activeJobs = ($queueCounts['pending'] ?? 0) + ($queueCounts['reserved'] ?? 0);
+$dashboardWidgets = $renderedPersonalDashboard['widgets'] ?? [];
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
-  <section class="kontor-hero">
-    <div class="kontor-hero__content">
-      <p class="kontor-eyebrow">Operations workspace</p>
-      <h2>Your business, in one place.</h2>
-      <p>Kontor connects customer data, companies and operational components inside ProcessWire.</p>
-    </div>
-    <?php if ($contactsReady || $canCreateCatalogItems): ?>
-      <div class="kontor-hero__actions">
-        <?php if ($contactsReady): ?>
-          <a class="uk-button uk-button-default kontor-button kontor-button--light" href="<?= $e($adminUrl) ?>contact/">
-            <i class="fa fa-plus"></i> New contact
-          </a>
-          <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>company/">
-            <i class="fa fa-building"></i> New company
-          </a>
-        <?php endif; ?>
-        <?php if ($canCreateCatalogItems): ?>
-          <a class="uk-button <?= $contactsReady ? 'uk-button-default kontor-button--light' : 'uk-button-primary' ?> kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
-            <i class="fa fa-cube"></i> New catalog item
-          </a>
-        <?php endif; ?>
+  <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
+    <div class="uk-grid-medium uk-flex-middle" uk-grid>
+      <div class="uk-width-1-1 uk-width-expand@m">
+        <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Operations workspace</p>
+        <h2 class="uk-h1 uk-margin-small-top uk-margin-small-bottom">Your business, in one place.</h2>
+        <p class="uk-text-muted uk-margin-remove">Kontor connects customer data, companies and operational components inside ProcessWire.</p>
       </div>
-    <?php endif; ?>
+      <?php if ($contactsReady || $canCreateCatalogItems): ?>
+        <div class="uk-width-1-1 uk-width-auto@m">
+          <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
+            <?php if ($contactsReady): ?>
+              <div><a class="uk-button uk-button-default kontor-button" href="<?= $e($adminUrl) ?>contact/"><i class="fa fa-plus"></i> New contact</a></div>
+              <div><a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>company/"><i class="fa fa-building"></i> New company</a></div>
+            <?php endif; ?>
+            <?php if ($canCreateCatalogItems): ?>
+              <div><a class="uk-button uk-button-default kontor-button" href="<?= $e($adminUrl) ?>catalog-item/"><i class="fa fa-cube"></i> New catalog item</a></div>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endif; ?>
+    </div>
   </section>
 
   <?php if ($dashboardReady && $canViewPersonalDashboard): ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
-      <header class="kontor-panel__head">
+    <section class="uk-margin-medium-bottom">
+      <header class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
         <div>
-          <p class="kontor-eyebrow">Personal layout</p>
-          <h3><?= $e($personalDashboard?->name ?? 'Your dashboard') ?></h3>
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Personal layout</p>
+          <h2 class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($personalDashboard?->name ?? 'Your dashboard') ?></h2>
         </div>
       </header>
+
       <?php if ($personalDashboard === null): ?>
         <?php if ($canCreatePersonalDashboard): ?>
-          <form method="post" action="<?= $e($adminUrl) ?>dashboard-save/">
+          <form class="uk-card uk-card-default uk-card-small uk-card-body uk-form-stacked" method="post" action="<?= $e($adminUrl) ?>dashboard-save/">
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-            <label>Dashboard name <input name="name" value="My dashboard" required></label>
-            <button class="uk-button uk-button-primary kontor-button" type="submit">Create personal dashboard</button>
+            <div class="uk-grid-small uk-flex-bottom" uk-grid>
+              <label class="uk-width-expand">Dashboard name <input class="uk-input uk-margin-small-top" name="name" value="My dashboard" required></label>
+              <div class="uk-width-auto"><button class="uk-button uk-button-primary" type="submit">Create personal dashboard</button></div>
+            </div>
           </form>
         <?php else: ?>
-          <p>No personal or role dashboard is configured for you yet.</p>
+          <div class="uk-placeholder uk-text-center"><p class="uk-text-muted uk-margin-remove">No personal or role dashboard is configured for you yet.</p></div>
         <?php endif; ?>
       <?php else: ?>
         <div class="kontor-dashboardwidgets">
-          <?php foreach ($renderedPersonalDashboard['widgets'] ?? [] as $renderedWidget): ?>
+          <?php foreach ($dashboardWidgets as $renderedWidget): ?>
             <?php
-            $layout = $renderedWidget['layout'];
-            $widgetSpan = max(2, min(12, $layout->width));
-            $widgetColumn = max(1, min(13 - $widgetSpan, $layout->positionX + 1));
+              $layout = $renderedWidget['layout'];
+              $widgetSpan = max(2, min(12, $layout->width));
+              $widgetColumn = max(1, min(13 - $widgetSpan, $layout->positionX + 1));
             ?>
             <article
-              class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel kontor-dashboardwidget"
+              class="uk-card uk-card-default uk-card-small uk-card-body uk-flex uk-flex-column kontor-dashboardwidget"
               style="--kontor-widget-column: <?= $e($widgetColumn) ?>; --kontor-widget-span: <?= $e($widgetSpan) ?>;"
             >
               <header class="kontor-panel__head">
@@ -99,6 +102,7 @@ $enabledComponents = count(array_filter(
                   <?= $renderedWidget['cacheHit'] ? 'Cached' : 'Fresh' ?>
                 </span>
               </header>
+
               <?php if ($layout->widgetKey === 'welcome'): ?>
                 <div class="kontor-dashboardwidget__welcome">
                   <span class="kontor-dashboardwidget__heroicon"><i class="fa fa-hand-spock-o"></i></span>
@@ -116,18 +120,21 @@ $enabledComponents = count(array_filter(
                   <ul class="kontor-list">
                     <?php foreach ($renderedWidget['data']['tasks'] as $task): ?>
                       <li>
-                        <a href="<?= $e($adminUrl) ?>task/?id=<?= $e(rawurlencode((string) $task['uid'])) ?>"><?= $e((string) $task['title']) ?></a>
-                        <span class="uk-label kontor-pill<?= !empty($task['overdue']) ? ' kontor-pill--danger' : '' ?>"><?= $e((string) $task['priority']) ?><?= !empty($task['dueAt']) ? ' · ' . $e(substr((string) $task['dueAt'], 0, 10)) : '' ?></span>
+                        <span class="kontor-list__body">
+                          <a href="<?= $e($adminUrl) ?>task/?id=<?= $e(rawurlencode((string) $task['uid'])) ?>"><?= $e((string) $task['title']) ?></a>
+                        </span>
+                        <span class="uk-label<?= !empty($task['overdue']) ? ' uk-label-danger' : '' ?>"><?= $e((string) $task['priority']) ?><?= !empty($task['dueAt']) ? ' · ' . $e(substr((string) $task['dueAt'], 0, 10)) : '' ?></span>
                       </li>
                     <?php endforeach; ?>
                   </ul>
                 <?php else: ?>
-                  <p class="kontor-dashboardwidget__empty">No open tasks assigned to you.</p>
+                  <p class="uk-text-muted uk-margin-small-top">No open tasks assigned to you.</p>
                 <?php endif; ?>
-                <a class="kontor-dashboardwidget__link" href="<?= $e($adminUrl) ?>tasks/">Open tasks <i class="fa fa-arrow-right"></i></a>
+                <div class="uk-margin-top"><a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>tasks/">Open tasks</a></div>
               <?php else: ?>
                 <pre><?= $e(json_encode($renderedWidget['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
               <?php endif; ?>
+
               <?php if ($canEditPersonalDashboard): ?>
                 <form class="kontor-dashboardwidget__controls" method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
@@ -143,234 +150,170 @@ $enabledComponents = count(array_filter(
               <?php endif; ?>
             </article>
           <?php endforeach; ?>
+
+          <?php if ($canEditPersonalDashboard && $availableDashboardWidgets !== []): ?>
+            <article
+              class="uk-card uk-card-default uk-card-small uk-card-body uk-flex uk-flex-column kontor-dashboardwidget"
+              style="--kontor-widget-column: auto; --kontor-widget-span: 4;"
+            >
+              <header class="kontor-panel__head"><h3>Add widget</h3></header>
+              <p class="uk-text-muted uk-margin-small-top">Extend your personal workspace with another live view.</p>
+              <form class="uk-form-stacked uk-margin-auto-top" method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
+                <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                <input type="hidden" name="dashboard_uid" value="<?= $e($personalDashboard->uid->toString()) ?>">
+                <label>
+                  <span class="uk-form-label">Widget</span>
+                  <select class="uk-select uk-margin-small-top" name="widget_key">
+                    <?php foreach ($availableDashboardWidgets as $key => $provider): ?><option value="<?= $e($key) ?>"><?= $e($provider->title()) ?></option><?php endforeach; ?>
+                  </select>
+                </label>
+                <button class="uk-button uk-button-primary uk-width-1-1 uk-margin-top" name="action" value="add" type="submit"><i class="fa fa-plus"></i> Add widget</button>
+              </form>
+            </article>
+          <?php endif; ?>
         </div>
-        <?php if (($renderedPersonalDashboard['widgets'] ?? []) === []): ?>
-          <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
-            <i class="fa fa-th-large"></i>
-            <h3>No widgets yet</h3>
-            <p>Add a widget to build your personal workspace.</p>
-          </div>
-        <?php endif; ?>
-        <?php if ($canEditPersonalDashboard && $availableDashboardWidgets !== []): ?>
-          <form class="kontor-dashboardwidgetadd" method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
-            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-            <input type="hidden" name="dashboard_uid" value="<?= $e($personalDashboard->uid->toString()) ?>">
-            <label>
-              <span>Add widget</span>
-              <select name="widget_key">
-                <?php foreach ($availableDashboardWidgets as $key => $provider): ?><option value="<?= $e($key) ?>"><?= $e($provider->title()) ?></option><?php endforeach; ?>
-              </select>
-            </label>
-            <button class="uk-button uk-button-primary kontor-button" name="action" value="add" type="submit"><i class="fa fa-plus"></i> Add widget</button>
-          </form>
+
+        <?php if ($dashboardWidgets === [] && (!$canEditPersonalDashboard || $availableDashboardWidgets === [])): ?>
+          <div class="uk-placeholder uk-text-center"><p class="uk-text-muted uk-margin-remove">No widgets yet.</p></div>
         <?php endif; ?>
       <?php endif; ?>
     </section>
   <?php endif; ?>
 
   <?php if ($canViewCatalog): ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-catalogoverview">
-      <header class="kontor-panel__head">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
+      <header class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
         <div>
-          <p class="kontor-eyebrow">Commercial catalog</p>
-          <h3>Catalog overview</h3>
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Commercial catalog</p>
+          <h2 class="uk-h3 uk-margin-small-top uk-margin-remove-bottom">Catalog overview</h2>
         </div>
-        <a href="<?= $e($adminUrl) ?>catalog/">Open catalog</a>
+        <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>catalog/">Open catalog</a>
       </header>
-      <div class="kontor-catalogmetrics">
-        <a href="<?= $e($adminUrl) ?>catalog/?type=product">
-          <i class="fa fa-cube"></i>
-          <strong><?= $e($catalogSummary['products']) ?></strong>
-          <span>Products</span>
-        </a>
-        <a href="<?= $e($adminUrl) ?>catalog/?type=service">
-          <i class="fa fa-wrench"></i>
-          <strong><?= $e($catalogSummary['services']) ?></strong>
-          <span>Services</span>
-        </a>
-        <a href="<?= $e($adminUrl) ?>catalog/?archived=1">
-          <i class="fa fa-archive"></i>
-          <strong><?= $e($catalogSummary['archived']) ?></strong>
-          <span>Archived</span>
-        </a>
-        <a href="<?= $e($adminUrl) ?>catalog-price-lists/">
-          <i class="fa fa-tags"></i>
-          <strong><?= $e($catalogSummary['priceLists'] ?? 0) ?></strong>
-          <span>Price lists</span>
-        </a>
-      </div>
-      <div class="kontor-catalogrecent">
-        <span class="kontor-secondary">
-          <a href="<?= $e($adminUrl) ?>catalog/?pricing=unpriced">
-            <?= $e($catalogSummary['unpriced']) ?> item(s) without sales price
-          </a>
-          ·
-          <a href="<?= $e($adminUrl) ?>catalog/?category=uncategorized">
-            <?= $e($catalogSummary['uncategorized']) ?> uncategorized item(s)
-          </a>
-          ·
-          <a href="<?= $e($adminUrl) ?>catalog/?inventory=tracked">
-            <?= $e($catalogSummary['inventoryTracked']) ?> item(s) track inventory
-          </a>
-          ·
-          <a href="<?= $e($adminUrl) ?>catalog-price-lists/?validity=expired">
-            <?= $e($catalogSummary['expiredPriceLists'] ?? 0) ?> expired price list(s)
-          </a>
-          ·
-          <a href="<?= $e($adminUrl) ?>catalog-price-lists/?validity=upcoming">
-            <?= $e($catalogSummary['upcomingPriceLists'] ?? 0) ?> upcoming price list(s)
-          </a>
-        </span>
-        <?php if ($recentCatalogItems): ?>
-          <div>
+
+      <dl class="uk-grid-small uk-grid-divider uk-child-width-1-2 uk-child-width-1-4@m uk-margin-remove" uk-grid>
+        <div><dt class="uk-text-meta"><i class="fa fa-cube uk-text-primary"></i> Products</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['products']) ?></dd></div>
+        <div><dt class="uk-text-meta"><i class="fa fa-wrench uk-text-primary"></i> Services</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['services']) ?></dd></div>
+        <div><dt class="uk-text-meta"><i class="fa fa-archive uk-text-primary"></i> Archived</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['archived']) ?></dd></div>
+        <div><dt class="uk-text-meta"><i class="fa fa-tags uk-text-primary"></i> Price lists</dt><dd class="uk-h3 uk-margin-small-top uk-margin-remove-bottom"><?= $e($catalogSummary['priceLists'] ?? 0) ?></dd></div>
+      </dl>
+
+      <ul class="uk-subnav uk-subnav-divider uk-margin-top uk-margin-remove-bottom" aria-label="Catalog diagnostics">
+        <li><span><strong><?= $e($catalogSummary['unpriced']) ?></strong> without sales price</span></li>
+        <li><span><strong><?= $e($catalogSummary['uncategorized']) ?></strong> uncategorized</span></li>
+        <li><span><strong><?= $e($catalogSummary['inventoryTracked']) ?></strong> track inventory</span></li>
+        <li><span><strong><?= $e($catalogSummary['expiredPriceLists'] ?? 0) ?></strong> expired price lists</span></li>
+        <li><span><strong><?= $e($catalogSummary['upcomingPriceLists'] ?? 0) ?></strong> upcoming price lists</span></li>
+      </ul>
+
+      <?php if ($recentCatalogItems): ?>
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-margin-top">
+          <span class="uk-text-meta">Recently updated</span>
+          <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
             <?php foreach ($recentCatalogItems as $item): ?>
-              <a href="<?= $e($adminUrl) ?>catalog-item/?id=<?= $e(rawurlencode($item->uid->toString())) ?>">
-                <?= $e($item->titleIn($catalogLanguage) ?? $item->titleIn('en') ?? reset($item->title) ?: 'Untitled item') ?>
-              </a>
+              <div>
+                <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>catalog-item/?id=<?= $e(rawurlencode($item->uid->toString())) ?>">
+                  <?= $e($item->titleIn($catalogLanguage) ?? $item->titleIn('en') ?? reset($item->title) ?: 'Untitled item') ?>
+                </a>
+              </div>
             <?php endforeach; ?>
           </div>
-        <?php else: ?>
-          <span class="kontor-secondary">Create the first product or service to populate this overview.</span>
-        <?php endif; ?>
-      </div>
+        </div>
+      <?php endif; ?>
     </section>
   <?php endif; ?>
 
   <?php if (!$contactsReady): ?>
-    <div class="kontor-setup">
-      <strong>Contacts is not installed yet.</strong>
-      Install the Contacts component to activate the customer workspace.
+    <div class="uk-alert-warning uk-margin-medium-bottom" uk-alert>
+      <strong>Contacts is not installed yet.</strong> Install the Contacts component to activate the customer workspace.
     </div>
   <?php endif; ?>
 
-  <section class="kontor-statgrid<?= $queueReady && $canViewQueue ? ' kontor-statgrid--four' : '' ?>">
-    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>contacts/">
-      <span class="kontor-stat__icon"><i class="fa fa-address-book"></i></span>
-      <span>
-        <strong class="kontor-stat__value"><?= $e($contactCount) ?></strong>
-        <span class="kontor-stat__label">Active contacts</span>
-      </span>
-    </a>
-    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>companies/">
-      <span class="kontor-stat__icon"><i class="fa fa-building"></i></span>
-      <span>
-        <strong class="kontor-stat__value"><?= $e($companyCount) ?></strong>
-        <span class="kontor-stat__label">Companies</span>
-      </span>
-    </a>
-    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>components/?status=enabled">
-      <span class="kontor-stat__icon"><i class="fa fa-cubes"></i></span>
-      <span>
-        <strong class="kontor-stat__value"><?= $e($enabledComponents) ?></strong>
-        <span class="kontor-stat__label">Enabled components</span>
-      </span>
-    </a>
-    <?php if ($queueReady && $canViewQueue): ?>
-      <?php $activeJobs = ($queueCounts['pending'] ?? 0) + ($queueCounts['reserved'] ?? 0); ?>
-      <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>queue/?status=active">
-        <span class="kontor-stat__icon<?= ($queueCounts['dead'] ?? 0) > 0 ? ' kontor-stat__icon--danger' : '' ?>">
-          <i class="fa fa-tasks"></i>
-        </span>
-        <span>
-          <strong class="kontor-stat__value"><?= $e($activeJobs) ?></strong>
-          <span class="kontor-stat__label">
-            Active jobs<?= ($queueCounts['dead'] ?? 0) > 0 ? ' · ' . $e($queueCounts['dead']) . ' dead' : '' ?>
-          </span>
-        </span>
-      </a>
-    <?php endif; ?>
-  </section>
-
-  <section class="kontor-grid">
-    <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
-      <header class="kontor-panel__head">
-        <h3>Recently updated contacts</h3>
-        <?php if ($contactsReady): ?>
-          <a href="<?= $e($adminUrl) ?>contacts/">View all</a>
-        <?php endif; ?>
-      </header>
-      <?php if ($recentContacts): ?>
-        <ul class="kontor-list">
-          <?php foreach ($recentContacts as $contact): ?>
-            <li>
-              <span class="kontor-avatar"><?= $e(mb_substr($contact->displayName, 0, 2)) ?></span>
-              <span class="kontor-list__body">
-                <a href="<?= $e($adminUrl) ?>contact/?id=<?= $e(rawurlencode($contact->uid->toString())) ?>">
-                  <?= $e($contact->displayName) ?>
-                </a>
-                <small><?= $e($contact->email ?: $contact->jobTitle ?: 'No contact details yet') ?></small>
-              </span>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else: ?>
-        <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
-          <i class="fa fa-user-plus"></i>
-          <h3>No contacts yet</h3>
-          <p>Create your first contact to start building the workspace.</p>
+  <section class="uk-margin-medium-bottom">
+    <header class="uk-margin-bottom">
+      <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Workspace status</p>
+      <h2 class="uk-h3 uk-margin-small-top uk-margin-remove-bottom">At a glance</h2>
+    </header>
+    <div class="uk-grid-small uk-child-width-1-2 uk-child-width-1-4@l uk-grid-match" uk-grid>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-address-book"></i></span><span><strong class="kontor-stat__value"><?= $e($contactCount) ?></strong><span class="kontor-stat__label">Active contacts</span></span></div></div>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-building"></i></span><span><strong class="kontor-stat__value"><?= $e($companyCount) ?></strong><span class="kontor-stat__label">Companies</span></span></div></div>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-cubes"></i></span><span><strong class="kontor-stat__value"><?= $e($enabledComponents) ?></strong><span class="kontor-stat__label">Enabled components</span></span></div></div>
+      <?php if ($queueReady && $canViewQueue): ?>
+        <div>
+          <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat">
+            <span class="kontor-stat__icon<?= ($queueCounts['dead'] ?? 0) > 0 ? ' kontor-stat__icon--danger' : '' ?>"><i class="fa fa-tasks"></i></span>
+            <span><strong class="kontor-stat__value"><?= $e($activeJobs) ?></strong><span class="kontor-stat__label">Active jobs<?= ($queueCounts['dead'] ?? 0) > 0 ? ' · ' . $e($queueCounts['dead']) . ' dead' : '' ?></span></span>
+          </div>
         </div>
       <?php endif; ?>
-    </article>
+    </div>
+  </section>
 
-    <aside class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
-      <header class="kontor-panel__head"><h3>Your quick access</h3><a href="<?= $e($adminUrl) ?>sections/">Customize</a></header>
-      <div class="kontor-quicklinks">
-        <?php foreach ($navigationGroups as $items): ?>
-          <?php foreach ($items as $item): ?>
-            <?php if (in_array($item['key'], $quickNavigationKeys, true)): ?>
-              <a class="kontor-quicklink" href="<?= $e($adminUrl . $item['url']) ?>">
-                <i class="fa fa-<?= $e($item['icon']) ?>"></i><span><?= $e($item['label']) ?></span>
-              </a>
-            <?php endif; ?>
-          <?php endforeach; ?>
-        <?php endforeach; ?>
-        <?php if ($quickNavigationKeys === []): ?>
-          <p class="kontor-secondary">No pinned sections yet.</p>
+  <section class="uk-grid-medium uk-child-width-1-2@m uk-grid-match uk-margin-medium-bottom" uk-grid>
+    <div>
+      <article class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+        <header class="kontor-panel__head">
+          <h2 class="uk-h3 uk-margin-remove">Recently updated contacts</h2>
+          <?php if ($contactsReady): ?><a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>contacts/">View all</a><?php endif; ?>
+        </header>
+        <?php if ($recentContacts): ?>
+          <ul class="kontor-list">
+            <?php foreach ($recentContacts as $contact): ?>
+              <li>
+                <span class="kontor-avatar"><?= $e(mb_substr($contact->displayName, 0, 2)) ?></span>
+                <span class="kontor-list__body">
+                  <a href="<?= $e($adminUrl) ?>contact/?id=<?= $e(rawurlencode($contact->uid->toString())) ?>"><?= $e($contact->displayName) ?></a>
+                  <small><?= $e($contact->email ?: $contact->jobTitle ?: 'No contact details yet') ?></small>
+                </span>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?>
+          <div class="uk-placeholder uk-text-center"><p class="uk-text-muted uk-margin-remove">No contacts yet.</p></div>
         <?php endif; ?>
-      </div>
-    </aside>
+      </article>
+    </div>
+
+    <div>
+      <aside class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+        <header class="kontor-panel__head">
+          <h2 class="uk-h3 uk-margin-remove">Your quick access</h2>
+          <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>sections/">Customize</a>
+        </header>
+        <div class="kontor-quicklinks">
+          <?php foreach ($navigationGroups as $items): ?>
+            <?php foreach ($items as $item): ?>
+              <?php if (in_array($item['key'], $quickNavigationKeys, true)): ?>
+                <a class="kontor-quicklink" href="<?= $e($adminUrl . $item['url']) ?>"><i class="fa fa-<?= $e($item['icon']) ?>"></i><span><?= $e($item['label']) ?></span></a>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          <?php endforeach; ?>
+          <?php if ($quickNavigationKeys === []): ?><p class="uk-text-muted">No pinned sections yet.</p><?php endif; ?>
+        </div>
+      </aside>
+    </div>
   </section>
 
   <?php if ($canViewActivity): ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-dashboardactivity">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body">
       <header class="kontor-panel__head">
-        <h3>Recent activity</h3>
-        <a href="<?= $e($adminUrl) ?>activity/">Open audit trail</a>
+        <h2 class="uk-h3 uk-margin-remove">Recent activity</h2>
+        <a class="uk-button uk-button-default uk-button-small kontor-button" href="<?= $e($adminUrl) ?>activity/">Open audit trail</a>
       </header>
       <?php if ($recentActivity): ?>
         <div class="kontor-dashboardactivity__list">
           <?php foreach ($recentActivity as $event): ?>
             <article>
-              <span class="kontor-dashboardactivity__icon">
-                <i class="fa fa-<?= $event->entityType === 'backup' ? 'database' : ($event->entityType === 'job' ? 'tasks' : 'history') ?>"></i>
-              </span>
+              <span class="kontor-dashboardactivity__icon"><i class="fa fa-<?= $event->entityType === 'backup' ? 'database' : ($event->entityType === 'job' ? 'tasks' : 'history') ?>"></i></span>
               <div>
-                <strong>
-                  <a href="<?= $e($adminUrl) ?>activity/?action=<?= $e(rawurlencode($event->action)) ?>">
-                    <?= $e(ucwords(str_replace(['.', '_'], ' ', $event->action))) ?>
-                  </a>
-                </strong>
-                <p>
-                  <a href="<?= $e($adminUrl) ?>activity/?entity_type=<?= $e(rawurlencode($event->entityType)) ?>">
-                    <?= $e(ucfirst($event->entityType)) ?>
-                  </a>
-                  ·
-                  <a href="<?= $e($adminUrl) ?>activity/?component=<?= $e(rawurlencode($event->component)) ?>">
-                    <?= $e($event->component) ?>
-                  </a>
-                </p>
+                <strong><?= $e(ucwords(str_replace(['.', '_'], ' ', $event->action))) ?></strong>
+                <p><?= $e(ucfirst($event->entityType)) ?> · <?= $e($event->component) ?></p>
               </div>
-              <time datetime="<?= $e($event->occurredAt->format(DATE_ATOM)) ?>">
-                <?= $e($event->occurredAt->format('M j, H:i')) ?>
-              </time>
+              <time datetime="<?= $e($event->occurredAt->format(DATE_ATOM)) ?>"><?= $e($event->occurredAt->format('M j, H:i')) ?></time>
             </article>
           <?php endforeach; ?>
         </div>
       <?php else: ?>
-        <div class="kontor-dashboardactivity__empty">
-          <i class="fa fa-history"></i>
-          <span>Operational changes will appear here.</span>
-        </div>
+        <div class="uk-placeholder uk-text-center"><p class="uk-text-muted uk-margin-remove">Operational changes will appear here.</p></div>
       <?php endif; ?>
     </section>
   <?php endif; ?>
