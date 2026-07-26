@@ -4,6 +4,17 @@
 /** @var array<string, mixed> $values */
 /** @var string $error */
 /** @var bool $archived */
+/** @var bool $collaborationReady */
+/** @var \Kontor\Collaboration\Domain\Note[] $notes */
+/** @var \Kontor\Collaboration\Domain\Comment[] $comments */
+/** @var bool $following */
+/** @var bool $canViewNotes */
+/** @var bool $canCreateNotes */
+/** @var bool $canArchiveNotes */
+/** @var bool $canViewComments */
+/** @var bool $canCreateComments */
+/** @var bool $canArchiveComments */
+/** @var bool $canManageFollow */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -66,5 +77,58 @@
         <button class="kontor-button kontor-button--ghost" name="action" value="<?= $archived ? 'restore' : 'archive' ?>" type="submit"><?= $archived ? 'Restore' : 'Archive' ?></button>
       </form>
     </div>
+  <?php endif; ?>
+
+  <?php if ($task !== null && $collaborationReady): ?>
+    <section class="kontor-card">
+      <div class="kontor-pagehead">
+        <div><p class="kontor-eyebrow">Collaboration</p><h3>Notes and discussion</h3></div>
+        <?php if ($canManageFollow): ?><form method="post" action="<?= $e($adminUrl) ?>collaboration-action/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <input type="hidden" name="entity_uid" value="<?= $e($task->uid->toString()) ?>">
+          <button class="kontor-button kontor-button--ghost" name="action" value="toggle_follow" type="submit"><?= $following ? 'Unfollow thread' : 'Follow thread' ?></button>
+        </form><?php endif; ?>
+      </div>
+
+      <?php if ($canViewNotes): ?><h4>Internal notes</h4>
+      <?php foreach ($notes as $note): ?>
+        <article class="kontor-card">
+          <p><?= nl2br($e($note->body)) ?></p>
+          <small>User #<?= $e($note->createdBy ?? 'system') ?> · <?= $e($note->createdAt->format('Y-m-d H:i')) ?></small>
+          <?php if ($canArchiveNotes): ?><form method="post" action="<?= $e($adminUrl) ?>collaboration-action/">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <input type="hidden" name="entity_uid" value="<?= $e($task->uid->toString()) ?>">
+            <input type="hidden" name="record_uid" value="<?= $e($note->uid->toString()) ?>">
+            <button class="kontor-button kontor-button--ghost" name="action" value="archive_note" type="submit">Archive note</button>
+          </form><?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+      <?php if ($canCreateNotes): ?><form method="post" action="<?= $e($adminUrl) ?>collaboration-post/">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <input type="hidden" name="kind" value="note"><input type="hidden" name="entity_type" value="task"><input type="hidden" name="entity_uid" value="<?= $e($task->uid->toString()) ?>">
+        <label>New note <textarea name="body" rows="3" required></textarea></label>
+        <button class="kontor-button" type="submit">Add note</button>
+      </form><?php endif; ?><?php endif; ?>
+
+      <?php if ($canViewComments): ?><h4>Discussion</h4>
+      <?php foreach ($comments as $comment): ?>
+        <article class="kontor-card">
+          <p><?= nl2br($e($comment->body)) ?></p>
+          <small>User #<?= $e($comment->createdBy ?? 'system') ?> · <?= $e($comment->createdAt->format('Y-m-d H:i')) ?><?= $comment->isReply() ? ' · reply' : '' ?></small>
+          <?php if ($canArchiveComments): ?><form method="post" action="<?= $e($adminUrl) ?>collaboration-action/">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <input type="hidden" name="entity_uid" value="<?= $e($task->uid->toString()) ?>">
+            <input type="hidden" name="record_uid" value="<?= $e($comment->uid->toString()) ?>">
+            <button class="kontor-button kontor-button--ghost" name="action" value="archive_comment" type="submit">Archive comment</button>
+          </form><?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+      <?php if ($canCreateComments): ?><form method="post" action="<?= $e($adminUrl) ?>collaboration-post/">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <input type="hidden" name="kind" value="comment"><input type="hidden" name="entity_type" value="task"><input type="hidden" name="entity_uid" value="<?= $e($task->uid->toString()) ?>">
+        <label>New comment <textarea name="body" rows="3" required></textarea></label>
+        <button class="kontor-button" type="submit">Post comment</button>
+      </form><?php endif; ?><?php endif; ?>
+    </section>
   <?php endif; ?>
 </div>

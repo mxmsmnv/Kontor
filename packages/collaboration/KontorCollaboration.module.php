@@ -34,7 +34,7 @@ class KontorCollaboration extends WireData implements Module
         return [
             'title' => 'Kontor Collaboration',
             'summary' => 'Notes, comments, mentions, followers, unread states.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCollaboration',
             'icon' => 'comments-o',
@@ -151,6 +151,13 @@ class KontorCollaboration extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('collaboration', self::getModuleInfo()['version'], 'collaboration');
+        $components->enable('collaboration');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('collaboration', self::getModuleInfo()['version'], 'collaboration');
         $components->enable('collaboration');
     }

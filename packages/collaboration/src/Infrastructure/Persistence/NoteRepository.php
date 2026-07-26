@@ -92,6 +92,28 @@ final class NoteRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return Note[]
+     */
+    public function findRecent(string $organizationUid, int $limit = 50): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_notes
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY created_at DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue(
+            ':organization_id',
+            $this->organizations->internalIdOf($organizationUid),
+            \PDO::PARAM_INT
+        );
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): Note
     {
         return new Note(

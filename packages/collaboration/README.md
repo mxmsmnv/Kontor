@@ -52,6 +52,12 @@ regex extraction) and runs for real. Everything under `tests/Integration/`
 needs real MySQL (see `../../docker-compose.test.yml`) and is skipped
 otherwise, same `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The root `ProcessKontor` module now exposes recent collaboration activity and
+task-attached notes/comments. Posting a comment exercises the existing mention
+parser and auto-follow behavior; opening the task marks its thread read.
+
 ## Not in scope for this substage
 
 No notification delivery when someone is mentioned or a followed entity
@@ -59,5 +65,5 @@ gets a new comment — `MentionRepository::unreadFor()` and
 `FollowerRepository::followersOf()` are the query surface a future
 `kontor/queue` + `kontor/mail`-backed dispatcher would use, same deferred
 cross-component wiring choice `kontor/tasks` made for reminder delivery.
-No admin UI/API endpoints, no rich text/markdown rendering (`body` is
+No API endpoints or rich text/markdown rendering (`body` is
 stored and returned as plain text).

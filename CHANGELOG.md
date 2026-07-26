@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Collaboration admin vertical: recent notes/comments, task-attached
+  discussion, auto-following, unread-state reads, and archive actions.
 - First Tasks admin vertical: organization-scoped listing and filters,
   create/edit, start/complete/cancel, recurrence spawning, and archive/restore.
 - First Payments admin vertical: sent-invoice payment capture, automatic

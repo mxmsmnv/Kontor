@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: recent collaboration activity plus task-attached notes,
+  comments, auto-following, unread-state reads, and archive actions.
 - Initial alpha (Substage 5.2): `kontor_notes`, `kontor_comments`,
   `kontor_mentions`, `kontor_followers`, `kontor_unread_states` migrations
   (schema gap-fill); `Note`/`Comment`/`Mention`/`Follower`/`UnreadState`

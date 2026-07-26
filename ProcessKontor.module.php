@@ -2,6 +2,7 @@
 
 namespace ProcessWire;
 
+use Kontor\Collaboration\Domain\Note;
 use Kontor\Catalog\Application\PriceListDuplicator;
 use Kontor\Catalog\Domain\CatalogItem;
 use Kontor\Catalog\Domain\Category;
@@ -69,7 +70,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '091',
+            'version' => '092',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -159,6 +160,12 @@ class ProcessKontor extends Process
                     'label' => 'Tasks',
                     'icon' => 'check-square-o',
                     'permission' => 'kontor-tasks-task-view',
+                ],
+                [
+                    'url' => 'collaboration/',
+                    'label' => 'Collaboration',
+                    'icon' => 'comments-o',
+                    'permission' => 'kontor-collaboration-comment-view',
                 ],
                 [
                     'url' => 'components/',
@@ -1660,12 +1667,61 @@ class ProcessKontor extends Process
         $this->setPageTitle($task === null
             ? $this->_('Kontor · New task')
             : sprintf($this->_('Kontor · %s'), $task->title));
+        $collaborationReady = $task !== null && $this->collaborationReady();
+        $notes = [];
+        $comments = [];
+        $following = false;
+        $user = $this->wire()->user;
+        $canViewNotes = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-note-view');
+        $canCreateNotes = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-note-create');
+        $canArchiveNotes = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-note-archive');
+        $canViewComments = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-comment-view');
+        $canCreateComments = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-comment-create');
+        $canArchiveComments = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-comment-archive');
+        $canManageFollow = $user->isSuperuser() || $user->hasPermission('kontor-collaboration-follow-manage');
+
+        if ($collaborationReady) {
+            $collaboration = $this->collaborationModule();
+            $notes = $canViewNotes
+                ? $collaboration->noteRepository()->forEntity('task', $task->uid->toString())
+                : [];
+            $comments = $canViewComments
+                ? $collaboration->commentRepository()->forEntity('task', $task->uid->toString())
+                : [];
+            if ($canManageFollow) {
+                $following = $collaboration->followerRepository()->isFollowing(
+                    $this->organizationUid(),
+                    'task',
+                    $task->uid->toString(),
+                    (int) $user->id,
+                );
+            }
+            if ($canViewComments) {
+                $collaboration->unreadStateService()->markRead(
+                    $this->organizationUid(),
+                    (int) $user->id,
+                    'task',
+                    $task->uid->toString(),
+                );
+            }
+        }
 
         return $this->renderTemplate('task', [
             'task' => $task,
             'values' => $values,
             'error' => $error,
             'archived' => $archived,
+            'collaborationReady' => $collaborationReady,
+            'notes' => $notes,
+            'comments' => $comments,
+            'following' => $following,
+            'canViewNotes' => $canViewNotes,
+            'canCreateNotes' => $canCreateNotes,
+            'canArchiveNotes' => $canArchiveNotes,
+            'canViewComments' => $canViewComments,
+            'canCreateComments' => $canCreateComments,
+            'canArchiveComments' => $canArchiveComments,
+            'canManageFollow' => $canManageFollow,
         ]);
     }
 
@@ -1723,6 +1779,163 @@ class ProcessKontor extends Process
         $this->audit('tasks', 'task', $id, $action);
         $this->message($this->_('Task updated.'));
         $this->wire()->session->redirect('../task/?id=' . rawurlencode($id));
+    }
+
+    public function ___executeCollaboration(): string
+    {
+        $this->requireCollaboration();
+        $this->requirePermission('kontor-collaboration-comment-view');
+        $module = $this->collaborationModule();
+        $this->setPageTitle($this->_('Kontor · Collaboration'));
+
+        return $this->renderTemplate('collaboration', [
+            'notes' => ($this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-collaboration-note-view'))
+                ? $module->noteRepository()->findRecent($this->organizationUid(), 50)
+                : [],
+            'comments' => $module->commentRepository()->findRecent($this->organizationUid(), 50),
+            'taskLabels' => $this->collaborationTaskLabels(),
+        ]);
+    }
+
+    public function ___executeCollaborationPost(): void
+    {
+        $this->requirePost();
+        $this->requireCollaboration();
+        $kind = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('kind'),
+            ['note', 'comment']
+        );
+        $this->requireAction($kind, ['note', 'comment']);
+        $this->requirePermission($kind === 'note'
+            ? 'kontor-collaboration-note-create'
+            : 'kontor-collaboration-comment-create');
+        $entityType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('entity_type'),
+            ['task']
+        );
+        $this->requireAction($entityType, ['task']);
+        $entityUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('entity_uid'));
+        $task = $this->taskModule()->taskRepository()->require($entityUid);
+        $this->requireSameOrganization($task->organizationId);
+        $body = trim((string) $this->wire()->input->post('body'));
+
+        if ($body === '') {
+            throw new WireException($this->_('Collaboration text cannot be empty.'));
+        }
+        $body = mb_substr($body, 0, 10000);
+        $module = $this->collaborationModule();
+
+        if ($kind === 'note') {
+            $record = Note::create(
+                $this->organizationUid(),
+                $entityType,
+                $entityUid,
+                $body,
+                (int) $this->wire()->user->id,
+            );
+            $module->noteRepository()->save($record);
+        } else {
+            $parentUid = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('parent_uid')
+            );
+            if ($parentUid !== '') {
+                $parent = $module->commentRepository()->require($parentUid);
+                if (
+                    !hash_equals($parent->organizationId, $this->organizationUid())
+                    || $parent->entityType !== $entityType
+                    || !hash_equals($parent->entityUid, $entityUid)
+                ) {
+                    throw new WirePermissionException($this->_('Reply target does not belong to this thread.'));
+                }
+            }
+            $record = $module->commentService()->post(
+                $this->organizationUid(),
+                $entityType,
+                $entityUid,
+                $body,
+                (int) $this->wire()->user->id,
+                $parentUid !== '' ? $parentUid : null,
+            );
+        }
+
+        $this->audit(
+            'collaboration',
+            $kind,
+            $record->uid->toString(),
+            'created',
+            current: ['entityType' => $entityType, 'entityUid' => $entityUid],
+        );
+        $this->message($kind === 'note' ? $this->_('Note added.') : $this->_('Comment posted.'));
+        $this->wire()->session->redirect('../task/?id=' . rawurlencode($entityUid));
+    }
+
+    public function ___executeCollaborationAction(): void
+    {
+        $this->requirePost();
+        $this->requireCollaboration();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive_note', 'archive_comment', 'toggle_follow']
+        );
+        $this->requireAction($action, ['archive_note', 'archive_comment', 'toggle_follow']);
+        $entityUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('entity_uid'));
+        $task = $this->taskModule()->taskRepository()->require($entityUid);
+        $this->requireSameOrganization($task->organizationId);
+        $module = $this->collaborationModule();
+
+        if ($action === 'toggle_follow') {
+            $this->requirePermission('kontor-collaboration-follow-manage');
+            $userId = (int) $this->wire()->user->id;
+            $following = $module->followerRepository()->isFollowing(
+                $this->organizationUid(),
+                'task',
+                $entityUid,
+                $userId,
+            );
+            if ($following) {
+                $module->followerRepository()->unfollow(
+                    $this->organizationUid(),
+                    'task',
+                    $entityUid,
+                    $userId,
+                );
+            } else {
+                $module->followerRepository()->follow(
+                    $this->organizationUid(),
+                    'task',
+                    $entityUid,
+                    $userId,
+                );
+            }
+            $this->audit(
+                'collaboration',
+                'follower',
+                $entityUid,
+                $following ? 'unfollowed' : 'followed',
+            );
+            $this->message($following ? $this->_('Thread unfollowed.') : $this->_('Thread followed.'));
+        } else {
+            $kind = $action === 'archive_note' ? 'note' : 'comment';
+            $this->requirePermission('kontor-collaboration-' . $kind . '-archive');
+            $recordUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('record_uid'));
+            $repository = $kind === 'note'
+                ? $module->noteRepository()
+                : $module->commentRepository();
+            $record = $repository->require($recordUid);
+            if (
+                !hash_equals($record->organizationId, $this->organizationUid())
+                || $record->entityType !== 'task'
+                || !hash_equals($record->entityUid, $entityUid)
+            ) {
+                throw new WirePermissionException($this->_('Collaboration record does not belong to this task.'));
+            }
+            $repository->archive($recordUid);
+            $this->audit('collaboration', $kind, $recordUid, 'archived');
+            $this->message($kind === 'note' ? $this->_('Note archived.') : $this->_('Comment archived.'));
+        }
+
+        $this->wire()->session->redirect('../task/?id=' . rawurlencode($entityUid));
     }
 
     public function ___executeCompany(): string
@@ -5171,6 +5384,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorTasks');
     }
 
+    private function collaborationReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorCollaboration');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -5210,6 +5428,13 @@ class ProcessKontor extends Process
     {
         if (!$this->tasksReady()) {
             throw new WireException($this->_('The Kontor Tasks component is not installed.'));
+        }
+    }
+
+    private function requireCollaboration(): void
+    {
+        if (!$this->collaborationReady()) {
+            throw new WireException($this->_('The Kontor Collaboration component is not installed.'));
         }
     }
 
@@ -5262,6 +5487,34 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorTasks');
 
         return $module;
+    }
+
+    private function collaborationModule(): KontorCollaboration
+    {
+        /** @var KontorCollaboration $module */
+        $module = $this->wire()->modules->get('KontorCollaboration');
+
+        return $module;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function collaborationTaskLabels(): array
+    {
+        if (!$this->tasksReady()) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($this->taskModule()->taskRepository()->findMatching(
+            $this->organizationUid(),
+            limit: 250,
+        ) as $task) {
+            $labels[$task->uid->toString()] = $task->title;
+        }
+
+        return $labels;
     }
 
     private function requireDataExchangeEntity(string $entityType): void

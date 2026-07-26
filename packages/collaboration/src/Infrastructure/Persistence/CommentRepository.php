@@ -96,6 +96,28 @@ final class CommentRepository implements RepositoryInterface
     }
 
     /**
+     * @return Comment[]
+     */
+    public function findRecent(string $organizationUid, int $limit = 50): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_comments
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY created_at DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue(
+            ':organization_id',
+            $this->organizations->internalIdOf($organizationUid),
+            \PDO::PARAM_INT
+        );
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
      * The "unread states" milestone's actual count query: comments on this
      * entity created after $since, excluding ones authored by the viewer
      * themselves (your own comments never count as unread for you).
