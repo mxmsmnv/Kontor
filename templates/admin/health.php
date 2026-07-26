@@ -48,9 +48,9 @@ $displayValue = static function (mixed $value): string {
     <div>
       <strong><?= $e($overallLabel) ?></strong>
       <p>
-        <?= $e($counts['ok']) ?> healthy
-        · <?= $e($counts['warning']) ?> warning
-        · <?= $e($counts['critical']) ?> critical
+        <a href="./?status=ok"><?= $e($counts['ok']) ?> healthy</a>
+        · <a href="./?status=warning"><?= $e($counts['warning']) ?> warning</a>
+        · <a href="./?status=critical"><?= $e($counts['critical']) ?> critical</a>
       </p>
     </div>
     <time datetime="<?= $e($checkedAt->format(DATE_ATOM)) ?>">
