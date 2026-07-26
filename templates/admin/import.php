@@ -3,6 +3,8 @@
 /** @var string $entityType */
 /** @var \Kontor\Core\Domain\ImportBatchResult|null $result */
 /** @var string|null $filename */
+/** @var string|null $previewToken */
+/** @var string|null $backupId */
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
@@ -37,7 +39,7 @@
     </form>
     <p class="kontor-import__notice">
       <i class="fa fa-shield"></i>
-      Preview mode is read-only. Live import remains disabled until a verified Contacts backup provider is available.
+      Preview mode is read-only. A live import can start only after Kontor creates and verifies a Contacts snapshot.
     </p>
   </section>
 
@@ -45,20 +47,45 @@
     <section class="kontor-import-result">
       <div class="kontor-sectionhead">
         <div>
-          <p class="kontor-eyebrow">Preview complete</p>
+          <p class="kontor-eyebrow"><?= $result->dryRun ? 'Preview complete' : 'Import complete' ?></p>
           <h3><?= $e($filename ?: 'Uploaded file') ?></h3>
         </div>
         <span class="kontor-pill<?= $result->failed > 0 ? ' kontor-pill--inactive' : '' ?>">
-          <?= $result->failed > 0 ? $e($result->failed) . ' issues' : 'ready' ?>
+          <?= $result->failed > 0 ? $e($result->failed) . ' issues' : ($result->dryRun ? 'ready' : 'imported') ?>
         </span>
       </div>
 
       <div class="kontor-previewstats">
         <article><strong><?= $e($result->totalRows) ?></strong><span>Total rows</span></article>
-        <article><strong><?= $e($result->created) ?></strong><span>Would create</span></article>
-        <article><strong><?= $e($result->updated) ?></strong><span>Would update</span></article>
+        <article><strong><?= $e($result->created) ?></strong><span><?= $result->dryRun ? 'Would create' : 'Created' ?></span></article>
+        <article><strong><?= $e($result->updated) ?></strong><span><?= $result->dryRun ? 'Would update' : 'Updated' ?></span></article>
         <article><strong><?= $e($result->failed) ?></strong><span>Invalid rows</span></article>
       </div>
+
+      <?php if ($result->dryRun && $previewToken !== null): ?>
+        <form class="kontor-import-confirm" method="post" action="./">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <input type="hidden" name="entity" value="<?= $e($entityType) ?>">
+          <input type="hidden" name="preview_token" value="<?= $e($previewToken) ?>">
+          <input type="hidden" name="commit_import" value="1">
+          <div>
+            <strong>Ready to import <?= $e($result->totalRows) ?> rows</strong>
+            <span>Kontor will create and verify a complete Contacts snapshot before changing any data.</span>
+          </div>
+          <button class="kontor-button" type="submit" onclick="return confirm('Create a verified backup and import these rows?')">
+            <i class="fa fa-shield"></i> Back up and import
+          </button>
+        </form>
+      <?php elseif (!$result->dryRun && $backupId !== null): ?>
+        <p class="kontor-import-success">
+          <i class="fa fa-check-circle"></i>
+          Import completed after verified backup <code><?= $e($backupId) ?></code>.
+        </p>
+      <?php elseif ($result->dryRun && $result->failed > 0): ?>
+        <p class="kontor-import__notice">
+          Fix every invalid row and preview the file again before importing.
+        </p>
+      <?php endif; ?>
 
       <?php if ($result->rows): ?>
         <div class="kontor-card kontor-tablewrap">

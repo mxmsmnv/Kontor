@@ -17,6 +17,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 - Active and archived repository list queries used by the admin workspace.
 - Single-primary-address enforcement when saving owner addresses.
+- An organization-scoped, portable backup provider covering contacts,
+  companies, addresses and memberships, with verified restore support.
 - Initial alpha (Substage 3.1) — the first business component:
   `kontor_contacts`, `kontor_companies`, `kontor_addresses`,
   `kontor_contact_company` migrations; `Contact`/`Company`/`Address`/

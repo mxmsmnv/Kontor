@@ -5,6 +5,7 @@ namespace ProcessWire;
 use Kontor\Contacts\Application\ContactDuplicateDetector;
 use Kontor\Contacts\Application\TagService;
 use Kontor\Contacts\Health\ContactsHealthCheck;
+use Kontor\Contacts\Infrastructure\Backup\ContactsBackupProvider;
 use Kontor\Contacts\Infrastructure\Export\CompanyExportProvider;
 use Kontor\Contacts\Infrastructure\Export\ContactExportProvider;
 use Kontor\Contacts\Infrastructure\Import\CompanyImportProvider;
@@ -21,6 +22,7 @@ use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\ExtensionRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\ExportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\ImportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\RepositoryRegistry;
@@ -42,7 +44,7 @@ class KontorContacts extends WireData implements Module
         return [
             'title' => 'Kontor Contacts',
             'summary' => 'Contacts, companies, addresses, memberships, tags and duplicate detection.',
-            'version' => '004',
+            'version' => '005',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorContacts',
             'icon' => 'address-book',
@@ -102,6 +104,10 @@ class KontorContacts extends WireData implements Module
         $kontor->container()->get(RepositoryRegistry::class)->register('company', $this->companyRepository());
 
         $organizations = $kontor->container()->get(OrganizationRepository::class);
+        $kontor->container()->get(BackupProviderRegistry::class)->register(
+            'contacts',
+            new ContactsBackupProvider($this->pdo(), $organizations)
+        );
 
         $searchModule->providerRegistry()->register(new SqlFullTextSearchProvider(
             pdo: $this->pdo(),

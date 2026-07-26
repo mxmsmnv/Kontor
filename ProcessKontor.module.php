@@ -11,11 +11,14 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\ImportManager;
+use Kontor\Core\Domain\ImportBatchResult;
 use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\SDK\DTO\BackupVerification;
 use Kontor\SDK\DTO\ExportContext;
 use Kontor\SDK\DTO\ImportContext;
 use Kontor\SDK\ValueObjects\Uid;
@@ -31,7 +34,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '006',
+            'version' => '007',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -367,33 +370,62 @@ class ProcessKontor extends Process
         ) ?? 'contact';
         $result = null;
         $filename = null;
+        $previewToken = null;
+        $backupId = null;
+        $this->cleanupImportPreviews();
 
         if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
             $this->requirePost();
 
             try {
-                [$path, $format, $filename] = $this->receiveImportFile();
-
-                try {
-                    $result = $this->importManager()->run(
-                        entityType: $entityType,
-                        reader: (new FormatResolver())->reader($format),
-                        path: $path,
-                        context: new ImportContext(
-                            organizationId: $this->organizationUid(),
-                            batchId: Uid::generate()->toString(),
-                            dryRun: true,
-                            actorType: 'user',
-                            actorId: (string) $this->wire()->user->id,
-                        ),
+                if ($this->wire()->input->post('commit_import')) {
+                    [$result, $filename, $backupId] = $this->commitImportPreview(
+                        $this->wire()->sanitizer->text((string) $this->wire()->input->post('preview_token'))
                     );
-                } finally {
-                    if (is_file($path)) {
-                        unlink($path);
+                    $entityType = $result->entityType;
+                    $this->message(sprintf(
+                        $this->_('Import completed: %d created, %d updated. Verified backup %s was created first.'),
+                        $result->created,
+                        $result->updated,
+                        $backupId
+                    ));
+                } else {
+                    [$path, $format, $filename] = $this->receiveImportFile();
+                    $batchId = Uid::generate()->toString();
+
+                    try {
+                        $result = $this->importManager()->run(
+                            entityType: $entityType,
+                            reader: (new FormatResolver())->reader($format),
+                            path: $path,
+                            context: new ImportContext(
+                                organizationId: $this->organizationUid(),
+                                batchId: $batchId,
+                                dryRun: true,
+                                actorType: 'user',
+                                actorId: (string) $this->wire()->user->id,
+                            ),
+                        );
+
+                        if ($result->totalRows > 0 && $result->failed === 0) {
+                            $previewToken = $this->storeImportPreview(
+                                $batchId,
+                                $path,
+                                $format,
+                                $filename,
+                                $entityType,
+                                $result->updated
+                            );
+                            $path = '';
+                        }
+                    } finally {
+                        if ($path !== '' && is_file($path)) {
+                            unlink($path);
+                        }
                     }
                 }
             } catch (\Throwable $exception) {
-                $this->error($this->_('Import preview failed: ') . $exception->getMessage());
+                $this->error($this->_('Import failed: ') . $exception->getMessage());
             }
         }
 
@@ -401,6 +433,8 @@ class ProcessKontor extends Process
             'entityType' => $entityType,
             'result' => $result,
             'filename' => $filename,
+            'previewToken' => $previewToken,
+            'backupId' => $backupId,
         ]);
     }
 
@@ -723,6 +757,166 @@ class ProcessKontor extends Process
         return [$path, $format, $originalName];
     }
 
+    private function storeImportPreview(
+        string $batchId,
+        string $path,
+        string $format,
+        string $filename,
+        string $entityType,
+        int $updated
+    ): string {
+        $previews = $this->wire()->session->get('kontorImportPreviews');
+        $previews = is_array($previews) ? $previews : [];
+        $previews[$batchId] = [
+            'path' => $path,
+            'format' => $format,
+            'filename' => $filename,
+            'entityType' => $entityType,
+            'updated' => $updated,
+            'checksum' => hash_file('sha256', $path),
+            'expires' => time() + 3600,
+        ];
+        $this->wire()->session->set('kontorImportPreviews', $previews);
+
+        return $batchId;
+    }
+
+    /**
+     * @return array{0: ImportBatchResult, 1: string, 2: string}
+     */
+    private function commitImportPreview(string $token): array
+    {
+        $previews = $this->wire()->session->get('kontorImportPreviews');
+        $preview = is_array($previews) ? ($previews[$token] ?? null) : null;
+
+        if (!is_array($preview) || (int) ($preview['expires'] ?? 0) < time()) {
+            throw new WireException($this->_('This import preview has expired. Upload the file again.'));
+        }
+
+        $path = (string) ($preview['path'] ?? '');
+
+        if (
+            !$this->isManagedImportPath($path)
+            || !is_file($path)
+            || !hash_equals((string) ($preview['checksum'] ?? ''), (string) hash_file('sha256', $path))
+        ) {
+            $this->removeImportPreview($token);
+            throw new WireException($this->_('The preview file is no longer available or has changed.'));
+        }
+
+        $entityType = (string) $preview['entityType'];
+        $format = (string) $preview['format'];
+
+        if ((int) $preview['updated'] > 0) {
+            $this->requirePermission('kontor-import-update');
+        }
+
+        $backup = $this->backupManager()->create(
+            component: 'contacts',
+            kind: 'snapshot',
+            organizationId: $this->organizationUid(),
+            reason: "Before import {$token}",
+        );
+
+        if (!$backup->verified) {
+            throw new WireException($this->_('The pre-import Contacts backup could not be verified.'));
+        }
+
+        try {
+            $result = $this->importManager()->run(
+                entityType: $entityType,
+                reader: (new FormatResolver())->reader($format),
+                path: $path,
+                context: new ImportContext(
+                    organizationId: $this->organizationUid(),
+                    batchId: $token,
+                    dryRun: false,
+                    actorType: 'user',
+                    actorId: (string) $this->wire()->user->id,
+                ),
+                backupVerification: new BackupVerification(
+                    verified: true,
+                    checksum: $backup->checksum,
+                ),
+                auditOrganizationId: $this->organizationInternalId(),
+            );
+
+            if ($result->failed > 0) {
+                throw new WireException($this->_('The live import reported failed rows.'));
+            }
+        } catch (\Throwable $exception) {
+            $restore = $this->backupManager()->restore(
+                $backup->path,
+                'contacts',
+                $this->organizationUid()
+            );
+
+            if (!$restore->success) {
+                throw new WireException(
+                    $this->_('Import failed and automatic restore also failed: ') . implode('; ', $restore->errors),
+                    previous: $exception
+                );
+            }
+
+            $this->markImportAuditRestored($token);
+            throw new WireException(
+                $this->_('Import failed; Contacts data was restored from the verified backup.'),
+                previous: $exception
+            );
+        } finally {
+            $this->removeImportPreview($token);
+        }
+
+        return [$result, (string) $preview['filename'], $backup->id];
+    }
+
+    private function cleanupImportPreviews(): void
+    {
+        $previews = $this->wire()->session->get('kontorImportPreviews');
+
+        if (!is_array($previews)) {
+            return;
+        }
+
+        foreach ($previews as $token => $preview) {
+            if (!is_array($preview) || (int) ($preview['expires'] ?? 0) < time()) {
+                $this->removeImportPreview((string) $token);
+            }
+        }
+    }
+
+    private function removeImportPreview(string $token): void
+    {
+        $previews = $this->wire()->session->get('kontorImportPreviews');
+        $previews = is_array($previews) ? $previews : [];
+        $preview = $previews[$token] ?? null;
+
+        if (is_array($preview) && $this->isManagedImportPath((string) ($preview['path'] ?? ''))) {
+            @unlink((string) $preview['path']);
+        }
+
+        unset($previews[$token]);
+        $this->wire()->session->set('kontorImportPreviews', $previews);
+    }
+
+    private function isManagedImportPath(string $path): bool
+    {
+        return $path !== ''
+            && dirname($path) === rtrim($this->wire()->config->paths->cache, '/\\')
+            && str_starts_with(basename($path), 'kontor_import_');
+    }
+
+    private function markImportAuditRestored(string $batchId): void
+    {
+        $statement = $this->wire()->database->pdo()->prepare(
+            "UPDATE kontor_audit_events
+             SET action = 'import.restored'
+             WHERE correlation_id = :batch_id
+               AND action IN ('import.created', 'import.updated')"
+        );
+        $statement->execute(['batch_id' => $batchId]);
+    }
+
     private function renderTemplate(string $name, array $variables): string
     {
         $variables['adminUrl'] = $this->wire()->config->urls->admin . 'kontor/';
@@ -890,6 +1084,16 @@ class ProcessKontor extends Process
         return $organization->uid->toString();
     }
 
+    private function organizationInternalId(): int
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()
+            ->get(OrganizationRepository::class)
+            ->internalIdOf($this->organizationUid());
+    }
+
     private function componentRegistry(): ComponentRegistry
     {
         /** @var Kontor $kontor */
@@ -912,5 +1116,13 @@ class ProcessKontor extends Process
         $kontor = $this->wire()->modules->get('Kontor');
 
         return $kontor->container()->get(ImportManager::class);
+    }
+
+    private function backupManager(): BackupManager
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(BackupManager::class);
     }
 }

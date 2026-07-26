@@ -18,6 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   admin application.
 - CSV/JSON/JSON Lines/XLSX exports and read-only import previews for
   contacts and companies.
+- Two-step live imports gated by an automatically created and verified
+  Contacts snapshot, with automatic restore on import failure.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
