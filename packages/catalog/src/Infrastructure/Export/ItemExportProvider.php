@@ -14,9 +14,31 @@ use Kontor\SDK\DTO\ExportContext;
  */
 final class ItemExportProvider implements ExportProviderInterface
 {
-    private const ALL_FIELDS = [
-        'uid', 'item_type', 'sku', 'barcode', 'title_json', 'description_json', 'category_uid',
-        'unit_code', 'tax_code', 'sales_price_minor', 'sales_currency', 'status', 'created_at',
+    private const FIELD_SQL = [
+        'uid' => 'uid',
+        'item_type' => 'item_type',
+        'sku' => 'sku',
+        'barcode' => 'barcode',
+        'category_uid' => 'category_uid',
+        'unit_code' => 'unit_code',
+        'tax_code' => 'tax_code',
+        'sales_price_minor' => 'sales_price_minor',
+        'sales_currency' => 'sales_currency',
+        'purchase_price_minor' => 'purchase_price_minor',
+        'purchase_currency' => 'purchase_currency',
+        'cost_price_minor' => 'cost_price_minor',
+        'cost_currency' => 'cost_currency',
+        'track_inventory' => 'track_inventory',
+        'status' => 'status',
+        'title_en' => "JSON_UNQUOTE(JSON_EXTRACT(title_json, '$.en'))",
+        'description_en' => "JSON_UNQUOTE(JSON_EXTRACT(description_json, '$.en'))",
+        'title_fr' => "JSON_UNQUOTE(JSON_EXTRACT(title_json, '$.fr'))",
+        'description_fr' => "JSON_UNQUOTE(JSON_EXTRACT(description_json, '$.fr'))",
+        'title_de' => "JSON_UNQUOTE(JSON_EXTRACT(title_json, '$.de'))",
+        'description_de' => "JSON_UNQUOTE(JSON_EXTRACT(description_json, '$.de'))",
+        'title_es' => "JSON_UNQUOTE(JSON_EXTRACT(title_json, '$.es'))",
+        'description_es' => "JSON_UNQUOTE(JSON_EXTRACT(description_json, '$.es'))",
+        'created_at' => 'created_at',
     ];
 
     private const ALLOWED_FILTERS = ['status', 'item_type', 'category_uid'];
@@ -34,7 +56,7 @@ final class ItemExportProvider implements ExportProviderInterface
 
     public function fields(): array
     {
-        return self::ALL_FIELDS;
+        return array_keys(self::FIELD_SQL);
     }
 
     public function filters(): array
@@ -54,14 +76,18 @@ final class ItemExportProvider implements ExportProviderInterface
 
     public function iterate(array $filters, array $fields, ExportContext $context): iterable
     {
-        $selectedFields = $fields === [] ? self::ALL_FIELDS : array_values(array_intersect($fields, self::ALL_FIELDS));
+        $allFields = array_keys(self::FIELD_SQL);
+        $selectedFields = $fields === [] ? $allFields : array_values(array_intersect($fields, $allFields));
 
         if ($selectedFields === []) {
-            $selectedFields = self::ALL_FIELDS;
+            $selectedFields = $allFields;
         }
 
         [$where, $params] = $this->buildWhere($filters, $context);
-        $columns = implode(', ', $selectedFields);
+        $columns = implode(', ', array_map(
+            static fn (string $field): string => self::FIELD_SQL[$field] . " AS `{$field}`",
+            $selectedFields,
+        ));
 
         $statement = $this->pdo->prepare("SELECT {$columns} FROM kontor_catalog_items WHERE {$where} ORDER BY id ASC");
         $statement->execute($params);

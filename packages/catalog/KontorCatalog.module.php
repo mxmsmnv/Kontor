@@ -3,6 +3,7 @@
 namespace ProcessWire;
 
 use Kontor\Catalog\Health\CatalogHealthCheck;
+use Kontor\Catalog\Infrastructure\Backup\CatalogBackupProvider;
 use Kontor\Catalog\Infrastructure\Export\ItemExportProvider;
 use Kontor\Catalog\Infrastructure\Import\ItemImportProvider;
 use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
@@ -16,6 +17,7 @@ use Kontor\Catalog\Migrations\Migration0004CreatePricesTable;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\ExportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\ImportProviderRegistry;
 use Kontor\Core\Infrastructure\Registry\RepositoryRegistry;
@@ -34,7 +36,7 @@ class KontorCatalog extends WireData implements Module
         return [
             'title' => 'Kontor Catalog',
             'summary' => 'Items (products and services), categories, price lists, units and tax code references.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCatalog',
             'icon' => 'cubes',
@@ -78,6 +80,10 @@ class KontorCatalog extends WireData implements Module
         $kontor->container()->get(RepositoryRegistry::class)->register('catalog_item', $this->itemRepository());
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
+        $kontor->container()->get(BackupProviderRegistry::class)->register(
+            'catalog',
+            new CatalogBackupProvider($this->pdo(), $kontor->container()->get(OrganizationRepository::class))
+        );
     }
 
     private function registerTranslations(TranslationRegistry $translations): void

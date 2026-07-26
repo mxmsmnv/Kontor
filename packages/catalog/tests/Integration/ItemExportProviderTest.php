@@ -56,4 +56,14 @@ final class ItemExportProviderTest extends DatabaseTestCase
         $stillExists = (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_catalog_items')->fetchColumn();
         $this->assertSame(2, $stillExists);
     }
+
+    public function test_default_export_uses_flat_import_compatible_localized_fields(): void
+    {
+        $row = iterator_to_array($this->provider()->iterate([], [], $this->context()))[0];
+
+        $this->assertArrayHasKey('title_en', $row);
+        $this->assertArrayHasKey('description_en', $row);
+        $this->assertArrayHasKey('purchase_price_minor', $row);
+        $this->assertArrayNotHasKey('title_json', $row);
+    }
 }

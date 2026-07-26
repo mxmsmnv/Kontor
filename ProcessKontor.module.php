@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '031',
+            'version' => '032',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1002,7 +1002,7 @@ class ProcessKontor extends Process
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $component = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('component'),
-            ['core', 'contacts', 'unknown']
+            ['core', 'contacts', 'catalog', 'unknown']
         ) ?? '';
         $status = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('status'),
@@ -1224,9 +1224,13 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-backups-create');
         $component = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->post('component'),
-            ['core', 'contacts']
+            ['core', 'contacts', 'catalog']
         );
-        $this->requireAction($component, ['core', 'contacts']);
+        $this->requireAction($component, ['core', 'contacts', 'catalog']);
+
+        if ($component === 'catalog') {
+            $this->requireCatalog();
+        }
         $backup = $this->backupManager()->create(
             component: $component,
             kind: 'snapshot',
@@ -1283,7 +1287,7 @@ class ProcessKontor extends Process
         $kind = (string) ($metadata['kind'] ?? 'snapshot');
 
         if (
-            !in_array($component, ['core', 'contacts'], true)
+            !in_array($component, ['core', 'contacts', 'catalog'], true)
             || !$this->backupManager()->verify($path, $component, $this->organizationUid(), $kind)
         ) {
             throw new WireException($this->_('Backup verification failed; download was blocked.'));
@@ -1461,18 +1465,20 @@ class ProcessKontor extends Process
 
     public function ___executeExport(): void
     {
-        $this->requireContacts();
-        $this->requirePermission('kontor-contacts-export');
         $entityType = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('entity'),
-            ['contact', 'company']
+            ['contact', 'company', 'catalog_item']
         );
         $format = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('format'),
             ['csv', 'json', 'jsonl', 'xlsx']
         );
-        $this->requireAction($entityType, ['contact', 'company']);
+        $this->requireAction($entityType, ['contact', 'company', 'catalog_item']);
         $this->requireAction($format, ['csv', 'json', 'jsonl', 'xlsx']);
+        $this->requireDataExchangeEntity($entityType);
+        $this->requirePermission($entityType === 'catalog_item'
+            ? 'kontor-catalog-export'
+            : 'kontor-contacts-export');
 
         $temporary = tempnam($this->wire()->config->paths->cache, 'kontor_export_');
 
@@ -1501,9 +1507,13 @@ class ProcessKontor extends Process
             path: $path,
         );
         $date = (new \DateTimeImmutable())->format('Y-m-d');
-        $filename = 'kontor-' . ($entityType === 'contact' ? 'contacts' : 'companies') . "-{$date}.{$format}";
+        $filename = 'kontor-' . match ($entityType) {
+            'contact' => 'contacts',
+            'company' => 'companies',
+            default => 'catalog-items',
+        } . "-{$date}.{$format}";
         $this->audit(
-            'core',
+            $entityType === 'catalog_item' ? 'catalog' : 'core',
             $entityType,
             'bulk',
             'exported',
@@ -1519,13 +1529,13 @@ class ProcessKontor extends Process
 
     public function ___executeImport(): string
     {
-        $this->requireContacts();
         $this->requirePermission('kontor-import');
         $this->setPageTitle($this->_('Kontor · Import preview'));
         $entityType = $this->wire()->sanitizer->option(
             (string) ($this->wire()->input->post('entity') ?: $this->wire()->input->get('entity')),
-            ['contact', 'company']
+            ['contact', 'company', 'catalog_item']
         ) ?? 'contact';
+        $this->requireDataExchangeEntity($entityType);
         $result = null;
         $filename = null;
         $previewToken = null;
@@ -1593,6 +1603,8 @@ class ProcessKontor extends Process
             'filename' => $filename,
             'previewToken' => $previewToken,
             'backupId' => $backupId,
+            'availableEntityTypes' => $this->availableImportEntityTypes(),
+            'backupLabel' => $entityType === 'catalog_item' ? 'Catalog' : 'Contacts',
         ]);
     }
 
@@ -2792,15 +2804,20 @@ class ProcessKontor extends Process
             $this->requirePermission('kontor-import-update');
         }
 
+        $backupComponent = $entityType === 'catalog_item' ? 'catalog' : 'contacts';
+        $backupLabel = $backupComponent === 'catalog' ? 'Catalog' : 'Contacts';
         $backup = $this->backupManager()->create(
-            component: 'contacts',
+            component: $backupComponent,
             kind: 'snapshot',
             organizationId: $this->organizationUid(),
             reason: "Before import {$token}",
         );
 
         if (!$backup->verified) {
-            throw new WireException($this->_('The pre-import Contacts backup could not be verified.'));
+            throw new WireException(sprintf(
+                $this->_('The pre-import %s backup could not be verified.'),
+                $backupLabel
+            ));
         }
 
         try {
@@ -2828,7 +2845,7 @@ class ProcessKontor extends Process
         } catch (\Throwable $exception) {
             $restore = $this->backupManager()->restore(
                 $backup->path,
-                'contacts',
+                $backupComponent,
                 $this->organizationUid()
             );
 
@@ -2841,7 +2858,10 @@ class ProcessKontor extends Process
 
             $this->markImportAuditRestored($token);
             throw new WireException(
-                $this->_('Import failed; Contacts data was restored from the verified backup.'),
+                sprintf(
+                    $this->_('Import failed; %s data was restored from the verified backup.'),
+                    $backupLabel
+                ),
                 previous: $exception
             );
         } finally {
@@ -3128,7 +3148,7 @@ class ProcessKontor extends Process
                     : [];
                 $component = (string) ($metadata['component'] ?? '');
 
-                if (!in_array($component, ['core', 'contacts'], true)) {
+                if (!in_array($component, ['core', 'contacts', 'catalog'], true)) {
                     continue;
                 }
 
@@ -3288,6 +3308,32 @@ class ProcessKontor extends Process
         if (!$this->contactsReady()) {
             throw new WireException($this->_('The Kontor Contacts component is not installed.'));
         }
+    }
+
+    private function requireDataExchangeEntity(string $entityType): void
+    {
+        $entityType === 'catalog_item'
+            ? $this->requireCatalog()
+            : $this->requireContacts();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function availableImportEntityTypes(): array
+    {
+        $types = [];
+
+        if ($this->contactsReady()) {
+            $types['contact'] = $this->_('Contacts');
+            $types['company'] = $this->_('Companies');
+        }
+
+        if ($this->catalogReady()) {
+            $types['catalog_item'] = $this->_('Catalog items');
+        }
+
+        return $types;
     }
 
     private function queueReady(): bool

@@ -44,7 +44,7 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
       <p>Create verified snapshots before imports, upgrades, or high-risk changes.</p>
     </div>
     <div class="kontor-backupactions">
-      <?php foreach (['contacts' => 'Contacts snapshot', 'core' => 'Core snapshot'] as $component => $label): ?>
+      <?php foreach (['contacts' => 'Contacts snapshot', 'catalog' => 'Catalog snapshot', 'core' => 'Core snapshot'] as $component => $label): ?>
         <form method="post" action="<?= $e($adminUrl) ?>backup-create/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="component" value="<?= $e($component) ?>">
@@ -69,6 +69,7 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
     <select name="component" aria-label="Backup component">
       <option value="">All components</option>
       <option value="contacts"<?= $selectedComponent === 'contacts' ? ' selected' : '' ?>>Contacts</option>
+      <option value="catalog"<?= $selectedComponent === 'catalog' ? ' selected' : '' ?>>Catalog</option>
       <option value="core"<?= $selectedComponent === 'core' ? ' selected' : '' ?>>Core</option>
       <option value="unknown"<?= $selectedComponent === 'unknown' ? ' selected' : '' ?>>Unknown</option>
     </select>

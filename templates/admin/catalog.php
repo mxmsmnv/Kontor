@@ -75,6 +75,12 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <option value="service"<?= $selectedType === 'service' ? ' selected' : '' ?>>Services</option>
     </select>
     <button class="kontor-button" type="submit">Filter</button>
+    <a class="kontor-viewtoggle" href="<?= $e($adminUrl) ?>export/?entity=catalog_item&amp;format=csv">
+      <i class="fa fa-download"></i> Export CSV
+    </a>
+    <a class="kontor-viewtoggle" href="<?= $e($adminUrl) ?>import/?entity=catalog_item">
+      <i class="fa fa-upload"></i> Import
+    </a>
     <a class="kontor-viewtoggle" href="<?= $e($url(1, !$showArchived)) ?>">
       <i class="fa fa-<?= $showArchived ? 'cubes' : 'archive' ?>"></i>
       <?= $showArchived ? 'Active items' : 'Archive' ?>

@@ -5,6 +5,8 @@
 /** @var string|null $filename */
 /** @var string|null $previewToken */
 /** @var string|null $backupId */
+/** @var array<string, string> $availableEntityTypes */
+/** @var string $backupLabel */
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
@@ -24,8 +26,9 @@
       <label>
         <span>Record type</span>
         <select name="entity">
-          <option value="contact"<?= $entityType === 'contact' ? ' selected' : '' ?>>Contacts</option>
-          <option value="company"<?= $entityType === 'company' ? ' selected' : '' ?>>Companies</option>
+          <?php foreach ($availableEntityTypes as $value => $label): ?>
+            <option value="<?= $e($value) ?>"<?= $entityType === $value ? ' selected' : '' ?>><?= $e($label) ?></option>
+          <?php endforeach; ?>
         </select>
       </label>
       <label class="kontor-import__file">
@@ -39,7 +42,7 @@
     </form>
     <p class="kontor-import__notice">
       <i class="fa fa-shield"></i>
-      Preview mode is read-only. A live import can start only after Kontor creates and verifies a Contacts snapshot.
+      Preview mode is read-only. A live import can start only after Kontor creates and verifies a <?= $e($backupLabel) ?> snapshot.
     </p>
   </section>
 
@@ -70,7 +73,7 @@
           <input type="hidden" name="commit_import" value="1">
           <div>
             <strong>Ready to import <?= $e($result->totalRows) ?> rows</strong>
-            <span>Kontor will create and verify a complete Contacts snapshot before changing any data.</span>
+            <span>Kontor will create and verify a complete <?= $e($backupLabel) ?> snapshot before changing any data.</span>
           </div>
           <button class="kontor-button" type="submit" onclick="return confirm('Create a verified backup and import these rows?')">
             <i class="fa fa-shield"></i> Back up and import

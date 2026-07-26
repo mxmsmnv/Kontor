@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped Catalog backup/restore across items, categories, price
+  lists, and price tiers, registered for protected imports.
 - Organization-scoped active-item usage counts for unit and tax references.
 - Price-list search/pagination helpers and price-tier list/count/delete/replace
   persistence operations for the admin pricing workspace.
@@ -28,6 +30,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Catalog exports now use flat localized fields compatible with Catalog
+  imports and include all item price/currency columns.
 - Catalog item exports now yield associative rows only, without duplicate
   numeric PDO keys.
 - Provider registration now supplies the required `catalog_item` key, and

@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog item CSV/JSON/JSON Lines/XLSX export and preview-first import,
+  protected by verified Catalog snapshots and automatic restore on failure.
+- Catalog snapshots in the Backups workspace.
 - A searchable Catalog reference workspace for unit and generic tax codes,
   including active-item usage counts and links across Catalog navigation.
 - Catalog price-list management with searchable/status-filtered lists,
