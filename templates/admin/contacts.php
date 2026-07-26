@@ -3,10 +3,25 @@
 /** @var array $contacts */
 /** @var string $query */
 /** @var bool $showArchived */
+/** @var int $page */
+/** @var int $totalPages */
+/** @var int $totalRecords */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
+
+$pageUrl = static function (int $targetPage) use ($query, $showArchived): string {
+    return './?' . http_build_query(array_filter([
+        'q' => $query,
+        'archived' => $showArchived ? 1 : '',
+        'page' => $targetPage,
+    ], static fn (string|int $value): bool => $value !== ''));
+};
+$viewUrl = './?' . http_build_query(array_filter([
+    'q' => $query,
+    'archived' => $showArchived ? '' : 1,
+], static fn (string|int $value): bool => $value !== ''));
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -40,11 +55,11 @@
       </button>
     </form>
     <div class="kontor-toolbar__meta">
-      <a class="kontor-viewtoggle" href="./<?= $showArchived ? '' : '?archived=1' ?>">
+      <a class="kontor-viewtoggle" href="<?= $e($viewUrl) ?>">
         <i class="fa fa-<?= $showArchived ? 'address-book' : 'archive' ?>"></i>
         <?= $showArchived ? 'Active contacts' : 'Archive' ?>
       </a>
-      <span class="kontor-secondary"><?= $e(count($contacts)) ?> shown</span>
+      <span class="kontor-secondary"><?= $e($totalRecords) ?> total · <?= $e(count($contacts)) ?> shown</span>
     </div>
   </div>
 
@@ -103,4 +118,21 @@
       </div>
     <?php endif; ?>
   </section>
+  <?php if ($totalPages > 1): ?>
+    <nav class="kontor-pagination" aria-label="Contact pages">
+      <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
+      <div>
+        <?php if ($page > 1): ?>
+          <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+            <i class="fa fa-chevron-left"></i> Previous
+          </a>
+        <?php endif; ?>
+        <?php if ($page < $totalPages): ?>
+          <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+            Next <i class="fa fa-chevron-right"></i>
+          </a>
+        <?php endif; ?>
+      </div>
+    </nav>
+  <?php endif; ?>
 </div>

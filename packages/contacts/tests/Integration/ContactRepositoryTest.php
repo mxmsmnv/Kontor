@@ -112,6 +112,10 @@ final class ContactRepositoryTest extends DatabaseTestCase
         $matches = $repository->findAll($this->organizationUid, 'Mathematician');
         $this->assertCount(1, $matches);
         $this->assertSame('Ada Lovelace', $matches[0]->displayName);
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Mathematician'));
+        $firstPage = $repository->findAll($this->organizationUid, limit: 1);
+        $secondPage = $repository->findAll($this->organizationUid, limit: 1, offset: 1);
+        $this->assertNotSame($firstPage[0]->uid->toString(), $secondPage[0]->uid->toString());
         $this->assertSame(2, $repository->countActive($this->organizationUid));
 
         $repository->archive($grace->uid->toString());
@@ -120,6 +124,7 @@ final class ContactRepositoryTest extends DatabaseTestCase
             ['Grace Hopper'],
             array_map(static fn (Contact $contact): string => $contact->displayName, $repository->findArchived($this->organizationUid))
         );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, archived: true));
     }
 
     public function test_save_rejects_a_non_contact_entity(): void

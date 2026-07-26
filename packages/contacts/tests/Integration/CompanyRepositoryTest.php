@@ -72,6 +72,10 @@ final class CompanyRepositoryTest extends DatabaseTestCase
         $matches = $repository->findAll($this->organizationUid, 'HRB-123');
         $this->assertCount(1, $matches);
         $this->assertSame('Acme GmbH', $matches[0]->legalName);
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'HRB-123'));
+        $firstPage = $repository->findAll($this->organizationUid, limit: 1);
+        $secondPage = $repository->findAll($this->organizationUid, limit: 1, offset: 1);
+        $this->assertNotSame($firstPage[0]->uid->toString(), $secondPage[0]->uid->toString());
         $this->assertSame(2, $repository->countActive($this->organizationUid));
 
         $repository->archive($globex->uid->toString());

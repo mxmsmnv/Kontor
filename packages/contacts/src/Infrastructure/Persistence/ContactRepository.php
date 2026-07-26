@@ -130,27 +130,34 @@ final class ContactRepository implements RepositoryInterface
     /**
      * @return Contact[]
      */
-    public function findAll(string $organizationUid, string $query = '', int $limit = 100): array
+    public function findAll(string $organizationUid, string $query = '', int $limit = 100, int $offset = 0): array
     {
-        return $this->findList($organizationUid, $query, false, $limit);
+        return $this->findList($organizationUid, $query, false, $limit, $offset);
     }
 
     /**
      * @return Contact[]
      */
-    public function findArchived(string $organizationUid, string $query = '', int $limit = 100): array
+    public function findArchived(string $organizationUid, string $query = '', int $limit = 100, int $offset = 0): array
     {
-        return $this->findList($organizationUid, $query, true, $limit);
+        return $this->findList($organizationUid, $query, true, $limit, $offset);
     }
 
     /**
      * @return Contact[]
      */
-    private function findList(string $organizationUid, string $query, bool $archived, int $limit): array
+    private function findList(
+        string $organizationUid,
+        string $query,
+        bool $archived,
+        int $limit,
+        int $offset,
+    ): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
         $query = trim($query);
         $limit = max(1, min($limit, 250));
+        $offset = max(0, $offset);
         $sql = 'SELECT * FROM kontor_contacts
             WHERE organization_id = :organization_id
               AND deleted_at IS NULL
@@ -166,7 +173,7 @@ final class ContactRepository implements RepositoryInterface
             )';
         }
 
-        $sql .= ' ORDER BY updated_at DESC, display_name ASC LIMIT :limit';
+        $sql .= ' ORDER BY updated_at DESC, display_name ASC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
 
@@ -175,12 +182,44 @@ final class ContactRepository implements RepositoryInterface
         }
 
         $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $statement->execute();
 
         return array_map(
             fn (array $row): Contact => $this->hydrate($row),
             $statement->fetchAll(\PDO::FETCH_ASSOC)
         );
+    }
+
+    public function countMatching(string $organizationUid, string $query = '', bool $archived = false): int
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $query = trim($query);
+        $sql = 'SELECT COUNT(*) FROM kontor_contacts
+            WHERE organization_id = :organization_id
+              AND deleted_at IS NULL
+              AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
+
+        if ($query !== '') {
+            $sql .= ' AND (
+                display_name LIKE :query
+                OR email LIKE :query
+                OR phone LIKE :query
+                OR mobile LIKE :query
+                OR job_title LIKE :query
+            )';
+        }
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
+
+        if ($query !== '') {
+            $statement->bindValue(':query', '%' . $query . '%');
+        }
+
+        $statement->execute();
+
+        return (int) $statement->fetchColumn();
     }
 
     public function countActive(string $organizationUid): int

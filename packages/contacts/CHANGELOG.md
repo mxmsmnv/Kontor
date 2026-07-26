@@ -15,6 +15,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Paginated active/archive contact and company queries with offsets and exact
+  organization-scoped search counts for the admin workspace.
 - Active and archived repository list queries used by the admin workspace.
 - Single-primary-address enforcement when saving owner addresses.
 - An organization-scoped, portable backup provider covering contacts,

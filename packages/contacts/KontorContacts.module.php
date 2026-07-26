@@ -44,7 +44,7 @@ class KontorContacts extends WireData implements Module
         return [
             'title' => 'Kontor Contacts',
             'summary' => 'Contacts, companies, addresses, memberships, tags and duplicate detection.',
-            'version' => '006',
+            'version' => '007',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorContacts',
             'icon' => 'address-book',

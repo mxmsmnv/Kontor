@@ -48,7 +48,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '024',
+            'version' => '025',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -164,13 +164,35 @@ class ProcessKontor extends Process
         $this->setPageTitle($this->_('Kontor · Contacts'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
+        $organizationUid = $this->organizationUid();
+        $pageSize = 25;
+        $totalRecords = $this->contactRepository()->countMatching(
+            $organizationUid,
+            $query,
+            $showArchived,
+        );
+        $totalPages = max(1, (int) ceil($totalRecords / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
 
         return $this->renderTemplate('contacts', [
             'contacts' => $showArchived
-                ? $this->contactRepository()->findArchived($this->organizationUid(), $query)
-                : $this->contactRepository()->findAll($this->organizationUid(), $query),
+                ? $this->contactRepository()->findArchived(
+                    $organizationUid,
+                    $query,
+                    $pageSize,
+                    ($page - 1) * $pageSize,
+                )
+                : $this->contactRepository()->findAll(
+                    $organizationUid,
+                    $query,
+                    $pageSize,
+                    ($page - 1) * $pageSize,
+                ),
             'query' => $query,
             'showArchived' => $showArchived,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalRecords' => $totalRecords,
         ]);
     }
 
@@ -259,13 +281,35 @@ class ProcessKontor extends Process
         $this->setPageTitle($this->_('Kontor · Companies'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
+        $organizationUid = $this->organizationUid();
+        $pageSize = 25;
+        $totalRecords = $this->companyRepository()->countMatching(
+            $organizationUid,
+            $query,
+            $showArchived,
+        );
+        $totalPages = max(1, (int) ceil($totalRecords / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
 
         return $this->renderTemplate('companies', [
             'companies' => $showArchived
-                ? $this->companyRepository()->findArchived($this->organizationUid(), $query)
-                : $this->companyRepository()->findAll($this->organizationUid(), $query),
+                ? $this->companyRepository()->findArchived(
+                    $organizationUid,
+                    $query,
+                    $pageSize,
+                    ($page - 1) * $pageSize,
+                )
+                : $this->companyRepository()->findAll(
+                    $organizationUid,
+                    $query,
+                    $pageSize,
+                    ($page - 1) * $pageSize,
+                ),
             'query' => $query,
             'showArchived' => $showArchived,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalRecords' => $totalRecords,
         ]);
     }
 
