@@ -89,7 +89,10 @@ $enabledComponents = count(array_filter(
           <a href="<?= $e($adminUrl) ?>catalog/?pricing=unpriced">
             <?= $e($catalogSummary['unpriced']) ?> item(s) without sales price
           </a>
-          · <?= $e($catalogSummary['inventoryTracked']) ?> item(s) track inventory
+          ·
+          <a href="<?= $e($adminUrl) ?>catalog/?inventory=tracked">
+            <?= $e($catalogSummary['inventoryTracked']) ?> item(s) track inventory
+          </a>
         </span>
         <?php if ($recentCatalogItems): ?>
           <div>

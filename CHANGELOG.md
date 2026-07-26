@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct dashboard drill-down from the inventory-tracked Catalog count.
 - Dashboard visibility for active Catalog items without a sales price, linking
   directly to the corresponding filtered view.
 - Catalog item filtering for positions with or without a configured sales price.
