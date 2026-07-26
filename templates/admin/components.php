@@ -4,6 +4,10 @@
 /** @var array{total: int, enabled: int, attention: int} $counts */
 /** @var string $query */
 /** @var string $selectedStatus */
+/** @var bool $canSyncComponents */
+/** @var string $adminUrl */
+/** @var string $csrfName */
+/** @var string $csrfValue */
 /** @var callable $e */
 
 $hasFilters = $query !== '' || $selectedStatus !== '';
@@ -84,10 +88,24 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
-          <?php if ($component['href'] !== ''): ?>
-            <a class="kontor-component__source" href="<?= $e($component['href']) ?>" target="_blank" rel="noreferrer">
-              View source <i class="fa fa-external-link"></i>
-            </a>
+          <?php $canSync = $canSyncComponents && $component['needsAttention'] && $component['runtimeInstalled']; ?>
+          <?php if ($component['href'] !== '' || $canSync): ?>
+            <div class="kontor-component__actions">
+              <?php if ($component['href'] !== ''): ?>
+                <a class="kontor-component__source" href="<?= $e($component['href']) ?>" target="_blank" rel="noreferrer">
+                  View source <i class="fa fa-external-link"></i>
+                </a>
+              <?php endif; ?>
+              <?php if ($canSync): ?>
+                <form method="post" action="<?= $e($adminUrl) ?>component-sync/">
+                  <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                  <input type="hidden" name="component" value="<?= $e($component['name']) ?>">
+                  <button class="kontor-button kontor-button--ghost" type="submit">
+                    <i class="fa fa-refresh"></i> Sync registry
+                  </button>
+                </form>
+              <?php endif; ?>
+            </div>
           <?php endif; ?>
         </article>
       <?php endforeach; ?>

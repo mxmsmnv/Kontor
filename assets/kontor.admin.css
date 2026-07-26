@@ -1112,9 +1112,25 @@
   color: var(--kontor-brand);
   font-size: 0.75rem;
   font-weight: 700;
+  text-decoration: none;
+}
+
+.kontor-component__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
   margin-top: auto;
   padding-top: 0.8rem;
-  text-decoration: none;
+}
+
+.kontor-component__actions form {
+  margin: 0;
+}
+
+.kontor-component__actions .kontor-button {
+  min-height: 32px;
+  padding: 0.5rem 0.65rem;
 }
 
 .kontor-setup {

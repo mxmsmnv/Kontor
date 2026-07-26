@@ -47,7 +47,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '021',
+            'version' => '022',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1120,7 +1120,60 @@ class ProcessKontor extends Process
             'counts' => $overview['counts'],
             'query' => $query,
             'selectedStatus' => $status,
+            'canSyncComponents' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-components-update'),
         ]);
+    }
+
+    public function ___executeComponentSync(): void
+    {
+        $this->requirePost();
+        $this->requirePermission('kontor-components-update');
+        $name = $this->wire()->sanitizer->text((string) $this->wire()->input->post('component'));
+        $registered = $this->componentRegistry()->find($name);
+
+        if ($registered === null) {
+            throw new WireException($this->_('Component is not registered.'));
+        }
+
+        $moduleName = (new ComponentOverviewBuilder())->moduleName($name);
+        $runtime = $this->wire()->modules->getModuleInfoVerbose($moduleName);
+
+        if (
+            !is_array($runtime)
+            || !($runtime['installed'] ?? false)
+            || (string) ($runtime['version'] ?? '') === ''
+        ) {
+            throw new WireException($this->_('The matching ProcessWire module is not installed.'));
+        }
+
+        $previous = [
+            'version' => (string) ($registered['version'] ?? ''),
+            'status' => (string) ($registered['status'] ?? ''),
+        ];
+        $version = (string) $runtime['version'];
+        $this->componentRegistry()->markInstalled(
+            $name,
+            $version,
+            (string) ($registered['source'] ?? $name),
+            isset($registered['checksum']) ? (string) $registered['checksum'] : null,
+        );
+        $this->componentRegistry()->enable($name);
+        $this->audit(
+            'core',
+            'component',
+            $name,
+            'synchronized',
+            previous: $previous,
+            current: ['version' => $version, 'status' => 'enabled'],
+            metadata: ['moduleName' => $moduleName],
+        );
+        $this->message(sprintf(
+            $this->_('%s synchronized with ProcessWire runtime version %s.'),
+            (string) ($runtime['title'] ?? $moduleName),
+            (string) ($runtime['versionStr'] ?? $version),
+        ));
+        $this->wire()->session->redirect('../components/');
     }
 
     private function buildContactForm(?Contact $contact): InputfieldForm

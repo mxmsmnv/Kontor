@@ -50,6 +50,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   labels, mobile layout, and a separate metadata section.
 - Operational Components overview with runtime-versus-registry version drift,
   dependency metadata, status totals, search, and attention filtering.
+- CSRF-protected component registry synchronization against installed
+  ProcessWire module versions, permission-gated and fully audited.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
