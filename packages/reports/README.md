@@ -56,6 +56,13 @@ does not add a second registry.
   `ReportExportService`) and advances the schedule — but nothing
   dispatches it automatically; see "Not in scope".
 
+## Admin vertical
+
+The main Kontor Process module exposes a Reports workspace. It discovers
+registered providers, builds filter and grouping controls from each provider's
+declared schema, runs the report for the current organization, renders rows and
+totals, and exports the same validated query as CSV.
+
 ## Testing
 
 ```bash
@@ -78,6 +85,6 @@ No scheduler/cron wiring for due schedules — `ScheduledReportService::dueSched
 is the query, and `run()` the method, a future cron/queue-backed dispatcher
 (Stage 7) would call, same deferred-integration choice `kontor/tasks`'
 reminders and `kontor/invoices`' `sweepOverdue()` already made. No delivery
-of an exported report (email attachment, upload) — `run()` only produces
-the file on disk. No admin UI/API endpoints, no actual charting library —
-see `ChartDataMapper` above.
+of a scheduled report (email attachment, upload) — `run()` only produces
+the file on disk. No API endpoints or actual charting library — see
+`ChartDataMapper` above.

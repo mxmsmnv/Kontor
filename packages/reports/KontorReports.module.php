@@ -31,7 +31,7 @@ class KontorReports extends WireData implements Module
         return [
             'title' => 'Kontor Reports',
             'summary' => 'Report builder, charts, exports, scheduled reports.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorReports',
             'icon' => 'bar-chart',
@@ -77,7 +77,7 @@ class KontorReports extends WireData implements Module
 
     public function reportBuilder(): ReportBuilderService
     {
-        return new ReportBuilderService($this->reportProviders());
+        return new ReportBuilderService($this->providerRegistry());
     }
 
     public function chartDataMapper(): ChartDataMapper
@@ -92,15 +92,15 @@ class KontorReports extends WireData implements Module
 
     public function scheduledReports(): ScheduledReportService
     {
-        return new ScheduledReportService($this->scheduledReportRepository(), $this->reportProviders(), $this->reportBuilder(), $this->reportExporter());
+        return new ScheduledReportService($this->scheduledReportRepository(), $this->providerRegistry(), $this->reportBuilder(), $this->reportExporter());
     }
 
     public function healthCheck(): ReportsHealthCheck
     {
-        return new ReportsHealthCheck($this->pdo(), $this->reportProviders());
+        return new ReportsHealthCheck($this->pdo(), $this->providerRegistry());
     }
 
-    private function reportProviders(): ReportProviderRegistry
+    public function providerRegistry(): ReportProviderRegistry
     {
         /** @var Kontor $kontor */
         $kontor = $this->wire()->modules->get('Kontor');
@@ -132,6 +132,13 @@ class KontorReports extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('reports', self::getModuleInfo()['version'], 'reports');
+        $components->enable('reports');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('reports', self::getModuleInfo()['version'], 'reports');
         $components->enable('reports');
     }

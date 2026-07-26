@@ -54,6 +54,7 @@ use Kontor\Search\Application\GlobalSearchService;
 use Kontor\SDK\DTO\BackupVerification;
 use Kontor\SDK\DTO\ExportContext;
 use Kontor\SDK\DTO\ImportContext;
+use Kontor\SDK\DTO\ReportQuery;
 use Kontor\SDK\DTO\SearchQuery;
 use Kontor\SDK\ValueObjects\Money;
 use Kontor\SDK\ValueObjects\Uid;
@@ -70,7 +71,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '093',
+            'version' => '094',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -166,6 +167,12 @@ class ProcessKontor extends Process
                     'label' => 'Collaboration',
                     'icon' => 'comments-o',
                     'permission' => 'kontor-collaboration-comment-view',
+                ],
+                [
+                    'url' => 'reports/',
+                    'label' => 'Reports',
+                    'icon' => 'bar-chart',
+                    'permission' => 'kontor-reports-report-view',
                 ],
                 [
                     'url' => 'components/',
@@ -2067,6 +2074,141 @@ class ProcessKontor extends Process
         }
 
         $this->wire()->session->redirect('../task/?id=' . rawurlencode($entityUid));
+    }
+
+    public function ___executeReports(): string
+    {
+        $this->requireReports();
+        $this->requirePermission('kontor-reports-report-view');
+        $this->setPageTitle($this->_('Kontor · Reports'));
+        $module = $this->reportsModule();
+        $providers = $module->providerRegistry()->all();
+        $requestedKey = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('provider')
+        );
+        $providerKey = $requestedKey !== '' ? $requestedKey : (string) array_key_first($providers);
+        $provider = $providerKey !== '' && $module->providerRegistry()->has($providerKey)
+            ? $module->providerRegistry()->get($providerKey)
+            : null;
+        $filters = [];
+        $groupBy = [];
+        $result = null;
+
+        if ($provider !== null) {
+            $schema = $provider->schema();
+            foreach ($schema->filterableFields as $field) {
+                $value = trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->get('filter_' . $field)
+                ));
+                if ($value !== '') {
+                    $filters[$field] = $value;
+                }
+            }
+            $requestedGroup = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->get('group_by')
+            );
+            if ($requestedGroup !== '' && in_array($requestedGroup, $schema->groupableFields, true)) {
+                $groupBy[] = $requestedGroup;
+            }
+
+            if ((string) $this->wire()->input->get('run') === '1') {
+                $result = $module->reportBuilder()->run(
+                    $providerKey,
+                    new ReportQuery($this->organizationUid(), $filters, $groupBy),
+                );
+                $this->audit(
+                    'reports',
+                    'report',
+                    $providerKey,
+                    'run',
+                    metadata: ['filters' => $filters, 'groupBy' => $groupBy, 'rowCount' => count($result->rows)],
+                );
+            }
+        }
+
+        return $this->renderTemplate('reports', [
+            'providers' => $providers,
+            'providerKey' => $providerKey,
+            'provider' => $provider,
+            'filters' => $filters,
+            'groupBy' => $groupBy,
+            'result' => $result,
+            'canExport' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-reports-report-export'),
+        ]);
+    }
+
+    public function ___executeReportsExport(): void
+    {
+        $this->requirePost();
+        $this->requireReports();
+        $this->requirePermission('kontor-reports-report-export');
+        $module = $this->reportsModule();
+        $providerKey = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('provider')
+        );
+        if (!$module->providerRegistry()->has($providerKey)) {
+            throw new WireException($this->_('Unknown report provider.'));
+        }
+
+        try {
+            $filters = json_decode(
+                (string) $this->wire()->input->post('filters_json'),
+                true,
+                16,
+                JSON_THROW_ON_ERROR,
+            );
+            $groupBy = json_decode(
+                (string) $this->wire()->input->post('group_by_json'),
+                true,
+                16,
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\JsonException) {
+            throw new WireException($this->_('Invalid report parameters.'));
+        }
+        if (!is_array($filters) || !is_array($groupBy)) {
+            throw new WireException($this->_('Invalid report parameters.'));
+        }
+        foreach ($filters as $field => $value) {
+            if (!is_string($field) || !is_scalar($value)) {
+                throw new WireException($this->_('Invalid report filter.'));
+            }
+            $filters[$field] = mb_substr(trim((string) $value), 0, 191);
+        }
+        $groupBy = array_values(array_filter(
+            $groupBy,
+            static fn (mixed $field): bool => is_string($field),
+        ));
+        $result = $module->reportBuilder()->run(
+            $providerKey,
+            new ReportQuery($this->organizationUid(), $filters, $groupBy),
+        );
+        $temporary = tempnam($this->wire()->config->paths->cache, 'kontor_report_');
+        if ($temporary === false) {
+            throw new WireException($this->_('Could not create a report export file.'));
+        }
+        $path = $temporary . '.csv';
+        rename($temporary, $path);
+        register_shutdown_function(static function () use ($path): void {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        });
+        $fields = array_keys($module->providerRegistry()->get($providerKey)->schema()->fields);
+        $module->reportExporter()->export($result, $fields, 'csv', $path);
+        $this->audit(
+            'reports',
+            'report',
+            $providerKey,
+            'exported',
+            metadata: ['format' => 'csv', 'rowCount' => count($result->rows)],
+        );
+        wireSendFile($path, [
+            'forceDownload' => true,
+            'downloadFilename' => preg_replace('/[^a-z0-9_-]+/i', '-', $providerKey) . '-report.csv',
+            'exit' => true,
+        ]);
     }
 
     public function ___executeCompany(): string
@@ -5525,6 +5667,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorDashboard');
     }
 
+    private function reportsReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorReports');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -5578,6 +5725,13 @@ class ProcessKontor extends Process
     {
         if (!$this->dashboardReady()) {
             throw new WireException($this->_('The Kontor Dashboard component is not installed.'));
+        }
+    }
+
+    private function requireReports(): void
+    {
+        if (!$this->reportsReady()) {
+            throw new WireException($this->_('The Kontor Reports component is not installed.'));
         }
     }
 
@@ -5644,6 +5798,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorDashboard $module */
         $module = $this->wire()->modules->get('KontorDashboard');
+
+        return $module;
+    }
+
+    private function reportsModule(): KontorReports
+    {
+        /** @var KontorReports $module */
+        $module = $this->wire()->modules->get('KontorReports');
 
         return $module;
     }

@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: registered-provider discovery, schema-driven filters
+  and grouping, organization-scoped report execution, result/totals rendering,
+  and CSV export.
 - Initial alpha (Substage 5.4): `kontor_scheduled_reports` migration
   (schema gap-fill); `ScheduledReport` domain object (daily/weekly/monthly/
   yearly recurrence, same math as `kontor/tasks`); `ScheduledReportRepository`

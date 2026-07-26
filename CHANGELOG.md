@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Reports admin vertical: provider discovery, organization-scoped
+  execution, schema-driven filters and grouping, result tables, totals, and
+  CSV export.
 - Dashboard package integration on the existing Kontor home: personal default
   dashboard creation, registered widget placement, persisted layout controls,
   and live widget rendering.
