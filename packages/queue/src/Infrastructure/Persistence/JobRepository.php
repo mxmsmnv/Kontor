@@ -270,11 +270,17 @@ final class JobRepository implements JobRepositoryInterface
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function findRecent(?string $queue = null, ?string $status = null, int $limit = 100): array
+    public function findRecent(
+        ?string $queue = null,
+        ?string $status = null,
+        int $limit = 100,
+        int $offset = 0,
+    ): array
     {
         $conditions = [];
         $params = [];
         $limit = max(1, min($limit, 250));
+        $offset = max(0, $offset);
 
         if ($queue !== null) {
             $conditions[] = 'queue = :queue';
@@ -292,7 +298,7 @@ final class JobRepository implements JobRepositoryInterface
             $sql .= ' WHERE ' . implode(' AND ', $conditions);
         }
 
-        $sql .= ' ORDER BY id DESC LIMIT :limit';
+        $sql .= ' ORDER BY id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
 
         foreach ($params as $name => $value) {
@@ -300,9 +306,37 @@ final class JobRepository implements JobRepositoryInterface
         }
 
         $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $statement->execute();
 
         return $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function countMatching(?string $queue = null, ?string $status = null): int
+    {
+        $conditions = [];
+        $params = [];
+
+        if ($queue !== null) {
+            $conditions[] = 'queue = :queue';
+            $params['queue'] = $queue;
+        }
+
+        if ($status !== null) {
+            $conditions[] = 'status = :status';
+            $params['status'] = $status;
+        }
+
+        $sql = 'SELECT COUNT(*) FROM kontor_jobs';
+
+        if ($conditions !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
     }
 
     /**

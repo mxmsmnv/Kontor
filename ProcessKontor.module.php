@@ -48,7 +48,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '025',
+            'version' => '026',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -646,13 +646,25 @@ class ProcessKontor extends Process
             ['pending', 'reserved', 'completed', 'dead', 'cancelled']
         );
         $queue = $queue !== '' && in_array($queue, $queues, true) ? $queue : null;
+        $pageSize = 25;
+        $totalJobs = $this->jobRepository()->countMatching($queue, $status);
+        $totalPages = max(1, (int) ceil($totalJobs / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
 
         return $this->renderTemplate('queue', [
-            'jobs' => $this->jobRepository()->findRecent($queue, $status, 100),
+            'jobs' => $this->jobRepository()->findRecent(
+                $queue,
+                $status,
+                $pageSize,
+                ($page - 1) * $pageSize,
+            ),
             'counts' => $this->jobRepository()->summaryCounts(),
             'queues' => $queues,
             'selectedQueue' => $queue,
             'selectedStatus' => $status,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalJobs' => $totalJobs,
             'canCancelJobs' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-queue-cancel'),
             'canRetryJobs' => $this->wire()->user->isSuperuser()

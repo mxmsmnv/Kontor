@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Paginated recent-job queries with exact queue/status counts for the admin
+  monitor.
 - Bounded recent-job queries, status summaries, and queue discovery for the
   ProcessKontor queue monitor.
 - State-guarded dead-letter retry support for the Queue monitor.

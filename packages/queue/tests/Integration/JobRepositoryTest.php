@@ -16,7 +16,7 @@ final class JobRepositoryTest extends DatabaseTestCase
         $row = $jobs->find($uid);
 
         $this->assertSame('send.email', $row['job_type']);
-        $this->assertSame('{"to":"a@b.test"}', $row['payload_json']);
+        $this->assertSame(['to' => 'a@b.test'], json_decode($row['payload_json'], true, flags: JSON_THROW_ON_ERROR));
         $this->assertSame('pending', $row['status']);
     }
 
@@ -177,6 +177,10 @@ final class JobRepositoryTest extends DatabaseTestCase
         $this->assertSame(1, $jobs->summaryCounts()['completed']);
         $this->assertSame($default, $jobs->findRecent('default', 'pending', 10)[0]['uid']);
         $this->assertSame($reports, $jobs->findRecent('reports', 'completed', 10)[0]['uid']);
+        $this->assertSame(1, $jobs->countMatching('reports', 'completed'));
+        $firstPage = $jobs->findRecent(limit: 1);
+        $secondPage = $jobs->findRecent(limit: 1, offset: 1);
+        $this->assertNotSame($firstPage[0]['uid'], $secondPage[0]['uid']);
     }
 
     private function secondConnection(): \PDO

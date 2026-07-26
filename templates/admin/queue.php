@@ -5,6 +5,9 @@
 /** @var string[] $queues */
 /** @var string|null $selectedQueue */
 /** @var string|null $selectedStatus */
+/** @var int $page */
+/** @var int $totalPages */
+/** @var int $totalJobs */
 /** @var bool $canCancelJobs */
 /** @var bool $canRetryJobs */
 /** @var string $adminUrl */
@@ -14,6 +17,16 @@
 
 $total = array_sum($counts);
 $active = ($counts['pending'] ?? 0) + ($counts['reserved'] ?? 0);
+$pageUrl = static function (int $targetPage) use ($selectedQueue, $selectedStatus): string {
+    $query = http_build_query(array_filter([
+        'queue' => $selectedQueue,
+        'status' => $selectedStatus,
+        'page' => $targetPage > 1 ? $targetPage : '',
+    ], static fn (string|int|null $value): bool => $value !== null && $value !== ''));
+
+    return $query === '' ? './' : './?' . $query;
+};
+$refreshUrl = $pageUrl($page);
 $statusClass = static fn (string $status): string => match ($status) {
     'completed' => '',
     'pending' => ' kontor-pill--warning',
@@ -28,7 +41,7 @@ $statusClass = static fn (string $status): string => match ($status) {
       <h2>Queue monitor</h2>
       <p>Recent asynchronous work, retries, progress, and dead-letter failures.</p>
     </div>
-    <a class="kontor-button" href="./"><i class="fa fa-refresh"></i> Refresh</a>
+    <a class="kontor-button" href="<?= $e($refreshUrl) ?>"><i class="fa fa-refresh"></i> Refresh</a>
   </header>
 
   <section class="kontor-queuestats">
@@ -69,6 +82,7 @@ $statusClass = static fn (string $status): string => match ($status) {
     <?php if ($selectedQueue !== null || $selectedStatus !== null): ?>
       <a class="kontor-button kontor-button--ghost" href="./">Clear filters</a>
     <?php endif; ?>
+    <span class="kontor-secondary"><?= $e($totalJobs) ?> matching · <?= $e(count($jobs)) ?> shown</span>
   </form>
 
   <?php if ($jobs): ?>
@@ -141,6 +155,23 @@ $statusClass = static fn (string $status): string => match ($status) {
         </tbody>
       </table>
     </section>
+    <?php if ($totalPages > 1): ?>
+      <nav class="kontor-pagination" aria-label="Queue pages">
+        <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
+        <div>
+          <?php if ($page > 1): ?>
+            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+              <i class="fa fa-chevron-left"></i> Previous
+            </a>
+          <?php endif; ?>
+          <?php if ($page < $totalPages): ?>
+            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+              Next <i class="fa fa-chevron-right"></i>
+            </a>
+          <?php endif; ?>
+        </div>
+      </nav>
+    <?php endif; ?>
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-tasks"></i>

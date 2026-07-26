@@ -58,6 +58,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   result totals, preserved scope navigation, and explicit short-query help.
 - Paginated Contacts and Companies lists with exact active/archive search
   totals and filter-preserving view and page navigation.
+- Paginated Queue monitoring with exact filtered totals and preserved queue
+  and status selection across pages.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
