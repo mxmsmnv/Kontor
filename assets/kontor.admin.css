@@ -1262,6 +1262,48 @@
   text-align: right;
 }
 
+.kontor-organization-meta {
+  align-items: center;
+  background: linear-gradient(135deg, #172033, #27366b);
+  border-radius: 14px;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+}
+
+.kontor-organization-meta > div {
+  align-items: center;
+  display: flex;
+  gap: 0.85rem;
+}
+
+.kontor-organization-meta__icon {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  display: flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.kontor-organization-meta strong,
+.kontor-organization-meta small {
+  display: block;
+}
+
+.kontor-organization-meta small {
+  color: #c7d2fe;
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+}
+
+.kontor-organization-form {
+  max-width: none;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components {

@@ -8,6 +8,7 @@
 /** @var bool $canViewActivity */
 /** @var bool $canViewBackups */
 /** @var bool $canViewHealth */
+/** @var bool $canManageOrganization */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -122,6 +123,11 @@ $enabledComponents = count(array_filter(
         <?php if ($canViewHealth): ?>
           <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>health/">
             <i class="fa fa-heartbeat"></i><span>System health</span>
+          </a>
+        <?php endif; ?>
+        <?php if ($canManageOrganization): ?>
+          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>organization/">
+            <i class="fa fa-briefcase"></i><span>Organization settings</span>
           </a>
         <?php endif; ?>
       </div>

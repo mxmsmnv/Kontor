@@ -28,6 +28,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   snapshots without exposing destructive restore controls.
 - A Health screen that runs Core and installed-component diagnostics and
   contains individual probe failures without hiding the remaining results.
+- An Organization settings screen for workspace identity and localization
+  defaults, with validation, permission checks, and change-only auditing.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

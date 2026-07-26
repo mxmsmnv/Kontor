@@ -18,6 +18,7 @@ use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\HealthCheckRunner;
 use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Domain\ImportBatchResult;
+use Kontor\Core\Domain\Organization;
 use Kontor\Core\Health\CoreHealthCheck;
 use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
@@ -41,7 +42,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '010',
+            'version' => '011',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -71,6 +72,12 @@ class ProcessKontor extends Process
                     'label' => 'Health',
                     'icon' => 'heartbeat',
                     'permission' => 'kontor-health-view',
+                ],
+                [
+                    'url' => 'organization/',
+                    'label' => 'Organization',
+                    'icon' => 'briefcase',
+                    'permission' => 'kontor-admin',
                 ],
                 [
                     'url' => 'contacts/',
@@ -125,6 +132,8 @@ class ProcessKontor extends Process
                 || $this->wire()->user->hasPermission('kontor-backups-view'),
             'canViewHealth' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-health-view'),
+            'canManageOrganization' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-admin'),
         ]);
     }
 
@@ -372,6 +381,73 @@ class ProcessKontor extends Process
         return $this->renderTemplate('health', [
             'checks' => $this->healthCheckRunner()->run($checks),
             'checkedAt' => new \DateTimeImmutable(),
+        ]);
+    }
+
+    public function ___executeOrganization(): string
+    {
+        $this->requirePermission('kontor-admin');
+        $this->setPageTitle($this->_('Kontor · Organization'));
+        $organization = $this->organization();
+        $form = $this->buildOrganizationForm($organization);
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $form->processInput($this->wire()->input->post);
+            $countryCode = strtoupper($this->requiredFormValue($form, 'country_code'));
+            $language = $this->requiredFormValue($form, 'default_language');
+            $currency = strtoupper($this->requiredFormValue($form, 'default_currency'));
+            $timezone = $this->requiredFormValue($form, 'timezone');
+
+            if (preg_match('/^[A-Z]{2}$/', $countryCode) !== 1) {
+                $form->getChildByName('country_code')?->error($this->_('Use a two-letter ISO country code.'));
+            }
+
+            if (preg_match('/^[a-z]{2}(?:-[A-Z]{2})?$/', $language) !== 1) {
+                $form->getChildByName('default_language')?->error($this->_('Choose a supported language.'));
+            }
+
+            if (preg_match('/^[A-Z]{3}$/', $currency) !== 1) {
+                $form->getChildByName('default_currency')?->error($this->_('Use a three-letter ISO currency code.'));
+            }
+
+            if (!in_array($timezone, $this->allowedTimezones(), true)) {
+                $form->getChildByName('timezone')?->error($this->_('Choose a valid IANA timezone.'));
+            }
+
+            if (!$form->getErrors()) {
+                $previous = $this->organizationAuditSnapshot($organization);
+                $organization->name = $this->requiredFormValue($form, 'name');
+                $organization->legalName = $this->formValue($form, 'legal_name');
+                $organization->countryCode = $countryCode;
+                $organization->defaultLanguage = $language;
+                $organization->defaultCurrency = $currency;
+                $organization->timezone = $timezone;
+                $organization->settings['dateFormat'] = $this->requiredFormValue($form, 'date_format');
+                $current = $this->organizationAuditSnapshot($organization);
+
+                if ($previous !== $current) {
+                    $this->organizationRepository()->save($organization);
+                    $this->audit(
+                        'core',
+                        'organization',
+                        $organization->uid->toString(),
+                        'updated',
+                        previous: $previous,
+                        current: $current,
+                    );
+                    $this->message($this->_('Organization settings saved.'));
+                } else {
+                    $this->message($this->_('Organization settings are already up to date.'));
+                }
+
+                $this->wire()->session->redirect('./');
+            }
+        }
+
+        return $this->renderTemplate('organization', [
+            'organization' => $organization,
+            'form' => $form,
         ]);
     }
 
@@ -829,6 +905,81 @@ class ProcessKontor extends Process
         return $form;
     }
 
+    private function buildOrganizationForm(Organization $organization): InputfieldForm
+    {
+        /** @var InputfieldForm $form */
+        $form = $this->wire()->modules->get('InputfieldForm');
+        $form->action = './';
+        $form->addClass('InputfieldFormFocusFirst kontor-entity-form kontor-organization-form');
+        $this->addTextField($form, 'name', $this->_('Display name'), $organization->name, true, 50);
+        $this->addTextField($form, 'legal_name', $this->_('Legal name'), $organization->legalName, false, 50);
+        $this->addTextField($form, 'country_code', $this->_('Country code'), $organization->countryCode, true, 33);
+        $languageOptions = [
+            'en' => 'English',
+            'de' => 'Deutsch',
+            'fr' => 'Français',
+            'es' => 'Español',
+            'it' => 'Italiano',
+            'nl' => 'Nederlands',
+            'pl' => 'Polski',
+            'uk' => 'Українська',
+        ];
+
+        if (!isset($languageOptions[$organization->defaultLanguage])) {
+            $languageOptions[$organization->defaultLanguage] = $organization->defaultLanguage;
+        }
+
+        $this->addSelectField(
+            $form,
+            'default_language',
+            $this->_('Default language'),
+            $languageOptions,
+            $organization->defaultLanguage,
+            33
+        );
+        $this->addTextField(
+            $form,
+            'default_currency',
+            $this->_('Default currency'),
+            $organization->defaultCurrency,
+            true,
+            34
+        );
+        $timezoneIdentifiers = $this->allowedTimezones();
+        $timezones = array_combine($timezoneIdentifiers, $timezoneIdentifiers) ?: [];
+        $this->addSelectField(
+            $form,
+            'timezone',
+            $this->_('Timezone'),
+            $timezones,
+            $organization->timezone,
+            50
+        );
+        $dateFormat = (string) ($organization->settings['dateFormat'] ?? 'Y-m-d');
+        $dateFormats = [
+            'Y-m-d' => date('Y-m-d'),
+            'd.m.Y' => date('d.m.Y'),
+            'm/d/Y' => date('m/d/Y'),
+            'd/m/Y' => date('d/m/Y'),
+        ];
+
+        if (!isset($dateFormats[$dateFormat])) {
+            $dateFormats[$dateFormat] = date($dateFormat);
+        }
+
+        $this->addSelectField(
+            $form,
+            'date_format',
+            $this->_('Date format'),
+            $dateFormats,
+            $dateFormat,
+            50
+        );
+        $this->addSubmit($form, $this->_('Save organization'));
+
+        return $form;
+    }
+
     private function saveContactFromForm(InputfieldForm $form, ?Contact $contact): Contact
     {
         if ($contact === null) {
@@ -924,6 +1075,36 @@ class ProcessKontor extends Process
         ]);
         $field->value = $value;
         $field->columnWidth = 50;
+        $form->add($field);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function allowedTimezones(): array
+    {
+        return ['UTC', ...\DateTimeZone::listIdentifiers()];
+    }
+
+    /**
+     * @param array<string, string> $options
+     */
+    private function addSelectField(
+        InputfieldForm $form,
+        string $name,
+        string $label,
+        array $options,
+        string $value,
+        int $width
+    ): void {
+        /** @var InputfieldSelect $field */
+        $field = $this->wire()->modules->get('InputfieldSelect');
+        $field->name = $name;
+        $field->label = $label;
+        $field->addOptions($options);
+        $field->value = $value;
+        $field->required = true;
+        $field->columnWidth = $width;
         $form->add($field);
     }
 
@@ -1253,6 +1434,22 @@ class ProcessKontor extends Process
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function organizationAuditSnapshot(Organization $organization): array
+    {
+        return [
+            'name' => $organization->name,
+            'legalName' => $organization->legalName,
+            'countryCode' => $organization->countryCode,
+            'defaultLanguage' => $organization->defaultLanguage,
+            'defaultCurrency' => $organization->defaultCurrency,
+            'timezone' => $organization->timezone,
+            'dateFormat' => $organization->settings['dateFormat'] ?? 'Y-m-d',
+        ];
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     private function backupSummaries(): array
@@ -1486,13 +1683,25 @@ class ProcessKontor extends Process
 
     private function organizationUid(): string
     {
+        return $this->organization()->uid->toString();
+    }
+
+    private function organization(): Organization
+    {
         /** @var Kontor $kontor */
         $kontor = $this->wire()->modules->get('Kontor');
-        $organization = $kontor->container()
+
+        return $kontor->container()
             ->get(OrganizationRepository::class)
             ->defaultOrganization('US', 'en', 'USD');
+    }
 
-        return $organization->uid->toString();
+    private function organizationRepository(): OrganizationRepository
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(OrganizationRepository::class);
     }
 
     private function organizationInternalId(): int
