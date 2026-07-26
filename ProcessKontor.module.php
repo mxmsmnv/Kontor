@@ -46,6 +46,7 @@ use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Inventory\Domain\Warehouse;
 use Kontor\Payments\Domain\Payment;
 use Kontor\Queue\Infrastructure\Persistence\JobRepository;
 use Kontor\Sales\Domain\DocumentLine;
@@ -71,7 +72,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '094',
+            'version' => '095',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -119,6 +120,12 @@ class ProcessKontor extends Process
                     'label' => 'Catalog',
                     'icon' => 'cubes',
                     'permission' => 'kontor-catalog-item-view',
+                ],
+                [
+                    'url' => 'inventory/',
+                    'label' => 'Inventory',
+                    'icon' => 'cube',
+                    'permission' => 'kontor-inventory-stock-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -2208,6 +2215,286 @@ class ProcessKontor extends Process
             'forceDownload' => true,
             'downloadFilename' => preg_replace('/[^a-z0-9_-]+/i', '-', $providerKey) . '-report.csv',
             'exit' => true,
+        ]);
+    }
+
+    public function ___executeInventory(): string
+    {
+        $this->requireInventory();
+        $this->requirePermission('kontor-inventory-stock-view');
+        $this->setPageTitle($this->_('Kontor · Inventory'));
+        $module = $this->inventoryModule();
+        $organizationUid = $this->organizationUid();
+        $warehouses = $module->warehouseRepository()->forOrganization($organizationUid);
+
+        return $this->renderTemplate('inventory', [
+            'warehouses' => $warehouses,
+            'warehouseLabels' => array_column(array_map(
+                static fn (Warehouse $warehouse): array => [
+                    $warehouse->uid->toString(),
+                    $warehouse->code . ' · ' . $warehouse->name,
+                ],
+                $warehouses,
+            ), 1, 0),
+            'itemLabels' => $this->inventoryItemLabels(),
+            'balances' => $module->balanceRepository()->forOrganization($organizationUid),
+            'movements' => ($this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-inventory-movement-view'))
+                ? $module->movementRepository()->recentForOrganization($organizationUid)
+                : [],
+            'canManageWarehouses' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-inventory-warehouse-admin'),
+            'canMoveStock' => $this->canPerformAnyInventoryMovement(),
+        ]);
+    }
+
+    public function ___executeInventoryWarehouse(): string
+    {
+        $this->requireInventory();
+        $this->requirePermission('kontor-inventory-warehouse-admin');
+        $this->setPageTitle($this->_('Kontor · New warehouse'));
+        $values = ['code' => '', 'name' => ''];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'code' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('code')
+                )),
+                'name' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('name')
+                )),
+            ];
+            if ($values['code'] === '' || preg_match('/^[A-Z0-9_-]{1,50}$/', $values['code']) !== 1) {
+                $error = $this->_('Warehouse code must use letters, numbers, hyphens, or underscores.');
+            } elseif ($values['name'] === '') {
+                $error = $this->_('Warehouse name is required.');
+            }
+
+            if ($error === '') {
+                $warehouse = Warehouse::create(
+                    $this->organizationUid(),
+                    $values['code'],
+                    mb_substr($values['name'], 0, 191),
+                );
+                try {
+                    $this->inventoryModule()->warehouseRepository()->save($warehouse);
+                } catch (\PDOException $exception) {
+                    $error = $exception->getCode() === '23000'
+                        ? $this->_('That warehouse code is already in use.')
+                        : $this->_('Warehouse could not be saved.');
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'inventory',
+                        'warehouse',
+                        $warehouse->uid->toString(),
+                        'created',
+                        current: ['code' => $warehouse->code, 'name' => $warehouse->name],
+                    );
+                    $this->message($this->_('Warehouse created.'));
+                    $this->wire()->session->redirect('../inventory/');
+                }
+            }
+        }
+
+        return $this->renderTemplate('inventory-warehouse', [
+            'values' => $values,
+            'error' => $error,
+        ]);
+    }
+
+    public function ___executeInventoryWarehouseAction(): void
+    {
+        $this->requirePost();
+        $this->requireInventory();
+        $this->requirePermission('kontor-inventory-warehouse-admin');
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['activate', 'deactivate']
+        );
+        $this->requireAction($action, ['activate', 'deactivate']);
+        $uid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('warehouse_uid'));
+        $warehouse = $this->inventoryModule()->warehouseRepository()->require($uid);
+        $this->requireSameOrganization($warehouse->organizationId);
+        $action === 'activate'
+            ? $this->inventoryModule()->warehouseRepository()->restore($uid)
+            : $this->inventoryModule()->warehouseRepository()->archive($uid);
+        $this->audit('inventory', 'warehouse', $uid, $action === 'activate' ? 'activated' : 'deactivated');
+        $this->message($action === 'activate'
+            ? $this->_('Warehouse activated.')
+            : $this->_('Warehouse deactivated.'));
+        $this->wire()->session->redirect('../inventory/');
+    }
+
+    public function ___executeInventoryMovement(): string
+    {
+        $this->requireInventory();
+        $module = $this->inventoryModule();
+        $warehouses = $module->warehouseRepository()->forOrganization($this->organizationUid());
+        $items = $this->inventoryItemOptions();
+        $values = [
+            'action' => 'receive',
+            'warehouseUid' => '',
+            'destinationWarehouseUid' => '',
+            'itemUid' => '',
+            'quantity' => '',
+            'unitCode' => 'pcs',
+            'reason' => '',
+            'idempotencyKey' => 'admin-' . Uid::generate()->toString(),
+        ];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_move')) {
+            $this->requirePost();
+            $action = $this->wire()->sanitizer->option(
+                (string) $this->wire()->input->post('action'),
+                ['receive', 'transfer', 'adjust_increase', 'adjust_decrease', 'reserve', 'release']
+            );
+            $this->requireAction($action, ['receive', 'transfer', 'adjust_increase', 'adjust_decrease', 'reserve', 'release']);
+            $this->requirePermission(match ($action) {
+                'receive' => 'kontor-inventory-receive',
+                'transfer' => 'kontor-inventory-transfer',
+                'adjust_increase', 'adjust_decrease' => 'kontor-inventory-adjust',
+                'reserve' => 'kontor-inventory-reserve',
+                'release' => 'kontor-inventory-release',
+            });
+            $values = [
+                'action' => $action,
+                'warehouseUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('warehouse_uid')
+                ),
+                'destinationWarehouseUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('destination_warehouse_uid')
+                ),
+                'itemUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('item_uid')
+                ),
+                'quantity' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('quantity')
+                ),
+                'unitCode' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('unit_code')
+                ),
+                'reason' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('reason')
+                )),
+                'idempotencyKey' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('idempotency_key')
+                ),
+            ];
+            $quantity = (float) str_replace(',', '.', $values['quantity']);
+            $warehouseMap = [];
+            foreach ($warehouses as $warehouse) {
+                $warehouseMap[$warehouse->uid->toString()] = $warehouse;
+            }
+            if (!isset($warehouseMap[$values['warehouseUid']])
+                || !$warehouseMap[$values['warehouseUid']]->isActive()) {
+                $error = $this->_('Select an active warehouse.');
+            } elseif ($action === 'transfer' && (
+                !isset($warehouseMap[$values['destinationWarehouseUid']])
+                || !$warehouseMap[$values['destinationWarehouseUid']]->isActive()
+                || $values['destinationWarehouseUid'] === $values['warehouseUid']
+            )) {
+                $error = $this->_('Select a different active destination warehouse.');
+            } elseif ($values['itemUid'] === '') {
+                $error = $this->_('Select or enter an inventory item.');
+            } elseif ($quantity <= 0) {
+                $error = $this->_('Quantity must be greater than zero.');
+            } elseif (in_array($action, ['adjust_increase', 'adjust_decrease'], true)
+                && $values['reason'] === '') {
+                $error = $this->_('A reason is required for stock adjustments.');
+            }
+
+            if ($error === '') {
+                $arguments = [
+                    $this->organizationUid(),
+                    $values['warehouseUid'],
+                    $values['itemUid'],
+                    $quantity,
+                ];
+                try {
+                    $movement = match ($action) {
+                        'receive' => $module->movements()->receive(
+                            ...$arguments,
+                            unitCode: $values['unitCode'] ?: 'pcs',
+                            reason: $values['reason'] ?: null,
+                            idempotencyKey: $values['idempotencyKey'],
+                            createdBy: (int) $this->wire()->user->id,
+                        ),
+                        'transfer' => $module->movements()->transfer(
+                            $this->organizationUid(),
+                            $values['warehouseUid'],
+                            $values['destinationWarehouseUid'],
+                            $values['itemUid'],
+                            $quantity,
+                            unitCode: $values['unitCode'] ?: 'pcs',
+                            reason: $values['reason'] ?: null,
+                            idempotencyKey: $values['idempotencyKey'],
+                            createdBy: (int) $this->wire()->user->id,
+                        ),
+                        'adjust_increase' => $module->movements()->adjustIncrease(
+                            ...$arguments,
+                            reason: $values['reason'],
+                            unitCode: $values['unitCode'] ?: 'pcs',
+                            idempotencyKey: $values['idempotencyKey'],
+                            createdBy: (int) $this->wire()->user->id,
+                        ),
+                        'adjust_decrease' => $module->movements()->adjustDecrease(
+                            ...$arguments,
+                            reason: $values['reason'],
+                            unitCode: $values['unitCode'] ?: 'pcs',
+                            allowNegative: $this->wire()->user->isSuperuser()
+                                || $this->wire()->user->hasPermission('kontor-inventory-negative-stock-override'),
+                            idempotencyKey: $values['idempotencyKey'],
+                            createdBy: (int) $this->wire()->user->id,
+                        ),
+                        'reserve' => $module->movements()->reserve(
+                            ...$arguments,
+                            unitCode: $values['unitCode'] ?: 'pcs',
+                            idempotencyKey: $values['idempotencyKey'],
+                            createdBy: (int) $this->wire()->user->id,
+                        ),
+                        'release' => $module->movements()->release(
+                            ...$arguments,
+                            unitCode: $values['unitCode'] ?: 'pcs',
+                            idempotencyKey: $values['idempotencyKey'],
+                            createdBy: (int) $this->wire()->user->id,
+                        ),
+                    };
+                } catch (\InvalidArgumentException|\RuntimeException $exception) {
+                    $error = $exception->getMessage();
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'inventory',
+                        'movement',
+                        $movement->uid->toString(),
+                        $action,
+                        current: [
+                            'itemUid' => $movement->itemUid,
+                            'quantity' => $movement->quantity,
+                            'unitCode' => $movement->unitCode,
+                        ],
+                    );
+                    $this->message($this->_('Inventory movement completed.'));
+                    $this->wire()->session->redirect('../inventory/');
+                }
+            }
+        } else {
+            $this->requirePermission('kontor-inventory-stock-view');
+        }
+        $this->setPageTitle($this->_('Kontor · Stock movement'));
+
+        return $this->renderTemplate('inventory-movement', [
+            'values' => $values,
+            'error' => $error,
+            'warehouses' => array_values(array_filter(
+                $warehouses,
+                static fn (Warehouse $warehouse): bool => $warehouse->isActive(),
+            )),
+            'items' => $items,
         ]);
     }
 
@@ -5672,6 +5959,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorReports');
     }
 
+    private function inventoryReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorInventory');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -5732,6 +6024,13 @@ class ProcessKontor extends Process
     {
         if (!$this->reportsReady()) {
             throw new WireException($this->_('The Kontor Reports component is not installed.'));
+        }
+    }
+
+    private function requireInventory(): void
+    {
+        if (!$this->inventoryReady()) {
+            throw new WireException($this->_('The Kontor Inventory component is not installed.'));
         }
     }
 
@@ -5808,6 +6107,73 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorReports');
 
         return $module;
+    }
+
+    private function inventoryModule(): KontorInventory
+    {
+        /** @var KontorInventory $module */
+        $module = $this->wire()->modules->get('KontorInventory');
+
+        return $module;
+    }
+
+    /**
+     * @return array<string, array{label: string, unitCode: string}>
+     */
+    private function inventoryItemOptions(): array
+    {
+        if (!$this->catalogReady()) {
+            return [];
+        }
+
+        $locale = $this->organization()->defaultLanguage;
+        $items = [];
+        foreach ($this->catalogItemRepository()->findAll(
+            $this->organizationUid(),
+            limit: 250,
+            status: 'active',
+            trackInventory: true,
+        ) as $item) {
+            $items[$item->uid->toString()] = [
+                'label' => ($item->sku ? $item->sku . ' · ' : '')
+                    . ($item->titleIn($locale) ?? $item->uid->toString()),
+                'unitCode' => $item->unitCode,
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function inventoryItemLabels(): array
+    {
+        return array_map(
+            static fn (array $item): string => $item['label'],
+            $this->inventoryItemOptions(),
+        );
+    }
+
+    private function canPerformAnyInventoryMovement(): bool
+    {
+        $user = $this->wire()->user;
+        if ($user->isSuperuser()) {
+            return true;
+        }
+        foreach ([
+            'kontor-inventory-receive',
+            'kontor-inventory-transfer',
+            'kontor-inventory-adjust',
+            'kontor-inventory-reserve',
+            'kontor-inventory-release',
+        ] as $permission) {
+            if ($user->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

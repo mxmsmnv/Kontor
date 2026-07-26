@@ -106,6 +106,24 @@ final class MovementRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return InventoryMovement[] newest first
+     */
+    public function recentForOrganization(string $organizationUid, int $limit = 100): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $limit = max(1, min(500, $limit));
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_inventory_movements
+             WHERE organization_id = :organization_id
+             ORDER BY occurred_at DESC
+             LIMIT {$limit}"
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): InventoryMovement
     {
         return new InventoryMovement(

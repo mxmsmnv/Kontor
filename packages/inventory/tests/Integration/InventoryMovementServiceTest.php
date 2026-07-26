@@ -10,6 +10,8 @@ use Kontor\Inventory\Domain\Warehouse;
 use Kontor\Inventory\Infrastructure\Persistence\BalanceRepository;
 use Kontor\Inventory\Infrastructure\Persistence\MovementRepository;
 use Kontor\Inventory\Infrastructure\Persistence\WarehouseRepository;
+use Kontor\SDK\Contracts\EventDispatcherInterface;
+use Kontor\SDK\Events\KontorEvent;
 
 final class InventoryMovementServiceTest extends DatabaseTestCase
 {
@@ -48,6 +50,41 @@ final class InventoryMovementServiceTest extends DatabaseTestCase
         $this->assertSame(10.0, $balance->quantityOnHand);
         $this->assertSame(10.0, $balance->quantityAvailable);
         $this->assertSame(0.0, $balance->quantityReserved);
+    }
+
+    public function test_movement_event_uses_the_sdk_string_actor_id(): void
+    {
+        $events = new class implements EventDispatcherInterface {
+            public ?KontorEvent $event = null;
+
+            public function dispatch(KontorEvent $event): void
+            {
+                $this->event = $event;
+            }
+
+            public function subscribe(string $eventName, callable|string $listener, int $priority = 0): void
+            {
+            }
+        };
+        $organizations = new OrganizationRepository($this->pdo);
+        $service = new InventoryMovementService(
+            $this->pdo,
+            $organizations,
+            $this->warehouses,
+            $this->balances,
+            new MovementRepository($this->pdo, $organizations),
+            $events,
+        );
+
+        $service->receive(
+            $this->organizationUid,
+            $this->warehouseA,
+            self::ITEM,
+            1.0,
+            createdBy: 41,
+        );
+
+        $this->assertSame('41', $events->event?->actorId);
     }
 
     public function test_receive_into_an_inactive_warehouse_is_rejected(): void

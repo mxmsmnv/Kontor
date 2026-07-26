@@ -42,6 +42,27 @@ final class BalanceRepository
     }
 
     /**
+     * @return StockBalance[]
+     */
+    public function forOrganization(string $organizationUid, int $limit = 100): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $limit = max(1, min(500, $limit));
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_inventory_balances
+             WHERE organization_id = :organization_id
+             ORDER BY updated_at DESC, warehouse_uid ASC, item_uid ASC
+             LIMIT {$limit}"
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map(
+            fn (array $row): StockBalance => $this->hydrate($row, $organizationUid),
+            $statement->fetchAll(\PDO::FETCH_ASSOC),
+        );
+    }
+
+    /**
      * Must be called inside an already-open transaction. Returns the raw
      * row (including its `id`) so the caller can pass it straight to
      * updateQuantities() without a second lookup.

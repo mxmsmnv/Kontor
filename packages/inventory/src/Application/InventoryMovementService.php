@@ -382,7 +382,7 @@ final class InventoryMovementService
             entityType: 'inventory_movement',
             entityId: $movement->uid->toString(),
             actorType: 'system',
-            actorId: $movement->createdBy,
+            actorId: $movement->createdBy !== null ? (string) $movement->createdBy : null,
             data: [
                 'movementType' => $movement->movementType,
                 'itemUid' => $movement->itemUid,

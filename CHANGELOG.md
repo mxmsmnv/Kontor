@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Inventory admin vertical: warehouse lifecycle, catalog-backed item
+  selection, stock receipts/transfers/adjustments/reservations/releases,
+  balance visibility, and the movement ledger.
 - First Reports admin vertical: provider discovery, organization-scoped
   execution, schema-driven filters and grouping, result tables, totals, and
   CSV export.

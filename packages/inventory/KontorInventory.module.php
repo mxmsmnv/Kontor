@@ -3,6 +3,7 @@
 namespace ProcessWire;
 
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
+use Kontor\Core\Infrastructure\Events\EventDispatcher;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
@@ -30,7 +31,7 @@ class KontorInventory extends WireData implements Module
         return [
             'title' => 'Kontor Inventory',
             'summary' => 'Warehouses, balances, movements, reservations, transfers, barcode support.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorInventory',
             'icon' => 'cubes',
@@ -106,6 +107,7 @@ class KontorInventory extends WireData implements Module
             $this->warehouseRepository(),
             $this->balanceRepository(),
             $this->movementRepository(),
+            $this->wire()->modules->get('Kontor')->container()->get(EventDispatcher::class),
         );
     }
 
@@ -141,6 +143,13 @@ class KontorInventory extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('inventory', self::getModuleInfo()['version'], 'inventory');
+        $components->enable('inventory');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('inventory', self::getModuleInfo()['version'], 'inventory');
         $components->enable('inventory');
     }

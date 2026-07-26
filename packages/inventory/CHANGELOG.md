@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: warehouse creation and activation, organization-scoped
+  balances and recent movements, and permission-gated receive, transfer,
+  adjustment, reserve, and release operations. The live module now injects the
+  Core event dispatcher into `InventoryMovementService`.
 - Initial alpha (Substage 6.1): `kontor_inventory_warehouses`,
   `kontor_inventory_balances`, `kontor_inventory_movements` migrations
   (kontor.md#16.1–16.3) and `kontor_inventory_barcodes` (gap-fill for the

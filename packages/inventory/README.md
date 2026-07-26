@@ -56,12 +56,20 @@ Everything under `tests/Integration/` needs real MySQL (see
 `../../docker-compose.test.yml`) and is skipped otherwise, same
 `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The main Kontor Process module provides warehouse lifecycle controls,
+catalog-backed tracked-item selection, every movement operation supported by
+`InventoryMovementService`, current balances, and the append-only movement
+ledger. Live module wiring also supplies Core's event dispatcher, so completed
+admin movements publish `inventory.movement.completed`.
+
 ## Not in scope for this substage
 
-No item existence validation — `item_uid` is trusted as given, the same
-looseness `kontor_document_lines.item_uid` already has. No approval
+When Catalog is installed, the admin form selects active inventory-tracked
+items; service-level callers still trust `item_uid`, the same looseness
+`kontor_document_lines.item_uid` already has. No approval
 workflow for "reject or request approval" (diagram 17.3's insufficient-
 stock branch) — there's no workflow engine yet (kontor.md#18); a rejected
-movement is just a thrown exception. No admin UI/API endpoints — barcode
-scanning UI, warehouse management screens, and stock-count reconciliation
-tooling are all future work on top of this package's services.
+movement is just a thrown exception. No API endpoints — barcode scanning and
+stock-count reconciliation tooling remain future work.
