@@ -116,6 +116,10 @@ final class ContactRepositoryTest extends DatabaseTestCase
 
         $repository->archive($grace->uid->toString());
         $this->assertSame(1, $repository->countActive($this->organizationUid));
+        $this->assertSame(
+            ['Grace Hopper'],
+            array_map(static fn (Contact $contact): string => $contact->displayName, $repository->findArchived($this->organizationUid))
+        );
     }
 
     public function test_save_rejects_a_non_contact_entity(): void

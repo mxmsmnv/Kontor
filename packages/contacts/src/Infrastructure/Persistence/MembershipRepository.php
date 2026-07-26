@@ -48,7 +48,11 @@ final class MembershipRepository
     public function end(string $contactUid, string $companyUid, \DateTimeImmutable $endedAt): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE kontor_contact_company SET ended_at = :ended_at WHERE contact_uid = :contact_uid AND company_uid = :company_uid'
+            'UPDATE kontor_contact_company
+             SET ended_at = :ended_at
+             WHERE contact_uid = :contact_uid
+               AND company_uid = :company_uid
+               AND ended_at IS NULL'
         );
         $statement->execute([
             'ended_at' => $endedAt->format('Y-m-d'),

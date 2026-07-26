@@ -76,6 +76,10 @@ final class CompanyRepositoryTest extends DatabaseTestCase
 
         $repository->archive($globex->uid->toString());
         $this->assertSame(1, $repository->countActive($this->organizationUid));
+        $this->assertSame(
+            ['Globex LLC'],
+            array_map(static fn (Company $company): string => $company->legalName, $repository->findArchived($this->organizationUid))
+        );
     }
 
     public function test_require_throws_for_unknown_uid(): void

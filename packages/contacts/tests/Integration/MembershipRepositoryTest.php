@@ -64,6 +64,28 @@ final class MembershipRepositoryTest extends DatabaseTestCase
         $this->assertEquals(new \DateTimeImmutable('2026-06-01'), $memberships[0]->endedAt);
     }
 
+    public function test_end_does_not_rewrite_historical_memberships(): void
+    {
+        $repository = $this->repository();
+        $repository->save(new ContactCompanyMembership(
+            $this->organizationUid,
+            'ct_01',
+            'cmp_01',
+            'Former role',
+            null,
+            false,
+            null,
+            new \DateTimeImmutable('2025-01-01'),
+        ));
+
+        $repository->end('ct_01', 'cmp_01', new \DateTimeImmutable('2026-06-01'));
+
+        $this->assertEquals(
+            new \DateTimeImmutable('2025-01-01'),
+            $repository->forContact('ct_01')[0]->endedAt
+        );
+    }
+
     public function test_same_role_upserts_rather_than_duplicating(): void
     {
         $repository = $this->repository();

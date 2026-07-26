@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   forms for both entity types.
 - Contact and company repository list/count queries for the admin workspace.
 - Component registry version synchronization during Core module upgrades.
+- CRM relationship cards, contact-to-company linking, and reversible archive
+  workflows for contacts and companies in the admin application.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Active and archived repository list queries used by the admin workspace.
 - Initial alpha (Substage 3.1) — the first business component:
   `kontor_contacts`, `kontor_companies`, `kontor_addresses`,
   `kontor_contact_company` migrations; `Contact`/`Company`/`Address`/

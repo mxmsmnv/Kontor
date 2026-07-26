@@ -2,7 +2,10 @@
 
 /** @var array $contacts */
 /** @var string $query */
+/** @var bool $showArchived */
 /** @var string $adminUrl */
+/** @var string $csrfName */
+/** @var string $csrfValue */
 /** @var callable $e */
 ?>
 <div class="kontor-shell">
@@ -21,12 +24,19 @@
 
   <div class="kontor-toolbar">
     <form class="kontor-search" method="get" action="./">
+      <?php if ($showArchived): ?><input type="hidden" name="archived" value="1"><?php endif; ?>
       <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Search name, email, phone or role">
       <button class="kontor-button kontor-button--ghost" type="submit">
         <i class="fa fa-search"></i> Search
       </button>
     </form>
-    <span class="kontor-secondary"><?= $e(count($contacts)) ?> shown</span>
+    <div class="kontor-toolbar__meta">
+      <a class="kontor-viewtoggle" href="./<?= $showArchived ? '' : '?archived=1' ?>">
+        <i class="fa fa-<?= $showArchived ? 'address-book' : 'archive' ?>"></i>
+        <?= $showArchived ? 'Active contacts' : 'Archive' ?>
+      </a>
+      <span class="kontor-secondary"><?= $e(count($contacts)) ?> shown</span>
+    </div>
   </div>
 
   <section class="kontor-card kontor-tablewrap">
@@ -38,6 +48,7 @@
             <th>Role</th>
             <th>Phone</th>
             <th>Status</th>
+            <th><span class="kontor-visually-hidden">Actions</span></th>
           </tr>
         </thead>
         <tbody>
@@ -58,8 +69,18 @@
               <td><?= $e($contact->mobile ?: $contact->phone ?: '—') ?></td>
               <td>
                 <span class="kontor-pill<?= $contact->status === 'active' ? '' : ' kontor-pill--inactive' ?>">
-                  <?= $e($contact->status) ?>
+                  <?= $e($showArchived ? 'archived' : $contact->status) ?>
                 </span>
+              </td>
+              <td class="kontor-rowaction">
+                <form method="post" action="<?= $e($adminUrl) ?>contact-status/">
+                  <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                  <input type="hidden" name="id" value="<?= $e($contact->uid->toString()) ?>">
+                  <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">
+                  <button type="submit" title="<?= $showArchived ? 'Restore contact' : 'Archive contact' ?>">
+                    <i class="fa fa-<?= $showArchived ? 'undo' : 'archive' ?>"></i>
+                  </button>
+                </form>
               </td>
             </tr>
           <?php endforeach; ?>
@@ -68,8 +89,8 @@
     <?php else: ?>
       <div class="kontor-empty">
         <i class="fa fa-address-book"></i>
-        <h3><?= $query !== '' ? 'No matching contacts' : 'Your contact list is empty' ?></h3>
-        <p><?= $query !== '' ? 'Try a broader search.' : 'Create the first person in your directory.' ?></p>
+        <h3><?= $query !== '' ? 'No matching contacts' : ($showArchived ? 'The archive is empty' : 'Your contact list is empty') ?></h3>
+        <p><?= $query !== '' ? 'Try a broader search.' : ($showArchived ? 'Archived contacts will appear here.' : 'Create the first person in your directory.') ?></p>
       </div>
     <?php endif; ?>
   </section>

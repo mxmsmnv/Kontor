@@ -132,13 +132,29 @@ final class ContactRepository implements RepositoryInterface
      */
     public function findAll(string $organizationUid, string $query = '', int $limit = 100): array
     {
+        return $this->findList($organizationUid, $query, false, $limit);
+    }
+
+    /**
+     * @return Contact[]
+     */
+    public function findArchived(string $organizationUid, string $query = '', int $limit = 100): array
+    {
+        return $this->findList($organizationUid, $query, true, $limit);
+    }
+
+    /**
+     * @return Contact[]
+     */
+    private function findList(string $organizationUid, string $query, bool $archived, int $limit): array
+    {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
         $query = trim($query);
         $limit = max(1, min($limit, 250));
         $sql = 'SELECT * FROM kontor_contacts
             WHERE organization_id = :organization_id
               AND deleted_at IS NULL
-              AND archived_at IS NULL';
+              AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
 
         if ($query !== '') {
             $sql .= ' AND (

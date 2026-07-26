@@ -304,6 +304,19 @@
   margin-bottom: 1rem;
 }
 
+.kontor-toolbar__meta {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+}
+
+.kontor-viewtoggle {
+  color: var(--kontor-brand);
+  font-size: 0.8rem;
+  font-weight: 720;
+  text-decoration: none;
+}
+
 .kontor-search {
   display: flex;
   flex: 1;
@@ -348,6 +361,45 @@
 
 .kontor-table tbody tr:hover {
   background: #fafbff;
+}
+
+.kontor-rowaction {
+  text-align: right;
+  width: 44px;
+}
+
+.kontor-rowaction form {
+  margin: 0;
+}
+
+.kontor-rowaction button,
+.kontor-inline-action button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #8b93a7;
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.kontor-rowaction button:hover,
+.kontor-inline-action button:hover {
+  background: #f0f2f8;
+  color: var(--kontor-brand);
+}
+
+.kontor-visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .kontor-identity {
@@ -436,6 +488,95 @@
   padding: 0.35rem;
 }
 
+.kontor-relations {
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-sectionhead {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kontor-sectionhead h3 {
+  color: var(--kontor-ink);
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.kontor-relationlist {
+  border-top: 1px solid var(--kontor-line);
+  margin-top: 1rem;
+}
+
+.kontor-relation {
+  align-items: center;
+  border-bottom: 1px solid var(--kontor-line);
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.85rem 0;
+}
+
+.kontor-relation__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kontor-relation__body a {
+  color: var(--kontor-ink);
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.kontor-inline-action {
+  margin: 0;
+}
+
+.kontor-relations__empty {
+  color: var(--kontor-muted);
+  font-size: 0.85rem;
+  margin: 1rem 0 0;
+}
+
+.kontor-relationform {
+  align-items: end;
+  background: #f8f9fc;
+  border-radius: 10px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  margin-top: 1rem;
+  padding: 0.85rem;
+}
+
+.kontor-relationform label {
+  margin: 0;
+}
+
+.kontor-relationform label > span {
+  color: #697386;
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 750;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+.kontor-relationform input,
+.kontor-relationform select {
+  background: #fff;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--kontor-ink);
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
 .kontor-components {
   display: grid;
   gap: 1rem;
@@ -493,5 +634,9 @@
 
   .kontor-hero {
     min-height: 0;
+  }
+
+  .kontor-relationform {
+    grid-template-columns: 1fr;
   }
 }

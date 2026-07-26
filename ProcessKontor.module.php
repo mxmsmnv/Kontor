@@ -4,8 +4,10 @@ namespace ProcessWire;
 
 use Kontor\Contacts\Domain\Company;
 use Kontor\Contacts\Domain\Contact;
+use Kontor\Contacts\Domain\ContactCompanyMembership;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
+use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 
@@ -20,7 +22,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -88,10 +90,14 @@ class ProcessKontor extends Process
         $this->requireContacts();
         $this->setPageTitle($this->_('Kontor · Contacts'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $showArchived = (string) $this->wire()->input->get('archived') === '1';
 
         return $this->renderTemplate('contacts', [
-            'contacts' => $this->contactRepository()->findAll($this->organizationUid(), $query),
+            'contacts' => $showArchived
+                ? $this->contactRepository()->findArchived($this->organizationUid(), $query)
+                : $this->contactRepository()->findAll($this->organizationUid(), $query),
             'query' => $query,
+            'showArchived' => $showArchived,
         ]);
     }
 
@@ -119,6 +125,8 @@ class ProcessKontor extends Process
             }
         }
 
+        $relationships = $contact === null ? [] : $this->contactRelationships($contact);
+
         return $this->renderTemplate('entity-form', [
             'form' => $form,
             'backUrl' => '../contacts/',
@@ -128,6 +136,12 @@ class ProcessKontor extends Process
             'description' => $contact === null
                 ? $this->_('Add a person to your shared customer directory.')
                 : $this->_('Keep identity, communication and assignment details in one place.'),
+            'entity' => $contact,
+            'entityType' => 'contact',
+            'relationships' => $relationships,
+            'availableCompanies' => $contact === null
+                ? []
+                : $this->companyRepository()->findAll($this->organizationUid(), '', 250),
         ]);
     }
 
@@ -137,10 +151,14 @@ class ProcessKontor extends Process
         $this->requireContacts();
         $this->setPageTitle($this->_('Kontor · Companies'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $showArchived = (string) $this->wire()->input->get('archived') === '1';
 
         return $this->renderTemplate('companies', [
-            'companies' => $this->companyRepository()->findAll($this->organizationUid(), $query),
+            'companies' => $showArchived
+                ? $this->companyRepository()->findArchived($this->organizationUid(), $query)
+                : $this->companyRepository()->findAll($this->organizationUid(), $query),
             'query' => $query,
+            'showArchived' => $showArchived,
         ]);
     }
 
@@ -168,6 +186,8 @@ class ProcessKontor extends Process
             }
         }
 
+        $relationships = $company === null ? [] : $this->companyRelationships($company);
+
         return $this->renderTemplate('entity-form', [
             'form' => $form,
             'backUrl' => '../companies/',
@@ -177,7 +197,89 @@ class ProcessKontor extends Process
             'description' => $company === null
                 ? $this->_('Add an organization, customer or partner.')
                 : $this->_('Manage commercial identity and contact information.'),
+            'entity' => $company,
+            'entityType' => 'company',
+            'relationships' => $relationships,
+            'availableCompanies' => [],
         ]);
+    }
+
+    public function ___executeContactStatus(): void
+    {
+        $this->requirePost();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $contact = $this->contactRepository()->require($id);
+        $this->requireSameOrganization($contact->organizationId);
+        $this->requirePermission('kontor-contacts-contact-archive');
+
+        $action === 'restore'
+            ? $this->contactRepository()->restore($id)
+            : $this->contactRepository()->archive($id);
+        $this->message($action === 'restore' ? $this->_('Contact restored.') : $this->_('Contact archived.'));
+        $this->wire()->session->redirect('../contacts/' . ($action === 'restore' ? '?archived=1' : ''));
+    }
+
+    public function ___executeCompanyStatus(): void
+    {
+        $this->requirePost();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $company = $this->companyRepository()->require($id);
+        $this->requireSameOrganization($company->organizationId);
+        $this->requirePermission('kontor-contacts-company-archive');
+
+        $action === 'restore'
+            ? $this->companyRepository()->restore($id)
+            : $this->companyRepository()->archive($id);
+        $this->message($action === 'restore' ? $this->_('Company restored.') : $this->_('Company archived.'));
+        $this->wire()->session->redirect('../companies/' . ($action === 'restore' ? '?archived=1' : ''));
+    }
+
+    public function ___executeRelationship(): void
+    {
+        $this->requirePost();
+        $contactId = $this->wire()->sanitizer->text((string) $this->wire()->input->post('contact_id'));
+        $companyId = $this->wire()->sanitizer->text((string) $this->wire()->input->post('company_id'));
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['add', 'end']
+        );
+        $this->requireAction($action, ['add', 'end']);
+        $contact = $this->contactRepository()->require($contactId);
+        $company = $this->companyRepository()->require($companyId);
+        $this->requireSameOrganization($contact->organizationId);
+        $this->requireSameOrganization($company->organizationId);
+        $this->requirePermission('kontor-contacts-contact-edit');
+
+        if ($action === 'end') {
+            $this->membershipRepository()->end($contactId, $companyId, new \DateTimeImmutable('today'));
+            $this->message($this->_('Company relationship ended.'));
+        } else {
+            $role = $this->wire()->sanitizer->text((string) $this->wire()->input->post('role'));
+            $department = $this->wire()->sanitizer->text((string) $this->wire()->input->post('department'));
+            $this->membershipRepository()->save(new ContactCompanyMembership(
+                organizationId: $this->organizationUid(),
+                contactUid: $contactId,
+                companyUid: $companyId,
+                role: $role !== '' ? $role : $this->_('Member'),
+                department: $department !== '' ? $department : null,
+                isPrimary: false,
+                startedAt: new \DateTimeImmutable('today'),
+                endedAt: null,
+            ));
+            $this->message($this->_('Company relationship added.'));
+        }
+
+        $this->wire()->session->redirect('../contact/?id=' . rawurlencode($contactId));
     }
 
     public function ___executeComponents(): string
@@ -370,6 +472,8 @@ class ProcessKontor extends Process
     private function renderTemplate(string $name, array $variables): string
     {
         $variables['adminUrl'] = $this->wire()->config->urls->admin . 'kontor/';
+        $variables['csrfName'] = $this->wire()->session->CSRF->getTokenName();
+        $variables['csrfValue'] = $this->wire()->session->CSRF->getTokenValue();
         $variables['e'] = static fn (mixed $value): string => htmlspecialchars(
             (string) $value,
             ENT_QUOTES | ENT_SUBSTITUTE,
@@ -399,6 +503,32 @@ class ProcessKontor extends Process
         }
     }
 
+    private function requirePost(): void
+    {
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+            throw new WireException($this->_('This action requires a POST request.'));
+        }
+
+        $this->wire()->session->CSRF->validate();
+    }
+
+    private function requireSameOrganization(string $organizationUid): void
+    {
+        if (!hash_equals($this->organizationUid(), $organizationUid)) {
+            throw new WirePermissionException($this->_('This record belongs to another organization.'));
+        }
+    }
+
+    /**
+     * @param string[] $allowed
+     */
+    private function requireAction(?string $action, array $allowed): void
+    {
+        if ($action === null || !in_array($action, $allowed, true)) {
+            throw new WireException($this->_('Invalid action.'));
+        }
+    }
+
     private function contactsReady(): bool
     {
         return $this->wire()->modules->isInstalled('KontorContacts');
@@ -425,6 +555,58 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorContacts');
 
         return $module->companyRepository();
+    }
+
+    private function membershipRepository(): MembershipRepository
+    {
+        /** @var KontorContacts $module */
+        $module = $this->wire()->modules->get('KontorContacts');
+
+        return $module->membershipRepository();
+    }
+
+    /**
+     * @return array<int, array{membership: ContactCompanyMembership, entity: Company}>
+     */
+    private function contactRelationships(Contact $contact): array
+    {
+        $relationships = [];
+
+        foreach ($this->membershipRepository()->forContact($contact->uid->toString()) as $membership) {
+            try {
+                $company = $this->companyRepository()->require($membership->companyUid);
+            } catch (\RuntimeException) {
+                continue;
+            }
+
+            if ($company->organizationId === $contact->organizationId) {
+                $relationships[] = ['membership' => $membership, 'entity' => $company];
+            }
+        }
+
+        return $relationships;
+    }
+
+    /**
+     * @return array<int, array{membership: ContactCompanyMembership, entity: Contact}>
+     */
+    private function companyRelationships(Company $company): array
+    {
+        $relationships = [];
+
+        foreach ($this->membershipRepository()->forCompany($company->uid->toString()) as $membership) {
+            try {
+                $contact = $this->contactRepository()->require($membership->contactUid);
+            } catch (\RuntimeException) {
+                continue;
+            }
+
+            if ($contact->organizationId === $company->organizationId) {
+                $relationships[] = ['membership' => $membership, 'entity' => $contact];
+            }
+        }
+
+        return $relationships;
     }
 
     private function organizationUid(): string
