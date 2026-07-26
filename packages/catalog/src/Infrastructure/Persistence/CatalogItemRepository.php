@@ -211,6 +211,33 @@ final class CatalogItemRepository implements RepositoryInterface
     }
 
     /**
+     * @return array{products: int, services: int, archived: int, inventoryTracked: int}
+     */
+    public function summary(string $organizationUid): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT
+                COALESCE(SUM(archived_at IS NULL AND item_type = "product"), 0) AS products,
+                COALESCE(SUM(archived_at IS NULL AND item_type = "service"), 0) AS services,
+                COALESCE(SUM(archived_at IS NOT NULL), 0) AS archived,
+                COALESCE(SUM(archived_at IS NULL AND track_inventory = 1), 0) AS inventory_tracked
+             FROM kontor_catalog_items
+             WHERE organization_id = :organization_id'
+        );
+        $statement->execute([
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+        return [
+            'products' => (int) ($row['products'] ?? 0),
+            'services' => (int) ($row['services'] ?? 0),
+            'archived' => (int) ($row['archived'] ?? 0),
+            'inventoryTracked' => (int) ($row['inventory_tracked'] ?? 0),
+        ];
+    }
+
+    /**
      * @return array{0: string, 1: array<string, int|string>}
      */
     private function listQuery(

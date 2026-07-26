@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped aggregate Catalog summary counts for dashboards.
 - Safe Catalog item duplication with fresh identity, cleared SKU/barcode,
   copied commercial data, and inactive status.
 - Transactional, tenant-scoped bulk archive and restore operations for up to

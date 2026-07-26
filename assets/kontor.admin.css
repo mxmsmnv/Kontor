@@ -1825,6 +1825,84 @@
   padding: 1rem 0 0.2rem;
 }
 
+.kontor-catalogoverview {
+  margin-bottom: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-catalogoverview .kontor-panel__head {
+  margin-bottom: 0.8rem;
+}
+
+.kontor-catalogoverview .kontor-panel__head h3 {
+  margin: 0.1rem 0 0;
+}
+
+.kontor-catalogmetrics {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kontor-catalogmetrics > a {
+  align-items: center;
+  background: var(--kontor-canvas);
+  border: 1px solid var(--kontor-line);
+  border-radius: 10px;
+  color: var(--kontor-ink);
+  display: grid;
+  gap: 0.1rem 0.65rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.8rem;
+  text-decoration: none;
+}
+
+.kontor-catalogmetrics > a:hover {
+  border-color: #cbd3f8;
+  transform: translateY(-1px);
+}
+
+.kontor-catalogmetrics i {
+  color: var(--kontor-primary);
+  grid-row: span 2;
+}
+
+.kontor-catalogmetrics strong {
+  font-size: 1.25rem;
+}
+
+.kontor-catalogmetrics span {
+  color: var(--kontor-muted);
+  font-size: 0.72rem;
+}
+
+.kontor-catalogrecent {
+  align-items: center;
+  border-top: 1px solid var(--kontor-line);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+}
+
+.kontor-catalogrecent > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.kontor-catalogrecent > div a {
+  background: var(--kontor-primary-soft);
+  border-radius: 999px;
+  color: var(--kontor-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.55rem;
+  text-decoration: none;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components,
@@ -1874,6 +1952,19 @@
 
   .kontor-dashboardactivity__list {
     grid-template-columns: 1fr;
+  }
+
+  .kontor-catalogmetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kontor-catalogrecent {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .kontor-catalogrecent > div {
+    justify-content: flex-start;
   }
 
   .kontor-dashboardactivity__list article:nth-child(odd),

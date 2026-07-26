@@ -186,4 +186,32 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
             'taxes' => ['standard' => 1],
         ], $repository->referenceUsage($this->organizationUid));
     }
+
+    public function test_summary_counts_catalog_shapes_for_one_organization(): void
+    {
+        $repository = $this->repository();
+        $tracked = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Tracked product'],
+            trackInventory: true,
+        );
+        $service = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Service'],
+            itemType: 'service',
+        );
+        $archived = CatalogItem::create($this->organizationUid, ['en' => 'Archived product']);
+
+        foreach ([$tracked, $service, $archived] as $item) {
+            $repository->save($item);
+        }
+        $repository->archive($archived->uid->toString());
+
+        $this->assertSame([
+            'products' => 1,
+            'services' => 1,
+            'archived' => 1,
+            'inventoryTracked' => 1,
+        ], $repository->summary($this->organizationUid));
+    }
 }

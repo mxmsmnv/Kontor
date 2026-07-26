@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '037',
+            'version' => '038',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -150,11 +150,21 @@ class ProcessKontor extends Process
         $this->setPageTitle($this->_('Kontor · Dashboard'));
         $components = $this->componentRegistry()->all();
         $contactsReady = $this->contactsReady();
-        $organizationUid = $contactsReady ? $this->organizationUid() : null;
+        $catalogReady = $this->catalogReady();
+        $organizationUid = $contactsReady || $catalogReady ? $this->organizationUid() : null;
         $contacts = $contactsReady ? $this->contactRepository()->countActive($organizationUid) : 0;
         $companies = $contactsReady ? $this->companyRepository()->countActive($organizationUid) : 0;
         $recentContacts = $contactsReady ? $this->contactRepository()->findAll($organizationUid, '', 6) : [];
         $user = $this->wire()->user;
+        $canViewCatalog = $catalogReady
+            && ($user->isSuperuser() || $user->hasPermission('kontor-catalog-item-view'));
+        $catalogSummary = $canViewCatalog
+            ? $this->catalogItemRepository()->summary($organizationUid)
+            : ['products' => 0, 'services' => 0, 'archived' => 0, 'inventoryTracked' => 0];
+
+        if ($canViewCatalog) {
+            $catalogSummary['priceLists'] = $this->priceListRepository()->countMatching($organizationUid);
+        }
         $canViewActivity = $user->isSuperuser() || $user->hasPermission('kontor-audit-view');
         $canViewQueue = $user->isSuperuser() || $user->hasPermission('kontor-queue-view');
         $queueReady = $this->queueReady();
@@ -165,6 +175,17 @@ class ProcessKontor extends Process
             'contactCount' => $contacts,
             'companyCount' => $companies,
             'recentContacts' => $recentContacts,
+            'catalogReady' => $catalogReady,
+            'canViewCatalog' => $canViewCatalog,
+            'canCreateCatalogItems' => $catalogReady
+                && ($user->isSuperuser() || $user->hasPermission('kontor-catalog-item-create')),
+            'catalogSummary' => $catalogSummary,
+            'catalogLanguage' => $organizationUid !== null
+                ? $this->organization()->defaultLanguage
+                : 'en',
+            'recentCatalogItems' => $canViewCatalog
+                ? $this->catalogItemRepository()->findAll($organizationUid, limit: 5)
+                : [],
             'canViewActivity' => $canViewActivity,
             'canViewBackups' => $user->isSuperuser() || $user->hasPermission('kontor-backups-view'),
             'canViewHealth' => $user->isSuperuser() || $user->hasPermission('kontor-health-view'),

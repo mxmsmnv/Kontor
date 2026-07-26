@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog dashboard overview with linked product, service, archive, price-list,
+  inventory-tracking, and recently updated item summaries.
 - One-click Catalog item duplication that copies localized content and
   commercial settings while clearing unique identifiers and creating an
   inactive, audited draft.

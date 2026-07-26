@@ -5,6 +5,12 @@
 /** @var int $contactCount */
 /** @var int $companyCount */
 /** @var array $recentContacts */
+/** @var bool $catalogReady */
+/** @var bool $canViewCatalog */
+/** @var bool $canCreateCatalogItems */
+/** @var array{products: int, services: int, archived: int, inventoryTracked: int, priceLists?: int} $catalogSummary */
+/** @var string $catalogLanguage */
+/** @var \Kontor\Catalog\Domain\CatalogItem[] $recentCatalogItems */
 /** @var bool $canViewActivity */
 /** @var bool $canViewBackups */
 /** @var bool $canViewHealth */
@@ -28,17 +34,74 @@ $enabledComponents = count(array_filter(
       <h2>Your business, in one place.</h2>
       <p>Kontor connects customer data, companies and operational components inside ProcessWire.</p>
     </div>
-    <?php if ($contactsReady): ?>
+    <?php if ($contactsReady || $canCreateCatalogItems): ?>
       <div class="kontor-hero__actions">
-        <a class="kontor-button kontor-button--light" href="<?= $e($adminUrl) ?>contact/">
-          <i class="fa fa-plus"></i> New contact
-        </a>
-        <a class="kontor-button" href="<?= $e($adminUrl) ?>company/">
-          <i class="fa fa-building"></i> New company
-        </a>
+        <?php if ($contactsReady): ?>
+          <a class="kontor-button kontor-button--light" href="<?= $e($adminUrl) ?>contact/">
+            <i class="fa fa-plus"></i> New contact
+          </a>
+          <a class="kontor-button" href="<?= $e($adminUrl) ?>company/">
+            <i class="fa fa-building"></i> New company
+          </a>
+        <?php endif; ?>
+        <?php if ($canCreateCatalogItems): ?>
+          <a class="kontor-button<?= $contactsReady ? ' kontor-button--light' : '' ?>" href="<?= $e($adminUrl) ?>catalog-item/">
+            <i class="fa fa-cube"></i> New catalog item
+          </a>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
   </section>
+
+  <?php if ($canViewCatalog): ?>
+    <section class="kontor-card kontor-catalogoverview">
+      <header class="kontor-panel__head">
+        <div>
+          <p class="kontor-eyebrow">Commercial catalog</p>
+          <h3>Catalog overview</h3>
+        </div>
+        <a href="<?= $e($adminUrl) ?>catalog/">Open catalog</a>
+      </header>
+      <div class="kontor-catalogmetrics">
+        <a href="<?= $e($adminUrl) ?>catalog/?type=product">
+          <i class="fa fa-cube"></i>
+          <strong><?= $e($catalogSummary['products']) ?></strong>
+          <span>Products</span>
+        </a>
+        <a href="<?= $e($adminUrl) ?>catalog/?type=service">
+          <i class="fa fa-wrench"></i>
+          <strong><?= $e($catalogSummary['services']) ?></strong>
+          <span>Services</span>
+        </a>
+        <a href="<?= $e($adminUrl) ?>catalog/?archived=1">
+          <i class="fa fa-archive"></i>
+          <strong><?= $e($catalogSummary['archived']) ?></strong>
+          <span>Archived</span>
+        </a>
+        <a href="<?= $e($adminUrl) ?>catalog-price-lists/">
+          <i class="fa fa-tags"></i>
+          <strong><?= $e($catalogSummary['priceLists'] ?? 0) ?></strong>
+          <span>Price lists</span>
+        </a>
+      </div>
+      <div class="kontor-catalogrecent">
+        <span class="kontor-secondary">
+          <?= $e($catalogSummary['inventoryTracked']) ?> item(s) track inventory
+        </span>
+        <?php if ($recentCatalogItems): ?>
+          <div>
+            <?php foreach ($recentCatalogItems as $item): ?>
+              <a href="<?= $e($adminUrl) ?>catalog-item/?id=<?= $e(rawurlencode($item->uid->toString())) ?>">
+                <?= $e($item->titleIn($catalogLanguage) ?? $item->titleIn('en') ?? reset($item->title) ?: 'Untitled item') ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <span class="kontor-secondary">Create the first product or service to populate this overview.</span>
+        <?php endif; ?>
+      </div>
+    </section>
+  <?php endif; ?>
 
   <?php if (!$contactsReady): ?>
     <div class="kontor-setup">
@@ -125,6 +188,11 @@ $enabledComponents = count(array_filter(
         <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>companies/">
           <i class="fa fa-building"></i><span>Browse companies</span>
         </a>
+        <?php if ($canViewCatalog): ?>
+          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>catalog/">
+            <i class="fa fa-cube"></i><span>Browse catalog</span>
+          </a>
+        <?php endif; ?>
         <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>components/">
           <i class="fa fa-cubes"></i><span>Component status</span>
         </a>
