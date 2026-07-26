@@ -8,6 +8,7 @@ use Kontor\Core\Infrastructure\Persistence\SequenceService;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Invoices\Application\InvoiceWorkflowService;
+use Kontor\Invoices\Application\OrderToInvoiceConversionService;
 use Kontor\Invoices\Health\InvoicesHealthCheck;
 use Kontor\Invoices\Infrastructure\Persistence\InvoiceRepository;
 use Kontor\Invoices\Migrations\Migration0001CreateInvoicesTable;
@@ -27,7 +28,7 @@ class KontorInvoices extends WireData implements Module
         return [
             'title' => 'Kontor Invoices',
             'summary' => 'Invoices, issue workflow, numbering, overdue state, credit notes.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorInvoices',
             'icon' => 'file-text',
@@ -88,6 +89,18 @@ class KontorInvoices extends WireData implements Module
         return new InvoiceWorkflowService($this->invoiceRepository(), $this->documentLineRepository(), $this->sequences());
     }
 
+    public function orderConversionService(): OrderToInvoiceConversionService
+    {
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+
+        return new OrderToInvoiceConversionService(
+            $this->invoiceRepository(),
+            $sales->orderRepository(),
+            $this->documentLineRepository(),
+        );
+    }
+
     public function healthCheck(): InvoicesHealthCheck
     {
         return new InvoicesHealthCheck($this->pdo());
@@ -125,6 +138,13 @@ class KontorInvoices extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('invoices', self::getModuleInfo()['version'], 'invoices');
+        $components->enable('invoices');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('invoices', self::getModuleInfo()['version'], 'invoices');
         $components->enable('invoices');
     }

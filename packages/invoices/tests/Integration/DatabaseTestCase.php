@@ -9,6 +9,7 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
 use Kontor\Core\Migrations\Migration0004CreateSequencesTable;
 use Kontor\Invoices\Migrations\Migration0001CreateInvoicesTable;
+use Kontor\Sales\Migrations\Migration0002CreateOrdersTable;
 use Kontor\Sales\Migrations\Migration0003CreateDocumentLinesTable;
 use PHPUnit\Framework\TestCase;
 
@@ -42,6 +43,7 @@ abstract class DatabaseTestCase extends TestCase
         $runner->run([
             new Migration0001CreateOrganizationsTable(),
             new Migration0004CreateSequencesTable(),
+            new Migration0002CreateOrdersTable(),
             new Migration0003CreateDocumentLinesTable(),
             new Migration0001CreateInvoicesTable(),
         ]);
@@ -65,6 +67,7 @@ abstract class DatabaseTestCase extends TestCase
             [
                 'kontor_invoices',
                 'kontor_document_lines',
+                'kontor_sales_orders',
                 'kontor_sequences',
                 'kontor_organizations',
                 'kontor_migrations',

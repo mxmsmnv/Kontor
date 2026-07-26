@@ -111,6 +111,100 @@ final class InvoiceRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
+    public function findByOrder(string $orderUid): ?Invoice
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_invoices
+             WHERE order_uid = :order_uid AND kind = 'invoice'
+             ORDER BY id ASC
+             LIMIT 1"
+        );
+        $statement->execute(['order_uid' => $orderUid]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
+    /**
+     * @return array<int, Invoice>
+     */
+    public function findMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+        int $limit = 50,
+        int $offset = 0,
+    ): array
+    {
+        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived);
+        $statement = $this->pdo->prepare(
+            'SELECT i.* FROM kontor_invoices i
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY i.updated_at DESC, i.id DESC
+             LIMIT :limit OFFSET :offset'
+        );
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn (array $row): Invoice => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+    ): int
+    {
+        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived);
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM kontor_invoices i WHERE ' . implode(' AND ', $where)
+        );
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, int|string>}
+     */
+    private function matchingConditions(
+        string $organizationUid,
+        string $query,
+        ?string $status,
+        bool $archived,
+    ): array
+    {
+        $where = [
+            'i.organization_id = :organization_id',
+            'i.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL'),
+        ];
+        $params = [
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ];
+
+        if ($status !== null) {
+            $where[] = 'i.status = :status';
+            $params['status'] = $status;
+        }
+
+        $query = trim($query);
+        if ($query !== '') {
+            $where[] = '(i.number LIKE :query OR i.customer_uid LIKE :query)';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        return [$where, $params];
+    }
+
     /**
      * Candidates for the "overdue state" milestone's sweep — sent
      * invoices whose due date has passed (kontor.md diagram 17.2: only

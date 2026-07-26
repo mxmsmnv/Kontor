@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped invoice search, status, archive, count, and pagination
+  queries for the shared admin workflow.
+- Confirmed/completed Sales order to Invoice draft conversion with immutable
+  line copies, totals, due amount, duplicate protection, and a default
+  fourteen-day due date.
 - Initial alpha (Substage 4.3): `kontor_invoices` migration (kontor.md#15.3
   plus a `kind`/`credited_invoice_uid` gap-fill for credit notes);
   `Invoice` domain object (`paid`/`due` kept in sync via
@@ -21,3 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   another business component (`kontor/sales`, for the shared
   `kontor_document_lines` table and `DocumentLine`/
   `DocumentLineRepository`).
+
+### Fixed
+
+- Keep the component registry version synchronized during module upgrades.

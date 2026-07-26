@@ -68,4 +68,43 @@ final class InvoiceRepositoryTest extends DatabaseTestCase
         $repository->restore($invoice->uid->toString());
         $this->assertNotNull($repository->find($invoice->uid->toString()));
     }
+
+    public function test_find_by_order_and_matching_filters(): void
+    {
+        $repository = $this->repository();
+        $invoice = Invoice::create(
+            $this->organizationUid,
+            'contact',
+            'ct_northwind',
+            'EUR',
+            orderUid: 'so_northwind',
+        );
+        $invoice->number = 'INV-NORTHWIND';
+        $invoice->status = 'issued';
+        $repository->save($invoice);
+        $repository->save(Invoice::create($this->organizationUid, 'contact', 'ct_other', 'EUR'));
+
+        $this->assertSame(
+            $invoice->uid->toString(),
+            $repository->findByOrder('so_northwind')?->uid->toString()
+        );
+        $this->assertSame(
+            [$invoice->uid->toString()],
+            array_map(
+                static fn (Invoice $item): string => $item->uid->toString(),
+                $repository->findMatching($this->organizationUid, 'NORTHWIND', 'issued')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'NORTHWIND', 'issued'));
+
+        $repository->archive($invoice->uid->toString());
+
+        $this->assertSame(0, $repository->countMatching($this->organizationUid, 'NORTHWIND', 'issued'));
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            'NORTHWIND',
+            'issued',
+            true,
+        ));
+    }
 }
