@@ -488,6 +488,30 @@
   padding: 0.35rem;
 }
 
+.kontor-warning {
+  align-items: flex-start;
+  background: #fff8e6;
+  border: 1px solid #f3d58a;
+  border-radius: 12px;
+  color: #7a4b00;
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.kontor-warning > i {
+  margin-top: 0.18rem;
+}
+
+.kontor-warning strong {
+  color: #593800;
+}
+
+.kontor-warning p {
+  margin: 0.2rem 0 0;
+}
+
 .kontor-relations {
   margin-top: 1rem;
   padding: 1.15rem;
@@ -577,6 +601,102 @@
   width: 100%;
 }
 
+.kontor-addresses {
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-addressgrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.kontor-address {
+  background: #fafbff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.kontor-address__top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kontor-address address {
+  color: var(--kontor-muted);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  font-style: normal;
+  gap: 0.15rem;
+  margin-top: 0.65rem;
+}
+
+.kontor-address address strong {
+  color: var(--kontor-ink);
+}
+
+.kontor-addressform {
+  align-items: end;
+  background: #f8f9fc;
+  border-radius: 10px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  padding: 0.85rem;
+}
+
+.kontor-addressform label {
+  margin: 0;
+}
+
+.kontor-addressform label > span {
+  color: #697386;
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 750;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+.kontor-addressform input,
+.kontor-addressform select {
+  background: #fff;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--kontor-ink);
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.kontor-addressform__wide {
+  grid-column: span 2;
+}
+
+.kontor-addressform .kontor-check {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+  min-height: 40px;
+}
+
+.kontor-addressform .kontor-check input {
+  min-height: 0;
+  width: auto;
+}
+
+.kontor-addressform .kontor-check > span {
+  margin: 0;
+  text-transform: none;
+}
+
 .kontor-components {
   display: grid;
   gap: 1rem;
@@ -638,5 +758,14 @@
 
   .kontor-relationform {
     grid-template-columns: 1fr;
+  }
+
+  .kontor-addressgrid,
+  .kontor-addressform {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-addressform__wide {
+    grid-column: auto;
   }
 }

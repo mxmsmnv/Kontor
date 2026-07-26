@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 - Component registry version synchronization during Core module upgrades.
 - CRM relationship cards, contact-to-company linking, and reversible archive
   workflows for contacts and companies in the admin application.
+- Contact/company address management and duplicate-contact warnings in the
+  admin application.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

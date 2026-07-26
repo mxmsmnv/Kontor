@@ -2,9 +2,12 @@
 
 namespace ProcessWire;
 
+use Kontor\Contacts\Application\ContactDuplicateDetector;
+use Kontor\Contacts\Domain\Address;
 use Kontor\Contacts\Domain\Company;
 use Kontor\Contacts\Domain\Contact;
 use Kontor\Contacts\Domain\ContactCompanyMembership;
+use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
@@ -22,7 +25,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '004',
+            'version' => '005',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -114,14 +117,27 @@ class ProcessKontor extends Process
             : sprintf($this->_('Kontor · %s'), $contact->displayName));
 
         $form = $this->buildContactForm($contact);
+        $duplicates = [];
 
         if ($this->wire()->input->post('submit_save')) {
             $form->processInput($this->wire()->input->post);
 
             if (!$form->getErrors()) {
-                $contact = $this->saveContactFromForm($form, $contact);
-                $this->message($this->_('Contact saved.'));
-                $this->wire()->session->redirect('../contact/?id=' . rawurlencode($contact->uid->toString()));
+                if ($contact === null) {
+                    $duplicates = $this->duplicateDetector()->findDuplicates(
+                        $this->organizationUid(),
+                        $this->formValue($form, 'email'),
+                        $this->formValue($form, 'phone')
+                    );
+                }
+
+                if ($duplicates !== [] && !$this->wire()->input->post('confirm_duplicate')) {
+                    $this->addDuplicateConfirmation($form);
+                } else {
+                    $contact = $this->saveContactFromForm($form, $contact);
+                    $this->message($this->_('Contact saved.'));
+                    $this->wire()->session->redirect('../contact/?id=' . rawurlencode($contact->uid->toString()));
+                }
             }
         }
 
@@ -142,6 +158,10 @@ class ProcessKontor extends Process
             'availableCompanies' => $contact === null
                 ? []
                 : $this->companyRepository()->findAll($this->organizationUid(), '', 250),
+            'addresses' => $contact === null
+                ? []
+                : $this->addressRepository()->forOwner('contact', $contact->uid->toString()),
+            'duplicates' => $duplicates,
         ]);
     }
 
@@ -201,7 +221,82 @@ class ProcessKontor extends Process
             'entityType' => 'company',
             'relationships' => $relationships,
             'availableCompanies' => [],
+            'addresses' => $company === null
+                ? []
+                : $this->addressRepository()->forOwner('company', $company->uid->toString()),
+            'duplicates' => [],
         ]);
+    }
+
+    public function ___executeAddress(): void
+    {
+        $this->requirePost();
+        $ownerType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('owner_type'),
+            ['contact', 'company']
+        );
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['add', 'delete']
+        );
+        $this->requireAction($ownerType, ['contact', 'company']);
+        $this->requireAction($action, ['add', 'delete']);
+        $ownerUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('owner_uid'));
+        $owner = $ownerType === 'contact'
+            ? $this->contactRepository()->require($ownerUid)
+            : $this->companyRepository()->require($ownerUid);
+        $this->requireSameOrganization($owner->organizationId);
+        $this->requirePermission($ownerType === 'contact'
+            ? 'kontor-contacts-contact-edit'
+            : 'kontor-contacts-company-edit');
+
+        if ($action === 'delete') {
+            $addressUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('address_uid'));
+            $address = $this->addressRepository()->find($addressUid);
+
+            if (
+                $address === null
+                || $address->ownerType !== $ownerType
+                || !hash_equals($address->ownerUid, $ownerUid)
+                || !hash_equals($address->organizationId, $this->organizationUid())
+            ) {
+                throw new WirePermissionException($this->_('Address does not belong to this record.'));
+            }
+
+            $this->addressRepository()->delete($addressUid);
+            $this->message($this->_('Address removed.'));
+        } else {
+            $line1 = $this->wire()->sanitizer->text(trim((string) $this->wire()->input->post('line1')));
+            $city = $this->wire()->sanitizer->text(trim((string) $this->wire()->input->post('city')));
+            $countryCode = strtoupper(trim((string) $this->wire()->input->post('country_code')));
+
+            if ($line1 === '' || $city === '' || preg_match('/^[A-Z]{2}$/', $countryCode) !== 1) {
+                $this->error($this->_('Street, city and a two-letter country code are required.'));
+                $this->wire()->session->redirect('../' . $ownerType . '/?id=' . rawurlencode($ownerUid));
+            }
+
+            $addresses = $this->addressRepository()->forOwner($ownerType, $ownerUid);
+            $addressType = $this->wire()->sanitizer->option(
+                (string) $this->wire()->input->post('address_type'),
+                ['billing', 'shipping', 'home', 'work', 'other']
+            ) ?? 'billing';
+            $this->addressRepository()->save(Address::create(
+                organizationId: $this->organizationUid(),
+                ownerType: $ownerType,
+                ownerUid: $ownerUid,
+                line1: $line1,
+                city: $city,
+                countryCode: $countryCode,
+                addressType: $addressType,
+                line2: $this->nullablePostText('line2'),
+                region: $this->nullablePostText('region'),
+                postalCode: $this->nullablePostText('postal_code'),
+                isPrimary: $addresses === [] || (bool) $this->wire()->input->post('is_primary'),
+            ));
+            $this->message($this->_('Address added.'));
+        }
+
+        $this->wire()->session->redirect('../' . $ownerType . '/?id=' . rawurlencode($ownerUid));
     }
 
     public function ___executeContactStatus(): void
@@ -457,6 +552,17 @@ class ProcessKontor extends Process
         $form->add($submit);
     }
 
+    private function addDuplicateConfirmation(InputfieldForm $form): void
+    {
+        /** @var InputfieldCheckbox $field */
+        $field = $this->wire()->modules->get('InputfieldCheckbox');
+        $field->name = 'confirm_duplicate';
+        $field->label = $this->_('Create this contact anyway');
+        $field->description = $this->_('I reviewed the possible duplicate contacts shown above.');
+        $field->required = true;
+        $form->insertBefore($field, $form->getChildByName('submit_save'));
+    }
+
     private function formValue(InputfieldForm $form, string $name): ?string
     {
         $value = trim((string) $form->getChildByName($name)?->value);
@@ -467,6 +573,13 @@ class ProcessKontor extends Process
     private function requiredFormValue(InputfieldForm $form, string $name): string
     {
         return trim((string) $form->getChildByName($name)?->value);
+    }
+
+    private function nullablePostText(string $name): ?string
+    {
+        $value = trim((string) $this->wire()->input->post($name));
+
+        return $value === '' ? null : $this->wire()->sanitizer->text($value);
     }
 
     private function renderTemplate(string $name, array $variables): string
@@ -563,6 +676,22 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorContacts');
 
         return $module->membershipRepository();
+    }
+
+    private function addressRepository(): AddressRepository
+    {
+        /** @var KontorContacts $module */
+        $module = $this->wire()->modules->get('KontorContacts');
+
+        return $module->addressRepository();
+    }
+
+    private function duplicateDetector(): ContactDuplicateDetector
+    {
+        /** @var KontorContacts $module */
+        $module = $this->wire()->modules->get('KontorContacts');
+
+        return $module->duplicateDetector();
     }
 
     /**
