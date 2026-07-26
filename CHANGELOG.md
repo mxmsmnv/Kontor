@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct currency and status drill-downs from Catalog item pricing coverage to
+  filtered Price lists.
 - Composable active/inactive filters and clickable status badges for Contacts
   and Companies.
 - Human-readable Global Search result badges and a query-preserving return to

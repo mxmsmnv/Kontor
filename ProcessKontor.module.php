@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '082',
+            'version' => '083',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -743,6 +743,7 @@ class ProcessKontor extends Process
             foreach ($this->priceListRepository()->findAll($this->organizationUid(), limit: 250) as $priceList) {
                 $priceListDetails[$priceList->uid->toString()] = [
                     'name' => $priceList->name,
+                    'currency' => $priceList->currencyCode,
                     'status' => $priceList->status,
                 ];
             }

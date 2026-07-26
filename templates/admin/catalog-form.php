@@ -5,7 +5,7 @@
 /** @var bool $canViewPriceLists */
 /** @var bool $canEditPriceLists */
 /** @var \Kontor\Catalog\Domain\PriceListEntry[] $priceEntries */
-/** @var array<string, array{name: string, status: string}> $priceListDetails */
+/** @var array<string, array{name: string, currency: string, status: string}> $priceListDetails */
 /** @var string $title */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -26,6 +26,8 @@ $money = static function (\Kontor\SDK\ValueObjects\Money $value): string {
     );
 };
 $quantity = static fn (float $value): string => rtrim(rtrim(number_format($value, 6, '.', ''), '0'), '.');
+$priceListFilterUrl = static fn (string $facet, string $value): string =>
+    $adminUrl . 'catalog-price-lists/?' . http_build_query([$facet => $value]);
 $coveredPriceLists = count(array_unique(array_map(
     static fn (\Kontor\Catalog\Domain\PriceListEntry $entry): string => $entry->priceListUid,
     $priceEntries,
@@ -88,7 +90,11 @@ $coveredPriceLists = count(array_unique(array_map(
           <tbody>
             <?php foreach ($priceEntries as $entry): ?>
               <?php
-                $details = $priceListDetails[$entry->priceListUid] ?? ['name' => 'Unknown price list', 'status' => 'unknown'];
+                $details = $priceListDetails[$entry->priceListUid] ?? [
+                    'name' => 'Unknown price list',
+                    'currency' => '',
+                    'status' => 'unknown',
+                ];
                 $quantityValue = $quantity($entry->minQuantity);
               ?>
               <tr>
@@ -100,6 +106,13 @@ $coveredPriceLists = count(array_unique(array_map(
                       <?= $e($details['name']) ?>
                     <?php endif; ?>
                   </strong>
+                  <?php if ($details['currency'] !== ''): ?>
+                    <span class="kontor-secondary">
+                      <a class="kontor-catalogfacet" href="<?= $e($priceListFilterUrl('currency', $details['currency'])) ?>">
+                        <?= $e($details['currency']) ?> price lists
+                      </a>
+                    </span>
+                  <?php endif; ?>
                 </td>
                 <td><?= $e($quantityValue) ?></td>
                 <td>
@@ -110,7 +123,12 @@ $coveredPriceLists = count(array_unique(array_map(
                   <?php endif; ?>
                 </td>
                 <td><?= $e($entry->validFrom?->format('Y-m-d') ?? '—') ?> → <?= $e($entry->validTo?->format('Y-m-d') ?? '—') ?></td>
-                <td><span class="kontor-pill<?= $details['status'] === 'active' ? '' : ' kontor-pill--inactive' ?>"><?= $e($details['status']) ?></span></td>
+                <td>
+                  <a
+                    class="kontor-catalogfacet kontor-pill<?= $details['status'] === 'active' ? '' : ' kontor-pill--inactive' ?>"
+                    href="<?= $e($priceListFilterUrl('status', $details['status'])) ?>"
+                  ><?= $e($details['status']) ?></a>
+                </td>
               </tr>
             <?php endforeach; ?>
           </tbody>
