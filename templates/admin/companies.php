@@ -22,6 +22,7 @@ $viewUrl = './?' . http_build_query(array_filter([
     'q' => $query,
     'archived' => $showArchived ? '' : 1,
 ], static fn (string|int $value): bool => $value !== ''));
+$clearSearchUrl = $showArchived ? './?archived=1' : './';
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -55,6 +56,11 @@ $viewUrl = './?' . http_build_query(array_filter([
       </button>
     </form>
     <div class="kontor-toolbar__meta">
+      <?php if ($query !== ''): ?>
+        <a class="kontor-viewtoggle" href="<?= $e($clearSearchUrl) ?>">
+          <i class="fa fa-times"></i> Clear search
+        </a>
+      <?php endif; ?>
       <a class="kontor-viewtoggle" href="<?= $e($viewUrl) ?>">
         <i class="fa fa-<?= $showArchived ? 'building' : 'archive' ?>"></i>
         <?= $showArchived ? 'Active companies' : 'Archive' ?>
