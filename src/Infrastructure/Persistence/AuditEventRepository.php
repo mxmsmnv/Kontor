@@ -24,53 +24,19 @@ final class AuditEventRepository
         ?string $action = null,
         int $offset = 0,
     ): array {
-        $query = trim($query);
         $limit = max(1, min($limit, 250));
         $offset = max(0, $offset);
-        $sql = 'SELECT * FROM kontor_audit_events WHERE organization_id = :organization_id';
-
-        if ($query !== '') {
-            $sql .= ' AND (
-                component LIKE :query
-                OR entity_type LIKE :query
-                OR entity_uid LIKE :query
-                OR action LIKE :query
-                OR actor_uid LIKE :query
-            )';
-        }
-
-        if ($component !== null) {
-            $sql .= ' AND component = :component';
-        }
-
-        if ($entityType !== null) {
-            $sql .= ' AND entity_type = :entity_type';
-        }
-
-        if ($action !== null) {
-            $sql .= ' AND action = :action';
-        }
-
-        $sql .= ' ORDER BY occurred_at DESC, id DESC LIMIT :limit OFFSET :offset';
+        [$where, $bindings] = $this->matchingWhere(
+            $organizationId,
+            $query,
+            $component,
+            $entityType,
+            $action,
+        );
+        $sql = 'SELECT * FROM kontor_audit_events WHERE ' . $where
+            . ' ORDER BY occurred_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
-
-        if ($query !== '') {
-            $statement->bindValue(':query', '%' . $query . '%');
-        }
-
-        if ($component !== null) {
-            $statement->bindValue(':component', $component);
-        }
-
-        if ($entityType !== null) {
-            $statement->bindValue(':entity_type', $entityType);
-        }
-
-        if ($action !== null) {
-            $statement->bindValue(':action', $action);
-        }
-
+        $this->bindMatching($statement, $bindings);
         $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $statement->execute();
@@ -81,6 +47,35 @@ final class AuditEventRepository
         );
     }
 
+    /**
+     * @return \Generator<int, AuditEvent>
+     */
+    public function iterateMatching(
+        int $organizationId,
+        string $query = '',
+        ?string $component = null,
+        ?string $entityType = null,
+        ?string $action = null,
+    ): \Generator {
+        [$where, $bindings] = $this->matchingWhere(
+            $organizationId,
+            $query,
+            $component,
+            $entityType,
+            $action,
+        );
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_audit_events WHERE ' . $where
+            . ' ORDER BY occurred_at DESC, id DESC'
+        );
+        $this->bindMatching($statement, $bindings);
+        $statement->execute();
+
+        while ($row = $statement->fetch(\PDO::FETCH_ASSOC)) {
+            yield $this->hydrate($row);
+        }
+    }
+
     public function countMatching(
         int $organizationId,
         string $query = '',
@@ -88,53 +83,75 @@ final class AuditEventRepository
         ?string $entityType = null,
         ?string $action = null,
     ): int {
-        $query = trim($query);
-        $sql = 'SELECT COUNT(*) FROM kontor_audit_events WHERE organization_id = :organization_id';
-
-        if ($query !== '') {
-            $sql .= ' AND (
-                action LIKE :query
-                OR component LIKE :query
-                OR entity_type LIKE :query
-                OR entity_uid LIKE :query
-                OR actor_uid LIKE :query
-            )';
-        }
-
-        if ($component !== null) {
-            $sql .= ' AND component = :component';
-        }
-
-        if ($entityType !== null) {
-            $sql .= ' AND entity_type = :entity_type';
-        }
-
-        if ($action !== null) {
-            $sql .= ' AND action = :action';
-        }
-
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
-
-        if ($query !== '') {
-            $statement->bindValue(':query', '%' . $query . '%');
-        }
-
-        if ($component !== null) {
-            $statement->bindValue(':component', $component);
-        }
-
-        if ($entityType !== null) {
-            $statement->bindValue(':entity_type', $entityType);
-        }
-
-        if ($action !== null) {
-            $statement->bindValue(':action', $action);
-        }
-
+        [$where, $bindings] = $this->matchingWhere(
+            $organizationId,
+            $query,
+            $component,
+            $entityType,
+            $action,
+        );
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM kontor_audit_events WHERE ' . $where
+        );
+        $this->bindMatching($statement, $bindings);
         $statement->execute();
 
         return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, int|string>}
+     */
+    private function matchingWhere(
+        int $organizationId,
+        string $query,
+        ?string $component,
+        ?string $entityType,
+        ?string $action,
+    ): array {
+        $query = trim($query);
+        $where = 'organization_id = :organization_id';
+        $bindings = [':organization_id' => $organizationId];
+
+        if ($query !== '') {
+            $where .= ' AND (
+                component LIKE :query
+                OR entity_type LIKE :query
+                OR entity_uid LIKE :query
+                OR action LIKE :query
+                OR actor_uid LIKE :query
+            )';
+            $bindings[':query'] = '%' . $query . '%';
+        }
+
+        foreach (
+            [
+                'component' => $component,
+                'entity_type' => $entityType,
+                'action' => $action,
+            ] as $column => $value
+        ) {
+            if ($value !== null) {
+                $where .= " AND {$column} = :{$column}";
+                $bindings[":{$column}"] = $value;
+            }
+        }
+
+        return [$where, $bindings];
+    }
+
+    /**
+     * @param array<string, int|string> $bindings
+     */
+    private function bindMatching(\PDOStatement $statement, array $bindings): void
+    {
+        foreach ($bindings as $name => $value) {
+            $statement->bindValue(
+                $name,
+                $value,
+                is_int($value) ? \PDO::PARAM_INT : \PDO::PARAM_STR
+            );
+        }
     }
 
     /**

@@ -59,11 +59,19 @@ final class AuditEventRepositoryTest extends DatabaseTestCase
             limit: 1,
             offset: 1,
         );
+        $exported = iterator_to_array($repository->iterateMatching(
+            $organizationId,
+            component: 'KontorContacts',
+            entityType: 'company',
+            action: 'updated',
+        ));
 
         $this->assertCount(1, $filtered);
         $this->assertSame('company_01', $filtered[0]->entityUid);
         $this->assertCount(1, $secondPage);
         $this->assertSame('contact_01', $secondPage[0]->entityUid);
+        $this->assertCount(1, $exported);
+        $this->assertSame('company_01', $exported[0]->entityUid);
         $this->assertSame(2, $repository->countMatching($organizationId));
         $this->assertSame(1, $repository->countMatching(
             $organizationId,

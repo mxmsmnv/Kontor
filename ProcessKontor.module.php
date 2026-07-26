@@ -12,6 +12,7 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\Core\Application\AuditCsvExporter;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ExportManager;
@@ -44,7 +45,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '018',
+            'version' => '019',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -354,15 +355,12 @@ class ProcessKontor extends Process
     {
         $this->requirePermission('kontor-audit-view');
         $this->setPageTitle($this->_('Kontor · Activity'));
-        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $organizationId = $this->organizationInternalId();
-        $options = $this->auditEventRepository()->filterOptions($organizationId);
-        $component = $this->wire()->sanitizer->text((string) $this->wire()->input->get('component'));
-        $entityType = $this->wire()->sanitizer->text((string) $this->wire()->input->get('entity_type'));
-        $action = $this->wire()->sanitizer->text((string) $this->wire()->input->get('action'));
-        $component = in_array($component, $options['components'], true) ? $component : null;
-        $entityType = in_array($entityType, $options['entityTypes'], true) ? $entityType : null;
-        $action = in_array($action, $options['actions'], true) ? $action : null;
+        $filters = $this->activityFilterSelection($organizationId);
+        $query = $filters['query'];
+        $component = $filters['component'];
+        $entityType = $filters['entityType'];
+        $action = $filters['action'];
         $pageSize = 50;
         $totalEvents = $this->auditEventRepository()->countMatching(
             $organizationId,
@@ -388,13 +386,62 @@ class ProcessKontor extends Process
                 ($page - 1) * $pageSize,
             ),
             'query' => $query,
-            'filterOptions' => $options,
+            'filterOptions' => $filters['options'],
             'selectedComponent' => $component,
             'selectedEntityType' => $entityType,
             'selectedAction' => $action,
             'page' => $page,
             'totalPages' => $totalPages,
             'totalEvents' => $totalEvents,
+        ]);
+    }
+
+    public function ___executeActivityExport(): void
+    {
+        $this->requirePermission('kontor-audit-view');
+        $organizationId = $this->organizationInternalId();
+        $filters = $this->activityFilterSelection($organizationId);
+        $temporary = tempnam($this->wire()->config->paths->cache, 'kontor_activity_');
+
+        if ($temporary === false) {
+            throw new WireException($this->_('Could not create an Activity export file.'));
+        }
+
+        $path = $temporary . '.csv';
+        rename($temporary, $path);
+        register_shutdown_function(static function () use ($path): void {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        });
+        $count = (new AuditCsvExporter())->export(
+            $path,
+            $this->auditEventRepository()->iterateMatching(
+                $organizationId,
+                $filters['query'],
+                $filters['component'],
+                $filters['entityType'],
+                $filters['action'],
+            ),
+        );
+        $activeFilters = array_filter([
+            'query' => $filters['query'],
+            'component' => $filters['component'],
+            'entityType' => $filters['entityType'],
+            'action' => $filters['action'],
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+        $this->audit(
+            'core',
+            'audit',
+            'bulk',
+            'exported',
+            metadata: ['format' => 'csv', 'recordCount' => $count, 'filters' => $activeFilters],
+        );
+        $filename = 'kontor-activity-' . (new \DateTimeImmutable())->format('Y-m-d') . '.csv';
+        wireSendFile($path, [
+            'forceDownload' => true,
+            'downloadFilename' => $filename,
+            'exit' => true,
         ]);
     }
 
@@ -1767,6 +1814,32 @@ class ProcessKontor extends Process
         if ($action === null || !in_array($action, $allowed, true)) {
             throw new WireException($this->_('Invalid action.'));
         }
+    }
+
+    /**
+     * @return array{
+     *   query: string,
+     *   component: string|null,
+     *   entityType: string|null,
+     *   action: string|null,
+     *   options: array{components: string[], entityTypes: string[], actions: string[]}
+     * }
+     */
+    private function activityFilterSelection(int $organizationId): array
+    {
+        $options = $this->auditEventRepository()->filterOptions($organizationId);
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $component = $this->wire()->sanitizer->text((string) $this->wire()->input->get('component'));
+        $entityType = $this->wire()->sanitizer->text((string) $this->wire()->input->get('entity_type'));
+        $action = $this->wire()->sanitizer->text((string) $this->wire()->input->get('action'));
+
+        return [
+            'query' => $query,
+            'component' => $component !== '' ? $component : null,
+            'entityType' => $entityType !== '' ? $entityType : null,
+            'action' => $action !== '' ? $action : null,
+            'options' => $options,
+        ];
     }
 
     private function contactsReady(): bool

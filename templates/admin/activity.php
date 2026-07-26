@@ -49,6 +49,9 @@ $filterUrl = static function (string $facet, string $value): string {
       <h2>Activity</h2>
       <p>Recent changes and operational events across Kontor.</p>
     </div>
+    <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>activity-export/?<?= $e(http_build_query($pageQuery)) ?>" download>
+      <i class="fa fa-download"></i> Export CSV
+    </a>
   </header>
 
   <form class="kontor-toolbar kontor-activityfilters" method="get" action="./">
