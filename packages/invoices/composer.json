@@ -17,6 +17,7 @@
         "kontor/sales": "^0.1"
     },
     "suggest": {
+        "kontor/ledger": "Posts invoice issuance, credit notes, and cancellations into the general ledger.",
         "kontor/mail": "Delivers issued invoices and records linked outbound history."
     },
     "require-dev": {

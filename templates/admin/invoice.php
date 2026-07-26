@@ -14,6 +14,9 @@
 /** @var bool $mailReady */
 /** @var \Kontor\Mail\Domain\Mailbox[] $mailboxes */
 /** @var string $customerEmail */
+/** @var bool $ledgerReady */
+/** @var \Kontor\Ledger\Domain\LedgerEntry|null $ledgerPosting */
+/** @var \Kontor\Ledger\Domain\LedgerEntry|null $ledgerCancellation */
 /** @var callable $e */
 
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
@@ -38,6 +41,27 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       <strong>Due <?= $e($money($invoice->due)) ?></strong>
     </div>
   </section>
+
+  <?php if ($ledgerReady): ?>
+    <section class="kontor-card">
+      <p class="kontor-eyebrow">Ledger</p>
+      <?php if ($ledgerPosting !== null): ?>
+        <h3>Accounting entry recorded</h3>
+        <p>
+          <a href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($ledgerPosting->uid->toString())) ?>">Open issuance posting</a>
+          <?php if ($ledgerCancellation !== null): ?>
+            · <a href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($ledgerCancellation->uid->toString())) ?>">Open cancellation posting</a>
+          <?php endif; ?>
+        </p>
+      <?php elseif (!$invoice->isDraft() && $invoice->status !== 'cancelled'): ?>
+        <p>No automatic accounting entry exists for this legacy document.</p>
+      <?php elseif ($invoice->status === 'cancelled'): ?>
+        <p>This cancelled draft did not require an accounting entry.</p>
+      <?php else: ?>
+        <p>Issuing this document will post receivables, revenue, and sales tax automatically.</p>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
 
   <?php if ($invoice->isDraft() && $invoiceTemplate === null): ?>
     <section class="kontor-card kontor-warning">

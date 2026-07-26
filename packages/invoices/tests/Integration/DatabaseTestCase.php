@@ -9,6 +9,9 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
 use Kontor\Core\Migrations\Migration0004CreateSequencesTable;
 use Kontor\Invoices\Migrations\Migration0001CreateInvoicesTable;
+use Kontor\Ledger\Migrations\Migration0001CreateAccountsTable;
+use Kontor\Ledger\Migrations\Migration0002CreateEntriesTable;
+use Kontor\Ledger\Migrations\Migration0003CreateLinesTable;
 use Kontor\Sales\Migrations\Migration0002CreateOrdersTable;
 use Kontor\Sales\Migrations\Migration0003CreateDocumentLinesTable;
 use PHPUnit\Framework\TestCase;
@@ -46,6 +49,9 @@ abstract class DatabaseTestCase extends TestCase
             new Migration0002CreateOrdersTable(),
             new Migration0003CreateDocumentLinesTable(),
             new Migration0001CreateInvoicesTable(),
+            new Migration0001CreateAccountsTable(),
+            new Migration0002CreateEntriesTable(),
+            new Migration0003CreateLinesTable(),
         ]);
 
         $this->organizationUid = (new OrganizationRepository($this->pdo))
@@ -65,6 +71,9 @@ abstract class DatabaseTestCase extends TestCase
     {
         foreach (
             [
+                'kontor_ledger_lines',
+                'kontor_ledger_entries',
+                'kontor_ledger_accounts',
                 'kontor_invoices',
                 'kontor_document_lines',
                 'kontor_sales_orders',

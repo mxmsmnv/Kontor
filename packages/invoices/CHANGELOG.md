@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Invoice and credit-note issuance now creates balanced, idempotent Ledger
+  entries for receivables, revenue, and sales tax; cancelling an issued or
+  sent document appends an exact reversal.
 - Issued invoices can now be delivered through an active Mail mailbox;
   outbound history is retained and linked back to the invoice.
 - Invoice and credit-note issuance now resolve their standard Documents

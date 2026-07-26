@@ -51,6 +51,7 @@ use Kontor\Expenses\Domain\Expense;
 use Kontor\Expenses\Domain\ExpenseCategory;
 use Kontor\Expenses\Application\LedgerExpensePostingService;
 use Kontor\Inventory\Domain\Warehouse;
+use Kontor\Invoices\Application\LedgerInvoicePostingService;
 use Kontor\Invoices\Domain\Invoice;
 use Kontor\Germany\DTO\LocalizedInvoiceInput;
 use Kontor\Germany\DTO\LocalizedLineItemInput;
@@ -91,7 +92,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '131',
+            'version' => '132',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1922,6 +1923,19 @@ class ProcessKontor extends Process
             'allocations' => $this->paymentsReady()
                 ? $this->paymentModule()->allocationRepository()->forDocument('invoice', $id)
                 : [],
+            'ledgerReady' => $this->ledgerReady(),
+            'ledgerPosting' => $this->ledgerReady()
+                ? $this->ledgerModule()->entryRepository()->findByReference(
+                    LedgerInvoicePostingService::ISSUE_REFERENCE,
+                    $id,
+                )
+                : null,
+            'ledgerCancellation' => $this->ledgerReady()
+                ? $this->ledgerModule()->entryRepository()->findByReference(
+                    LedgerInvoicePostingService::CANCELLATION_REFERENCE,
+                    $id,
+                )
+                : null,
             'mailReady' => $this->mailReady(),
             'mailboxes' => $this->mailReady()
                 ? array_values(array_filter(
@@ -2004,8 +2018,8 @@ class ProcessKontor extends Process
             $pdo->beginTransaction();
             try {
                 $issued = $action === 'credit'
-                    ? $module->workflow()->issueCreditNote($id)
-                    : $module->workflow()->issue($id);
+                    ? $module->workflow()->issueCreditNote($id, (int) $this->wire()->user->id)
+                    : $module->workflow()->issue($id, (int) $this->wire()->user->id);
                 $stored = $this->storeIssuedInvoiceDocument($module, $issued, $template);
                 $pdo->commit();
             } catch (\Throwable $exception) {
@@ -2112,7 +2126,17 @@ class ProcessKontor extends Process
             $this->wire()->session->redirect('../invoice/?id=' . rawurlencode($id));
             return;
         } elseif ($action === 'cancel') {
-            $module->workflow()->cancel($id);
+            $pdo = $this->wire()->database->pdo();
+            $pdo->beginTransaction();
+            try {
+                $module->workflow()->cancel($id, (int) $this->wire()->user->id);
+                $pdo->commit();
+            } catch (\Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $exception;
+            }
         } elseif ($action === 'restore') {
             $module->invoiceRepository()->restore($id);
         } else {

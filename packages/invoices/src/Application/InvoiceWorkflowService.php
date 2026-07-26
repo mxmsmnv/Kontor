@@ -24,10 +24,11 @@ final class InvoiceWorkflowService
         private readonly InvoiceRepository $invoices,
         private readonly DocumentLineRepository $lines,
         private readonly SequenceService $sequences,
+        private readonly ?InvoicePostingInterface $posting = null,
     ) {
     }
 
-    public function issue(string $invoiceUid): Invoice
+    public function issue(string $invoiceUid, ?int $createdBy = null): Invoice
     {
         $invoice = $this->invoices->require($invoiceUid);
 
@@ -43,7 +44,9 @@ final class InvoiceWorkflowService
         $invoice->issuedAt = new \DateTimeImmutable();
         $invoice->status = 'issued';
 
+        $this->posting?->assertCanPost($invoice);
         $this->invoices->save($invoice);
+        $this->posting?->postIssue($invoice, $createdBy);
 
         return $invoice;
     }
@@ -63,7 +66,7 @@ final class InvoiceWorkflowService
         return $invoice;
     }
 
-    public function cancel(string $invoiceUid): Invoice
+    public function cancel(string $invoiceUid, ?int $createdBy = null): Invoice
     {
         $invoice = $this->invoices->require($invoiceUid);
 
@@ -71,6 +74,9 @@ final class InvoiceWorkflowService
             throw new RuntimeException("Invoice \"{$invoiceUid}\" cannot be cancelled from status \"{$invoice->status}\".");
         }
 
+        if (!$invoice->isDraft()) {
+            $this->posting?->postCancellation($invoice, $createdBy);
+        }
         $invoice->status = 'cancelled';
         $invoice->cancelledAt = new \DateTimeImmutable();
         $this->invoices->save($invoice);
@@ -132,7 +138,7 @@ final class InvoiceWorkflowService
      * invoice in this monorepo today). Partial credit notes aren't a
      * listed milestone and aren't built here — see the README.
      */
-    public function issueCreditNote(string $originalInvoiceUid): Invoice
+    public function issueCreditNote(string $originalInvoiceUid, ?int $createdBy = null): Invoice
     {
         $original = $this->invoices->require($originalInvoiceUid);
 
@@ -185,7 +191,9 @@ final class InvoiceWorkflowService
         $creditNote->issueDate = new \DateTimeImmutable();
         $creditNote->issuedAt = new \DateTimeImmutable();
         $creditNote->status = 'issued';
+        $this->posting?->assertCanPost($creditNote);
         $this->invoices->save($creditNote);
+        $this->posting?->postIssue($creditNote, $createdBy);
 
         $original->status = 'credited';
         $this->invoices->save($original);

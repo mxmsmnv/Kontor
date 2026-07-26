@@ -8,6 +8,7 @@ use Kontor\Core\Infrastructure\Persistence\SequenceService;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Invoices\Application\InvoiceWorkflowService;
+use Kontor\Invoices\Application\LedgerInvoicePostingService;
 use Kontor\Invoices\Application\OrderToInvoiceConversionService;
 use Kontor\Invoices\Health\InvoicesHealthCheck;
 use Kontor\Invoices\Infrastructure\Persistence\InvoiceRepository;
@@ -28,7 +29,7 @@ class KontorInvoices extends WireData implements Module
         return [
             'title' => 'Kontor Invoices',
             'summary' => 'Invoices, issue workflow, numbering, overdue state, credit notes.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorInvoices',
             'icon' => 'file-text',
@@ -86,7 +87,23 @@ class KontorInvoices extends WireData implements Module
 
     public function workflow(): InvoiceWorkflowService
     {
-        return new InvoiceWorkflowService($this->invoiceRepository(), $this->documentLineRepository(), $this->sequences());
+        $posting = null;
+        if ($this->wire()->modules->isInstalled('KontorLedger')) {
+            /** @var KontorLedger $ledger */
+            $ledger = $this->wire()->modules->get('KontorLedger');
+            $posting = new LedgerInvoicePostingService(
+                $ledger->accountRepository(),
+                $ledger->entryRepository(),
+                $ledger->entries(),
+            );
+        }
+
+        return new InvoiceWorkflowService(
+            $this->invoiceRepository(),
+            $this->documentLineRepository(),
+            $this->sequences(),
+            $posting,
+        );
     }
 
     public function orderConversionService(): OrderToInvoiceConversionService

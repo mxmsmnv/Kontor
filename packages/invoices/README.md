@@ -13,6 +13,12 @@ through an active shared mailbox, records the outbound message, and creates a
 `mail_link` relation back to the invoice. Delivery defaults to a safe
 simulation until the transport is deliberately enabled.
 
+Ledger is optional. When installed, issuing an invoice atomically debits trade
+receivables (`1400`) and credits revenue (`8000`) plus sales tax (`1700`).
+Credit notes reverse those sides, while cancelling an issued or sent document
+adds a separate reversal entry. Every posting is idempotent by invoice UID and
+linked from the invoice workspace.
+
 ## A second schema gap, filled inside this package
 
 kontor.md#15.3 gives `kontor_invoices` a column list, and kontor.md#19.6 /
@@ -55,6 +61,10 @@ rendering machinery as an ordinary invoice, rather than a parallel
     numbers it via a separate `credit_note` sequence (`CN-` prefix), and
     moves the original straight to `'credited'`. Guarded against crediting
     a draft, an already-credited invoice, or a credit note itself.
+- `src/Application/LedgerInvoicePostingService.php` — optional accounting
+  bridge for issuance, credit notes, and cancellation reversals. It validates
+  account roles, currency, and totals before the workflow persists a state
+  transition.
 - `src/Domain/Invoice.php` — `paid`/`due` fields exist per kontor.md#15.3
   and stay in sync (`due = total - paid`) whenever totals are recomputed,
   but nothing in this package ever moves `paid` off zero — that's
