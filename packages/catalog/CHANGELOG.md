@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Price-list validity filtering for current, upcoming, and expired windows.
 - Context-aware filter reset controls across Catalog admin lists.
 - Inventory-tracking filtering for active and archived Catalog views.
 - Transactional, tenant-scoped bulk activation, deactivation, and

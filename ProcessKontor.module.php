@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '051',
+            'version' => '052',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -998,21 +998,27 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('status'),
             ['active', 'inactive']
         );
+        $validity = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('validity'),
+            ['current', 'upcoming', 'expired']
+        );
         $organizationUid = $this->organizationUid();
         $pageSize = 25;
         $totalPriceLists = $this->priceListRepository()->countMatching(
-            $organizationUid,
-            $query,
-            $status,
+            organizationUid: $organizationUid,
+            query: $query,
+            status: $status,
+            validity: $validity,
         );
         $totalPages = max(1, (int) ceil($totalPriceLists / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
         $priceLists = $this->priceListRepository()->findAll(
-            $organizationUid,
-            $query,
-            $status,
-            $pageSize,
-            ($page - 1) * $pageSize,
+            organizationUid: $organizationUid,
+            query: $query,
+            status: $status,
+            limit: $pageSize,
+            offset: ($page - 1) * $pageSize,
+            validity: $validity,
         );
 
         return $this->renderTemplate('catalog-price-lists', [
@@ -1020,6 +1026,7 @@ class ProcessKontor extends Process
             'entryCounts' => $this->priceEntryCounts($priceLists),
             'query' => $query,
             'selectedStatus' => $status,
+            'selectedValidity' => $validity,
             'page' => $page,
             'totalPages' => $totalPages,
             'totalPriceLists' => $totalPriceLists,
@@ -3806,10 +3813,15 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('return_status'),
             ['active', 'inactive']
         );
+        $validity = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_validity'),
+            ['current', 'upcoming', 'expired']
+        );
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
             'q' => $query,
             'status' => $status,
+            'validity' => $validity,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
 

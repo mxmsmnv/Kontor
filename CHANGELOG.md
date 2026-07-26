@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Current, upcoming, and expired validity filters for Catalog price lists,
+  preserved across pagination and bulk status actions.
 - Context-aware Clear filters actions for Catalog items, categories, and price
   lists, retaining archive mode where applicable.
 - Catalog inventory-tracking filtering, preserved across pagination and bulk

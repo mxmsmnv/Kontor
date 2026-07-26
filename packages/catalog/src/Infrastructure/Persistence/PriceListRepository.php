@@ -77,8 +77,9 @@ final class PriceListRepository
         ?string $status = null,
         int $limit = 100,
         int $offset = 0,
+        ?string $validity = null,
     ): array {
-        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status);
+        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, $validity);
         $statement = $this->pdo->prepare(
             $sql . ' ORDER BY name ASC, id ASC LIMIT :limit OFFSET :offset'
         );
@@ -94,9 +95,14 @@ final class PriceListRepository
         return array_map(fn (array $row): PriceList => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
-    public function countMatching(string $organizationUid, string $query = '', ?string $status = null): int
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        ?string $validity = null,
+    ): int
     {
-        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, true);
+        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, $validity, true);
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
 
@@ -132,6 +138,7 @@ final class PriceListRepository
         string $organizationUid,
         string $query,
         ?string $status,
+        ?string $validity,
         bool $count = false,
     ): array {
         $parameters = [
@@ -147,6 +154,15 @@ final class PriceListRepository
         if ($status !== null) {
             $conditions[] = 'status = :status';
             $parameters['status'] = $status;
+        }
+
+        if ($validity === 'current') {
+            $conditions[] = '(valid_from IS NULL OR valid_from <= CURRENT_DATE)';
+            $conditions[] = '(valid_to IS NULL OR valid_to >= CURRENT_DATE)';
+        } elseif ($validity === 'upcoming') {
+            $conditions[] = 'valid_from > CURRENT_DATE';
+        } elseif ($validity === 'expired') {
+            $conditions[] = 'valid_to < CURRENT_DATE';
         }
 
         return [

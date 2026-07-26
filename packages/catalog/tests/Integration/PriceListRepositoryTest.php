@@ -45,6 +45,47 @@ final class PriceListRepositoryTest extends DatabaseTestCase
         $this->assertSame('Seasonal Retail', $repository->findAll($this->organizationUid, '', null, 1, 1)[0]->name);
     }
 
+    public function test_validity_filter_returns_current_upcoming_and_expired_lists(): void
+    {
+        $repository = new PriceListRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $today = new \DateTimeImmutable('today');
+        $current = PriceList::create($this->organizationUid, 'Current', 'EUR');
+        $upcoming = PriceList::create(
+            $this->organizationUid,
+            'Upcoming',
+            'EUR',
+            validFrom: $today->modify('+1 day'),
+        );
+        $expired = PriceList::create(
+            $this->organizationUid,
+            'Expired',
+            'EUR',
+            validTo: $today->modify('-1 day'),
+        );
+
+        foreach ([$current, $upcoming, $expired] as $priceList) {
+            $repository->save($priceList);
+        }
+
+        foreach ([
+            'current' => $current,
+            'upcoming' => $upcoming,
+            'expired' => $expired,
+        ] as $validity => $expected) {
+            $this->assertSame(1, $repository->countMatching(
+                $this->organizationUid,
+                validity: $validity,
+            ));
+            $this->assertSame(
+                $expected->uid->toString(),
+                $repository->findAll(
+                    $this->organizationUid,
+                    validity: $validity,
+                )[0]->uid->toString(),
+            );
+        }
+    }
+
     public function test_require_returns_the_price_list_or_throws(): void
     {
         $repository = new PriceListRepository($this->pdo, new OrganizationRepository($this->pdo));

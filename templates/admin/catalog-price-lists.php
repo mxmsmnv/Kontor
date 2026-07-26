@@ -4,6 +4,7 @@
 /** @var array<string, int> $entryCounts */
 /** @var string $query */
 /** @var string|null $selectedStatus */
+/** @var string|null $selectedValidity */
 /** @var int $page */
 /** @var int $totalPages */
 /** @var int $totalPriceLists */
@@ -12,16 +13,17 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 
-$url = static function (int $targetPage) use ($query, $selectedStatus): string {
+$url = static function (int $targetPage) use ($query, $selectedStatus, $selectedValidity): string {
     $parameters = http_build_query(array_filter([
         'q' => $query,
         'status' => $selectedStatus,
+        'validity' => $selectedValidity,
         'page' => $targetPage > 1 ? $targetPage : '',
     ], static fn (string|int|null $value): bool => $value !== null && $value !== ''));
 
     return $parameters === '' ? './' : './?' . $parameters;
 };
-$hasFilters = $query !== '' || $selectedStatus !== null;
+$hasFilters = $query !== '' || $selectedStatus !== null || $selectedValidity !== null;
 $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d') ?? '—';
 ?>
 <div class="kontor-shell">
@@ -57,6 +59,12 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
       <option value="active"<?= $selectedStatus === 'active' ? ' selected' : '' ?>>Active</option>
       <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
     </select>
+    <select name="validity" aria-label="Price list validity">
+      <option value="">All validity periods</option>
+      <option value="current"<?= $selectedValidity === 'current' ? ' selected' : '' ?>>Current</option>
+      <option value="upcoming"<?= $selectedValidity === 'upcoming' ? ' selected' : '' ?>>Upcoming</option>
+      <option value="expired"<?= $selectedValidity === 'expired' ? ' selected' : '' ?>>Expired</option>
+    </select>
     <button class="kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="./">
@@ -78,6 +86,7 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <input type="hidden" name="return_q" value="<?= $e($query) ?>">
       <input type="hidden" name="return_status" value="<?= $e($selectedStatus ?? '') ?>">
+      <input type="hidden" name="return_validity" value="<?= $e($selectedValidity ?? '') ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
       <button
@@ -149,8 +158,8 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-tags"></i>
-      <h3><?= $query !== '' || $selectedStatus !== null ? 'No matching price lists' : 'No price lists yet' ?></h3>
-      <p><?= $query !== '' || $selectedStatus !== null ? 'Try another search or status.' : 'Create a price list, then add item and quantity tiers.' ?></p>
+      <h3><?= $hasFilters ? 'No matching price lists' : 'No price lists yet' ?></h3>
+      <p><?= $hasFilters ? 'Try another search, status, or validity period.' : 'Create a price list, then add item and quantity tiers.' ?></p>
     </div>
   <?php endif; ?>
 </div>
