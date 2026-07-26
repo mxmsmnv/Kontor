@@ -79,6 +79,8 @@ back to organization-scoped active-item counts.
 Catalog item forms show organization-scoped pricing coverage across all price
 lists and quantity tiers.
 New price tiers can be started directly from an item with the item preselected.
+Catalog filters include an explicit Uncategorized view for finding items that
+still need classification.
 The package itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

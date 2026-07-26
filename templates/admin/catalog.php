@@ -78,14 +78,13 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <option value="product"<?= $selectedType === 'product' ? ' selected' : '' ?>>Products</option>
       <option value="service"<?= $selectedType === 'service' ? ' selected' : '' ?>>Services</option>
     </select>
-    <?php if ($categoryOptions): ?>
-      <select name="category" aria-label="Catalog category">
-        <option value="">All categories</option>
-        <?php foreach ($categoryOptions as $uid => $label): ?>
-          <option value="<?= $e($uid) ?>"<?= $selectedCategory === $uid ? ' selected' : '' ?>><?= $e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    <?php endif; ?>
+    <select name="category" aria-label="Catalog category">
+      <option value="">All categories</option>
+      <option value="uncategorized"<?= $selectedCategory === 'uncategorized' ? ' selected' : '' ?>>Uncategorized</option>
+      <?php foreach ($categoryOptions as $uid => $label): ?>
+        <option value="<?= $e($uid) ?>"<?= $selectedCategory === $uid ? ' selected' : '' ?>><?= $e($label) ?></option>
+      <?php endforeach; ?>
+    </select>
     <button class="kontor-button" type="submit">Filter</button>
     <a class="kontor-viewtoggle" href="<?= $e($adminUrl) ?>export/?entity=catalog_item&amp;format=csv">
       <i class="fa fa-download"></i> Export CSV

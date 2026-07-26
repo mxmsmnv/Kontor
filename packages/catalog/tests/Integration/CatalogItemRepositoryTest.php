@@ -209,8 +209,12 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
             itemType: 'service',
             categoryUid: $servicesUid,
         );
+        $uncategorized = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Loose item'],
+        );
 
-        foreach ([$laptop, $monitor, $consulting] as $item) {
+        foreach ([$laptop, $monitor, $consulting, $uncategorized] as $item) {
             $repository->save($item);
         }
         $repository->archive($monitor->uid->toString());
@@ -224,6 +228,17 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
             $repository->findAll(
                 $this->organizationUid,
                 categoryUid: $servicesUid,
+            )[0]->uid->toString(),
+        );
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            categoryUid: 'uncategorized',
+        ));
+        $this->assertSame(
+            $uncategorized->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                categoryUid: 'uncategorized',
             )[0]->uid->toString(),
         );
         $this->assertSame([

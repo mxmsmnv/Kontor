@@ -299,7 +299,9 @@ final class CatalogItemRepository implements RepositoryInterface
             $params['item_type'] = $itemType;
         }
 
-        if ($categoryUid !== null) {
+        if ($categoryUid === 'uncategorized') {
+            $sql .= ' AND category_uid IS NULL';
+        } elseif ($categoryUid !== null) {
             $sql .= ' AND category_uid = :category_uid';
             $params['category_uid'] = $categoryUid;
         }

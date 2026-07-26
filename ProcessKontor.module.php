@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '044',
+            'version' => '045',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -523,7 +523,11 @@ class ProcessKontor extends Process
             $categoryNames[$category->uid->toString()] = $this->categoryName($category) . ' · archived';
         }
 
-        if ($categoryUid !== null && !isset($categoryOptions[$categoryUid])) {
+        if (
+            $categoryUid !== null
+            && $categoryUid !== 'uncategorized'
+            && !isset($categoryOptions[$categoryUid])
+        ) {
             $selectedCategory = $this->categoryRepository()->find($categoryUid);
 
             if ($selectedCategory !== null && hash_equals($selectedCategory->organizationId, $organizationUid)) {

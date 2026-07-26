@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Explicit Uncategorized filtering for active and archived Catalog items.
 - Direct new-tier flow from a Catalog item with the item preselected in the
   pricing form.
 - Organization-scoped price-tier lookup across all price lists for a Catalog

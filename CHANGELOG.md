@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Uncategorized filtering in Catalog, preserved across pagination and bulk
+  archive/restore flows.
 - Direct Add price tier action on Catalog item forms, with price-list choice
   and the current item preselected.
 - Pricing coverage on Catalog item forms, listing every quantity tier across
