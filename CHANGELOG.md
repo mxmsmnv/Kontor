@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct entity-type scoping from Global Search result badges.
 - Internal type and exact-search facets for Catalog reference labels and codes.
 - Composable row facets for Category status and Price list currency, validity,
   and status.
