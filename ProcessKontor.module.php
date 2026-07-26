@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '042',
+            'version' => '043',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -640,9 +640,35 @@ class ProcessKontor extends Process
             }
         }
 
+        $user = $this->wire()->user;
+        $canViewPriceLists = $item !== null
+            && ($user->isSuperuser() || $user->hasPermission('kontor-catalog-pricelist-view'));
+        $canEditPriceLists = $item !== null
+            && ($user->isSuperuser() || $user->hasPermission('kontor-catalog-pricelist-edit'));
+        $priceEntries = $canViewPriceLists
+            ? $this->priceRepository()->forCatalogItem(
+                $this->organizationUid(),
+                $item->uid->toString(),
+            )
+            : [];
+        $priceListDetails = [];
+
+        if ($canViewPriceLists) {
+            foreach ($this->priceListRepository()->findAll($this->organizationUid(), limit: 250) as $priceList) {
+                $priceListDetails[$priceList->uid->toString()] = [
+                    'name' => $priceList->name,
+                    'status' => $priceList->status,
+                ];
+            }
+        }
+
         return $this->renderTemplate('catalog-form', [
             'form' => $form,
             'item' => $item,
+            'canViewPriceLists' => $canViewPriceLists,
+            'canEditPriceLists' => $canEditPriceLists,
+            'priceEntries' => $priceEntries,
+            'priceListDetails' => $priceListDetails,
             'title' => $item === null ? $this->_('Create catalog item') : $this->catalogItemTitle($item),
         ]);
     }

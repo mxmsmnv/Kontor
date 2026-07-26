@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Pricing coverage on Catalog item forms, listing every quantity tier across
+  the organization's price lists with direct edit links.
 - Category filtering for Catalog items, category labels in item rows, and
   linked active-item counts in the category workspace.
 - Bulk Activate/Deactivate controls for Catalog price lists, preserving list

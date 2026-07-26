@@ -3,7 +3,7 @@
     "description": "Kontor Catalog: items (products and services), categories, price lists, units of measure and tax code references.",
     "type": "library",
     "license": "MIT",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "authors": [
         {
             "name": "Maxim Semenov",

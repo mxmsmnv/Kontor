@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped price-tier lookup across all price lists for a Catalog
+  item.
 - Organization-scoped Catalog item filtering and active-item usage counts by
   category.
 - Transactional, tenant-scoped bulk activation and deactivation for up to

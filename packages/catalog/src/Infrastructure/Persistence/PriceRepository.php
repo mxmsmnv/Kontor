@@ -58,6 +58,33 @@ final class PriceRepository
     /**
      * @return array<int, PriceListEntry>
      */
+    public function forCatalogItem(string $organizationUid, string $itemUid): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT prices.*
+             FROM kontor_catalog_prices prices
+             INNER JOIN kontor_catalog_price_lists price_lists
+                ON price_lists.uid = prices.price_list_uid
+             INNER JOIN kontor_organizations organizations
+                ON organizations.id = price_lists.organization_id
+             WHERE organizations.uid = :organization_uid
+               AND prices.item_uid = :item_uid
+             ORDER BY price_lists.name ASC, prices.min_quantity ASC'
+        );
+        $statement->execute([
+            'organization_uid' => $organizationUid,
+            'item_uid' => $itemUid,
+        ]);
+
+        return array_map(
+            fn (array $row): PriceListEntry => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC),
+        );
+    }
+
+    /**
+     * @return array<int, PriceListEntry>
+     */
     public function forPriceList(string $priceListUid): array
     {
         $statement = $this->pdo->prepare(
