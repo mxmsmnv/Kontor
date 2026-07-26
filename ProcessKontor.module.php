@@ -16,6 +16,7 @@ use Kontor\Core\Application\AuditChangePresenter;
 use Kontor\Core\Application\AuditCsvExporter;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
+use Kontor\Core\Application\BackupOverviewBuilder;
 use Kontor\Core\Application\ComponentOverviewBuilder;
 use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\HealthCheckRunner;
@@ -48,7 +49,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '026',
+            'version' => '027',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -520,9 +521,31 @@ class ProcessKontor extends Process
     {
         $this->requirePermission('kontor-backups-view');
         $this->setPageTitle($this->_('Kontor · Backups'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $component = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('component'),
+            ['core', 'contacts', 'unknown']
+        ) ?? '';
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['verified', 'failed']
+        ) ?? '';
+        $overview = (new BackupOverviewBuilder())->build(
+            $this->backupSummaries(),
+            $query,
+            $component,
+            $status,
+            max(1, (int) $this->wire()->input->get('page')),
+        );
 
         return $this->renderTemplate('backups', [
-            'backups' => $this->backupSummaries(),
+            'backups' => $overview['backups'],
+            'query' => $query,
+            'selectedComponent' => $component,
+            'selectedStatus' => $status,
+            'page' => $overview['page'],
+            'totalPages' => $overview['totalPages'],
+            'totalBackups' => $overview['total'],
             'canDownloadBackups' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-backups-download'),
         ]);

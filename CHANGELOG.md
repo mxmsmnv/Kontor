@@ -60,6 +60,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   totals and filter-preserving view and page navigation.
 - Paginated Queue monitoring with exact filtered totals and preserved queue
   and status selection across pages.
+- Searchable, filterable Backup history with verification-state facets,
+  exact result totals, and pagination.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
