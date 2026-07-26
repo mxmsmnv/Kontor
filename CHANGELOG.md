@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Internal type and exact-search facets for Catalog reference labels and codes.
 - Composable row facets for Category status and Price list currency, validity,
   and status.
 - Composable Catalog row facets for item type, category, inventory, pricing,

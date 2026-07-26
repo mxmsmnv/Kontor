@@ -8,6 +8,13 @@
 /** @var callable $e */
 
 $hasFilters = $query !== '' || $selectedType !== null;
+$filterParameters = array_filter([
+    'q' => $query,
+    'type' => $selectedType,
+], static fn (?string $value): bool => $value !== null && $value !== '');
+$filterUrl = static function (string $facet, string $value) use ($filterParameters): string {
+    return './?' . http_build_query([...$filterParameters, $facet => $value]);
+};
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -55,9 +62,21 @@ $hasFilters = $query !== '' || $selectedType !== null;
         <tbody>
           <?php foreach ($references as $reference): ?>
             <tr>
-              <td><strong><?= $e($reference['label']) ?></strong></td>
-              <td><span class="kontor-pill"><?= $reference['type'] === 'unit' ? 'Unit' : 'Tax code' ?></span></td>
-              <td><code><?= $e($reference['code']) ?></code></td>
+              <td>
+                <strong>
+                  <a class="kontor-catalogfacet" href="<?= $e($filterUrl('q', $reference['label'])) ?>"><?= $e($reference['label']) ?></a>
+                </strong>
+              </td>
+              <td>
+                <a class="kontor-catalogfacet kontor-pill" href="<?= $e($filterUrl('type', $reference['type'])) ?>">
+                  <?= $reference['type'] === 'unit' ? 'Unit' : 'Tax code' ?>
+                </a>
+              </td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('q', $reference['code'])) ?>">
+                  <code><?= $e($reference['code']) ?></code>
+                </a>
+              </td>
               <td>
                 <?php if ($reference['usage'] > 0): ?>
                   <a href="<?= $e($adminUrl) ?>catalog/?<?= $reference['type'] === 'unit' ? 'unit' : 'tax' ?>=<?= rawurlencode($reference['code']) ?>">
