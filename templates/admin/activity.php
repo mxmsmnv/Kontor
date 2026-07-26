@@ -74,6 +74,7 @@ $filterUrl = static function (string $facet, string $value) use ($pageQuery): st
     </select>
     <button class="kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
+    <span class="kontor-secondary kontor-filtercount"><?= $e($totalEvents) ?> matching · <?= $e(count($events)) ?> shown</span>
   </form>
 
   <?php if ($events): ?>
