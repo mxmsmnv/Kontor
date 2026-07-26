@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Components now uses native UIkit status navigation, filters, matched card
+  grids, labels and actions without its former page-specific CSS layer.
 - Sections now shares one explicit UIkit grid for its header, toolbar and
   cards, with uniform spacing and only essential navigation links/actions.
 - Sections now relies on native UIkit cards, grid, search, checkbox, label and

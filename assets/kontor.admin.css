@@ -1182,187 +1182,6 @@
   font-size: 0.8rem;
 }
 
-.kontor-components {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.kontor-componentstats {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 1rem;
-}
-
-.kontor-componentstats .kontor-card {
-  display: flex;
-  flex-direction: column;
-  padding: 0.85rem 1rem;
-  text-decoration: none;
-}
-
-.kontor-componentstats .kontor-card:hover {
-  border-color: var(--pw-main-color);
-}
-
-.kontor-componentstats .kontor-card--selected {
-  border-color: var(--pw-main-color);
-}
-
-.kontor-componentstats strong {
-  color: var(--pw-main-color);
-  font-size: 1.45rem;
-}
-
-.kontor-componentstats span {
-  color: var(--pw-muted-color);
-  font-size: 0.76rem;
-}
-
-.kontor-componentstats .kontor-componentstats--warning strong {
-  color: var(--pw-text-color);
-}
-
-.kontor-componentfilters {
-  justify-content: flex-start;
-}
-
-.kontor-componentfilters select {
-  background: var(--pw-blocks-background);
-  border: 1px solid var(--pw-border-color);
-  border-radius: var(--pw-input-radius);
-  min-height: 40px;
-  min-width: 180px;
-  padding: 0.55rem 2rem 0.55rem 0.7rem;
-}
-
-.kontor-component {
-  display: flex;
-  flex-direction: column;
-  padding: 1.15rem;
-}
-
-.kontor-component__top {
-  align-items: center;
-  display: flex;
-  gap: 0.75rem;
-}
-
-.kontor-component__top > div {
-  flex: 1;
-  min-width: 0;
-}
-
-.kontor-component__icon {
-  align-items: center;
-  background: var(--pw-inputs-background);
-  border-radius: var(--pw-input-radius);
-  color: var(--pw-main-color);
-  display: flex;
-  flex: 0 0 auto;
-  height: 40px;
-  justify-content: center;
-  width: 40px;
-}
-
-.kontor-component h3 {
-  color: var(--pw-text-color);
-  font-size: 1rem;
-  margin: 0;
-}
-
-.kontor-component__top code {
-  color: var(--pw-muted-color);
-  font-size: 0.7rem;
-}
-
-.kontor-component p {
-  color: var(--pw-muted-color);
-  font-size: 0.8rem;
-  margin: 0.7rem 0 0;
-}
-
-.kontor-component__facts {
-  border-bottom: 1px solid var(--pw-border-color);
-  border-top: 1px solid var(--pw-border-color);
-  display: grid;
-  gap: 0.6rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0.9rem 0 0;
-  padding: 0.75rem 0;
-}
-
-.kontor-component__facts dt,
-.kontor-component__requires > span {
-  color: var(--pw-muted-color);
-  font-size: 0.65rem;
-  font-weight: 750;
-  text-transform: uppercase;
-}
-
-.kontor-component__facts dd {
-  font-size: 0.76rem;
-  margin: 0.15rem 0 0;
-}
-
-.kontor-component__warning {
-  color: var(--pw-text-color);
-  display: block;
-  font-size: 0.65rem;
-  margin-top: 0.15rem;
-}
-
-.kontor-component__requires {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-}
-
-.kontor-component__requires code {
-  background: var(--pw-main-background);
-  border-radius: var(--pw-input-radius);
-  color: var(--pw-muted-color);
-  font-size: 0.68rem;
-  padding: 0.2rem 0.35rem;
-}
-
-.kontor-component__requires a {
-  text-decoration: none;
-}
-
-.kontor-component__requires a:hover code {
-  background: var(--pw-inputs-background);
-  color: var(--pw-main-color);
-}
-
-.kontor-component__source {
-  color: var(--pw-main-color);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.kontor-component__actions {
-  align-items: center;
-  display: flex;
-  gap: 0.7rem;
-  justify-content: space-between;
-  margin-top: auto;
-  padding-top: 0.8rem;
-}
-
-.kontor-component__actions form {
-  margin: 0;
-}
-
-.kontor-component__actions .kontor-button {
-  min-height: 32px;
-  padding: 0.5rem 0.65rem;
-}
-
 .kontor-setup {
   background: var(--pw-alert-warning);
   border: 1px solid var(--pw-alert-warning);
@@ -2366,9 +2185,7 @@
 }
 
 @media (max-width: 850px) {
-  .kontor-statgrid,
-  .kontor-components,
-  .kontor-componentstats {
+  .kontor-statgrid {
     grid-template-columns: 1fr;
   }
 
@@ -2494,10 +2311,6 @@
   }
 
   .kontor-activityfilters {
-    align-items: stretch;
-  }
-
-  .kontor-componentfilters {
     align-items: stretch;
   }
 
