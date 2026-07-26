@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `ChartOfAccountsService::findByCode()` for conflict-safe localization
+  seeders that need to preflight a complete chart before writing.
 - Admin chart-of-accounts and journal workbench with live balances,
   balanced two-line posting, immutable entry detail, account lifecycle,
   and optional business-document references.

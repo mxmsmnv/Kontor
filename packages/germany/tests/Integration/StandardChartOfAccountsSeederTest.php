@@ -47,15 +47,49 @@ final class StandardChartOfAccountsSeederTest extends DatabaseTestCase
         $this->assertSame('asset', $cash->type);
     }
 
-    public function test_seeding_twice_for_the_same_organization_fails_on_duplicate_codes(): void
+    public function test_seeding_twice_for_the_same_organization_is_idempotent(): void
     {
         $accounts = new AccountRepository($this->pdo, new OrganizationRepository($this->pdo));
         $seeder = new StandardChartOfAccountsSeeder(new ChartOfAccountsService($accounts));
 
-        $seeder->seed($this->organizationUid);
+        $first = $seeder->seed($this->organizationUid);
+        $second = $seeder->seed($this->organizationUid);
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->assertSame(
+            array_map(static fn ($account): string => $account->uid->toString(), $first),
+            array_map(static fn ($account): string => $account->uid->toString(), $second),
+        );
+        $this->assertCount(count($first), $accounts->forOrganization($this->organizationUid));
+    }
 
-        $seeder->seed($this->organizationUid);
+    public function test_conflicts_are_detected_before_any_german_accounts_are_created(): void
+    {
+        $accounts = new AccountRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $chart = new ChartOfAccountsService($accounts);
+        $chart->createAccount($this->organizationUid, '1700', 'Conflicting tax account', 'asset', 'EUR');
+        $seeder = new StandardChartOfAccountsSeeder($chart);
+
+        try {
+            $seeder->seed($this->organizationUid);
+            $this->fail('Expected an incompatible account conflict.');
+        } catch (\InvalidArgumentException) {
+            // expected
+        }
+
+        $this->assertCount(1, $accounts->forOrganization($this->organizationUid));
+        $this->assertNull($accounts->findByCode($this->organizationUid, '1000'));
+    }
+
+    public function test_seed_restores_a_compatible_archived_account(): void
+    {
+        $accounts = new AccountRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $chart = new ChartOfAccountsService($accounts);
+        $cash = $chart->createAccount($this->organizationUid, '1000', 'Kasse', 'asset', 'EUR');
+        $chart->archive($cash->uid->toString());
+
+        $seeded = (new StandardChartOfAccountsSeeder($chart))->seed($this->organizationUid);
+
+        $this->assertTrue($seeded[0]->isActive());
+        $this->assertFalse($seeded[0]->isArchived());
     }
 }

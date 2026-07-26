@@ -49,6 +49,9 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Expenses\Domain\Expense;
 use Kontor\Expenses\Domain\ExpenseCategory;
 use Kontor\Inventory\Domain\Warehouse;
+use Kontor\Germany\DTO\LocalizedInvoiceInput;
+use Kontor\Germany\DTO\LocalizedLineItemInput;
+use Kontor\Germany\DTO\LocalizedPartyInput;
 use Kontor\Ledger\Domain\Account;
 use Kontor\Ledger\DTO\LedgerLineInput;
 use Kontor\Payments\Domain\Payment;
@@ -84,7 +87,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '109',
+            'version' => '110',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -222,6 +225,12 @@ class ProcessKontor extends Process
                     'label' => 'Ledger',
                     'icon' => 'balance-scale',
                     'permission' => 'kontor-ledger-entry-view',
+                ],
+                [
+                    'url' => 'germany/',
+                    'label' => 'Germany',
+                    'icon' => 'flag',
+                    'permission' => 'kontor-germany-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -4887,6 +4896,201 @@ class ProcessKontor extends Process
         );
     }
 
+    public function ___executeGermany(): string
+    {
+        $this->requireGermany();
+        $this->requirePermission('kontor-germany-view');
+        $module = $this->germanyModule();
+        $definitions = $module->chartOfAccountsSeeder()->definitions();
+        $chartStatus = [];
+        foreach ($definitions as $definition) {
+            $account = $this->ledgerModule()->accountRepository()->findByCode(
+                $this->organizationUid(),
+                $definition['code'],
+            );
+            $chartStatus[] = [
+                'definition' => $definition,
+                'account' => $account,
+                'compatible' => $account === null || (
+                    $account->name === $definition['name']
+                    && $account->type === $definition['type']
+                    && $account->currencyCode === 'EUR'
+                ),
+            ];
+        }
+        $taxResult = $this->wire()->session->get('kontorGermanyTaxResult');
+        $xmlResult = $this->wire()->session->get('kontorGermanyXmlResult');
+        $this->wire()->session->set('kontorGermanyTaxResult', null);
+        $this->wire()->session->set('kontorGermanyXmlResult', null);
+        $provider = $module->localizationProvider();
+        $this->setPageTitle($this->_('Kontor · Germany'));
+
+        return $this->renderTemplate('germany', [
+            'countryCode' => $provider->countryCode(),
+            'documentFormats' => $provider->supportedDocumentFormats(),
+            'chartStatus' => $chartStatus,
+            'taxResult' => is_array($taxResult) ? $taxResult : null,
+            'xmlResult' => is_array($xmlResult) ? $xmlResult : null,
+            'canConfigure' => $this->can('kontor-germany-configure'),
+        ]);
+    }
+
+    public function ___executeGermanyTaxId(): void
+    {
+        $this->requirePost();
+        $this->requireGermany();
+        $this->requirePermission('kontor-germany-view');
+        $taxId = strtoupper(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('tax_id')
+        )));
+        if ($taxId === '' || strlen($taxId) > 32) {
+            throw new WireException($this->_('Enter a German VAT ID.'));
+        }
+        $valid = $this->germanyModule()->localizationProvider()->validateTaxId($taxId);
+        $this->wire()->session->set('kontorGermanyTaxResult', [
+            'taxId' => $taxId,
+            'valid' => $valid,
+        ]);
+        $this->message($valid
+            ? $this->_('VAT ID checksum is valid.')
+            : $this->_('VAT ID checksum is invalid.'));
+        $this->wire()->session->redirect('../germany/');
+    }
+
+    public function ___executeGermanySeedChart(): void
+    {
+        $this->requirePost();
+        $this->requireGermany();
+        $this->requirePermission('kontor-germany-configure');
+        $seeder = $this->germanyModule()->chartOfAccountsSeeder();
+        $before = [];
+        foreach ($seeder->definitions() as $definition) {
+            $existing = $this->ledgerModule()->accountRepository()->findByCode(
+                $this->organizationUid(),
+                $definition['code'],
+            );
+            if ($existing !== null) {
+                $before[$existing->uid->toString()] = true;
+            }
+        }
+        $accounts = $seeder->seed(
+            $this->organizationUid(),
+            (int) $this->wire()->user->id,
+        );
+        $created = 0;
+        foreach ($accounts as $account) {
+            if (isset($before[$account->uid->toString()])) {
+                continue;
+            }
+            $created++;
+            $this->audit('germany', 'ledger_account', $account->uid->toString(), 'seeded', current: [
+                'code' => $account->code,
+                'name' => $account->name,
+                'type' => $account->type,
+            ]);
+        }
+        $this->message(sprintf(
+            $this->_('German chart ready: %d created, %d already present.'),
+            $created,
+            count($accounts) - $created,
+        ));
+        $this->wire()->session->redirect('../germany/');
+    }
+
+    public function ___executeGermanyFormat(): void
+    {
+        $this->requirePost();
+        $this->requireGermany();
+        $this->requirePermission('kontor-germany-view');
+        $invoiceNumber = $this->germanyRequiredTextFromPost('invoice_number', 'Invoice number', 100);
+        $issueDate = $this->germanyDateFromPost('issue_date', 'Issue date');
+        $dueDateRaw = trim((string) $this->wire()->input->post('due_date'));
+        $dueDate = $dueDateRaw !== ''
+            ? $this->germanyDateFromPost('due_date', 'Due date')
+            : null;
+        if ($dueDate !== null && $dueDate < $issueDate) {
+            throw new WireException($this->_('Due date cannot be before the issue date.'));
+        }
+        $sellerTaxId = strtoupper(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('seller_tax_id')
+        )));
+        if ($sellerTaxId !== ''
+            && !$this->germanyModule()->localizationProvider()->validateTaxId($sellerTaxId)) {
+            throw new WireException($this->_('Seller VAT ID checksum is invalid.'));
+        }
+        $sellerTaxId = str_replace([' ', '-'], '', $sellerTaxId);
+        $quantityRaw = str_replace(',', '.', trim((string) $this->wire()->input->post('quantity')));
+        if (preg_match('/^\d{1,9}(?:\.\d{1,3})?$/', $quantityRaw) !== 1
+            || (float) $quantityRaw <= 0) {
+            throw new WireException($this->_('Quantity must be positive with at most three decimal places.'));
+        }
+        $taxRateRaw = str_replace(',', '.', trim((string) $this->wire()->input->post('tax_rate')));
+        if (preg_match('/^\d{1,3}(?:\.\d{1,2})?$/', $taxRateRaw) !== 1
+            || (float) $taxRateRaw > 100) {
+            throw new WireException($this->_('Tax rate must be between 0 and 100.'));
+        }
+        $unitPrice = Money::ofMinor(
+            $this->positiveMoneyMinorFromPost('unit_price', 'Unit price'),
+            'EUR',
+        );
+        $lineTotal = $unitPrice->multiply((float) $quantityRaw);
+        $totalTax = Money::ofMinor(
+            (int) round($lineTotal->amountMinor() * (float) $taxRateRaw / 100),
+            'EUR',
+        );
+        $totalGross = $lineTotal->add($totalTax);
+        $buyerCountryCode = strtoupper(
+            $this->germanyRequiredTextFromPost('buyer_country_code', 'Buyer country', 2)
+        );
+        if (preg_match('/^[A-Z]{2}$/', $buyerCountryCode) !== 1) {
+            throw new WireException($this->_('Buyer country must be a two-letter code.'));
+        }
+        $invoice = new LocalizedInvoiceInput(
+            invoiceNumber: $invoiceNumber,
+            issueDate: $issueDate,
+            dueDate: $dueDate,
+            currencyCode: 'EUR',
+            seller: new LocalizedPartyInput(
+                $this->germanyRequiredTextFromPost('seller_name', 'Seller name', 255),
+                $this->germanyRequiredTextFromPost('seller_street', 'Seller street', 255),
+                $this->germanyRequiredTextFromPost('seller_city', 'Seller city', 100),
+                $this->germanyRequiredTextFromPost('seller_postal_code', 'Seller postal code', 20),
+                'DE',
+                $sellerTaxId ?: null,
+            ),
+            buyer: new LocalizedPartyInput(
+                $this->germanyRequiredTextFromPost('buyer_name', 'Buyer name', 255),
+                $this->germanyRequiredTextFromPost('buyer_street', 'Buyer street', 255),
+                $this->germanyRequiredTextFromPost('buyer_city', 'Buyer city', 100),
+                $this->germanyRequiredTextFromPost('buyer_postal_code', 'Buyer postal code', 20),
+                $buyerCountryCode,
+            ),
+            lineItems: [
+                new LocalizedLineItemInput(
+                    $this->germanyRequiredTextFromPost('line_description', 'Line description', 255),
+                    $quantityRaw,
+                    $unitPrice,
+                    $lineTotal,
+                    $taxRateRaw,
+                ),
+            ],
+            totalNet: $lineTotal,
+            totalTax: $totalTax,
+            totalGross: $totalGross,
+        );
+        $xml = $this->germanyModule()->documentFormatter()->format($invoice);
+        $this->wire()->session->set('kontorGermanyXmlResult', [
+            'invoiceNumber' => $invoiceNumber,
+            'xml' => $xml,
+            'bytes' => strlen($xml),
+            'netMinor' => $lineTotal->amountMinor(),
+            'taxMinor' => $totalTax->amountMinor(),
+            'grossMinor' => $totalGross->amountMinor(),
+        ]);
+        $this->message($this->_('XRechnung preview generated.'));
+        $this->wire()->session->redirect('../germany/');
+    }
+
     public function ___executeMarketplace(): string
     {
         $this->requireMarketplace();
@@ -9032,6 +9236,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorLedger');
     }
 
+    private function germanyReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorGermany');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -9197,6 +9406,13 @@ class ProcessKontor extends Process
     {
         if (!$this->ledgerReady()) {
             throw new WireException($this->_('The Kontor Ledger component is not installed.'));
+        }
+    }
+
+    private function requireGermany(): void
+    {
+        if (!$this->germanyReady()) {
+            throw new WireException($this->_('The Kontor Germany component is not installed.'));
         }
     }
 
@@ -9391,6 +9607,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorLedger $module */
         $module = $this->wire()->modules->get('KontorLedger');
+
+        return $module;
+    }
+
+    private function germanyModule(): KontorGermany
+    {
+        /** @var KontorGermany $module */
+        $module = $this->wire()->modules->get('KontorGermany');
 
         return $module;
     }
@@ -9610,17 +9834,55 @@ class ProcessKontor extends Process
 
     private function ledgerAmountMinorFromPost(): int
     {
-        $raw = str_replace(',', '.', trim((string) $this->wire()->input->post('amount')));
+        return $this->positiveMoneyMinorFromPost('amount', 'Amount');
+    }
+
+    private function positiveMoneyMinorFromPost(string $field, string $label): int
+    {
+        $raw = str_replace(',', '.', trim((string) $this->wire()->input->post($field)));
         if (preg_match('/^\d{1,15}(?:\.\d{1,2})?$/', $raw) !== 1) {
-            throw new WireException($this->_('Amount must be positive with at most two decimal places.'));
+            throw new WireException(sprintf(
+                $this->_('%s must be positive with at most two decimal places.'),
+                $label,
+            ));
         }
         [$whole, $fraction] = array_pad(explode('.', $raw, 2), 2, '');
         $minor = ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
         if ($minor <= 0) {
-            throw new WireException($this->_('Amount must be greater than zero.'));
+            throw new WireException(sprintf($this->_('%s must be greater than zero.'), $label));
         }
 
         return $minor;
+    }
+
+    private function germanyRequiredTextFromPost(string $field, string $label, int $maxLength): string
+    {
+        $value = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post($field)
+        ));
+        if ($value === '') {
+            throw new WireException(sprintf($this->_('%s is required.'), $label));
+        }
+        if (mb_strlen($value) > $maxLength) {
+            throw new WireException(sprintf(
+                $this->_('%s must be at most %d characters.'),
+                $label,
+                $maxLength,
+            ));
+        }
+
+        return $value;
+    }
+
+    private function germanyDateFromPost(string $field, string $label): \DateTimeImmutable
+    {
+        $raw = trim((string) $this->wire()->input->post($field));
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+        if ($date === false || $date->format('Y-m-d') !== $raw) {
+            throw new WireException(sprintf($this->_('%s must use YYYY-MM-DD.'), $label));
+        }
+
+        return $date;
     }
 
     /**

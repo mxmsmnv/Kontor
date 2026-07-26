@@ -31,7 +31,7 @@ class KontorLedger extends WireData implements Module
         return [
             'title' => 'Kontor Ledger',
             'summary' => 'Double-entry foundations, chart of accounts.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorLedger',
             'icon' => 'balance-scale',

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Admin localization workbench for German VAT-ID checksum validation,
+  SKR03 account readiness and seeding, and generated XRechnung XML previews.
 - Initial alpha (Substage 9.4): `GermanTaxIdValidator` (validates a
   German USt-IdNr. via the published BZSt checksum algorithm, verified
   against a real, publicly known VAT ID); `GermanyLocalizationProvider`
@@ -21,3 +23,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   PHP's own `DOMDocument`, no third-party library; ZUGFeRD is declared
   supported but not implemented). Fifth and final component of Stage 9
   (Advanced capabilities), and of the entire kontor.md#36 build plan.
+
+### Fixed
+
+- Standard chart seeding preflights incompatible account-code conflicts and
+  can be repeated safely without duplicating already-compatible accounts;
+  compatible archived accounts are restored during setup.

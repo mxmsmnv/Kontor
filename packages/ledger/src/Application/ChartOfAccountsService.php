@@ -37,6 +37,11 @@ final class ChartOfAccountsService
         return $account;
     }
 
+    public function findByCode(string $organizationId, string $code): ?Account
+    {
+        return $this->accounts->findByCode($organizationId, $code);
+    }
+
     public function archive(string $accountUid): void
     {
         $this->accounts->archive($accountUid);

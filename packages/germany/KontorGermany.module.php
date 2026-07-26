@@ -27,13 +27,17 @@ class KontorGermany extends WireData implements Module
         return [
             'title' => 'Kontor Germany',
             'summary' => 'Localization contracts, Germany package, country-specific document formats.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorGermany',
             'icon' => 'flag',
             'singular' => true,
             'autoload' => true,
             'requires' => ['Kontor', 'KontorLedger'],
+            'permissions' => [
+                'kontor-germany-view' => 'View Germany localization tools',
+                'kontor-germany-configure' => 'Seed and configure Germany localization',
+            ],
         ];
     }
 
@@ -87,6 +91,23 @@ class KontorGermany extends WireData implements Module
 
     public function ___install(): void
     {
+        $components = new ComponentRegistry($this->wire()->database->pdo());
+        $components->markInstalled('germany', self::getModuleInfo()['version'], 'germany');
+        $components->enable('germany');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        foreach (self::getModuleInfo()['permissions'] as $name => $title) {
+            $permission = $this->wire()->permissions->get($name);
+            if ($permission->id) {
+                continue;
+            }
+            $permission = $this->wire()->permissions->add($name);
+            $permission->title = $title;
+            $this->wire()->permissions->save($permission);
+        }
+
         $components = new ComponentRegistry($this->wire()->database->pdo());
         $components->markInstalled('germany', self::getModuleInfo()['version'], 'germany');
         $components->enable('germany');

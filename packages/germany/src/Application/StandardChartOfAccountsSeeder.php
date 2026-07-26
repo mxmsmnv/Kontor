@@ -38,20 +38,54 @@ final class StandardChartOfAccountsSeeder
     }
 
     /**
+     * @return array<int, array{code: string, name: string, type: string}>
+     */
+    public function definitions(): array
+    {
+        return self::ACCOUNTS;
+    }
+
+    /**
      * @return Account[]
      */
     public function seed(string $organizationId, ?int $createdBy = null): array
     {
-        return array_map(
-            fn (array $definition) => $this->chartOfAccounts->createAccount(
-                $organizationId,
-                $definition['code'],
-                $definition['name'],
-                $definition['type'],
-                'EUR',
-                createdBy: $createdBy,
-            ),
-            self::ACCOUNTS,
-        );
+        $existingByCode = [];
+        foreach (self::ACCOUNTS as $definition) {
+            $existing = $this->chartOfAccounts->findByCode($organizationId, $definition['code']);
+            if ($existing === null) {
+                continue;
+            }
+            if ($existing->name !== $definition['name']
+                || $existing->type !== $definition['type']
+                || $existing->currencyCode !== 'EUR') {
+                throw new \InvalidArgumentException(
+                    "Account code \"{$definition['code']}\" already exists with incompatible German chart data."
+                );
+            }
+            $existingByCode[$definition['code']] = $existing;
+        }
+
+        $accounts = [];
+        foreach (self::ACCOUNTS as $definition) {
+            $account = $existingByCode[$definition['code']] ?? null;
+            if ($account === null) {
+                $account = $this->chartOfAccounts->createAccount(
+                    $organizationId,
+                    $definition['code'],
+                    $definition['name'],
+                    $definition['type'],
+                    'EUR',
+                    createdBy: $createdBy,
+                );
+            } elseif ($account->isArchived()) {
+                $this->chartOfAccounts->restore($account->uid->toString());
+                $account = $this->chartOfAccounts->findByCode($organizationId, $definition['code'])
+                    ?? throw new \RuntimeException('Restored German account could not be reloaded.');
+            }
+            $accounts[] = $account;
+        }
+
+        return $accounts;
     }
 }

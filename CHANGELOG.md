@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- German chart seeding is now conflict-safe and idempotent, avoiding
+  partial localized charts on repeated setup runs.
 - Archived ledger accounts are represented in the domain and rejected by
   the posting service, which also prevents account-currency mismatches.
 - Documents now loads its PDF runtime from the root application dependency
@@ -17,6 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Germany localization admin vertical: capability visibility, local
+  VAT-ID checksum validation, conflict-safe illustrative SKR03 seeding into
+  Ledger, and an XRechnung XML preview workbench.
 - First Ledger admin vertical: chart-of-accounts creation and lifecycle,
   live normal-side balances, balanced two-line journal posting, immutable
   entry detail, and optional business-document references.
