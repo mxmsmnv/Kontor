@@ -125,17 +125,29 @@ final class CompanyRepository implements RepositoryInterface
     /**
      * @return Company[]
      */
-    public function findAll(string $organizationUid, string $query = '', int $limit = 100, int $offset = 0): array
+    public function findAll(
+        string $organizationUid,
+        string $query = '',
+        int $limit = 100,
+        int $offset = 0,
+        string $status = '',
+    ): array
     {
-        return $this->findList($organizationUid, $query, false, $limit, $offset);
+        return $this->findList($organizationUid, $query, false, $limit, $offset, $status);
     }
 
     /**
      * @return Company[]
      */
-    public function findArchived(string $organizationUid, string $query = '', int $limit = 100, int $offset = 0): array
+    public function findArchived(
+        string $organizationUid,
+        string $query = '',
+        int $limit = 100,
+        int $offset = 0,
+        string $status = '',
+    ): array
     {
-        return $this->findList($organizationUid, $query, true, $limit, $offset);
+        return $this->findList($organizationUid, $query, true, $limit, $offset, $status);
     }
 
     /**
@@ -147,6 +159,7 @@ final class CompanyRepository implements RepositoryInterface
         bool $archived,
         int $limit,
         int $offset,
+        string $status,
     ): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
@@ -168,12 +181,20 @@ final class CompanyRepository implements RepositoryInterface
             )';
         }
 
+        if ($status !== '') {
+            $sql .= ' AND status = :status';
+        }
+
         $sql .= ' ORDER BY updated_at DESC, legal_name ASC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
 
         if ($query !== '') {
             $statement->bindValue(':query', '%' . $query . '%');
+        }
+
+        if ($status !== '') {
+            $statement->bindValue(':status', $status);
         }
 
         $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
@@ -186,7 +207,12 @@ final class CompanyRepository implements RepositoryInterface
         );
     }
 
-    public function countMatching(string $organizationUid, string $query = '', bool $archived = false): int
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        bool $archived = false,
+        string $status = '',
+    ): int
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
         $query = trim($query);
@@ -205,11 +231,19 @@ final class CompanyRepository implements RepositoryInterface
             )';
         }
 
+        if ($status !== '') {
+            $sql .= ' AND status = :status';
+        }
+
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
 
         if ($query !== '') {
             $statement->bindValue(':query', '%' . $query . '%');
+        }
+
+        if ($status !== '') {
+            $statement->bindValue(':status', $status);
         }
 
         $statement->execute();

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Composable active/inactive filters and clickable status badges for Contacts
+  and Companies.
 - Human-readable Global Search result badges and a query-preserving return to
   all result types.
 - Direct entity-type scoping from Global Search result badges.

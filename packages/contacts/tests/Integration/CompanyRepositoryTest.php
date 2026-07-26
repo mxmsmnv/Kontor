@@ -64,7 +64,8 @@ final class CompanyRepositoryTest extends DatabaseTestCase
         $globex = Company::create(
             $this->organizationUid,
             'Globex LLC',
-            email: 'hello@globex.test'
+            email: 'hello@globex.test',
+            status: 'inactive'
         );
         $repository->save($acme);
         $repository->save($globex);
@@ -73,6 +74,14 @@ final class CompanyRepositoryTest extends DatabaseTestCase
         $this->assertCount(1, $matches);
         $this->assertSame('Acme GmbH', $matches[0]->legalName);
         $this->assertSame(1, $repository->countMatching($this->organizationUid, 'HRB-123'));
+        $this->assertSame(
+            ['Globex LLC'],
+            array_map(
+                static fn (Company $company): string => $company->legalName,
+                $repository->findAll($this->organizationUid, status: 'inactive')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, status: 'inactive'));
         $firstPage = $repository->findAll($this->organizationUid, limit: 1);
         $secondPage = $repository->findAll($this->organizationUid, limit: 1, offset: 1);
         $this->assertNotSame($firstPage[0]->uid->toString(), $secondPage[0]->uid->toString());

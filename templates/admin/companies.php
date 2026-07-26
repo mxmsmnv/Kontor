@@ -2,6 +2,7 @@
 
 /** @var array $companies */
 /** @var string $query */
+/** @var string $selectedStatus */
 /** @var bool $showArchived */
 /** @var int $page */
 /** @var int $totalPages */
@@ -11,9 +12,10 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 
-$pageUrl = static function (int $targetPage) use ($query, $showArchived): string {
+$pageUrl = static function (int $targetPage) use ($query, $selectedStatus, $showArchived): string {
     return './?' . http_build_query(array_filter([
         'q' => $query,
+        'status' => $selectedStatus,
         'archived' => $showArchived ? 1 : '',
         'page' => $targetPage,
     ], static fn (string|int $value): bool => $value !== ''));
@@ -22,7 +24,16 @@ $viewUrl = './?' . http_build_query(array_filter([
     'q' => $query,
     'archived' => $showArchived ? '' : 1,
 ], static fn (string|int $value): bool => $value !== ''));
-$clearSearchUrl = $showArchived ? './?archived=1' : './';
+$filterParameters = array_filter([
+    'q' => $query,
+    'status' => $selectedStatus,
+], static fn (string $value): bool => $value !== '');
+$statusUrl = static fn (string $status): string => './?' . http_build_query([
+    ...$filterParameters,
+    'status' => $status,
+]);
+$clearFiltersUrl = $showArchived ? './?archived=1' : './';
+$hasFilters = $query !== '' || $selectedStatus !== '';
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -47,29 +58,33 @@ $clearSearchUrl = $showArchived ? './?archived=1' : './';
     </div>
   </header>
 
-  <div class="kontor-toolbar">
-    <form class="kontor-search" method="get" action="./">
-      <?php if ($showArchived): ?><input type="hidden" name="archived" value="1"><?php endif; ?>
+  <form class="kontor-toolbar" method="get" action="./">
+    <?php if ($showArchived): ?><input type="hidden" name="archived" value="1"><?php endif; ?>
+    <label class="kontor-searchfield">
+      <i class="fa fa-search"></i>
       <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Search company, email or registration">
-      <button class="kontor-button kontor-button--ghost" type="submit">
-        <i class="fa fa-search"></i> Search
-      </button>
-    </form>
-    <div class="kontor-toolbar__meta">
-      <?php if ($query !== ''): ?>
-        <a class="kontor-viewtoggle" href="<?= $e($clearSearchUrl) ?>">
-          <i class="fa fa-times"></i> Clear search
-        </a>
-      <?php endif; ?>
-      <a class="kontor-viewtoggle" href="<?= $e($viewUrl) ?>">
-        <i class="fa fa-<?= $showArchived ? 'building' : 'archive' ?>"></i>
-        <?= $showArchived ? 'Active companies' : 'Archive' ?>
+    </label>
+    <?php if (!$showArchived): ?>
+      <select name="status" aria-label="Company status">
+        <option value="">All statuses</option>
+        <option value="active"<?= $selectedStatus === 'active' ? ' selected' : '' ?>>Active</option>
+        <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
+      </select>
+    <?php endif; ?>
+    <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?>
+      <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
+        <i class="fa fa-times"></i> Clear filters
       </a>
-      <span class="kontor-secondary"><?= $e($totalRecords) ?> total · <?= $e(count($companies)) ?> shown</span>
-    </div>
-  </div>
+    <?php endif; ?>
+    <a class="kontor-viewtoggle" href="<?= $e($viewUrl) ?>">
+      <i class="fa fa-<?= $showArchived ? 'building' : 'archive' ?>"></i>
+      <?= $showArchived ? 'Active companies' : 'Archive' ?>
+    </a>
+    <span class="kontor-secondary"><?= $e($totalRecords) ?> total · <?= $e(count($companies)) ?> shown</span>
+  </form>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="kontor-card kontor-tablewrap kontor-directorytable">
     <?php if ($companies): ?>
       <table class="kontor-table">
         <thead>
@@ -101,9 +116,15 @@ $clearSearchUrl = $showArchived ? './?archived=1' : './';
               </td>
               <td><?= $e($company->registrationNumber ?: $company->vatNumber ?: '—') ?></td>
               <td>
-                <span class="kontor-pill<?= $company->status === 'active' ? '' : ' kontor-pill--inactive' ?>">
-                  <?= $e($showArchived ? 'archived' : $company->status) ?>
-                </span>
+                <?php if ($showArchived): ?>
+                  <span class="kontor-pill kontor-pill--inactive">archived</span>
+                <?php else: ?>
+                  <a
+                    class="kontor-pill<?= $company->status === 'active' ? '' : ' kontor-pill--inactive' ?>"
+                    href="<?= $e($statusUrl($company->status)) ?>"
+                    <?= $selectedStatus === $company->status ? 'aria-current="page"' : '' ?>
+                  ><?= $e($company->status) ?></a>
+                <?php endif; ?>
               </td>
               <td class="kontor-rowaction">
                 <form method="post" action="<?= $e($adminUrl) ?>company-status/">

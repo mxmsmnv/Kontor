@@ -104,7 +104,8 @@ final class ContactRepositoryTest extends DatabaseTestCase
             'Grace',
             null,
             'Hopper',
-            email: 'grace@example.test'
+            email: 'grace@example.test',
+            status: 'inactive'
         );
         $repository->save($ada);
         $repository->save($grace);
@@ -113,6 +114,14 @@ final class ContactRepositoryTest extends DatabaseTestCase
         $this->assertCount(1, $matches);
         $this->assertSame('Ada Lovelace', $matches[0]->displayName);
         $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Mathematician'));
+        $this->assertSame(
+            ['Grace Hopper'],
+            array_map(
+                static fn (Contact $contact): string => $contact->displayName,
+                $repository->findAll($this->organizationUid, status: 'inactive')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, status: 'inactive'));
         $firstPage = $repository->findAll($this->organizationUid, limit: 1);
         $secondPage = $repository->findAll($this->organizationUid, limit: 1, offset: 1);
         $this->assertNotSame($firstPage[0]->uid->toString(), $secondPage[0]->uid->toString());

@@ -15,6 +15,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Repository-backed active/inactive directory filters for contacts and
+  companies, exposed through the Core admin UI.
 - Paginated active/archive contact and company queries with offsets and exact
   organization-scoped search counts for the admin workspace.
 - Active and archived repository list queries used by the admin workspace.
