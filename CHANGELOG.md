@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Every Kontor section now explains its functional purpose and common actions,
+  while ProcessWire and native UIkit forms provide accessible field
+  descriptions plus practical completion notes.
 - Dashboard now follows one consistent UIkit spacing and grid system, fills
   personal-layout gaps with the widget picker, presents metrics as plain
   facts, and keeps links only for explicit navigation and entity opening.

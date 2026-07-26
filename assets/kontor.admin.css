@@ -560,6 +560,13 @@
   padding: 0.35rem;
 }
 
+.ProcessKontor .kontor-entity-form .notes {
+  background: transparent !important;
+  color: var(--pw-muted-color) !important;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
 .kontor-nativeform {
   display: grid;
   gap: 1rem;
@@ -577,6 +584,28 @@
   color: var(--pw-text-color);
   font-size: 0.8rem;
   font-weight: 750;
+}
+
+.kontor-field-guidance {
+  display: grid;
+  gap: 0.15rem;
+  line-height: 1.45;
+}
+
+.kontor-field-description,
+.kontor-field-note {
+  color: var(--pw-muted-color);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.kontor-field-note {
+  opacity: 0.85;
+}
+
+.kontor-field-note strong {
+  color: inherit;
+  font-weight: 650;
 }
 
 .kontor-nativefield input,
@@ -601,6 +630,20 @@
   display: flex;
   gap: 0.8rem;
   margin-bottom: 1rem;
+}
+
+.kontor-section-guide {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.2rem;
+}
+
+.kontor-section-guide p {
+  margin: 0.2rem 0 0;
+}
+
+.kontor-section-guide .uk-text-meta {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .kontor-warning > i {
@@ -2000,6 +2043,15 @@
 }
 
 @media (max-width: 850px) {
+  .kontor-nativeform {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-nativefield--wide,
+  .kontor-nativeform__actions {
+    grid-column: auto;
+  }
+
   .kontor-dashboardwidgets {
     grid-template-columns: 1fr;
   }

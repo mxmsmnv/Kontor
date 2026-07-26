@@ -1,10 +1,107 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const fieldGuidance = (control, label) => {
+    const name = (control.name || '').toLowerCase();
+    const normalizedLabel = label.replace(/\s*\*\s*$/, '').trim().toLowerCase() || 'this value';
+    const exact = {
+      name: ['A clear internal name teammates can recognize in lists and selections.', 'Use a concise, distinctive name.'],
+      title: ['The title shown to teammates and, where applicable, in customer-facing output.', 'Lead with the subject or outcome, not an internal code.'],
+      description: ['The context teammates need to understand the purpose and scope of this record.', 'Keep it concise; include details that affect execution or decisions.'],
+      notes: ['Internal context that helps teammates work with this record.', 'Do not include passwords, secrets or unnecessary personal data.'],
+      status: ['Controls whether this record is available to active workflows and selections.', 'Choose an inactive or archived state instead of deleting business history.'],
+      email: ['The primary address used for communication and account matching.', 'Use a complete address such as name@example.com.'],
+      email_address: ['The mailbox address used to send or receive messages.', 'Use a complete address such as team@example.com.'],
+      phone: ['The main telephone number for this record.', 'Include the international country code when the number is used across regions.'],
+      mobile: ['A direct mobile number for time-sensitive communication.', 'Include the international country code when possible.'],
+      url: ['The complete web address used by this integration or resource.', 'Include https:// and verify that the destination is accessible.'],
+      website: ['The organization’s primary public website.', 'Include the full address, for example https://example.com.'],
+      currency: ['The currency used to interpret monetary values in this form.', 'Use the three-letter ISO code, for example EUR or USD.'],
+      currency_code: ['The currency used to interpret monetary values in this record.', 'Use the three-letter ISO code, for example EUR or USD.'],
+      quantity: ['The number of units included in this operation.', 'Use a positive number; decimals are allowed when the unit supports them.'],
+      unit_price: ['The price for one unit before tax.', 'Enter a decimal amount without a currency symbol, for example 129.90.'],
+      tax_rate: ['The percentage of tax applied to the taxable amount.', 'Enter the percentage as a number, for example 19.'],
+      query: ['The GraphQL operation to validate and run against Kontor.', 'Request only the fields you need and keep query complexity within the stated limit.'],
+      token: ['The credential that authorizes this request.', 'Treat tokens as secrets; they are not displayed again after creation.'],
+      payload_json: ['The structured JSON payload processed by this operation.', 'Use valid JSON with double-quoted property names.'],
+      raw_email: ['The complete raw email including headers and message body.', 'Keep a blank line between the headers and the body.'],
+      subject: ['The concise subject recipients will see in their mailbox.', 'Describe the purpose or requested action in plain language.'],
+      body_text: ['The plain-text content sent to recipients.', 'Include the context and next action the recipient needs.'],
+      password: ['The password used to authenticate this account.', 'Use at least 12 characters and do not reuse another account’s password.'],
+      code: ['A stable short code used in references, imports and integrations.', 'Use a concise value that will not need to change later.'],
+      sku: ['Your internal stock-keeping code for search, imports and integrations.', 'Use a unique, stable code.'],
+      barcode: ['The scannable identifier supplied by the manufacturer or your organization.', 'Enter digits exactly as printed, without spaces.'],
+    };
+
+    let description = exact[name]?.[0];
+    let note = exact[name]?.[1];
+
+    if (!description && (name.endsWith('_uid') || name.endsWith('_id'))) {
+      description = `Selects the ${normalizedLabel} connected to this record.`;
+      note = 'Choose an existing record; the relationship is saved with this operation.';
+    } else if (!description && (name.includes('date') || name.endsWith('_at') || name.startsWith('valid_'))) {
+      description = `Sets when ${normalizedLabel} applies to this record.`;
+      note = control.type === 'datetime-local' ? 'Use your local date and time.' : 'Use the date picker or YYYY-MM-DD.';
+    } else if (!description && (name.includes('price') || name.includes('amount') || name.includes('rate'))) {
+      description = `Records the numeric value for ${normalizedLabel}.`;
+      note = 'Enter a number without a currency or percent symbol unless the label says otherwise.';
+    } else if (!description && name.includes('json')) {
+      description = `Defines the structured data used for ${normalizedLabel}.`;
+      note = 'Use valid JSON with double-quoted property names.';
+    } else if (!description && control.tagName === 'SELECT') {
+      description = `Choose the option that controls ${normalizedLabel} for this record.`;
+      note = control.required ? 'A selection is required before saving.' : 'Leave the default when no special value applies.';
+    } else if (!description && control.tagName === 'TEXTAREA') {
+      description = `Add the context teammates need for ${normalizedLabel}.`;
+      note = 'Keep it concise and avoid secrets or unnecessary personal data.';
+    } else if (!description && control.type === 'checkbox') {
+      description = `Turns ${normalizedLabel} on or off for this operation.`;
+      note = 'Review the setting before submitting the form.';
+    } else if (!description) {
+      description = `The value used for ${normalizedLabel} in this record and its connected workflows.`;
+      note = control.required
+        ? 'Required. Review this value before saving.'
+        : 'Optional. Leave blank when the information is not known or does not apply.';
+    }
+
+    return { description, note };
+  };
+
+  const addNativeFieldGuidance = (workspace) => {
+    workspace.querySelectorAll('.kontor-nativefield').forEach((field, fieldIndex) => {
+      const control = field.querySelector('input:not([type="hidden"]), select, textarea');
+      if (!control || control.type === 'submit' || control.type === 'button' || field.querySelector('.kontor-field-guidance')) {
+        return;
+      }
+
+      const labelNode = field.querySelector(':scope > span');
+      const label = labelNode?.textContent?.trim() || control.getAttribute('aria-label') || control.name;
+      const guidance = fieldGuidance(control, label);
+      const id = `kontor-help-${control.name || 'field'}-${fieldIndex}`;
+      const help = document.createElement('span');
+      help.className = 'kontor-field-guidance';
+      help.id = id;
+      const description = document.createElement('span');
+      description.className = 'kontor-field-description';
+      description.textContent = guidance.description;
+      const note = document.createElement('span');
+      note.className = 'kontor-field-note';
+      const noteLabel = document.createElement('strong');
+      noteLabel.textContent = 'Note:';
+      note.append(noteLabel, ` ${guidance.note}`);
+      help.append(description, note);
+      field.append(help);
+
+      const describedBy = control.getAttribute('aria-describedby');
+      control.setAttribute('aria-describedby', describedBy ? `${describedBy} ${id}` : id);
+    });
+  };
+
   if (document.body.classList.contains('ProcessKontor')) {
     const contentBody = document.getElementById('pw-content-body');
     contentBody?.replaceWith(...contentBody.childNodes);
   }
 
   document.querySelectorAll('.ProcessKontor').forEach((workspace) => {
+    addNativeFieldGuidance(workspace);
     workspace.querySelectorAll('input').forEach((input) => {
       const type = (input.getAttribute('type') || 'text').toLowerCase();
 
