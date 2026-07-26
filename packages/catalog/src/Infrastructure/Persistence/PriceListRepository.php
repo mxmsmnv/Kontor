@@ -78,8 +78,9 @@ final class PriceListRepository
         int $limit = 100,
         int $offset = 0,
         ?string $validity = null,
+        ?string $currencyCode = null,
     ): array {
-        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, $validity);
+        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, $validity, $currencyCode);
         $statement = $this->pdo->prepare(
             $sql . ' ORDER BY name ASC, id ASC LIMIT :limit OFFSET :offset'
         );
@@ -100,9 +101,17 @@ final class PriceListRepository
         string $query = '',
         ?string $status = null,
         ?string $validity = null,
+        ?string $currencyCode = null,
     ): int
     {
-        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, $validity, true);
+        [$sql, $parameters] = $this->listQuery(
+            $organizationUid,
+            $query,
+            $status,
+            $validity,
+            $currencyCode,
+            true,
+        );
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
 
@@ -139,6 +148,7 @@ final class PriceListRepository
         string $query,
         ?string $status,
         ?string $validity,
+        ?string $currencyCode,
         bool $count = false,
     ): array {
         $parameters = [
@@ -163,6 +173,11 @@ final class PriceListRepository
             $conditions[] = 'valid_from > CURRENT_DATE';
         } elseif ($validity === 'expired') {
             $conditions[] = 'valid_to < CURRENT_DATE';
+        }
+
+        if ($currencyCode !== null) {
+            $conditions[] = 'currency_code = :currency_code';
+            $parameters['currency_code'] = $currencyCode;
         }
 
         return [

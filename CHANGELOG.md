@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped currency filtering for Catalog price lists, preserved
+  across pagination and bulk status actions.
 - Current, upcoming, and expired validity filters for Catalog price lists,
   preserved across pagination and bulk status actions.
 - Context-aware Clear filters actions for Catalog items, categories, and price

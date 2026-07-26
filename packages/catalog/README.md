@@ -77,6 +77,7 @@ tenant-scoped bulk operations.
 Price-list status can be activated or deactivated in tenant-scoped bulk
 operations without opening each list.
 Price lists can be filtered by current, upcoming, or expired validity windows.
+Price-list currency options are derived from the current organization's data.
 Catalog items can be filtered by category, while the category workspace links
 back to organization-scoped active-item counts.
 Catalog categories can be filtered by active or inactive status and changed

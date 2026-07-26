@@ -84,6 +84,20 @@ final class PriceListRepositoryTest extends DatabaseTestCase
                 )[0]->uid->toString(),
             );
         }
+
+        $usd = PriceList::create($this->organizationUid, 'US retail', 'USD');
+        $repository->save($usd);
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            currencyCode: 'USD',
+        ));
+        $this->assertSame(
+            $usd->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                currencyCode: 'USD',
+            )[0]->uid->toString(),
+        );
     }
 
     public function test_require_returns_the_price_list_or_throws(): void

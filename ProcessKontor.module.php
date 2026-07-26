@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '052',
+            'version' => '053',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1002,6 +1002,10 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('validity'),
             ['current', 'upcoming', 'expired']
         );
+        $currency = strtoupper($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('currency')
+        ));
+        $currency = preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
         $organizationUid = $this->organizationUid();
         $pageSize = 25;
         $totalPriceLists = $this->priceListRepository()->countMatching(
@@ -1009,6 +1013,7 @@ class ProcessKontor extends Process
             query: $query,
             status: $status,
             validity: $validity,
+            currencyCode: $currency,
         );
         $totalPages = max(1, (int) ceil($totalPriceLists / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
@@ -1019,7 +1024,14 @@ class ProcessKontor extends Process
             limit: $pageSize,
             offset: ($page - 1) * $pageSize,
             validity: $validity,
+            currencyCode: $currency,
         );
+        $currencyOptions = [];
+
+        foreach ($this->priceListRepository()->findAll($organizationUid, limit: 250) as $priceList) {
+            $currencyOptions[$priceList->currencyCode] = $priceList->currencyCode;
+        }
+        ksort($currencyOptions);
 
         return $this->renderTemplate('catalog-price-lists', [
             'priceLists' => $priceLists,
@@ -1027,6 +1039,8 @@ class ProcessKontor extends Process
             'query' => $query,
             'selectedStatus' => $status,
             'selectedValidity' => $validity,
+            'selectedCurrency' => $currency,
+            'currencyOptions' => $currencyOptions,
             'page' => $page,
             'totalPages' => $totalPages,
             'totalPriceLists' => $totalPriceLists,
@@ -3817,11 +3831,16 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('return_validity'),
             ['current', 'upcoming', 'expired']
         );
+        $currency = strtoupper($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('return_currency')
+        ));
+        $currency = preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
             'q' => $query,
             'status' => $status,
             'validity' => $validity,
+            'currency' => $currency,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
 

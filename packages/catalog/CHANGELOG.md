@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped price-list currency filtering.
 - Price-list validity filtering for current, upcoming, and expired windows.
 - Context-aware filter reset controls across Catalog admin lists.
 - Inventory-tracking filtering for active and archived Catalog views.
