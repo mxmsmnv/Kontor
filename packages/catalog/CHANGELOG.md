@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped active-item usage counts for unit and tax references.
 - Price-list search/pagination helpers and price-tier list/count/delete/replace
   persistence operations for the admin pricing workspace.
 - Organization-scoped catalog listing, search, type filters, archived views,

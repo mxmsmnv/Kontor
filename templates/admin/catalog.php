@@ -7,6 +7,7 @@
 /** @var int $page */
 /** @var int $totalPages */
 /** @var int $totalItems */
+/** @var array<string, string> $unitLabels */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -53,6 +54,9 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       </a>
       <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
         <i class="fa fa-tags"></i> Price lists
+      </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
+        <i class="fa fa-book"></i> References
       </a>
       <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
         <i class="fa fa-plus"></i> New item
@@ -106,7 +110,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
               <td><code><?= $e($item->sku ?: '—') ?></code></td>
               <td><?= $e(ucfirst($item->itemType)) ?></td>
               <td><?= $e($money($item->salesPrice)) ?></td>
-              <td><?= $e($item->unitCode) ?></td>
+              <td><?= $e($unitLabels[$item->unitCode] ?? $item->unitCode) ?> <small><code><?= $e($item->unitCode) ?></code></small></td>
               <td><span class="kontor-pill<?= $item->status === 'active' ? '' : ' kontor-pill--inactive' ?>"><?= $e($item->status) ?></span></td>
               <td class="kontor-queueactions">
                 <form method="post" action="<?= $e($adminUrl) ?>catalog-item-action/">

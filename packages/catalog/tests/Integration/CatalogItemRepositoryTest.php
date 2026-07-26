@@ -122,4 +122,23 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Nebula'));
         $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Nebula', archived: true));
     }
+
+    public function test_reference_usage_counts_only_active_items(): void
+    {
+        $repository = $this->repository();
+        $piece = CatalogItem::create($this->organizationUid, ['en' => 'Piece']);
+        $piece->unitCode = 'pcs';
+        $piece->taxCode = 'standard';
+        $box = CatalogItem::create($this->organizationUid, ['en' => 'Box']);
+        $box->unitCode = 'box';
+        $box->taxCode = 'reduced';
+        $repository->save($piece);
+        $repository->save($box);
+        $repository->archive($box->uid->toString());
+
+        $this->assertSame([
+            'units' => ['pcs' => 1],
+            'taxes' => ['standard' => 1],
+        ], $repository->referenceUsage($this->organizationUid));
+    }
 }

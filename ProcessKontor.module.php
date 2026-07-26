@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '030',
+            'version' => '031',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -476,6 +476,59 @@ class ProcessKontor extends Process
             'page' => $page,
             'totalPages' => $totalPages,
             'totalItems' => $totalItems,
+            'unitLabels' => (new UnitOfMeasure())->all(),
+        ]);
+    }
+
+    public function ___executeCatalogReferences(): string
+    {
+        $this->requirePermission('kontor-catalog-item-view');
+        $this->requireCatalog();
+        $this->setPageTitle($this->_('Kontor · Catalog references'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $selectedType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('type'),
+            ['unit', 'tax']
+        );
+        $usage = $this->catalogItemRepository()->referenceUsage($this->organizationUid());
+        $references = [];
+
+        foreach ([
+            'unit' => [(new UnitOfMeasure())->all(), $usage['units']],
+            'tax' => [(new TaxCode())->all(), $usage['taxes']],
+        ] as $type => [$options, $counts]) {
+            if ($selectedType !== null && $selectedType !== $type) {
+                continue;
+            }
+
+            foreach ($options as $code => $label) {
+                if (
+                    $query !== ''
+                    && !str_contains(mb_strtolower($code . ' ' . $label), mb_strtolower($query))
+                ) {
+                    continue;
+                }
+
+                $references[] = [
+                    'type' => $type,
+                    'code' => $code,
+                    'label' => $label,
+                    'usage' => $counts[$code] ?? 0,
+                ];
+            }
+        }
+
+        usort(
+            $references,
+            static fn (array $left, array $right): int => [$left['type'], $left['label']]
+                <=> [$right['type'], $right['label']]
+        );
+
+        return $this->renderTemplate('catalog-references', [
+            'references' => $references,
+            'query' => $query,
+            'selectedType' => $selectedType,
+            'totalReferences' => count((new UnitOfMeasure())->all()) + count((new TaxCode())->all()),
         ]);
     }
 

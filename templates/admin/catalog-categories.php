@@ -36,6 +36,9 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
       <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
         <i class="fa fa-tags"></i> Price lists
       </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
+        <i class="fa fa-book"></i> References
+      </a>
       <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-category/">
         <i class="fa fa-plus"></i> New category
       </a>

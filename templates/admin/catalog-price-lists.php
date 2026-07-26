@@ -35,6 +35,9 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
       <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-categories/">
         <i class="fa fa-folder-open"></i> Categories
       </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
+        <i class="fa fa-book"></i> References
+      </a>
       <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-price-list/">
         <i class="fa fa-plus"></i> New price list
       </a>

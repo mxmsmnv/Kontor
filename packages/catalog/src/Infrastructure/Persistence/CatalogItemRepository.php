@@ -161,6 +161,34 @@ final class CatalogItemRepository implements RepositoryInterface
     }
 
     /**
+     * @return array{units: array<string, int>, taxes: array<string, int>}
+     */
+    public function referenceUsage(string $organizationUid): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $usage = ['units' => [], 'taxes' => []];
+
+        foreach (['units' => 'unit_code', 'taxes' => 'tax_code'] as $group => $column) {
+            $statement = $this->pdo->prepare(
+                "SELECT {$column} AS reference_code, COUNT(*) AS item_count
+                 FROM kontor_catalog_items
+                 WHERE organization_id = :organization_id
+                   AND archived_at IS NULL
+                   AND {$column} IS NOT NULL
+                   AND {$column} <> ''
+                 GROUP BY {$column}"
+            );
+            $statement->execute(['organization_id' => $organizationId]);
+
+            foreach ($statement->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $usage[$group][$row['reference_code']] = (int) $row['item_count'];
+            }
+        }
+
+        return $usage;
+    }
+
+    /**
      * @return array{0: string, 1: array<string, int|string>}
      */
     private function listQuery(

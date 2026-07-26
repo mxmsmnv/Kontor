@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- A searchable Catalog reference workspace for unit and generic tax codes,
+  including active-item usage counts and links across Catalog navigation.
 - Catalog price-list management with searchable/status-filtered lists,
   validity periods, item quantity tiers, editing, deletion, and audit events.
 - A ProcessWire-native Kontor admin application with dashboard metrics,
