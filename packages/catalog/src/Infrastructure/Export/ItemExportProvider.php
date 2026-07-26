@@ -65,6 +65,7 @@ final class ItemExportProvider implements ExportProviderInterface
 
         $statement = $this->pdo->prepare("SELECT {$columns} FROM kontor_catalog_items WHERE {$where} ORDER BY id ASC");
         $statement->execute($params);
+        $statement->setFetchMode(\PDO::FETCH_ASSOC);
 
         foreach ($statement as $row) {
             yield $row;

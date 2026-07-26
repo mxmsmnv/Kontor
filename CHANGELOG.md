@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog price-list management with searchable/status-filtered lists,
+  validity periods, item quantity tiers, editing, deletion, and audit events.
 - A ProcessWire-native Kontor admin application with dashboard metrics,
   component navigation, searchable contact/company lists, and create/edit
   forms for both entity types.

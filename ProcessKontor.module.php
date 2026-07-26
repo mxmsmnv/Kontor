@@ -4,8 +4,12 @@ namespace ProcessWire;
 
 use Kontor\Catalog\Domain\CatalogItem;
 use Kontor\Catalog\Domain\Category;
+use Kontor\Catalog\Domain\PriceList;
+use Kontor\Catalog\Domain\PriceListEntry;
 use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
 use Kontor\Catalog\Infrastructure\Persistence\CategoryRepository;
+use Kontor\Catalog\Infrastructure\Persistence\PriceListRepository;
+use Kontor\Catalog\Infrastructure\Persistence\PriceRepository;
 use Kontor\Catalog\Support\TaxCode;
 use Kontor\Catalog\Support\UnitOfMeasure;
 use Kontor\Contacts\Application\ContactDuplicateDetector;
@@ -56,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '029',
+            'version' => '030',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -669,6 +673,177 @@ class ProcessKontor extends Process
             : $this->_('Catalog category archived.'));
         $this->wire()->session->redirect(
             '../catalog-categories/' . ($action === 'restore' ? '?archived=1' : '')
+        );
+    }
+
+    public function ___executeCatalogPriceLists(): string
+    {
+        $this->requirePermission('kontor-catalog-pricelist-view');
+        $this->requireCatalog();
+        $this->setPageTitle($this->_('Kontor · Price lists'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['active', 'inactive']
+        );
+        $organizationUid = $this->organizationUid();
+        $pageSize = 25;
+        $totalPriceLists = $this->priceListRepository()->countMatching(
+            $organizationUid,
+            $query,
+            $status,
+        );
+        $totalPages = max(1, (int) ceil($totalPriceLists / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
+        $priceLists = $this->priceListRepository()->findAll(
+            $organizationUid,
+            $query,
+            $status,
+            $pageSize,
+            ($page - 1) * $pageSize,
+        );
+
+        return $this->renderTemplate('catalog-price-lists', [
+            'priceLists' => $priceLists,
+            'entryCounts' => $this->priceEntryCounts($priceLists),
+            'query' => $query,
+            'selectedStatus' => $status,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalPriceLists' => $totalPriceLists,
+        ]);
+    }
+
+    public function ___executeCatalogPriceList(): string
+    {
+        $this->requireCatalog();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $priceList = $id !== '' ? $this->priceListRepository()->require($id) : null;
+
+        if ($priceList !== null) {
+            $this->requireSameOrganization($priceList->organizationId);
+        }
+
+        $this->requirePermission($priceList === null
+            ? 'kontor-catalog-pricelist-create'
+            : 'kontor-catalog-pricelist-edit');
+        $this->setPageTitle($priceList === null
+            ? $this->_('Kontor · New price list')
+            : sprintf($this->_('Kontor · %s'), $priceList->name));
+        $form = $this->buildCatalogPriceListForm($priceList);
+        $isNew = $priceList === null;
+        $previous = $priceList === null ? null : $this->catalogPriceListAuditSnapshot($priceList);
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $form->processInput($this->wire()->input->post);
+            $this->validateCatalogPriceListForm($form, $priceList);
+
+            if (!$form->getErrors()) {
+                $priceList = $this->saveCatalogPriceListFromForm($form, $priceList);
+                $this->audit(
+                    'catalog',
+                    'catalog_price_list',
+                    $priceList->uid->toString(),
+                    $isNew ? 'created' : 'updated',
+                    previous: $previous,
+                    current: $this->catalogPriceListAuditSnapshot($priceList),
+                );
+                $this->message($this->_('Price list saved.'));
+                $this->wire()->session->redirect(
+                    '../catalog-price-list/?id=' . rawurlencode($priceList->uid->toString())
+                );
+            }
+        }
+
+        $entries = $priceList !== null
+            ? $this->priceRepository()->forPriceList($priceList->uid->toString())
+            : [];
+
+        return $this->renderTemplate('catalog-price-list-form', [
+            'form' => $form,
+            'priceList' => $priceList,
+            'entries' => $entries,
+            'itemNames' => $this->catalogItemNames(),
+            'title' => $priceList === null ? $this->_('Create price list') : $priceList->name,
+        ]);
+    }
+
+    public function ___executeCatalogPriceEntry(): string
+    {
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-pricelist-edit');
+        $priceListUid = $this->wire()->sanitizer->text((string) $this->wire()->input->get('list'));
+        $priceList = $this->priceListRepository()->require($priceListUid);
+        $this->requireSameOrganization($priceList->organizationId);
+        $itemUid = $this->wire()->sanitizer->text((string) $this->wire()->input->get('item'));
+        $quantityText = $this->wire()->sanitizer->text((string) $this->wire()->input->get('quantity'));
+        $entry = $itemUid !== '' && $quantityText !== ''
+            ? $this->findPriceEntry($priceListUid, $itemUid, (float) $quantityText)
+            : null;
+        $this->setPageTitle($entry === null
+            ? $this->_('Kontor · New price tier')
+            : $this->_('Kontor · Edit price tier'));
+        $form = $this->buildCatalogPriceEntryForm($priceList, $entry);
+        $previous = $entry === null ? null : $this->catalogPriceEntryAuditSnapshot($entry);
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $form->processInput($this->wire()->input->post);
+            $this->validateCatalogPriceEntryForm($form);
+
+            if (!$form->getErrors()) {
+                $saved = $this->saveCatalogPriceEntryFromForm($form, $priceList, $entry);
+                $this->audit(
+                    'catalog',
+                    'catalog_price',
+                    $saved->itemUid,
+                    $entry === null ? 'created' : 'updated',
+                    previous: $previous,
+                    current: $this->catalogPriceEntryAuditSnapshot($saved),
+                    metadata: ['priceListUid' => $priceListUid],
+                );
+                $this->message($this->_('Price tier saved.'));
+                $this->wire()->session->redirect(
+                    '../catalog-price-list/?id=' . rawurlencode($priceListUid)
+                );
+            }
+        }
+
+        return $this->renderTemplate('catalog-price-entry-form', [
+            'form' => $form,
+            'priceList' => $priceList,
+            'title' => $entry === null ? $this->_('Add price tier') : $this->_('Edit price tier'),
+        ]);
+    }
+
+    public function ___executeCatalogPriceEntryAction(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-pricelist-edit');
+        $priceListUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('list'));
+        $itemUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('item'));
+        $quantity = (float) $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('quantity')
+        );
+        $priceList = $this->priceListRepository()->require($priceListUid);
+        $this->requireSameOrganization($priceList->organizationId);
+
+        if (!$this->priceRepository()->delete($priceListUid, $itemUid, $quantity)) {
+            throw new Wire404Exception($this->_('Price tier was not found.'));
+        }
+
+        $this->audit(
+            'catalog',
+            'catalog_price',
+            $itemUid,
+            'deleted',
+            metadata: ['priceListUid' => $priceListUid, 'minQuantity' => $quantity],
+        );
+        $this->message($this->_('Price tier deleted.'));
+        $this->wire()->session->redirect(
+            '../catalog-price-list/?id=' . rawurlencode($priceListUid)
         );
     }
 
@@ -1769,6 +1944,139 @@ class ProcessKontor extends Process
         return $form;
     }
 
+    private function buildCatalogPriceListForm(?PriceList $priceList): InputfieldForm
+    {
+        /** @var InputfieldForm $form */
+        $form = $this->wire()->modules->get('InputfieldForm');
+        $form->action = './' . ($priceList ? '?id=' . rawurlencode($priceList->uid->toString()) : '');
+        $form->addClass('InputfieldFormFocusFirst kontor-entity-form');
+        $currency = $priceList?->currencyCode ?? $this->organization()->defaultCurrency;
+        $currencies = array_values(array_unique([$currency, 'EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD']));
+        $currencyOptions = array_combine($currencies, $currencies) ?: [];
+
+        $this->addTextField($form, 'name', $this->_('Name'), $priceList?->name, true, 50);
+        $this->addSelectField(
+            $form,
+            'currency_code',
+            $this->_('Currency'),
+            $currencyOptions,
+            $currency,
+            25,
+        );
+        $this->addSelectField(
+            $form,
+            'status',
+            $this->_('Status'),
+            ['active' => $this->_('Active'), 'inactive' => $this->_('Inactive')],
+            $priceList?->status ?? 'active',
+            25,
+        );
+        $this->addTextField(
+            $form,
+            'valid_from',
+            $this->_('Valid from (YYYY-MM-DD)'),
+            $priceList?->validFrom?->format('Y-m-d'),
+            false,
+            50,
+        );
+        $this->addTextField(
+            $form,
+            'valid_to',
+            $this->_('Valid to (YYYY-MM-DD)'),
+            $priceList?->validTo?->format('Y-m-d'),
+            false,
+            50,
+        );
+        $this->addSubmit($form, $this->_('Save price list'));
+
+        return $form;
+    }
+
+    private function buildCatalogPriceEntryForm(
+        PriceList $priceList,
+        ?PriceListEntry $entry,
+    ): InputfieldForm {
+        /** @var InputfieldForm $form */
+        $form = $this->wire()->modules->get('InputfieldForm');
+        $query = ['list' => $priceList->uid->toString()];
+
+        if ($entry !== null) {
+            $query['item'] = $entry->itemUid;
+            $query['quantity'] = $this->quantityFormValue($entry->minQuantity);
+        }
+
+        $form->action = './?' . http_build_query($query);
+        $form->addClass('InputfieldFormFocusFirst kontor-entity-form');
+        /** @var InputfieldSelect $item */
+        $item = $this->wire()->modules->get('InputfieldSelect');
+        $item->name = 'item_uid';
+        $item->label = $this->_('Catalog item');
+        $item->required = true;
+        $itemNames = $this->catalogItemNames();
+
+        if ($entry !== null && !isset($itemNames[$entry->itemUid])) {
+            $assignedItem = $this->catalogItemRepository()->find($entry->itemUid);
+
+            if (
+                $assignedItem !== null
+                && hash_equals($assignedItem->organizationId, $this->organizationUid())
+            ) {
+                $itemNames[$entry->itemUid] = $this->catalogItemTitle($assignedItem) . ' · archived';
+            }
+        }
+
+        foreach ($itemNames as $uid => $name) {
+            $item->addOption($uid, $name);
+        }
+
+        $item->value = $entry?->itemUid ?? '';
+        $item->columnWidth = 50;
+        $form->add($item);
+        $this->addTextField(
+            $form,
+            'min_quantity',
+            $this->_('Minimum quantity'),
+            $entry !== null ? $this->quantityFormValue($entry->minQuantity) : '1',
+            true,
+            25,
+        );
+        $this->addTextField(
+            $form,
+            'entry_price',
+            $this->_('Price'),
+            $this->moneyFormValue($entry?->price),
+            true,
+            25,
+        );
+        $this->addSelectField(
+            $form,
+            'entry_currency',
+            $this->_('Currency'),
+            [$priceList->currencyCode => $priceList->currencyCode],
+            $priceList->currencyCode,
+            25,
+        );
+        $this->addTextField(
+            $form,
+            'valid_from',
+            $this->_('Valid from (YYYY-MM-DD)'),
+            $entry?->validFrom?->format('Y-m-d'),
+            false,
+            37,
+        );
+        $this->addTextField(
+            $form,
+            'valid_to',
+            $this->_('Valid to (YYYY-MM-DD)'),
+            $entry?->validTo?->format('Y-m-d'),
+            false,
+            38,
+        );
+        $this->addSubmit($form, $this->_('Save price tier'));
+
+        return $form;
+    }
+
     private function buildOrganizationForm(Organization $organization): InputfieldForm
     {
         /** @var InputfieldForm $form */
@@ -2034,6 +2342,145 @@ class ProcessKontor extends Process
         $this->categoryRepository()->save($category);
 
         return $category;
+    }
+
+    private function validateCatalogPriceListForm(
+        InputfieldForm $form,
+        ?PriceList $priceList,
+    ): void
+    {
+        $this->validateDateRangeForm($form);
+
+        if (
+            $priceList !== null
+            && $priceList->currencyCode !== strtoupper($this->requiredFormValue($form, 'currency_code'))
+            && $this->priceRepository()->forPriceList($priceList->uid->toString()) !== []
+        ) {
+            $form->getChildByName('currency_code')?->error(
+                $this->_('Remove existing price tiers before changing the currency.')
+            );
+        }
+    }
+
+    private function saveCatalogPriceListFromForm(
+        InputfieldForm $form,
+        ?PriceList $priceList,
+    ): PriceList {
+        if ($priceList === null) {
+            $priceList = PriceList::create(
+                $this->organizationUid(),
+                $this->requiredFormValue($form, 'name'),
+                $this->requiredFormValue($form, 'currency_code'),
+            );
+        }
+
+        $priceList->name = $this->requiredFormValue($form, 'name');
+        $priceList->currencyCode = strtoupper($this->requiredFormValue($form, 'currency_code'));
+        $priceList->status = $this->requiredFormValue($form, 'status');
+        $priceList->validFrom = $this->dateFromForm($form, 'valid_from');
+        $priceList->validTo = $this->dateFromForm($form, 'valid_to');
+        $this->priceListRepository()->save($priceList);
+
+        return $priceList;
+    }
+
+    private function validateCatalogPriceEntryForm(InputfieldForm $form): void
+    {
+        $itemUid = $this->requiredFormValue($form, 'item_uid');
+        $item = $this->catalogItemRepository()->find($itemUid);
+
+        if ($item === null || !hash_equals($item->organizationId, $this->organizationUid())) {
+            $form->getChildByName('item_uid')?->error(
+                $this->_('Choose a catalog item from this organization.')
+            );
+        }
+
+        $quantity = $this->requiredFormValue($form, 'min_quantity');
+
+        if (preg_match('/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/', $quantity) !== 1 || (float) $quantity <= 0) {
+            $form->getChildByName('min_quantity')?->error(
+                $this->_('Minimum quantity must be greater than zero with at most six decimal places.')
+            );
+        }
+
+        $price = $this->requiredFormValue($form, 'entry_price');
+
+        if (preg_match('/^-?\d+(?:\.\d{1,2})?$/', $price) !== 1) {
+            $form->getChildByName('entry_price')?->error(
+                $this->_('Use a number with no more than two decimal places.')
+            );
+        }
+
+        $this->validateDateRangeForm($form);
+    }
+
+    private function saveCatalogPriceEntryFromForm(
+        InputfieldForm $form,
+        PriceList $priceList,
+        ?PriceListEntry $entry,
+    ): PriceListEntry {
+        $saved = new PriceListEntry(
+            priceListUid: $priceList->uid->toString(),
+            itemUid: $this->requiredFormValue($form, 'item_uid'),
+            price: $this->moneyFromForm($form, 'entry')
+                ?? throw new WireException($this->_('Price is required.')),
+            minQuantity: (float) $this->requiredFormValue($form, 'min_quantity'),
+            validFrom: $this->dateFromForm($form, 'valid_from'),
+            validTo: $this->dateFromForm($form, 'valid_to'),
+        );
+
+        if ($entry === null) {
+            $this->priceRepository()->save($saved);
+        } else {
+            $this->priceRepository()->replace($entry->itemUid, $entry->minQuantity, $saved);
+        }
+
+        return $saved;
+    }
+
+    private function validateDateRangeForm(InputfieldForm $form): void
+    {
+        $from = $this->validatedDateFromForm($form, 'valid_from');
+        $to = $this->validatedDateFromForm($form, 'valid_to');
+
+        if ($from !== null && $to !== null && $from > $to) {
+            $form->getChildByName('valid_to')?->error(
+                $this->_('The end date must be on or after the start date.')
+            );
+        }
+    }
+
+    private function validatedDateFromForm(
+        InputfieldForm $form,
+        string $field,
+    ): ?\DateTimeImmutable {
+        $value = $this->formValue($form, $field);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+        if ($date === false || $date->format('Y-m-d') !== $value) {
+            $form->getChildByName($field)?->error($this->_('Use a valid date in YYYY-MM-DD format.'));
+
+            return null;
+        }
+
+        return $date;
+    }
+
+    private function dateFromForm(InputfieldForm $form, string $field): ?\DateTimeImmutable
+    {
+        $value = $this->formValue($form, $field);
+
+        return $value === null ? null : new \DateTimeImmutable($value);
+    }
+
+    private function quantityFormValue(float $quantity): string
+    {
+        return rtrim(rtrim(number_format($quantity, 6, '.', ''), '0'), '.');
     }
 
     private function moneyFromForm(InputfieldForm $form, string $prefix): ?Money
@@ -2500,6 +2947,35 @@ class ProcessKontor extends Process
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function catalogPriceListAuditSnapshot(PriceList $priceList): array
+    {
+        return [
+            'name' => $priceList->name,
+            'currencyCode' => $priceList->currencyCode,
+            'status' => $priceList->status,
+            'validFrom' => $priceList->validFrom?->format('Y-m-d'),
+            'validTo' => $priceList->validTo?->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function catalogPriceEntryAuditSnapshot(PriceListEntry $entry): array
+    {
+        return [
+            'priceListUid' => $entry->priceListUid,
+            'itemUid' => $entry->itemUid,
+            'price' => $entry->price->toString(),
+            'minQuantity' => $entry->minQuantity,
+            'validFrom' => $entry->validFrom?->format('Y-m-d'),
+            'validTo' => $entry->validTo?->format('Y-m-d'),
+        ];
+    }
+
     private function categoryName(Category $category): string
     {
         $language = $this->organization()->defaultLanguage;
@@ -2508,6 +2984,47 @@ class ProcessKontor extends Process
         return $category->nameIn($language)
             ?? $category->nameIn('en')
             ?? (is_string($fallback) && $fallback !== '' ? $fallback : $this->_('Untitled category'));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function catalogItemNames(): array
+    {
+        $names = [];
+
+        foreach ($this->catalogItemRepository()->findAll($this->organizationUid(), limit: 500) as $item) {
+            $names[$item->uid->toString()] = $this->catalogItemTitle($item);
+        }
+
+        return $names;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function priceEntryCounts(array $priceLists): array
+    {
+        $uids = array_map(
+            static fn (PriceList $priceList): string => $priceList->uid->toString(),
+            $priceLists,
+        );
+
+        return $this->priceRepository()->countsForPriceLists($uids);
+    }
+
+    private function findPriceEntry(
+        string $priceListUid,
+        string $itemUid,
+        float $minQuantity,
+    ): ?PriceListEntry {
+        foreach ($this->priceRepository()->forItem($priceListUid, $itemUid) as $entry) {
+            if (abs($entry->minQuantity - $minQuantity) < 0.0000001) {
+                return $entry;
+            }
+        }
+
+        throw new Wire404Exception($this->_('Price tier was not found.'));
     }
 
     /**
@@ -2754,6 +3271,22 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorCatalog');
 
         return $module->categoryRepository();
+    }
+
+    private function priceListRepository(): PriceListRepository
+    {
+        /** @var KontorCatalog $module */
+        $module = $this->wire()->modules->get('KontorCatalog');
+
+        return $module->priceListRepository();
+    }
+
+    private function priceRepository(): PriceRepository
+    {
+        /** @var KontorCatalog $module */
+        $module = $this->wire()->modules->get('KontorCatalog');
+
+        return $module->priceRepository();
     }
 
     private function contactRepository(): ContactRepository

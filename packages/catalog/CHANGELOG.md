@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Price-list search/pagination helpers and price-tier list/count/delete/replace
+  persistence operations for the admin pricing workspace.
 - Organization-scoped catalog listing, search, type filters, archived views,
   exact counts, and offset pagination for the admin workspace.
 - Searchable and paginated category queries with active/archive counts,
@@ -25,5 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Catalog item exports now yield associative rows only, without duplicate
+  numeric PDO keys.
 - Provider registration now supplies the required `catalog_item` key, and
   money hydration accepts native integer values returned by modern PDO.

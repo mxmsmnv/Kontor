@@ -54,17 +54,86 @@ final class PriceListRepository
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function require(string $uid): PriceList
+    {
+        return $this->find($uid) ?? throw new \RuntimeException("Price list {$uid} was not found.");
+    }
+
     /**
      * @return array<int, PriceList>
      */
     public function forOrganization(string $organizationUid): array
     {
-        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        return $this->findAll($organizationUid);
+    }
 
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_price_lists WHERE organization_id = :organization_id');
-        $statement->execute(['organization_id' => $organizationId]);
+    /**
+     * @return array<int, PriceList>
+     */
+    public function findAll(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        int $limit = 100,
+        int $offset = 0,
+    ): array {
+        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status);
+        $statement = $this->pdo->prepare(
+            $sql . ' ORDER BY name ASC, id ASC LIMIT :limit OFFSET :offset'
+        );
+
+        foreach ($parameters as $name => $value) {
+            $statement->bindValue($name, $value);
+        }
+
+        $statement->bindValue('limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue('offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
 
         return array_map(fn (array $row): PriceList => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    public function countMatching(string $organizationUid, string $query = '', ?string $status = null): int
+    {
+        [$sql, $parameters] = $this->listQuery($organizationUid, $query, $status, true);
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, int|string>}
+     */
+    private function listQuery(
+        string $organizationUid,
+        string $query,
+        ?string $status,
+        bool $count = false,
+    ): array {
+        $parameters = [
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ];
+        $conditions = ['organization_id = :organization_id'];
+
+        if ($query !== '') {
+            $conditions[] = 'name LIKE :query';
+            $parameters['query'] = '%' . $query . '%';
+        }
+
+        if ($status !== null) {
+            $conditions[] = 'status = :status';
+            $parameters['status'] = $status;
+        }
+
+        return [
+            sprintf(
+                'SELECT %s FROM kontor_catalog_price_lists WHERE %s',
+                $count ? 'COUNT(*)' : '*',
+                implode(' AND ', $conditions),
+            ),
+            $parameters,
+        ];
     }
 
     private function hydrate(array $row): PriceList

@@ -55,6 +55,85 @@ final class PriceRepository
         return array_map(fn (array $row): PriceListEntry => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return array<int, PriceListEntry>
+     */
+    public function forPriceList(string $priceListUid): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_catalog_prices
+             WHERE price_list_uid = :price_list_uid
+             ORDER BY item_uid ASC, min_quantity ASC'
+        );
+        $statement->execute(['price_list_uid' => $priceListUid]);
+
+        return array_map(fn (array $row): PriceListEntry => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @param array<int, string> $priceListUids
+     * @return array<string, int>
+     */
+    public function countsForPriceLists(array $priceListUids): array
+    {
+        if ($priceListUids === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($priceListUids), '?'));
+        $statement = $this->pdo->prepare(
+            "SELECT price_list_uid, COUNT(*) AS entry_count
+             FROM kontor_catalog_prices
+             WHERE price_list_uid IN ({$placeholders})
+             GROUP BY price_list_uid"
+        );
+        $statement->execute(array_values($priceListUids));
+        $counts = [];
+
+        foreach ($statement->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $counts[$row['price_list_uid']] = (int) $row['entry_count'];
+        }
+
+        return $counts;
+    }
+
+    public function delete(string $priceListUid, string $itemUid, float $minQuantity): bool
+    {
+        $statement = $this->pdo->prepare(
+            'DELETE FROM kontor_catalog_prices
+             WHERE price_list_uid = :price_list_uid
+               AND item_uid = :item_uid
+               AND min_quantity = :min_quantity'
+        );
+        $statement->execute([
+            'price_list_uid' => $priceListUid,
+            'item_uid' => $itemUid,
+            'min_quantity' => $minQuantity,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
+
+    public function replace(
+        string $originalItemUid,
+        float $originalMinQuantity,
+        PriceListEntry $entry,
+    ): void {
+        $this->pdo->beginTransaction();
+
+        try {
+            if ($originalItemUid !== $entry->itemUid || $originalMinQuantity !== $entry->minQuantity) {
+                $this->delete($entry->priceListUid, $originalItemUid, $originalMinQuantity);
+            }
+
+            $this->save($entry);
+            $this->pdo->commit();
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
+    }
+
     private function hydrate(array $row): PriceListEntry
     {
         return new PriceListEntry(
