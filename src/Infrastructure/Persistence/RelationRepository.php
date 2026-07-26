@@ -98,6 +98,30 @@ final class RelationRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * Every active relation explicitly pointing at an entity, regardless
+     * of whether the relation itself is directed or bidirectional.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function pointingTo(string $organizationUid, string $entityType, string $entityUid): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_relations
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+               AND target_type = :target_type AND target_uid = :target_uid
+             ORDER BY created_at DESC'
+        );
+        $statement->execute([
+            'organization_id' => $organizationId,
+            'target_type' => $entityType,
+            'target_uid' => $entityUid,
+        ]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     public function archive(string $uid): void
     {
         $statement = $this->pdo->prepare('UPDATE kontor_relations SET archived_at = :now WHERE uid = :uid');

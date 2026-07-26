@@ -29,7 +29,7 @@ class KontorTasks extends WireData implements Module
         return [
             'title' => 'Kontor Tasks',
             'summary' => 'Tasks, reminders, recurrence, calendar, entity relations.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorTasks',
             'icon' => 'check-square-o',
@@ -132,6 +132,13 @@ class KontorTasks extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('tasks', self::getModuleInfo()['version'], 'tasks');
+        $components->enable('tasks');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('tasks', self::getModuleInfo()['version'], 'tasks');
         $components->enable('tasks');
     }

@@ -56,6 +56,7 @@ use Kontor\SDK\DTO\ImportContext;
 use Kontor\SDK\DTO\SearchQuery;
 use Kontor\SDK\ValueObjects\Money;
 use Kontor\SDK\ValueObjects\Uid;
+use Kontor\Tasks\Domain\Task;
 
 /**
  * The single Kontor admin application. Business components provide the
@@ -68,7 +69,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '090',
+            'version' => '091',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -152,6 +153,12 @@ class ProcessKontor extends Process
                     'label' => 'Payments',
                     'icon' => 'money',
                     'permission' => 'kontor-payments-payment-view',
+                ],
+                [
+                    'url' => 'tasks/',
+                    'label' => 'Tasks',
+                    'icon' => 'check-square-o',
+                    'permission' => 'kontor-tasks-task-view',
                 ],
                 [
                     'url' => 'components/',
@@ -1519,6 +1526,203 @@ class ProcessKontor extends Process
         $this->audit('payments', 'payment', $id, 'reversed');
         $this->message($this->_('Payment and its allocations were reversed.'));
         $this->wire()->session->redirect('../payment/?id=' . rawurlencode($id));
+    }
+
+    public function ___executeTasks(): string
+    {
+        $this->requireTasks();
+        $this->requirePermission('kontor-tasks-task-view');
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['open', 'in_progress', 'done', 'cancelled']
+        );
+        $priority = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('priority'),
+            ['low', 'normal', 'high', 'urgent']
+        );
+        $archived = (string) $this->wire()->input->get('archived') === '1';
+        $this->setPageTitle($this->_('Kontor · Tasks'));
+
+        return $this->renderTemplate('tasks', [
+            'tasks' => $this->taskModule()->taskRepository()->findMatching(
+                $this->organizationUid(),
+                $query,
+                $status,
+                $priority,
+                $archived,
+                limit: 100,
+            ),
+            'query' => $query,
+            'selectedStatus' => $status,
+            'selectedPriority' => $priority,
+            'archived' => $archived,
+        ]);
+    }
+
+    public function ___executeTask(): string
+    {
+        $this->requireTasks();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $archived = (string) $this->wire()->input->get('archived') === '1';
+        $repository = $this->taskModule()->taskRepository();
+        $task = $id !== '' ? $repository->require($id) : null;
+        $this->requirePermission($task === null ? 'kontor-tasks-task-create' : 'kontor-tasks-task-edit');
+
+        if ($task !== null) {
+            $this->requireSameOrganization($task->organizationId);
+        }
+
+        $values = [
+            'title' => $task?->title ?? '',
+            'description' => $task?->description ?? '',
+            'priority' => $task?->priority ?? 'normal',
+            'dueAt' => $task?->dueAt?->format('Y-m-d\TH:i') ?? '',
+            'recurrenceRule' => $task?->recurrenceRule ?? '',
+            'recurrenceUntil' => $task?->recurrenceUntil?->format('Y-m-d') ?? '',
+            'assignedToMe' => $task?->assignedTo === (int) $this->wire()->user->id,
+        ];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'title' => trim($this->wire()->sanitizer->text((string) $this->wire()->input->post('title'))),
+                'description' => trim((string) $this->wire()->input->post('description')),
+                'priority' => $this->wire()->sanitizer->option(
+                    (string) $this->wire()->input->post('priority'),
+                    ['low', 'normal', 'high', 'urgent']
+                ) ?? 'normal',
+                'dueAt' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('due_at')),
+                'recurrenceRule' => $this->wire()->sanitizer->option(
+                    (string) $this->wire()->input->post('recurrence_rule'),
+                    ['daily', 'weekly', 'monthly', 'yearly']
+                ) ?? '',
+                'recurrenceUntil' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('recurrence_until')
+                ),
+                'assignedToMe' => (string) $this->wire()->input->post('assigned_to_me') === '1',
+            ];
+            $dueAt = null;
+            $recurrenceUntil = null;
+
+            if ($values['title'] === '') {
+                $error = $this->_('Task title is required.');
+            }
+            if ($error === '' && $values['dueAt'] !== '') {
+                try {
+                    $dueAt = new \DateTimeImmutable($values['dueAt']);
+                } catch (\Throwable) {
+                    $error = $this->_('Due date is invalid.');
+                }
+            }
+            if ($error === '' && $values['recurrenceUntil'] !== '') {
+                try {
+                    $recurrenceUntil = new \DateTimeImmutable($values['recurrenceUntil']);
+                } catch (\Throwable) {
+                    $error = $this->_('Recurrence end date is invalid.');
+                }
+            }
+            if ($error === '' && $values['recurrenceRule'] !== '' && $dueAt === null) {
+                $error = $this->_('A recurring task needs a due date.');
+            }
+
+            if ($error === '') {
+                $task ??= Task::create($this->organizationUid(), $values['title']);
+                $task->title = $values['title'];
+                $task->description = $values['description'] !== '' ? $values['description'] : null;
+                $task->priority = $values['priority'];
+                $task->dueAt = $dueAt;
+                $task->recurrenceRule = $values['recurrenceRule'] !== '' ? $values['recurrenceRule'] : null;
+                $task->recurrenceUntil = $recurrenceUntil;
+                $task->assignedTo = $values['assignedToMe'] ? (int) $this->wire()->user->id : null;
+                $isNew = $id === '';
+                $repository->save($task);
+                $this->audit(
+                    'tasks',
+                    'task',
+                    $task->uid->toString(),
+                    $isNew ? 'created' : 'updated',
+                    current: [
+                        'title' => $task->title,
+                        'priority' => $task->priority,
+                        'dueAt' => $task->dueAt?->format(DATE_ATOM),
+                        'recurrenceRule' => $task->recurrenceRule,
+                    ],
+                );
+                $this->message($isNew ? $this->_('Task created.') : $this->_('Task updated.'));
+                $this->wire()->session->redirect(
+                    '../task/?id=' . rawurlencode($task->uid->toString())
+                );
+            }
+        }
+
+        $this->setPageTitle($task === null
+            ? $this->_('Kontor · New task')
+            : sprintf($this->_('Kontor · %s'), $task->title));
+
+        return $this->renderTemplate('task', [
+            'task' => $task,
+            'values' => $values,
+            'error' => $error,
+            'archived' => $archived,
+        ]);
+    }
+
+    public function ___executeTaskAction(): void
+    {
+        $this->requirePost();
+        $this->requireTasks();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['start', 'complete', 'cancel', 'archive', 'restore']
+        );
+        $this->requireAction($action, ['start', 'complete', 'cancel', 'archive', 'restore']);
+        $this->requirePermission(match ($action) {
+            'complete' => 'kontor-tasks-task-complete',
+            'cancel' => 'kontor-tasks-task-cancel',
+            default => 'kontor-tasks-task-edit',
+        });
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $module = $this->taskModule();
+        $task = $module->taskRepository()->require($id);
+        $this->requireSameOrganization($task->organizationId);
+
+        if ($action === 'start') {
+            $module->workflow()->start($id);
+        } elseif ($action === 'complete') {
+            $result = $module->workflow()->complete($id);
+            if ($result['next'] !== null) {
+                $this->audit('tasks', 'task', $id, 'complete');
+                $this->audit(
+                    'tasks',
+                    'task',
+                    $result['next']->uid->toString(),
+                    'recurrence_created',
+                    current: ['sourceTaskUid' => $id, 'dueAt' => $result['next']->dueAt?->format(DATE_ATOM)],
+                );
+                $this->message($this->_('Task completed and the next occurrence was created.'));
+                $this->wire()->session->redirect(
+                    '../task/?id=' . rawurlencode($result['next']->uid->toString())
+                );
+            }
+        } elseif ($action === 'cancel') {
+            $module->workflow()->cancel($id);
+        } elseif ($action === 'restore') {
+            $module->taskRepository()->restore($id);
+            $this->audit('tasks', 'task', $id, 'restored');
+            $this->message($this->_('Task restored.'));
+            $this->wire()->session->redirect('../tasks/');
+        } else {
+            $module->taskRepository()->archive($id);
+            $this->audit('tasks', 'task', $id, 'archived');
+            $this->message($this->_('Task archived.'));
+            $this->wire()->session->redirect('../tasks/?archived=1');
+        }
+
+        $this->audit('tasks', 'task', $id, $action);
+        $this->message($this->_('Task updated.'));
+        $this->wire()->session->redirect('../task/?id=' . rawurlencode($id));
     }
 
     public function ___executeCompany(): string
@@ -4962,6 +5166,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorPayments');
     }
 
+    private function tasksReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorTasks');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -4994,6 +5203,13 @@ class ProcessKontor extends Process
     {
         if (!$this->paymentsReady()) {
             throw new WireException($this->_('The Kontor Payments component is not installed.'));
+        }
+    }
+
+    private function requireTasks(): void
+    {
+        if (!$this->tasksReady()) {
+            throw new WireException($this->_('The Kontor Tasks component is not installed.'));
         }
     }
 
@@ -5036,6 +5252,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorPayments $module */
         $module = $this->wire()->modules->get('KontorPayments');
+
+        return $module;
+    }
+
+    private function taskModule(): KontorTasks
+    {
+        /** @var KontorTasks $module */
+        $module = $this->wire()->modules->get('KontorTasks');
 
         return $module;
     }

@@ -41,9 +41,8 @@ Sections 11–16 of kontor.md never gave Tasks a schema section, so
 - `src/Application/TaskRelationService.php` — the "entity relations"
   milestone, thin wrapper over `RelationRepository`.
 - `TaskRepository::dueBetween()` — the "calendar" milestone's actual query
-  surface: tasks with a due date inside a range. No calendar UI is built
-  (no admin UI is built anywhere in this monorepo yet) — this is the data
-  a calendar view would render.
+  surface: tasks with a due date inside a range. This is the data a future
+  calendar view would render.
 
 ## Testing
 
@@ -57,13 +56,20 @@ logic) and runs for real. Everything under `tests/Integration/` needs real
 MySQL (see `../../docker-compose.test.yml`) and is skipped otherwise, same
 `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The root `ProcessKontor` module provides a deliberately narrow first task
+workflow: list and filter tasks, create or edit one, start it, complete or
+cancel it, and archive or restore it. Completing a recurring task exposes the
+next occurrence created by the existing workflow service.
+
 ## Not in scope for this substage
 
 No reminder delivery — `TaskReminderRepository::due()` is the query a
 future `kontor/queue`-backed dispatcher (plus `kontor/mail` for the email
 channel) would poll, but no dispatcher/job is wired up here, the same
 "deferred cross-component wiring" choice `kontor/documents` made for its
-snapshot builder. No admin UI/API endpoints, no calendar rendering. Task
+snapshot builder. No API endpoints or calendar rendering. Task
 assignment (`assigned_to`) stores a plain ProcessWire user id, matching
 `created_by`/`updated_by`'s convention (kontor.md#10.4) — there's no
 notification when a task is assigned.

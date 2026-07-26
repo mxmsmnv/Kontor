@@ -5,8 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Directed task relations can now be looked up from their target entity
+  without weakening the generic relation API's direction semantics.
+
 ### Added
 
+- First Tasks admin vertical: organization-scoped listing and filters,
+  create/edit, start/complete/cancel, recurrence spawning, and archive/restore.
 - First Payments admin vertical: sent-invoice payment capture, automatic
   confirmation and allocation, paid-state synchronization, payment listing,
   detail, and reversal.

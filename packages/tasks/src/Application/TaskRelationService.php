@@ -49,11 +49,11 @@ final class TaskRelationService
      */
     public function tasksRelatedTo(string $organizationUid, string $entityType, string $entityUid): array
     {
-        $relations = $this->relations->relatedTo($organizationUid, $entityType, $entityUid);
+        $relations = $this->relations->pointingTo($organizationUid, $entityType, $entityUid);
 
         return array_values(array_unique(array_map(
-            static fn (array $relation): string => $relation['sourceType'] === self::ENTITY_TYPE ? $relation['sourceUid'] : $relation['targetUid'],
-            array_filter($relations, static fn (array $relation): bool => self::ENTITY_TYPE === $relation['sourceType'] || self::ENTITY_TYPE === $relation['targetType']),
+            static fn (array $relation): string => $relation['sourceUid'],
+            array_filter($relations, static fn (array $relation): bool => self::ENTITY_TYPE === $relation['sourceType']),
         )));
     }
 }

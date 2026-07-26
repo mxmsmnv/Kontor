@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: organization-scoped task list, create/edit form,
+  start/complete/cancel lifecycle, recurrence controls, and archive/restore.
 - Initial alpha (Substage 5.1): `kontor_tasks` and `kontor_task_reminders`
   migrations (schema gap-fill); `Task` domain object with recurrence math
   (`nextOccurrenceDueAt()` for `'daily'|'weekly'|'monthly'|'yearly'`, capped
@@ -18,6 +20,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   "entity relations" milestone, first real consumer of `kontor/core`'s new
   `RelationRepository`); `TasksHealthCheck`; permissions; en/fr/de/es
   translations. First component of Stage 5.
+
+### Fixed
+
+- Reverse lookup now finds tasks linked to an entity by directed relations.
 
 ### Changed (in `kontor/core`, same commit)
 

@@ -88,6 +88,77 @@ final class TaskRepository implements RepositoryInterface
     }
 
     /**
+     * @return array<int, Task>
+     */
+    public function findMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        ?string $priority = null,
+        bool $archived = false,
+        int $limit = 50,
+        int $offset = 0,
+    ): array {
+        [$where, $params] = $this->matchingConditions(
+            $organizationUid,
+            $query,
+            $status,
+            $priority,
+            $archived,
+        );
+        $statement = $this->pdo->prepare(
+            'SELECT t.* FROM kontor_tasks t
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY t.due_at IS NULL, t.due_at ASC, t.updated_at DESC, t.id DESC
+             LIMIT :limit OFFSET :offset'
+        );
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn (array $row): Task => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, int|string>}
+     */
+    private function matchingConditions(
+        string $organizationUid,
+        string $query,
+        ?string $status,
+        ?string $priority,
+        bool $archived,
+    ): array {
+        $where = [
+            't.organization_id = :organization_id',
+            't.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL'),
+        ];
+        $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
+
+        if ($status !== null) {
+            $where[] = 't.status = :status';
+            $params['status'] = $status;
+        }
+        if ($priority !== null) {
+            $where[] = 't.priority = :priority';
+            $params['priority'] = $priority;
+        }
+        $query = trim($query);
+        if ($query !== '') {
+            $where[] = '(t.title LIKE :query OR t.description LIKE :query)';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        return [$where, $params];
+    }
+
+    /**
      * The "calendar" milestone's actual query surface — tasks with a due
      * date inside a range, for a caller to render on a calendar. No
      * calendar UI is built in this package; this is the data it would use.
