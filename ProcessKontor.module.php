@@ -92,7 +92,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '135',
+            'version' => '136',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -10446,8 +10446,78 @@ class ProcessKontor extends Process
 
     private function setPageTitle(string $title): void
     {
+        $title = preg_replace('/^Kontor\s+·\s+/u', '', trim($title)) ?? trim($title);
         $this->headline($title);
         $this->browserTitle($title);
+        $this->configureBreadcrumbs();
+    }
+
+    private function configureBreadcrumbs(): void
+    {
+        $segment = trim((string) $this->wire()->input->urlSegment1, '/');
+        if ($segment === '') {
+            return;
+        }
+
+        $adminUrl = $this->wire()->config->urls->admin . 'kontor/';
+        $trail = match ($segment) {
+            'contact' => [['contacts/', 'Contacts']],
+            'company' => [['companies/', 'Companies']],
+            'crm-deals' => [['crm/', 'CRM']],
+            'crm-lead', 'crm-pipeline' => [['crm/', 'CRM']],
+            'crm-deal' => [['crm/', 'CRM'], ['crm-deals/', 'Deals']],
+            'sales-quotation', 'sales-order' => [['sales/', 'Sales']],
+            'invoice' => [['invoices/', 'Invoices']],
+            'payment' => [['payments/', 'Payments']],
+            'task' => [['tasks/', 'Tasks']],
+            'inventory-warehouse', 'inventory-movement' => [['inventory/', 'Inventory']],
+            'purchasing-supplier', 'purchase-order', 'purchasing-receipt' => [
+                ['purchasing/', 'Purchasing'],
+            ],
+            'expense-category', 'expense' => [['expenses/', 'Expenses']],
+            'project' => [['projects/', 'Projects']],
+            'workflow' => [['workflows/', 'Workflows']],
+            'workflow-instance' => [['workflows/', 'Workflows']],
+            'automation' => [['automations/', 'Automations']],
+            'custom-entity' => [['custom-entities/', 'Custom entities']],
+            'custom-entity-record' => [['custom-entities/', 'Custom entities']],
+            'catalog-references', 'catalog-categories', 'catalog-price-lists' => [
+                ['catalog/', 'Catalog'],
+            ],
+            'catalog-item' => [['catalog/', 'Catalog']],
+            'catalog-category' => [
+                ['catalog/', 'Catalog'],
+                ['catalog-categories/', 'Categories'],
+            ],
+            'catalog-price-list' => [
+                ['catalog/', 'Catalog'],
+                ['catalog-price-lists/', 'Price lists'],
+            ],
+            'catalog-price-entry' => [
+                ['catalog/', 'Catalog'],
+                ['catalog-price-lists/', 'Price lists'],
+            ],
+            'import' => $this->importBreadcrumbTrail(),
+            default => [],
+        };
+
+        $this->breadcrumb($adminUrl, $this->_('Kontor'));
+        foreach ($trail as [$path, $label]) {
+            $this->breadcrumb($adminUrl . $path, $this->_($label));
+        }
+    }
+
+    /**
+     * @return array<int, array{0: string, 1: string}>
+     */
+    private function importBreadcrumbTrail(): array
+    {
+        return match ((string) $this->wire()->input->get('entity')) {
+            'contact' => [['contacts/', 'Contacts']],
+            'company' => [['companies/', 'Companies']],
+            'catalog_item' => [['catalog/', 'Catalog']],
+            default => [],
+        };
     }
 
     private function requirePermission(string $permission): void

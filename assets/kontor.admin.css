@@ -2210,6 +2210,16 @@
   color: var(--pw-muted-color);
 }
 
+/*
+ * ProcessWire owns the page H1. The first workspace header supplies context
+ * and actions, so its legacy H2 must not repeat the same title visually or in
+ * the document outline. Section headers deeper in a workspace remain visible.
+ */
+.kontor-shell > .kontor-pagehead:first-child h2,
+.kontor-shell > .kontor-formhead:first-child h2 {
+  display: none;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components,

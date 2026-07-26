@@ -36,6 +36,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Consistent ProcessWire page titles and hierarchical breadcrumbs across
+  every Kontor list, detail, designer and import route.
 - `KontorDemo`, an executable order-to-cash reference workflow that
   creates and connects real Contacts, CRM, Catalog, Sales, Workflow,
   Tasks, Collaboration, Files, Mail, Projects, Invoices, Ledger and
