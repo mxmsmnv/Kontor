@@ -15,14 +15,11 @@ title, all built against that spec. Depends only on `kontor/core`.
 point — a business component implements it and registers into
 `ApiResourceRegistry`, the exact same inverted-dependency shape every
 other registry in this monorepo already uses (`ReportProviderRegistry`,
-`WidgetRegistry`, `ActionHandlerRegistry`). `Kontor\API\Infrastructure\Resources\OrganizationResource`
-is the one trivial built-in resource proving the pipeline end-to-end,
-over Core's own `kontor_organizations` table rather than a business
-entity — it only supports `list`/`find`/`update` (no `create`/`delete`;
-Core has no organization-lifecycle-via-API concept in this substage).
-kontor.md#20.10's actual business endpoints (`/contacts`, `/invoices`,
-`/quotations/{uid}/issue`, …) are for `kontor/contacts`, `kontor/invoices`,
-etc. to register when they choose to — not retrofitted here.
+`WidgetRegistry`, `ActionHandlerRegistry`). `OrganizationResource` is the
+trivial built-in resource proving the pipeline over Core. `kontor/contacts`
+is now the first business adopter: it registers `/contacts` with standard
+CRUD, pagination, filters, sparse fields, soft delete, and idempotent
+creation. Further business endpoints remain owned by their components.
 
 ## The real HTTP entry point is a thin wrapper over a pure core
 
@@ -30,15 +27,14 @@ etc. to register when they choose to — not retrofitted here.
 single true request/response cycle — routing, authentication, query
 parsing, CRUD dispatch, idempotency, error envelopes — and takes/returns
 plain DTOs with no superglobals or `$this->wire()` dependency, so it's
-fully unit- and integration-tested without a live HTTP server.
+fully unit- and integration-tested without requiring a live HTTP server.
 `KontorAPI::hookApiRequest()` (hooked onto `ProcessPageView::execute`,
 guarded to the `api/kontor/v1` path prefix) is the thin ProcessWire-glue
 translator from a real request to `ApiHttpRequest` and back — the same
 "pure core, thin I/O wrapper" split used throughout this monorepo for
-testability. That hook method itself can only be lint-checked in this
-sandbox (no live ProcessWire/HTTP server to exercise it against), the
-same disclosed limitation as every other ProcessWire-specific glue in
-this project.
+testability. The Contacts adopter also exercises that glue through the live
+local HTTPS endpoint, covering bearer authentication and the real
+`POST`/`PATCH`/filtered `GET`/`DELETE` request cycle.
 
 ## Contents
 
@@ -123,7 +119,6 @@ inline delivery only. No per-route scope enforcement (a token's scopes
 exist and are checked when explicitly requested, but `ApiRequestHandler`
 doesn't yet map a route to a required scope automatically). No
 ProcessWire session authentication wired into `ApiRequestHandler` yet —
-only bearer tokens. No GraphQL (that's Substage 8.2's own job) and no
-business-component resources (contacts, invoices, …) — this package only
-provides the registry and one demonstrator; adding those is each
-business component's own future work.
+only bearer tokens. No GraphQL (that's Substage 8.2's own job). Contacts is
+the first business resource; invoices, quotations, and other components still
+need to register their own adapters.

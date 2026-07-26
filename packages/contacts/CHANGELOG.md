@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Contacts registers the first business API resource: organization-scoped
+  REST CRUD, pagination, search/status filters, sparse fields, soft delete,
+  and the shared bearer-token/idempotency request lifecycle.
 - Repository-backed active/inactive directory filters for contacts and
   companies, exposed through the Core admin UI.
 - Paginated active/archive contact and company queries with offsets and exact

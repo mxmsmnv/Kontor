@@ -10,6 +10,7 @@ use Kontor\Contacts\Infrastructure\Export\CompanyExportProvider;
 use Kontor\Contacts\Infrastructure\Export\ContactExportProvider;
 use Kontor\Contacts\Infrastructure\Import\CompanyImportProvider;
 use Kontor\Contacts\Infrastructure\Import\ContactImportProvider;
+use Kontor\Contacts\Infrastructure\API\ContactResource;
 use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
@@ -44,13 +45,13 @@ class KontorContacts extends WireData implements Module
         return [
             'title' => 'Kontor Contacts',
             'summary' => 'Contacts, companies, addresses, memberships, tags and duplicate detection.',
-            'version' => '008',
+            'version' => '009',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorContacts',
             'icon' => 'address-book',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor', 'KontorSearch'],
+            'requires' => ['Kontor', 'KontorSearch', 'KontorAPI'],
             'permissions' => [
                 'kontor-contacts-contact-view' => 'View contacts',
                 'kontor-contacts-contact-create' => 'Create contacts',
@@ -81,6 +82,9 @@ class KontorContacts extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
         /** @var KontorSearch $searchModule */
         $searchModule = $this->wire()->modules->get('KontorSearch');
+        /** @var KontorAPI $apiModule */
+        $apiModule = $this->wire()->modules->get('KontorAPI');
+        $apiModule->resourceRegistry()->register(new ContactResource($this->contactRepository()));
 
         $kontor->container()->get(ImportProviderRegistry::class)->register(
             'contact',

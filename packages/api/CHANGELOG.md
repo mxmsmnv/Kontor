@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Contacts is the first external business-resource adopter, registering full
+  `/contacts` CRUD, pagination, filters, sparse fields, and soft delete.
 - First ProcessKontor admin vertical: one-time token issuance, revocation,
   resource/OpenAPI discovery, webhook subscription management, and recent
   delivery observability.

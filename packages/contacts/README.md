@@ -6,10 +6,10 @@ import/export. Everything before this stage was platform infrastructure
 (Core, SDK, Queue, Files, Cache, Search); this is the first component that
 actually stores and manages business data.
 
-Depends on `kontor/core` (persistence, registries) and `kontor/search`
-(federated search), same independent-package structure as the platform
-components — but unlike them, Contacts doesn't *provide* a capability
-other components consume; it *consumes* the infrastructure they provide.
+Depends on `kontor/core` (persistence, registries), `kontor/search`
+(federated search), and `kontor/api` for the registered `/contacts`
+resource. Contacts consumes those platform extension points rather than
+building parallel infrastructure.
 
 ## Contents
 
@@ -43,6 +43,10 @@ other components consume; it *consumes* the infrastructure they provide.
 - Search: registers `SqlFullTextSearchProvider` instances (from
   `kontor/search`, Substage 2.4) against `kontor_contacts`/`kontor_companies`'s
   own `FULLTEXT` indexes — no new search code needed, just configuration.
+- API: registers `ContactResource` into the shared API registry. The real
+  `/api/kontor/v1/contacts` endpoint supports organization-scoped list/find/
+  create/update/soft-delete, pagination, `filter[query]`, `filter[status]`,
+  sparse fields, and the standard bearer-token/idempotency flow.
 
 ## A SQL-injection risk caught before shipping
 
@@ -72,6 +76,7 @@ lints.
 
 ## Not in scope for this substage
 
-No admin UI/routes, no REST API endpoints, no CRM-specific concepts (leads,
-deals, pipelines — that's `kontor/crm`, Substage 3.3). "Merge" has a
-permission (`kontor-contacts-merge`) declared but no implementation yet.
+No API resources for companies, addresses, or memberships yet, and no
+CRM-specific concepts (leads, deals, pipelines — that's `kontor/crm`,
+Substage 3.3). "Merge" has a permission (`kontor-contacts-merge`) declared
+but no implementation yet.

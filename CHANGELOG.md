@@ -27,6 +27,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Contacts now registers the first business API resource with live
+  bearer-authenticated REST CRUD, filters, pagination, sparse fields,
+  idempotent create, and soft delete.
 - Assigned tasks can schedule delayed Queue reminders; workers deliver through
   Mail, write task-linked history, and mark reminders sent exactly once.
 - Collaboration comments now queue idempotent mention/follower notifications;
