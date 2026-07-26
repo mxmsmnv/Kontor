@@ -11,6 +11,8 @@ use Kontor\SDK\DTO\SearchResult;
 
 final class FakeSearchProvider implements SearchProviderInterface
 {
+    public int $searchCalls = 0;
+
     /**
      * @param SearchHit[] $hits
      */
@@ -33,6 +35,8 @@ final class FakeSearchProvider implements SearchProviderInterface
 
     public function search(SearchQuery $query): SearchResult
     {
+        $this->searchCalls++;
+
         return new SearchResult(array_slice($this->hits, $query->offset, $query->limit), count($this->hits));
     }
 }

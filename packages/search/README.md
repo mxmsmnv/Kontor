@@ -10,7 +10,8 @@ Separate component from Kontor Core (spec section 5.3), same independent-
 package structure as `kontor/queue`/`kontor/files`/`kontor/cache`. Unlike
 those, it depends on **kontor/queue directly** (not just `kontor/core`) —
 the indexing queue milestone is dispatched through KontorQueue rather than
-building a second queue.
+building a second queue. The ProcessWire module also requires
+**kontor/cache** for short-lived federated query results.
 
 ## How it fits together
 
@@ -25,7 +26,9 @@ building a second queue.
   "global search UI" / "command palette"), merges hits by score, and
   re-paginates the merged set. It implements `SearchProviderInterface`
   itself, which is what makes it registrable as the `search` capability
-  the same way every other capability maps to its own SDK contract.
+  the same way every other capability maps to its own SDK contract. Results
+  are cached for 30 seconds in the `search` namespace; the cache key includes
+  organization, term, entity filters and pagination.
 - `ComponentsSearchProvider` is a real, working provider (not a stub) that
   searches installed components via Core's `ComponentRegistry` — "components
   search" from section 28, registered automatically.
@@ -35,7 +38,8 @@ building a second queue.
   KontorQueue; the worker reconstructs it with the real
   `SearchIndexerRegistry` (via `JobRegistry`'s factory-closure pattern from
   Substage 2.1) and pushes to whatever `SearchIndexerInterface`
-  implementations are registered for that entity type. Pure SQL FULLTEXT
+  implementations are registered for that entity type. A successful job
+  invalidates the cache's `results` tag. Pure SQL FULLTEXT
   needs no indexer at all — the index lives in the same table, maintained
   automatically by MySQL. This only matters once an external engine
   (Meilisearch, Typesense, OpenSearch, Elasticsearch — section 28) is

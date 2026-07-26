@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Search serializes cached result DTOs into WireCache-compatible snapshots
+  and validates them while rebuilding the result.
 - Files now enforces organization boundaries across version lookup, sharing,
   reading, archiving and restoring; restores leave exactly one active version
   and failed metadata writes remove newly stored bytes.
@@ -22,6 +24,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Search now consumes Cache end to end: organization-scoped query keys,
+  30-second result reuse, and tag invalidation after indexing.
 - First Cache admin vertical: live ProcessWire adapter health,
   organization-scoped namespace workbench, JSON values, TTLs, tags, and
   generation-based tag or namespace invalidation.

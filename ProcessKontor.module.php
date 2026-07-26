@@ -87,7 +87,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '112',
+            'version' => '113',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4603,6 +4603,14 @@ class ProcessKontor extends Process
                 'result' => null,
             ], $state),
             'effectiveNamespacePrefix' => 'kontor-admin-org-' . $this->organizationInternalId() . '-',
+            'consumers' => [
+                [
+                    'name' => 'Search',
+                    'status' => $this->searchReady() ? 'connected' : 'unavailable',
+                    'namespace' => 'search',
+                    'policy' => '30-second query cache · results tag invalidated after indexing',
+                ],
+            ],
             'canManage' => $this->can('kontor-cache-manage'),
             'canFlush' => $this->can('kontor-cache-flush'),
         ]);
@@ -9488,6 +9496,11 @@ class ProcessKontor extends Process
     private function reportsReady(): bool
     {
         return $this->wire()->modules->isInstalled('KontorReports');
+    }
+
+    private function searchReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorSearch');
     }
 
     private function inventoryReady(): bool

@@ -7,6 +7,7 @@ namespace Kontor\Search\Tests\Unit\Infrastructure\Queue;
 use Kontor\Search\Infrastructure\Queue\SearchIndexJob;
 use Kontor\Search\Infrastructure\Registry\SearchIndexerRegistry;
 use Kontor\Search\SearchIndexerInterface;
+use Kontor\Search\Tests\Support\RecordingCache;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -78,6 +79,22 @@ final class SearchIndexJobTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         $job->handle($job->payload(), new NullProgressReporter());
+    }
+
+    public function test_handle_invalidates_cached_search_results_after_indexing(): void
+    {
+        $registry = new SearchIndexerRegistry();
+        $registry->register(new RecordingIndexer('contact'));
+        $cache = new RecordingCache();
+        $job = new SearchIndexJob(
+            ['action' => 'index', 'entityType' => 'contact', 'entityUid' => 'ct_01', 'data' => []],
+            $registry,
+            $cache,
+        );
+
+        $job->handle($job->payload(), new NullProgressReporter());
+
+        $this->assertSame(['results'], $cache->flushedTags);
     }
 }
 

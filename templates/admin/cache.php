@@ -3,6 +3,7 @@
 /** @var \Kontor\SDK\DTO\HealthCheckResult $health */
 /** @var array<string, mixed> $state */
 /** @var string $effectiveNamespacePrefix */
+/** @var array<int, array{name: string, status: string, namespace: string, policy: string}> $consumers */
 /** @var bool $canManage */
 /** @var bool $canFlush */
 /** @var string $adminUrl */
@@ -33,6 +34,19 @@ $resultJson = $result !== null
       <div><span>External connection</span><strong>None</strong></div>
       <div><span>Namespace isolation</span><strong>Organization-scoped workbench</strong></div>
     </div>
+  </section>
+
+  <section class="kontor-card kontor-tablewrap">
+    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Capability consumers</p><h3>Connected components</h3></div></header>
+    <table class="kontor-table">
+      <thead><tr><th>Component</th><th>Namespace</th><th>Policy</th><th>Status</th></tr></thead>
+      <tbody><?php foreach ($consumers as $consumer): ?><tr>
+        <td><strong><?= $e($consumer['name']) ?></strong></td>
+        <td><code><?= $e($consumer['namespace']) ?></code></td>
+        <td><?= $e($consumer['policy']) ?></td>
+        <td><span class="kontor-pill<?= $consumer['status'] === 'connected' ? '' : ' kontor-pill--inactive' ?>"><?= $e($consumer['status']) ?></span></td>
+      </tr><?php endforeach; ?></tbody>
+    </table>
   </section>
 
   <section class="kontor-card">

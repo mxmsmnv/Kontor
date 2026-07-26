@@ -28,13 +28,13 @@ class KontorSearch extends WireData implements Module
         return [
             'title' => 'Kontor Search',
             'summary' => 'Provider registry, federated global search, SQL full-text search and asynchronous indexing.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorSearch',
             'icon' => 'search',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor', 'KontorQueue'],
+            'requires' => ['Kontor', 'KontorQueue', 'KontorCache'],
         ];
     }
 
@@ -48,6 +48,8 @@ class KontorSearch extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
         /** @var KontorQueue $queueModule */
         $queueModule = $this->wire()->modules->get('KontorQueue');
+        /** @var KontorCache $cacheModule */
+        $cacheModule = $this->wire()->modules->get('KontorCache');
 
         $this->providerRegistry()->register(
             new ComponentsSearchProvider($kontor->container()->get(ComponentRegistry::class))
@@ -63,7 +65,11 @@ class KontorSearch extends WireData implements Module
 
         $queueModule->jobRegistry()->register(
             'search.index',
-            fn (array $payload): SearchIndexJob => new SearchIndexJob($payload, $this->indexerRegistry())
+            fn (array $payload): SearchIndexJob => new SearchIndexJob(
+                $payload,
+                $this->indexerRegistry(),
+                $cacheModule->manager()->forNamespace('search'),
+            )
         );
     }
 
@@ -79,7 +85,13 @@ class KontorSearch extends WireData implements Module
 
     public function globalSearchService(): GlobalSearchService
     {
-        return $this->globalSearchService ??= new GlobalSearchService($this->providerRegistry());
+        /** @var KontorCache $cacheModule */
+        $cacheModule = $this->wire()->modules->get('KontorCache');
+
+        return $this->globalSearchService ??= new GlobalSearchService(
+            $this->providerRegistry(),
+            $cacheModule->manager()->forNamespace('search'),
+        );
     }
 
     public function indexDispatcher(): SearchIndexDispatcher

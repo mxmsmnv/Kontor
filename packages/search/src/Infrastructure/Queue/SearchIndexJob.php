@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Search\Infrastructure\Queue;
 
 use Kontor\Search\Infrastructure\Registry\SearchIndexerRegistry;
+use Kontor\SDK\Contracts\CacheInterface;
 use Kontor\SDK\Contracts\JobInterface;
 use Kontor\SDK\Contracts\JobProgressReporterInterface;
 use RuntimeException;
@@ -24,6 +25,7 @@ final class SearchIndexJob implements JobInterface
     public function __construct(
         private readonly array $payload,
         private readonly ?SearchIndexerRegistry $indexers = null,
+        private readonly ?CacheInterface $cache = null,
     ) {
     }
 
@@ -71,6 +73,7 @@ final class SearchIndexJob implements JobInterface
             }
         }
 
+        $this->cache?->flushTag('results');
         $progress->report(100);
     }
 }

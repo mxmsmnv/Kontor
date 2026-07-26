@@ -9,6 +9,7 @@ use Kontor\SDK\DTO\SearchQuery;
 use Kontor\Search\Application\GlobalSearchService;
 use Kontor\Search\Infrastructure\Registry\SearchProviderRegistry;
 use Kontor\Search\Tests\Support\FakeSearchProvider;
+use Kontor\Search\Tests\Support\RecordingCache;
 use PHPUnit\Framework\TestCase;
 
 final class GlobalSearchServiceTest extends TestCase
@@ -83,5 +84,40 @@ final class GlobalSearchServiceTest extends TestCase
 
         $this->assertTrue($service->supports('contact'));
         $this->assertFalse($service->supports('invoice'));
+    }
+
+    public function test_repeated_query_is_served_from_cache_without_calling_provider_again(): void
+    {
+        $registry = new SearchProviderRegistry();
+        $provider = new FakeSearchProvider('contacts', 'contact', [
+            $this->hit('contact', 'c1', 1.0),
+        ]);
+        $registry->register($provider);
+        $cache = new RecordingCache();
+        $service = new GlobalSearchService($registry, $cache);
+        $query = new SearchQuery('org_01', 'acme', entityTypes: ['contact']);
+
+        $first = $service->search($query);
+        $second = $service->search($query);
+
+        $this->assertEquals($first, $second);
+        $this->assertSame(1, $provider->searchCalls);
+        $this->assertSame(1, $cache->rememberMisses);
+    }
+
+    public function test_cache_key_is_scoped_by_organization_and_pagination(): void
+    {
+        $registry = new SearchProviderRegistry();
+        $provider = new FakeSearchProvider('contacts', 'contact', [
+            $this->hit('contact', 'c1', 1.0),
+        ]);
+        $registry->register($provider);
+        $service = new GlobalSearchService($registry, new RecordingCache());
+
+        $service->search(new SearchQuery('org_01', 'acme', limit: 10));
+        $service->search(new SearchQuery('org_02', 'acme', limit: 10));
+        $service->search(new SearchQuery('org_01', 'acme', limit: 5));
+
+        $this->assertSame(3, $provider->searchCalls);
     }
 }
