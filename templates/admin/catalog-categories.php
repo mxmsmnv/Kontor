@@ -26,6 +26,14 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedS
     return $parameters === '' ? './' : './?' . $parameters;
 };
 $hasFilters = $query !== '' || $selectedStatus !== null;
+$filterParameters = array_filter([
+    'q' => $query,
+    'status' => $selectedStatus,
+    'archived' => $showArchived ? 1 : '',
+], static fn (string|int|null $value): bool => $value !== null && $value !== '');
+$filterUrl = static function (string $facet, string $value) use ($filterParameters): string {
+    return './?' . http_build_query([...$filterParameters, $facet => $value]);
+};
 $clearFiltersUrl = $showArchived ? './?archived=1' : './';
 ?>
 <div class="kontor-shell">
@@ -160,7 +168,11 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
                 </a>
               </td>
               <td><?= $e($category->sortOrder) ?></td>
-              <td><span class="kontor-pill<?= $category->status === 'active' ? '' : ' kontor-pill--inactive' ?>"><?= $e($category->status) ?></span></td>
+              <td>
+                <a class="kontor-catalogfacet kontor-pill<?= $category->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $category->status)) ?>">
+                  <?= $e($category->status) ?>
+                </a>
+              </td>
               <td class="kontor-queueactions">
                 <form method="post" action="<?= $e($adminUrl) ?>catalog-category-action/">
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">

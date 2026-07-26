@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Composable row facets for Category status and Price list currency, validity,
+  and status.
 - Composable Catalog row facets for item type, category, inventory, pricing,
   unit, and status.
 - Exact matching and shown-result feedback beside Activity filters.

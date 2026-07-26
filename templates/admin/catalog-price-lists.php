@@ -30,7 +30,17 @@ $hasFilters = $query !== ''
     || $selectedStatus !== null
     || $selectedValidity !== null
     || $selectedCurrency !== null;
+$filterParameters = array_filter([
+    'q' => $query,
+    'status' => $selectedStatus,
+    'validity' => $selectedValidity,
+    'currency' => $selectedCurrency,
+], static fn (?string $value): bool => $value !== null && $value !== '');
+$filterUrl = static function (string $facet, string $value) use ($filterParameters): string {
+    return './?' . http_build_query([...$filterParameters, $facet => $value]);
+};
 $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d') ?? '—';
+$today = new \DateTimeImmutable('today');
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -138,6 +148,9 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
         <tbody>
           <?php foreach ($priceLists as $priceList): ?>
             <?php $uid = $priceList->uid->toString(); ?>
+            <?php $validity = $priceList->validFrom !== null && $priceList->validFrom > $today
+                ? 'upcoming'
+                : ($priceList->validTo !== null && $priceList->validTo < $today ? 'expired' : 'current'); ?>
             <tr>
               <td class="kontor-selectcell">
                 <input
@@ -150,10 +163,22 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
                 >
               </td>
               <td><strong><a href="<?= $e($adminUrl) ?>catalog-price-list/?id=<?= $e(rawurlencode($uid)) ?>"><?= $e($priceList->name) ?></a></strong></td>
-              <td><code><?= $e($priceList->currencyCode) ?></code></td>
-              <td><?= $e($date($priceList->validFrom)) ?> → <?= $e($date($priceList->validTo)) ?></td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('currency', $priceList->currencyCode)) ?>">
+                  <code><?= $e($priceList->currencyCode) ?></code>
+                </a>
+              </td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('validity', $validity)) ?>">
+                  <?= $e($date($priceList->validFrom)) ?> → <?= $e($date($priceList->validTo)) ?>
+                </a>
+              </td>
               <td><?= $e($entryCounts[$uid] ?? 0) ?></td>
-              <td><span class="kontor-pill<?= $priceList->status === 'active' ? '' : ' kontor-pill--inactive' ?>"><?= $e($priceList->status) ?></span></td>
+              <td>
+                <a class="kontor-catalogfacet kontor-pill<?= $priceList->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $priceList->status)) ?>">
+                  <?= $e($priceList->status) ?>
+                </a>
+              </td>
             </tr>
           <?php endforeach; ?>
         </tbody>
