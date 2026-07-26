@@ -1,0 +1,13 @@
+{
+    "field.email": "E-Mail",
+    "field.password": "Passwort",
+    "field.first_name": "Vorname",
+    "field.last_name": "Nachname",
+    "field.phone": "Telefon",
+    "action.login": "Anmelden",
+    "action.view_quotation": "Angebot ansehen",
+    "action.view_invoice": "Rechnung ansehen",
+    "action.download_file": "Herunterladen",
+    "action.update_profile": "Profil aktualisieren",
+    "error.invalid_credentials": "Ungültige E-Mail oder Passwort."
+}

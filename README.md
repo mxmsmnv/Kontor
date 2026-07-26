@@ -333,6 +333,22 @@ two existing packages rather than a new one (spec section 5.6 rules out
   inbound adapter, simulating an inbound-parse webhook via `pushRaw()`.
   Fourth real consumer of `Kontor\Core\Testing\DatabaseTestCase` outside
   `kontor/core` — see its own README.
+- [`packages/portal/`](packages/portal/) — `kontor/portal` (Substage 9.2,
+  second component of Stage 9): customer login, quotations, invoices,
+  payments, files, profile. Depends on `kontor/core` **and**
+  `kontor/contacts`, `kontor/sales`, `kontor/invoices`, `kontor/payments`,
+  `kontor/files` — an aggregator over five sibling packages at once,
+  reused directly, none ever modified. A portal account is always exactly
+  one Contact. Quotations/invoices are a read-only, ownership-checked
+  view hydrating the sibling packages' own real Domain objects (their
+  constructors are public) rather than a parallel DTO, since neither
+  repository exposes a "find by customer" method and neither is
+  retrofitted with one. Payments reuse `kontor/payments`'s own allocation
+  lookup directly — read-only history, no payment gateway. Files build
+  the real signed-URL-verifying download endpoint `kontor/files`'s own
+  README flagged as deferred (customer-facing, so it lives here, not
+  there). Fifth real consumer of `Kontor\Core\Testing\DatabaseTestCase`
+  outside `kontor/core` — see its own README.
 
 ## Status
 
@@ -349,7 +365,7 @@ productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
 scaffolding — extensibility), all of Stage 8 (Substage 8.1 REST API,
 8.2 GraphQL, 8.3 Marketplace — API and external ecosystem), and
-Substage 9.1 (Mail, first component of Stage 9 — Advanced capabilities)
-per spec section 36. Not yet installed against a live ProcessWire
-instance — see the spec's Definition of Done
+Substage 9.1–9.2 (Mail, Portal — Stage 9, Advanced capabilities) per spec
+section 36. Not yet installed against a live ProcessWire instance — see
+the spec's Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.
