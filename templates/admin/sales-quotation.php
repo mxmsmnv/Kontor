@@ -8,6 +8,9 @@
 /** @var array<string, string> $values */
 /** @var array<string, string> $customers */
 /** @var \Kontor\CRM\Domain\Deal|null $sourceDeal */
+/** @var bool $mailReady */
+/** @var \Kontor\Mail\Domain\Mailbox[] $mailboxes */
+/** @var string $customerEmail */
 /** @var string $error */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -128,6 +131,23 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
           <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
         </form>
       <?php elseif ($quotation->isOpen()): ?>
+        <?php if ($mailReady && $mailboxes !== []): ?>
+          <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
+            <label>From
+              <select name="mailbox_uid" required>
+                <?php foreach ($mailboxes as $mailbox): ?><option value="<?= $e($mailbox->uid->toString()) ?>"><?= $e($mailbox->name . ' · ' . $mailbox->emailAddress) ?></option><?php endforeach; ?>
+              </select>
+            </label>
+            <label>Recipient <input type="email" name="recipient" value="<?= $e($customerEmail) ?>" required></label>
+            <label><input type="checkbox" name="dry_run" value="1" checked> Simulate delivery</label>
+            <button class="kontor-button" name="action" value="send" type="submit"><?= $quotation->status === 'sent' ? 'Send again via Mail' : 'Send via Mail' ?></button>
+          </form>
+        <?php elseif ($mailReady): ?>
+          <a class="kontor-button" href="<?= $e($adminUrl) ?>mail/">Create an active mailbox first</a>
+        <?php else: ?>
+          <a class="kontor-button" href="<?= $e($adminUrl) ?>components/">Enable Kontor Mail first</a>
+        <?php endif; ?>
         <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
           <button class="kontor-button" name="action" value="accept" type="submit">Accept quotation</button>

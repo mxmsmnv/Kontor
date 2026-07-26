@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Issued quotations can now be delivered through Mail, retain linked outbound
+  history, and advance to `sent` only after successful delivery.
 - Inventory-tracked order lines now reserve stock during confirmation, ship
   it on completion, and release reservations when a confirmed order is
   cancelled.
@@ -27,8 +29,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 - Reject repeated conversion of the same accepted quotation into multiple
   orders.
 - Keep the component registry version synchronized during module upgrades.
-
-### Added
 
 - Initial alpha (Substage 4.1): `kontor_sales_quotations`,
   `kontor_sales_orders`, `kontor_document_lines` migrations;

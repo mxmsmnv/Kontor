@@ -26,7 +26,8 @@
         "kontor/contacts": "^0.1",
         "kontor/catalog": "^0.1",
         "kontor/crm": "^0.1",
-        "kontor/invoices": "^0.1"
+        "kontor/invoices": "^0.1",
+        "kontor/mail": "^0.1"
     },
     "conflicts": {},
     "capabilities": [],

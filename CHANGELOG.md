@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Issued quotations now flow through Mail with linked outbound history and a
+  delivery-gated transition to `sent`.
 - Invoice issuance, credit notes, and cancellation now flow into Ledger as
   balanced, idempotent receivables, revenue, and sales-tax entries.
 - Inventory-tracked Sales orders now reserve stock on confirmation, ship the

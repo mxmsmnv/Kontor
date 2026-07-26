@@ -92,7 +92,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '132',
+            'version' => '133',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1546,6 +1546,16 @@ class ProcessKontor extends Process
             'values' => $values,
             'customers' => $this->salesCustomerLabels(),
             'sourceDeal' => $sourceDeal,
+            'mailReady' => $this->mailReady(),
+            'mailboxes' => $quotation !== null && $this->mailReady()
+                ? array_values(array_filter(
+                    $this->mailModule()->mailboxRepository()->forOrganization($quotation->organizationId),
+                    static fn (\Kontor\Mail\Domain\Mailbox $mailbox): bool => $mailbox->isActive(),
+                ))
+                : [],
+            'customerEmail' => $quotation !== null
+                ? $this->quotationCustomerEmail($quotation)
+                : '',
             'error' => $error,
         ]);
     }
@@ -1556,11 +1566,12 @@ class ProcessKontor extends Process
         $this->requireSales();
         $action = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->post('action'),
-            ['issue', 'accept', 'convert', 'cancel', 'archive', 'restore']
+            ['issue', 'send', 'accept', 'convert', 'cancel', 'archive', 'restore']
         );
-        $this->requireAction($action, ['issue', 'accept', 'convert', 'cancel', 'archive', 'restore']);
+        $this->requireAction($action, ['issue', 'send', 'accept', 'convert', 'cancel', 'archive', 'restore']);
         $permissions = [
             'issue' => 'kontor-sales-quotation-issue',
+            'send' => 'kontor-sales-quotation-send',
             'accept' => 'kontor-sales-quotation-accept',
             'convert' => 'kontor-sales-order-create',
             'cancel' => 'kontor-sales-quotation-cancel',
@@ -1627,6 +1638,83 @@ class ProcessKontor extends Process
                 'version' => $stored['versionNumber'],
             ]);
             $this->message($this->_('Quotation issued with an immutable snapshot and private PDF.'));
+        } elseif ($action === 'send') {
+            $this->requireMail();
+            $mailboxUid = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('mailbox_uid')
+            );
+            $recipient = strtolower(trim((string) $this->wire()->input->post('recipient')));
+            $mailbox = $this->mailModule()->mailboxRepository()->require($mailboxUid);
+            $this->requireSameOrganization($mailbox->organizationId);
+            if (!$mailbox->isActive()) {
+                throw new WireException($this->_('Select an active mailbox.'));
+            }
+            if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
+                throw new WireException($this->_('A valid quotation recipient is required.'));
+            }
+            $number = $quotation->number ?? $this->_('Quotation');
+            $subject = sprintf($this->_('Quotation %s'), $number);
+            $body = sprintf(
+                $this->_("Hello,\n\nplease find quotation %s for %s %s. The offer is valid until %s.\n\nRegards"),
+                $number,
+                number_format($quotation->total->amountMinor() / 100, 2, '.', ''),
+                $quotation->total->currencyCode(),
+                $quotation->validUntil?->format('Y-m-d') ?? $this->_('further notice'),
+            );
+            $dryRun = (bool) $this->wire()->input->post('dry_run');
+            $outbound = $dryRun
+                ? $this->mailModule()->outboundWithSender(
+                    new class implements \Kontor\Mail\Contracts\MailSenderInterface {
+                        public function send(
+                            string $fromAddress,
+                            array $toAddresses,
+                            array $ccAddresses,
+                            string $subject,
+                            string $bodyText,
+                        ): void {
+                        }
+                    }
+                )
+                : $this->mailModule()->outbound();
+            $message = $outbound->send(
+                $quotation->organizationId,
+                $mailbox->uid->toString(),
+                $mailbox->emailAddress,
+                [$recipient],
+                [],
+                $subject,
+                $body,
+                (int) $this->wire()->user->id,
+            );
+            $this->mailModule()->entityLinking()->link(
+                $quotation->organizationId,
+                $message->uid->toString(),
+                'quotation',
+                $quotation->uid->toString(),
+                (int) $this->wire()->user->id,
+            );
+            $this->audit('mail', 'message', $message->uid->toString(), 'quotation_delivery', metadata: [
+                'quotationUid' => $quotation->uid->toString(),
+                'dryRun' => $dryRun,
+                'status' => $message->status,
+            ]);
+            if ($message->status !== 'sent') {
+                throw new WireException(sprintf(
+                    $this->_('Quotation delivery failed: %s'),
+                    $message->error ?? $this->_('unknown transport error'),
+                ));
+            }
+            $sales->quotationWorkflow()->send($id);
+            $this->audit('sales', 'quotation', $id, 'send', metadata: [
+                'mailMessageUid' => $message->uid->toString(),
+                'recipient' => $recipient,
+                'dryRun' => $dryRun,
+            ]);
+            $this->message($dryRun
+                ? $this->_('Quotation delivery simulated, recorded in Mail, and marked sent.')
+                : $this->_('Quotation sent, recorded in Mail, and marked sent.'));
+            $this->wire()->session->redirect('../sales-quotation/?id=' . rawurlencode($id));
+            return;
         } elseif ($action === 'accept') {
             $sales->quotationWorkflow()->accept($id);
         } elseif ($action === 'convert') {
@@ -10617,6 +10705,22 @@ class ProcessKontor extends Process
 
         return $customer !== null
             && hash_equals($customer->organizationId, $invoice->organizationId)
+            ? (string) ($customer->email ?? '')
+            : '';
+    }
+
+    private function quotationCustomerEmail(Quotation $quotation): string
+    {
+        if (!$this->contactsReady()) {
+            return '';
+        }
+
+        $customer = $quotation->customerType === 'contact'
+            ? $this->contactRepository()->find($quotation->customerUid)
+            : $this->companyRepository()->find($quotation->customerUid);
+
+        return $customer !== null
+            && hash_equals($customer->organizationId, $quotation->organizationId)
             ? (string) ($customer->email ?? '')
             : '';
     }

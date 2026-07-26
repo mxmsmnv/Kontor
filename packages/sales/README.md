@@ -44,6 +44,10 @@ foreign keys"), not a hard dependency on `kontor/contacts`.
   snapshot into Sales, and stores the resulting confidential PDF through
   Files. The issued quotation links back to that historical template and
   private file even after newer template versions are published.
+- Issued quotations can be delivered through an active Mail mailbox. Every
+  attempt is retained in outbound history, linked back to the quotation, and
+  only successful delivery advances the quotation to `sent`. The admin UI
+  defaults to a safe simulated delivery.
 
 ## Filled a third Core gap
 
