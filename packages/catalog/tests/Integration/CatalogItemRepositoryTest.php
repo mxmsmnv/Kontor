@@ -188,6 +188,38 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         ], $repository->referenceUsage($this->organizationUid));
     }
 
+    public function test_status_filter_returns_only_matching_items(): void
+    {
+        $repository = $this->repository();
+        $active = CatalogItem::create($this->organizationUid, ['en' => 'Active item']);
+        $inactive = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Inactive item'],
+            status: 'inactive',
+        );
+        $discontinued = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Discontinued item'],
+            status: 'discontinued',
+        );
+
+        foreach ([$active, $inactive, $discontinued] as $item) {
+            $repository->save($item);
+        }
+
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            status: 'inactive',
+        ));
+        $this->assertSame(
+            $inactive->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                status: 'inactive',
+            )[0]->uid->toString(),
+        );
+    }
+
     public function test_category_filter_and_usage_counts_only_active_items(): void
     {
         $repository = $this->repository();

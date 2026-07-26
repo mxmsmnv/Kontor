@@ -151,6 +151,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $categoryUid = null,
         int $limit = 100,
         int $offset = 0,
+        ?string $status = null,
     ): array {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -158,6 +159,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $itemType,
             $archived,
             $categoryUid,
+            $status,
         );
         $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
@@ -182,6 +184,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $itemType = null,
         bool $archived = false,
         ?string $categoryUid = null,
+        ?string $status = null,
     ): int {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -189,6 +192,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $itemType,
             $archived,
             $categoryUid,
+            $status,
             true,
         );
         $statement = $this->pdo->prepare($sql);
@@ -286,6 +290,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $itemType,
         bool $archived,
         ?string $categoryUid,
+        ?string $status,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -304,6 +309,11 @@ final class CatalogItemRepository implements RepositoryInterface
         } elseif ($categoryUid !== null) {
             $sql .= ' AND category_uid = :category_uid';
             $params['category_uid'] = $categoryUid;
+        }
+
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
         }
 
         if ($query !== '') {

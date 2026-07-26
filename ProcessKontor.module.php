@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '045',
+            'version' => '046',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -490,6 +490,10 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('category')
         );
         $categoryUid = $categoryUid !== '' ? $categoryUid : null;
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['active', 'inactive', 'discontinued']
+        );
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
         $organizationUid = $this->organizationUid();
         $pageSize = 25;
@@ -499,6 +503,7 @@ class ProcessKontor extends Process
             itemType: $itemType,
             archived: $showArchived,
             categoryUid: $categoryUid,
+            status: $status,
         );
         $totalPages = max(1, (int) ceil($totalItems / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
@@ -510,6 +515,7 @@ class ProcessKontor extends Process
             categoryUid: $categoryUid,
             limit: $pageSize,
             offset: ($page - 1) * $pageSize,
+            status: $status,
         );
         $categoryOptions = [];
         $categoryNames = [];
@@ -540,6 +546,7 @@ class ProcessKontor extends Process
             'query' => $query,
             'selectedType' => $itemType,
             'selectedCategory' => $categoryUid,
+            'selectedStatus' => $status,
             'categoryOptions' => $categoryOptions,
             'categoryNames' => $categoryNames,
             'showArchived' => $showArchived,
@@ -3704,12 +3711,17 @@ class ProcessKontor extends Process
         $categoryUid = $this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('return_category')
         );
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_status'),
+            ['active', 'inactive', 'discontinued']
+        );
         $archived = (string) $this->wire()->input->post('return_archived') === '1';
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
             'q' => $query,
             'type' => $type,
             'category' => $categoryUid,
+            'status' => $status,
             'archived' => $archived ? 1 : null,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
