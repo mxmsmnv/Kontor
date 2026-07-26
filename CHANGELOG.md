@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct Dashboard summary-card drill-down for contacts, companies, enabled
+  components, and active Queue jobs.
 - Composable Queue table facets on queue names and job statuses.
 - Direct Queue summary-card drill-down for all, active, completed, and
   dead-letter jobs, including a combined pending/reserved active filter.

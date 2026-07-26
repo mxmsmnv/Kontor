@@ -129,30 +129,30 @@ $enabledComponents = count(array_filter(
   <?php endif; ?>
 
   <section class="kontor-statgrid<?= $queueReady && $canViewQueue ? ' kontor-statgrid--four' : '' ?>">
-    <article class="kontor-card kontor-stat">
+    <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>contacts/">
       <span class="kontor-stat__icon"><i class="fa fa-address-book"></i></span>
       <span>
         <strong class="kontor-stat__value"><?= $e($contactCount) ?></strong>
         <span class="kontor-stat__label">Active contacts</span>
       </span>
-    </article>
-    <article class="kontor-card kontor-stat">
+    </a>
+    <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>companies/">
       <span class="kontor-stat__icon"><i class="fa fa-building"></i></span>
       <span>
         <strong class="kontor-stat__value"><?= $e($companyCount) ?></strong>
         <span class="kontor-stat__label">Companies</span>
       </span>
-    </article>
-    <article class="kontor-card kontor-stat">
+    </a>
+    <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>components/?status=enabled">
       <span class="kontor-stat__icon"><i class="fa fa-cubes"></i></span>
       <span>
         <strong class="kontor-stat__value"><?= $e($enabledComponents) ?></strong>
         <span class="kontor-stat__label">Enabled components</span>
       </span>
-    </article>
+    </a>
     <?php if ($queueReady && $canViewQueue): ?>
       <?php $activeJobs = ($queueCounts['pending'] ?? 0) + ($queueCounts['reserved'] ?? 0); ?>
-      <article class="kontor-card kontor-stat">
+      <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>queue/?status=active">
         <span class="kontor-stat__icon<?= ($queueCounts['dead'] ?? 0) > 0 ? ' kontor-stat__icon--danger' : '' ?>">
           <i class="fa fa-tasks"></i>
         </span>
@@ -162,7 +162,7 @@ $enabledComponents = count(array_filter(
             Active jobs<?= ($queueCounts['dead'] ?? 0) > 0 ? ' · ' . $e($queueCounts['dead']) . ' dead' : '' ?>
           </span>
         </span>
-      </article>
+      </a>
     <?php endif; ?>
   </section>
 

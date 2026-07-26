@@ -142,6 +142,15 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.kontor-statgrid > a.kontor-card {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-statgrid > a.kontor-card:hover {
+  border-color: #a5b4fc;
+}
+
 .kontor-card {
   background: var(--kontor-surface);
   border: 1px solid var(--kontor-line);
