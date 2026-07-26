@@ -1478,6 +1478,23 @@
   margin: 0.2rem 0 0;
 }
 
+.kontor-healthsummary__filter {
+  border-radius: 999px;
+  color: inherit;
+  padding: 0.12rem 0.35rem;
+  text-decoration: none;
+}
+
+.kontor-healthsummary__filter:hover {
+  background: rgb(255 255 255 / 65%);
+}
+
+.kontor-healthsummary__filter--selected {
+  background: #fff;
+  box-shadow: 0 0 0 1px currentColor;
+  font-weight: 700;
+}
+
 .kontor-healthsummary time {
   color: var(--kontor-muted);
   font-size: 0.75rem;

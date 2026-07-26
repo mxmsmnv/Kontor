@@ -15,6 +15,9 @@ $overallLabel = [
     'critical' => 'Action required',
 ][$overall];
 $hasFilters = $query !== '' || $selectedStatus !== '';
+$healthySelected = $query === '' && $selectedStatus === 'ok';
+$warningSelected = $query === '' && $selectedStatus === 'warning';
+$criticalSelected = $query === '' && $selectedStatus === 'critical';
 $refreshQuery = http_build_query(array_filter([
     'q' => $query,
     'status' => $selectedStatus,
@@ -48,9 +51,9 @@ $displayValue = static function (mixed $value): string {
     <div>
       <strong><?= $e($overallLabel) ?></strong>
       <p>
-        <a href="./?status=ok"><?= $e($counts['ok']) ?> healthy</a>
-        · <a href="./?status=warning"><?= $e($counts['warning']) ?> warning</a>
-        · <a href="./?status=critical"><?= $e($counts['critical']) ?> critical</a>
+        <a class="kontor-healthsummary__filter<?= $healthySelected ? ' kontor-healthsummary__filter--selected' : '' ?>" href="./?status=ok"<?= $healthySelected ? ' aria-current="page"' : '' ?>><?= $e($counts['ok']) ?> healthy</a>
+        · <a class="kontor-healthsummary__filter<?= $warningSelected ? ' kontor-healthsummary__filter--selected' : '' ?>" href="./?status=warning"<?= $warningSelected ? ' aria-current="page"' : '' ?>><?= $e($counts['warning']) ?> warning</a>
+        · <a class="kontor-healthsummary__filter<?= $criticalSelected ? ' kontor-healthsummary__filter--selected' : '' ?>" href="./?status=critical"<?= $criticalSelected ? ' aria-current="page"' : '' ?>><?= $e($counts['critical']) ?> critical</a>
       </p>
     </div>
     <time datetime="<?= $e($checkedAt->format(DATE_ATOM)) ?>">
