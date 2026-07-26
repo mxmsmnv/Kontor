@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Catalog now uses a focused native UIkit search and filter flow, reveals bulk
+  actions only after selection, and presents item details with a concise
+  business summary and collapsed optional translations.
 - Components now uses native UIkit status navigation, filters, matched card
   grids, labels and actions without its former page-specific CSS layer.
 - Sections now shares one explicit UIkit grid for its header, toolbar and

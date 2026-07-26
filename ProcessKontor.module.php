@@ -102,7 +102,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '145',
+            'version' => '146',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7699,6 +7699,7 @@ class ProcessKontor extends Process
             'canEditPriceLists' => $canEditPriceLists,
             'priceEntries' => $priceEntries,
             'priceListDetails' => $priceListDetails,
+            'unitLabels' => (new UnitOfMeasure())->all(),
             'title' => $item === null ? $this->_('Create catalog item') : $this->catalogItemTitle($item),
         ]);
     }
@@ -9253,8 +9254,16 @@ class ProcessKontor extends Process
                 ),
                 $item?->title[$locale] ?? null,
                 $locale === $language,
-                50,
+                $locale === $language ? 50 : 33,
             );
+
+            if ($locale !== $language && ($item?->title[$locale] ?? '') === '') {
+                $translation = $form->getChildByName('title_' . $locale);
+
+                if ($translation !== null) {
+                    $translation->collapsed = Inputfield::collapsedYes;
+                }
+            }
         }
         $this->addTextField($form, 'sku', $this->_('SKU'), $item?->sku, false, 50);
         $this->addTextField($form, 'barcode', $this->_('Barcode'), $item?->barcode, false, 50);
@@ -9321,7 +9330,7 @@ class ProcessKontor extends Process
                 $label,
                 $this->moneyFormValue($money),
                 false,
-                25,
+                35,
             );
             $this->addSelectField(
                 $form,
@@ -9329,7 +9338,7 @@ class ProcessKontor extends Process
                 $this->_('Currency'),
                 $currencies,
                 $money?->currencyCode() ?? $currency,
-                25,
+                15,
             );
         }
 
@@ -9338,6 +9347,7 @@ class ProcessKontor extends Process
         $inventory->name = 'track_inventory';
         $inventory->label = $this->_('Track inventory for this item');
         $inventory->checked = $item?->trackInventory ?? false;
+        $inventory->columnWidth = 50;
         $form->add($inventory);
         foreach ($languages as $locale => $label) {
             $this->addTextareaField(
@@ -9350,8 +9360,16 @@ class ProcessKontor extends Process
                     strtoupper($locale)
                 ),
                 $item?->description[$locale] ?? null,
-                50,
+                $locale === $language ? 100 : 50,
             );
+
+            if ($locale !== $language && ($item?->description[$locale] ?? '') === '') {
+                $translation = $form->getChildByName('description_' . $locale);
+
+                if ($translation !== null) {
+                    $translation->collapsed = Inputfield::collapsedYes;
+                }
+            }
         }
         $this->addSubmit($form, $this->_('Save catalog item'));
 

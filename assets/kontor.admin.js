@@ -39,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
         count.textContent = `${selected} selected`;
       }
 
+      if (form.hasAttribute('data-kontor-hide-empty')) {
+        form.classList.toggle('uk-hidden', selected === 0);
+      }
+
       if (selectAll) {
         selectAll.checked = selected > 0 && selected === checkboxes.length;
         selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
