@@ -2,6 +2,7 @@
 
 namespace ProcessWire;
 
+use Kontor\Catalog\Application\PriceListDuplicator;
 use Kontor\Catalog\Domain\CatalogItem;
 use Kontor\Catalog\Domain\Category;
 use Kontor\Catalog\Domain\PriceList;
@@ -60,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '038',
+            'version' => '039',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -923,8 +924,41 @@ class ProcessKontor extends Process
             'priceList' => $priceList,
             'entries' => $entries,
             'itemNames' => $this->catalogItemNames(),
+            'canDuplicatePriceList' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-catalog-pricelist-create'),
             'title' => $priceList === null ? $this->_('Create price list') : $priceList->name,
         ]);
+    }
+
+    public function ___executeCatalogPriceListDuplicate(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-pricelist-create');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $source = $this->priceListRepository()->require($id);
+        $this->requireSameOrganization($source->organizationId);
+        $tierCount = count($this->priceRepository()->forPriceList($id));
+        $duplicate = $this->priceListDuplicator()->duplicate($source, $this->_(' (copy)'));
+
+        $this->audit(
+            'catalog',
+            'catalog_price_list',
+            $duplicate->uid->toString(),
+            'created',
+            current: $this->catalogPriceListAuditSnapshot($duplicate),
+            metadata: [
+                'duplicatedFrom' => $source->uid->toString(),
+                'priceTierCount' => $tierCount,
+            ],
+        );
+        $this->message(sprintf(
+            $this->_('Price list duplicated as an inactive draft with %d price tier(s).'),
+            $tierCount,
+        ));
+        $this->wire()->session->redirect(
+            '../catalog-price-list/?id=' . rawurlencode($duplicate->uid->toString())
+        );
     }
 
     public function ___executeCatalogPriceEntry(): string
@@ -3588,6 +3622,14 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorCatalog');
 
         return $module->priceRepository();
+    }
+
+    private function priceListDuplicator(): PriceListDuplicator
+    {
+        /** @var KontorCatalog $module */
+        $module = $this->wire()->modules->get('KontorCatalog');
+
+        return $module->priceListDuplicator();
     }
 
     private function contactRepository(): ContactRepository

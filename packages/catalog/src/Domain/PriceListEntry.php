@@ -34,4 +34,16 @@ final class PriceListEntry
 
         return !($this->validTo !== null && $date > $this->validTo);
     }
+
+    public function copyToPriceList(string $priceListUid): self
+    {
+        return new self(
+            priceListUid: $priceListUid,
+            itemUid: $this->itemUid,
+            price: $this->price,
+            minQuantity: $this->minQuantity,
+            validFrom: $this->validFrom,
+            validTo: $this->validTo,
+        );
+    }
 }

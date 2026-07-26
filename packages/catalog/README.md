@@ -69,6 +69,8 @@ The host `ProcessKontor` module provides item, category, price-list, price-tier,
 reference, import/export, backup, and global-search routes for Catalog. Item
 forms expose localized item titles/descriptions and category names for English,
 French, German, and Spanish, with the organization's default language required.
+Price lists can be duplicated transactionally with all quantity tiers, and
+copies always start inactive so existing commercial pricing is unaffected.
 The package itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

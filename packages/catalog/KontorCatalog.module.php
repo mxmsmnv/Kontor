@@ -2,6 +2,7 @@
 
 namespace ProcessWire;
 
+use Kontor\Catalog\Application\PriceListDuplicator;
 use Kontor\Catalog\Health\CatalogHealthCheck;
 use Kontor\Catalog\Infrastructure\Backup\CatalogBackupProvider;
 use Kontor\Catalog\Infrastructure\Export\ItemExportProvider;
@@ -37,7 +38,7 @@ class KontorCatalog extends WireData implements Module
         return [
             'title' => 'Kontor Catalog',
             'summary' => 'Items (products and services), categories, price lists, units and tax code references.',
-            'version' => '010',
+            'version' => '011',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCatalog',
             'icon' => 'cubes',
@@ -64,6 +65,7 @@ class KontorCatalog extends WireData implements Module
     private ?CategoryRepository $categoryRepository = null;
     private ?PriceListRepository $priceListRepository = null;
     private ?PriceRepository $priceRepository = null;
+    private ?PriceListDuplicator $priceListDuplicator = null;
 
     public function init(): void
     {
@@ -125,6 +127,15 @@ class KontorCatalog extends WireData implements Module
     public function priceRepository(): PriceRepository
     {
         return $this->priceRepository ??= new PriceRepository($this->pdo());
+    }
+
+    public function priceListDuplicator(): PriceListDuplicator
+    {
+        return $this->priceListDuplicator ??= new PriceListDuplicator(
+            $this->pdo(),
+            $this->priceListRepository(),
+            $this->priceRepository(),
+        );
     }
 
     public function healthCheck(): CatalogHealthCheck

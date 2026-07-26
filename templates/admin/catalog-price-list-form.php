@@ -4,6 +4,7 @@
 /** @var \Kontor\Catalog\Domain\PriceList|null $priceList */
 /** @var \Kontor\Catalog\Domain\PriceListEntry[] $entries */
 /** @var array<string, string> $itemNames */
+/** @var bool $canDuplicatePriceList */
 /** @var string $title */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -27,6 +28,15 @@ $quantity = static fn (float $value): string => rtrim(rtrim(number_format($value
     <p class="kontor-eyebrow">Catalog pricing</p>
     <h2><?= $e($title) ?></h2>
     <p>Currency, lifecycle status, and optional validity period.</p>
+    <?php if ($priceList !== null && $canDuplicatePriceList): ?>
+      <form method="post" action="<?= $e($adminUrl) ?>catalog-price-list-duplicate/">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <input type="hidden" name="id" value="<?= $e($priceList->uid->toString()) ?>">
+        <button class="kontor-button kontor-button--ghost" type="submit">
+          <i class="fa fa-copy"></i> Duplicate with tiers
+        </button>
+      </form>
+    <?php endif; ?>
   </header>
 
   <?= $form->render() ?>

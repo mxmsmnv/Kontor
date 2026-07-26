@@ -53,4 +53,16 @@ final class PriceList
 
         return !($this->validTo !== null && $date > $this->validTo);
     }
+
+    public function duplicate(string $nameSuffix = ' (copy)'): self
+    {
+        return self::create(
+            organizationId: $this->organizationId,
+            name: $this->name . $nameSuffix,
+            currencyCode: $this->currencyCode,
+            status: 'inactive',
+            validFrom: $this->validFrom,
+            validTo: $this->validTo,
+        );
+    }
 }

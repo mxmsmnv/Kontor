@@ -32,4 +32,25 @@ final class PriceListTest extends TestCase
 
         $this->assertSame('EUR', $priceList->currencyCode);
     }
+
+    public function test_duplicate_is_a_new_inactive_copy_with_the_same_commercial_window(): void
+    {
+        $priceList = PriceList::create(
+            'org_01',
+            'Retail',
+            'eur',
+            validFrom: new \DateTimeImmutable('2026-01-01'),
+            validTo: new \DateTimeImmutable('2026-12-31'),
+        );
+
+        $duplicate = $priceList->duplicate();
+
+        $this->assertFalse($priceList->uid->equals($duplicate->uid));
+        $this->assertSame('Retail (copy)', $duplicate->name);
+        $this->assertSame('inactive', $duplicate->status);
+        $this->assertSame('EUR', $duplicate->currencyCode);
+        $this->assertEquals($priceList->validFrom, $duplicate->validFrom);
+        $this->assertEquals($priceList->validTo, $duplicate->validTo);
+        $this->assertSame('active', $priceList->status);
+    }
 }

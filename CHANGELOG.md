@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- One-click Catalog price-list duplication that transactionally copies all
+  quantity tiers into a new inactive draft.
 - Catalog dashboard overview with linked product, service, archive, price-list,
   inventory-tracking, and recently updated item summaries.
 - One-click Catalog item duplication that copies localized content and
