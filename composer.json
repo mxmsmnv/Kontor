@@ -15,6 +15,7 @@
         "ext-dom": "*",
         "ext-json": "*",
         "ext-zip": "*",
+        "dompdf/dompdf": "^3.1",
         "kontor/sdk": "^0.2"
     },
     "require-dev": {

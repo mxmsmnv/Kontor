@@ -67,6 +67,22 @@ final class TemplateRepository
     }
 
     /**
+     * @return DocumentTemplate[] all versions, newest first
+     */
+    public function forOrganization(string $organizationUid): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_documents_templates
+             WHERE organization_id = :organization_id
+             ORDER BY created_at DESC'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
      * The active (non-archived, newest) version for a template family in a
      * given language. Falls back to English when the requested language
      * has no version — the same "English is always source and fallback"
@@ -83,7 +99,11 @@ final class TemplateRepository
         return $this->findCurrentVersionExact($organizationUid, $templateKey, 'en');
     }
 
-    private function findCurrentVersionExact(string $organizationUid, string $templateKey, string $language): ?DocumentTemplate
+    /**
+     * Exact family lookup for publishing/version management. Unlike
+     * findCurrentVersion(), this never falls back to English.
+     */
+    public function findCurrentVersionExact(string $organizationUid, string $templateKey, string $language): ?DocumentTemplate
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
@@ -134,8 +154,47 @@ final class TemplateRepository
 
     public function restore(string $uid): void
     {
-        $statement = $this->pdo->prepare('UPDATE kontor_documents_templates SET archived_at = NULL WHERE uid = :uid');
-        $statement->execute(['uid' => $uid]);
+        $template = $this->require($uid);
+        $organizationId = $this->organizations->internalIdOf($template->organizationId);
+        $startedTransaction = !$this->pdo->inTransaction();
+
+        if ($startedTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $archive = $this->pdo->prepare(
+                'UPDATE kontor_documents_templates
+                 SET archived_at = :now
+                 WHERE organization_id = :organization_id
+                    AND template_key = :template_key
+                    AND language = :language
+                    AND uid <> :uid
+                    AND archived_at IS NULL'
+            );
+            $archive->execute([
+                'now' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'),
+                'organization_id' => $organizationId,
+                'template_key' => $template->templateKey,
+                'language' => $template->language,
+                'uid' => $uid,
+            ]);
+
+            $restore = $this->pdo->prepare(
+                'UPDATE kontor_documents_templates SET archived_at = NULL WHERE uid = :uid'
+            );
+            $restore->execute(['uid' => $uid]);
+
+            if ($startedTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (\Throwable $exception) {
+            if ($startedTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     /**

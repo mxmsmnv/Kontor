@@ -7,11 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Documents now loads its PDF runtime from the root application dependency
+  graph, publishes language families independently of English fallback, and
+  keeps exactly one restored version active per family.
 - Directed task relations can now be looked up from their target entity
   without weakening the generic relation API's direction semantics.
 
 ### Added
 
+- First Documents admin vertical: versioned multilingual template publishing,
+  designer-v1 markup, HTML/PDF rendering, immutable issue snapshots, and
+  reversible version lifecycle.
 - First Portal admin vertical: customer-account provisioning and lifecycle,
   credential verification, safe profile editing, and customer-scoped previews
   of quotations, invoices, payments, and signed file downloads.

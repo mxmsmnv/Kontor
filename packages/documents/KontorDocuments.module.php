@@ -30,7 +30,7 @@ class KontorDocuments extends WireData implements Module
         return [
             'title' => 'Kontor Documents',
             'summary' => 'Document templates, HTML/PDF rendering, multilingual output, immutable issued-document snapshots.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorDocuments',
             'icon' => 'file-pdf-o',
@@ -132,6 +132,13 @@ class KontorDocuments extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('documents', self::getModuleInfo()['version'], 'documents');
+        $components->enable('documents');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('documents', self::getModuleInfo()['version'], 'documents');
         $components->enable('documents');
     }

@@ -5,8 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Publishing a language for the first time no longer increments or archives
+  the English fallback family.
+- Restoring an older template version archives the currently active sibling,
+  preserving one active version per key and language.
+- The root ProcessWire runtime now installs `dompdf/dompdf`, so admin PDF
+  rendering uses the same dependency graph loaded by `Kontor.module.php`.
+
 ### Added
 
+- First ProcessKontor admin vertical: template publishing and version ledger,
+  designer-v1 markup, HTML/PDF preview rendering, immutable snapshot output,
+  and archive/restore controls.
 - Initial alpha (Substage 4.2): `kontor_documents_templates` migration
   (schema gap-fill, versioned like `kontor_files`); `DocumentTemplate`
   domain object; `TemplateRepository` (save/find/findCurrentVersion with

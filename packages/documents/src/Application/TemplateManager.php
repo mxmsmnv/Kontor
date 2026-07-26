@@ -35,7 +35,7 @@ final class TemplateManager
         ?string $customCss = null,
         ?int $actorId = null,
     ): DocumentTemplate {
-        $existing = $this->templates->findCurrentVersion($organizationUid, $templateKey, $language);
+        $existing = $this->templates->findCurrentVersionExact($organizationUid, $templateKey, $language);
         $versionNumber = $existing !== null ? $existing->versionNumber + 1 : 1;
 
         $template = DocumentTemplate::create(

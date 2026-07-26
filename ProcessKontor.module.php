@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '106',
+            'version' => '107',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -201,6 +201,12 @@ class ProcessKontor extends Process
                     'label' => 'Portal',
                     'icon' => 'user-circle',
                     'permission' => 'kontor-portal-account-manage',
+                ],
+                [
+                    'url' => 'documents/',
+                    'label' => 'Documents',
+                    'icon' => 'file-pdf-o',
+                    'permission' => 'kontor-documents-template-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -4353,6 +4359,150 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect('../portal/?id=' . rawurlencode($uid));
     }
 
+    public function ___executeDocuments(): string
+    {
+        $this->requireDocuments();
+        $this->requirePermission('kontor-documents-template-view');
+        $module = $this->documentsModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $selected = $id !== '' ? $module->templateRepository()->require($id) : null;
+        if ($selected !== null) {
+            $this->requireSameOrganization($selected->organizationId);
+        }
+        $preview = $this->wire()->session->get('kontorDocumentsPreview');
+        $this->wire()->session->set('kontorDocumentsPreview', null);
+        $this->setPageTitle($this->_('Kontor · Documents'));
+
+        return $this->renderTemplate('documents', [
+            'templates' => $module->templateRepository()->forOrganization($this->organizationUid()),
+            'selected' => $selected,
+            'preview' => is_array($preview) ? $preview : null,
+            'canCreate' => $this->can('kontor-documents-template-create'),
+            'canEdit' => $this->can('kontor-documents-template-edit'),
+            'canArchive' => $this->can('kontor-documents-template-archive'),
+            'canRender' => $this->can('kontor-documents-render'),
+        ]);
+    }
+
+    public function ___executeDocumentsPublish(): void
+    {
+        $this->requirePost();
+        $this->requireDocuments();
+        $templateKey = strtolower(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('template_key')
+        )));
+        $documentType = strtolower(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('document_type')
+        )));
+        $language = strtolower(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('language')
+        )));
+        $name = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        $body = trim((string) $this->wire()->input->post('body_html'));
+        $css = trim((string) $this->wire()->input->post('custom_css'));
+        if (!preg_match('/^[a-z][a-z0-9_.-]{1,63}$/', $templateKey)
+            || !preg_match('/^[a-z][a-z0-9_-]{1,31}$/', $documentType)
+            || !preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language)
+            || $name === ''
+            || $body === ''
+            || strlen($body) > 262144
+            || strlen($css) > 65536) {
+            throw new WireException($this->_('Valid template metadata and HTML body are required.'));
+        }
+        $existing = $this->documentsModule()->templateRepository()->findCurrentVersionExact(
+            $this->organizationUid(),
+            $templateKey,
+            $language,
+        );
+        $this->requirePermission($existing === null
+            ? 'kontor-documents-template-create'
+            : 'kontor-documents-template-edit');
+        $template = $this->documentsModule()->templateManager()->publish(
+            $this->organizationUid(),
+            $templateKey,
+            $documentType,
+            $language,
+            mb_substr($name, 0, 255),
+            $body,
+            $css !== '' ? $css : null,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('documents', 'template', $template->uid->toString(), 'published', metadata: [
+            'key' => $templateKey,
+            'language' => $language,
+            'version' => $template->versionNumber,
+        ]);
+        $this->message($this->_('Document template version published.'));
+        $this->wire()->session->redirect(
+            '../documents/?id=' . rawurlencode($template->uid->toString())
+        );
+    }
+
+    public function ___executeDocumentsPreview(): void
+    {
+        $this->requirePost();
+        $this->requireDocuments();
+        $this->requirePermission('kontor-documents-render');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('template_uid')
+        );
+        $template = $this->documentsModule()->templateRepository()->require($uid);
+        $this->requireSameOrganization($template->organizationId);
+        $rawData = trim((string) $this->wire()->input->post('data_json'));
+        if ($rawData === '' || strlen($rawData) > 262144) {
+            throw new WireException($this->_('Preview JSON is required and must be at most 256 KB.'));
+        }
+        try {
+            $data = json_decode($rawData, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new WireException($this->_('Preview data must be valid JSON.'));
+        }
+        if (!is_array($data)) {
+            throw new WireException($this->_('Preview data must be a JSON object or array.'));
+        }
+        $renderer = $this->documentsModule()->renderService();
+        $snapshot = $this->documentsModule()->snapshotBuilder()->build($template, $data);
+        $pdf = $renderer->renderPdf($template, $data);
+        $this->wire()->session->set('kontorDocumentsPreview', [
+            'templateUid' => $uid,
+            'html' => $renderer->renderPreviewHtml($template, $data),
+            'snapshot' => $snapshot,
+            'pdfBytes' => strlen($pdf),
+            'dataJson' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+        ]);
+        $this->audit('documents', 'template', $uid, 'rendered', metadata: [
+            'pdfBytes' => strlen($pdf),
+            'snapshotVersion' => $snapshot['templateVersion'],
+        ]);
+        $this->message($this->_('HTML, PDF, and immutable snapshot rendered.'));
+        $this->wire()->session->redirect('../documents/?id=' . rawurlencode($uid));
+    }
+
+    public function ___executeDocumentsArchive(): void
+    {
+        $this->requirePost();
+        $this->requireDocuments();
+        $this->requirePermission('kontor-documents-template-archive');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('template_uid')
+        );
+        $action = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action')
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $template = $this->documentsModule()->templateRepository()->require($uid);
+        $this->requireSameOrganization($template->organizationId);
+        $repository = $this->documentsModule()->templateRepository();
+        $action === 'archive' ? $repository->archive($uid) : $repository->restore($uid);
+        $this->audit('documents', 'template', $uid, $action . 'd');
+        $this->message($action === 'archive'
+            ? $this->_('Template version archived.')
+            : $this->_('Template version restored.'));
+        $this->wire()->session->redirect('../documents/?id=' . rawurlencode($uid));
+    }
+
     public function ___executeMarketplace(): string
     {
         $this->requireMarketplace();
@@ -8483,6 +8633,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorPortal');
     }
 
+    private function documentsReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorDocuments');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8627,6 +8782,13 @@ class ProcessKontor extends Process
     {
         if (!$this->portalReady()) {
             throw new WireException($this->_('The Kontor Portal component is not installed.'));
+        }
+    }
+
+    private function requireDocuments(): void
+    {
+        if (!$this->documentsReady()) {
+            throw new WireException($this->_('The Kontor Documents component is not installed.'));
         }
     }
 
@@ -8797,6 +8959,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorPortal $module */
         $module = $this->wire()->modules->get('KontorPortal');
+
+        return $module;
+    }
+
+    private function documentsModule(): KontorDocuments
+    {
+        /** @var KontorDocuments $module */
+        $module = $this->wire()->modules->get('KontorDocuments');
 
         return $module;
     }

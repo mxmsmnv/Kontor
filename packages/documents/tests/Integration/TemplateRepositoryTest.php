@@ -86,4 +86,39 @@ final class TemplateRepositoryTest extends DatabaseTestCase
         $this->assertSame(2, $history[0]->versionNumber);
         $this->assertSame(1, $history[1]->versionNumber);
     }
+
+    public function test_for_organization_returns_active_and_archived_versions(): void
+    {
+        $repository = $this->repository();
+        $v1 = DocumentTemplate::create($this->organizationUid, 'invoice', 'invoice', 'en', 'v1', '<p>v1</p>');
+        $repository->save($v1);
+        $repository->archive($v1->uid->toString());
+        $v2 = DocumentTemplate::create($this->organizationUid, 'invoice', 'invoice', 'en', 'v2', '<p>v2</p>', versionNumber: 2);
+        $repository->save($v2);
+
+        $templates = $repository->forOrganization($this->organizationUid);
+
+        $this->assertCount(2, $templates);
+        $this->assertSame(['v2', 'v1'], array_column($templates, 'name'));
+        $this->assertTrue($templates[1]->isArchived());
+    }
+
+    public function test_restoring_an_old_version_archives_the_current_version(): void
+    {
+        $repository = $this->repository();
+        $v1 = DocumentTemplate::create($this->organizationUid, 'invoice', 'invoice', 'en', 'v1', '<p>v1</p>');
+        $repository->save($v1);
+        $repository->archive($v1->uid->toString());
+        $v2 = DocumentTemplate::create($this->organizationUid, 'invoice', 'invoice', 'en', 'v2', '<p>v2</p>', versionNumber: 2);
+        $repository->save($v2);
+
+        $repository->restore($v1->uid->toString());
+
+        $this->assertFalse($repository->require($v1->uid->toString())->isArchived());
+        $this->assertTrue($repository->require($v2->uid->toString())->isArchived());
+        $this->assertSame(
+            $v1->uid->toString(),
+            $repository->findCurrentVersion($this->organizationUid, 'invoice', 'en')?->uid->toString(),
+        );
+    }
 }
