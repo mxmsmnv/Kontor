@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '100',
+            'version' => '101',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -165,6 +165,12 @@ class ProcessKontor extends Process
                     'label' => 'Automations',
                     'icon' => 'bolt',
                     'permission' => 'kontor-automation-rule-view',
+                ],
+                [
+                    'url' => 'custom-entities/',
+                    'label' => 'Custom entities',
+                    'icon' => 'cube',
+                    'permission' => 'kontor-entities-record-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3955,6 +3961,319 @@ class ProcessKontor extends Process
         $this->redirectToAutomation($rule->uid->toString());
     }
 
+    public function ___executeCustomEntities(): string
+    {
+        $this->requireEntities();
+        $this->requirePermission('kontor-entities-record-view');
+        $module = $this->entitiesModule();
+        $definitions = array_values(array_filter(
+            $module->definitionRepository()->forOrganization($this->organizationUid()),
+            static fn ($definition): bool => $definition->isActive(),
+        ));
+        $recordCounts = [];
+        foreach ($definitions as $definition) {
+            $recordCounts[$definition->uid->toString()] = count(
+                $module->recordRepository()->forDefinition($definition->uid->toString())
+            );
+        }
+        $this->setPageTitle($this->_('Kontor · Custom entities'));
+
+        return $this->renderTemplate('custom-entities', [
+            'definitions' => $definitions,
+            'recordCounts' => $recordCounts,
+            'canManage' => $this->can('kontor-entities-definition-manage'),
+        ]);
+    }
+
+    public function ___executeCustomEntity(): string
+    {
+        $this->requireEntities();
+        $module = $this->entitiesModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $definition = $id !== '' ? $module->definitionRepository()->require($id) : null;
+        if ($definition !== null) {
+            $this->requireSameOrganization($definition->organizationId);
+            $this->requireEntityViewPermission($definition);
+        } else {
+            $this->requirePermission('kontor-entities-definition-manage');
+        }
+        $values = [
+            'entityKey' => '',
+            'name' => '',
+            'viewPermission' => 'kontor-entities-record-view',
+            'editPermission' => 'kontor-entities-record-manage',
+            'apiExposed' => false,
+        ];
+        $error = '';
+        if ($definition === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'entityKey' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('entity_key')
+                )),
+                'name' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('name')
+                )),
+                'viewPermission' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('view_permission')
+                )),
+                'editPermission' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('edit_permission')
+                )),
+                'apiExposed' => (bool) $this->wire()->input->post('api_exposed'),
+            ];
+            if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $values['entityKey']) !== 1) {
+                $error = $this->_('Entity key must be a lowercase identifier.');
+            } elseif ($values['name'] === '') {
+                $error = $this->_('Entity name is required.');
+            }
+            if ($error === '') {
+                try {
+                    $definition = $module->builder()->defineEntity(
+                        $this->organizationUid(),
+                        $values['entityKey'],
+                        mb_substr($values['name'], 0, 191),
+                        $values['viewPermission'] ?: null,
+                        $values['editPermission'] ?: null,
+                        $values['apiExposed'],
+                        (int) $this->wire()->user->id,
+                    );
+                } catch (\PDOException $exception) {
+                    $error = $exception->getCode() === '23000'
+                        ? $this->_('That entity key is already in use.')
+                        : $this->_('Entity definition could not be saved.');
+                }
+                if ($error === '') {
+                    $this->audit('entities', 'definition', $definition->uid->toString(), 'created');
+                    $this->message($this->_('Custom entity created.'));
+                    $this->wire()->session->redirect(
+                        '../custom-entity/?id=' . rawurlencode($definition->uid->toString())
+                    );
+                }
+            }
+        }
+
+        $fields = $definition !== null
+            ? $module->fieldRepository()->forDefinition($definition->uid->toString())
+            : [];
+        $views = $definition !== null
+            ? $module->viewRepository()->forDefinition($definition->uid->toString())
+            : [];
+        $viewId = $this->wire()->sanitizer->text((string) $this->wire()->input->get('view'));
+        $selectedView = $viewId !== '' ? $module->viewRepository()->require($viewId) : null;
+        if ($selectedView !== null && ($definition === null
+            || $selectedView->definitionUid !== $definition->uid->toString()
+            || $selectedView->organizationId !== $this->organizationUid())) {
+            throw new WirePermissionException($this->_('Saved view does not belong to this entity.'));
+        }
+        $records = $definition !== null
+            ? ($selectedView !== null
+                ? $module->views()->apply($selectedView)
+                : $module->recordRepository()->forDefinition($definition->uid->toString()))
+            : [];
+        $this->setPageTitle($definition === null
+            ? $this->_('Kontor · New custom entity')
+            : sprintf($this->_('Kontor · %s'), $definition->name));
+
+        return $this->renderTemplate('custom-entity', [
+            'definition' => $definition,
+            'values' => $values,
+            'error' => $error,
+            'fields' => $fields,
+            'views' => $views,
+            'selectedView' => $selectedView,
+            'records' => $records,
+            'schema' => $definition !== null ? $module->schema()->describe($definition->uid->toString()) : null,
+            'canDefine' => $this->can('kontor-entities-definition-manage'),
+            'canManageRecords' => $definition !== null && $this->canEditEntity($definition),
+            'canManageViews' => $this->can('kontor-entities-view-manage'),
+        ]);
+    }
+
+    public function ___executeCustomEntityField(): void
+    {
+        $this->requirePost();
+        $this->requireEntities();
+        $this->requirePermission('kontor-entities-definition-manage');
+        $definition = $this->requireEntityDefinitionFromPost();
+        $key = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('field_key')
+        ));
+        $label = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('label')
+        ));
+        $type = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('field_type'),
+            \Kontor\Entities\Domain\EntityField::TYPES,
+        );
+        if (preg_match('/^[a-z][a-z0-9_]{0,63}$/', $key) !== 1 || $label === '' || $type === null) {
+            throw new WireException($this->_('Field key, label, and supported type are required.'));
+        }
+        $field = $this->entitiesModule()->builder()->addField(
+            $definition->uid->toString(),
+            $key,
+            mb_substr($label, 0, 191),
+            $type,
+            (bool) $this->wire()->input->post('required'),
+        );
+        $this->audit('entities', 'field', $field->uid->toString(), 'created');
+        $this->message($this->_('Entity field added.'));
+        $this->redirectToEntityDefinition($definition->uid->toString());
+    }
+
+    public function ___executeCustomEntityRecord(): string
+    {
+        $this->requireEntities();
+        $module = $this->entitiesModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $record = $id !== '' ? $module->recordRepository()->require($id) : null;
+        $definitionId = $record?->definitionUid
+            ?? $this->wire()->sanitizer->text(
+                (string) (
+                    $this->wire()->input->get('definition')
+                    ?: $this->wire()->input->post('definition_uid')
+                )
+            );
+        $definition = $module->definitionRepository()->require($definitionId);
+        $this->requireSameOrganization($definition->organizationId);
+        $this->requireEntityViewPermission($definition);
+        if ($record !== null) {
+            $this->requireSameOrganization($record->organizationId);
+        }
+        $fields = $module->fieldRepository()->forDefinition($definitionId);
+        $error = '';
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $this->requireEntityEditPermission($definition);
+            try {
+                $data = $this->entityRecordDataFromPost($fields);
+                $record = $record === null
+                    ? $module->records()->create($definitionId, $data, (int) $this->wire()->user->id)
+                    : $module->records()->update($record->uid->toString(), $data);
+            } catch (\InvalidArgumentException $exception) {
+                $error = $exception->getMessage();
+            }
+            if ($error === '') {
+                $this->audit(
+                    'entities',
+                    'record',
+                    $record->uid->toString(),
+                    $id === '' ? 'created' : 'updated',
+                );
+                $this->message($this->_('Custom entity record saved.'));
+                $this->wire()->session->redirect(
+                    '../custom-entity-record/?id=' . rawurlencode($record->uid->toString())
+                );
+            }
+        }
+        $relations = $record !== null
+            ? $module->relations()->relatedTo(
+                $this->organizationUid(),
+                $definition->entityKey,
+                $record->uid->toString(),
+            )
+            : [];
+        $this->setPageTitle(sprintf(
+            $this->_('Kontor · %s record'),
+            $definition->name,
+        ));
+
+        return $this->renderTemplate('custom-entity-record', [
+            'definition' => $definition,
+            'record' => $record,
+            'fields' => $fields,
+            'error' => $error,
+            'relations' => $relations,
+            'canEdit' => $this->canEditEntity($definition),
+        ]);
+    }
+
+    public function ___executeCustomEntityView(): void
+    {
+        $this->requirePost();
+        $this->requireEntities();
+        $this->requirePermission('kontor-entities-view-manage');
+        $definition = $this->requireEntityDefinitionFromPost();
+        $fields = $this->entitiesModule()->fieldRepository()->forDefinition(
+            $definition->uid->toString()
+        );
+        $fieldKeys = array_map(static fn ($field): string => $field->fieldKey, $fields);
+        $name = trim($this->wire()->sanitizer->text((string) $this->wire()->input->post('name')));
+        $filterField = $this->wire()->sanitizer->text((string) $this->wire()->input->post('filter_field'));
+        $filterOperator = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('filter_operator'),
+            ['equals', 'not_equals', 'greater_than', 'less_than', 'contains'],
+        );
+        $filterValue = $this->wire()->sanitizer->text((string) $this->wire()->input->post('filter_value'));
+        $sortField = $this->wire()->sanitizer->text((string) $this->wire()->input->post('sort_field'));
+        $sortDirection = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('sort_direction'),
+            ['asc', 'desc'],
+        ) ?? 'asc';
+        if ($name === '' || ($filterField !== '' && !in_array($filterField, $fieldKeys, true))
+            || ($sortField !== '' && !in_array($sortField, $fieldKeys, true))) {
+            throw new WireException($this->_('Saved-view configuration is invalid.'));
+        }
+        $view = $this->entitiesModule()->views()->createView(
+            $this->organizationUid(),
+            $definition->uid->toString(),
+            mb_substr($name, 0, 191),
+            $filterField !== '' ? [[
+                'field' => $filterField,
+                'operator' => $filterOperator ?? 'equals',
+                'value' => $filterValue,
+            ]] : [],
+            $sortField !== '' ? [['field' => $sortField, 'direction' => $sortDirection]] : [],
+            $fieldKeys,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('entities', 'view', $view->uid->toString(), 'created');
+        $this->message($this->_('Saved view created.'));
+        $this->wire()->session->redirect(
+            '../custom-entity/?id=' . rawurlencode($definition->uid->toString())
+                . '&view=' . rawurlencode($view->uid->toString())
+        );
+    }
+
+    public function ___executeCustomEntityRelation(): void
+    {
+        $this->requirePost();
+        $this->requireEntities();
+        $recordUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('record_uid')
+        );
+        $record = $this->entitiesModule()->recordRepository()->require($recordUid);
+        $definition = $this->entitiesModule()->definitionRepository()->require($record->definitionUid);
+        $this->requireSameOrganization($record->organizationId);
+        $this->requireEntityEditPermission($definition);
+        $targetType = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('target_type')
+        );
+        $targetUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('target_uid')
+        );
+        $relationType = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('relation_type')
+        );
+        if ($targetType === '' || $targetUid === '' || $relationType === '') {
+            throw new WireException($this->_('Relation target and type are required.'));
+        }
+        $relationUid = $this->entitiesModule()->relations()->linkRecords(
+            $this->organizationUid(),
+            $definition->entityKey,
+            $recordUid,
+            $targetType,
+            $targetUid,
+            $relationType,
+            'directed',
+        );
+        $this->audit('entities', 'relation', $relationUid, 'created');
+        $this->message($this->_('Record relation created.'));
+        $this->wire()->session->redirect(
+            '../custom-entity-record/?id=' . rawurlencode($recordUid)
+        );
+    }
+
     public function ___executeCompany(): string
     {
         $this->requireContacts();
@@ -7446,6 +7765,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorAutomation');
     }
 
+    private function entitiesReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorEntities');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -7548,6 +7872,13 @@ class ProcessKontor extends Process
     {
         if (!$this->automationReady()) {
             throw new WireException($this->_('The Kontor Automation component is not installed.'));
+        }
+    }
+
+    private function requireEntities(): void
+    {
+        if (!$this->entitiesReady()) {
+            throw new WireException($this->_('The Kontor Custom Entities component is not installed.'));
         }
     }
 
@@ -7674,6 +8005,14 @@ class ProcessKontor extends Process
         return $module;
     }
 
+    private function entitiesModule(): KontorEntities
+    {
+        /** @var KontorEntities $module */
+        $module = $this->wire()->modules->get('KontorEntities');
+
+        return $module;
+    }
+
     private function can(string $permission): bool
     {
         return $this->wire()->user->isSuperuser()
@@ -7744,6 +8083,88 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect(
             '../automation/?id=' . rawurlencode($ruleUid)
         );
+    }
+
+    private function requireEntityViewPermission(
+        \Kontor\Entities\Domain\EntityDefinition $definition,
+    ): void {
+        $this->requirePermission('kontor-entities-record-view');
+        if ($definition->viewPermission !== null) {
+            $this->requirePermission($definition->viewPermission);
+        }
+    }
+
+    private function canEditEntity(
+        \Kontor\Entities\Domain\EntityDefinition $definition,
+    ): bool {
+        return $this->can('kontor-entities-record-manage')
+            && ($definition->editPermission === null || $this->can($definition->editPermission));
+    }
+
+    private function requireEntityEditPermission(
+        \Kontor\Entities\Domain\EntityDefinition $definition,
+    ): void {
+        $this->requirePermission('kontor-entities-record-manage');
+        if ($definition->editPermission !== null) {
+            $this->requirePermission($definition->editPermission);
+        }
+    }
+
+    private function requireEntityDefinitionFromPost(): \Kontor\Entities\Domain\EntityDefinition
+    {
+        $id = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('definition_uid')
+        );
+        $definition = $this->entitiesModule()->definitionRepository()->require($id);
+        $this->requireSameOrganization($definition->organizationId);
+
+        return $definition;
+    }
+
+    private function redirectToEntityDefinition(string $definitionUid): void
+    {
+        $this->wire()->session->redirect(
+            '../custom-entity/?id=' . rawurlencode($definitionUid)
+        );
+    }
+
+    /**
+     * @param \Kontor\Entities\Domain\EntityField[] $fields
+     * @return array<string, mixed>
+     */
+    private function entityRecordDataFromPost(array $fields): array
+    {
+        $data = [];
+        foreach ($fields as $field) {
+            $raw = $this->wire()->input->post($field->fieldKey);
+            if ($field->fieldType === 'bool') {
+                $data[$field->fieldKey] = (bool) $raw;
+                continue;
+            }
+            $value = trim((string) $raw);
+            if ($value === '') {
+                $data[$field->fieldKey] = null;
+                continue;
+            }
+            $data[$field->fieldKey] = match ($field->fieldType) {
+                'int' => filter_var($value, FILTER_VALIDATE_INT) !== false
+                    ? (int) $value
+                    : throw new \InvalidArgumentException(sprintf(
+                        $this->_('%s must be a whole number.'),
+                        $field->label,
+                    )),
+                'decimal' => is_numeric($value)
+                    ? (float) $value
+                    : throw new \InvalidArgumentException(sprintf(
+                        $this->_('%s must be a number.'),
+                        $field->label,
+                    )),
+                'date', 'datetime' => $this->wire()->sanitizer->text($value),
+                default => trim($this->wire()->sanitizer->text($value)),
+            };
+        }
+
+        return $data;
     }
 
     /**

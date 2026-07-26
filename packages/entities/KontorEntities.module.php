@@ -35,7 +35,7 @@ class KontorEntities extends WireData implements Module
         return [
             'title' => 'Kontor Custom Entities',
             'summary' => 'Entity builder, fields, relations, views, permissions, API exposure.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorEntities',
             'icon' => 'cube',
@@ -158,6 +158,13 @@ class KontorEntities extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('entities', self::getModuleInfo()['version'], 'entities');
+        $components->enable('entities');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('entities', self::getModuleInfo()['version'], 'entities');
         $components->enable('entities');
     }

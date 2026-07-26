@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: entity and typed-field builder, dynamic
+  record forms, saved filters and sorting, cross-component relation links,
+  permission-aware access, and visible API schema contracts.
 - Initial alpha (Substage 7.3): `kontor_entity_definitions`,
   `kontor_entity_fields`, `kontor_entity_records` (generic EAV-style
   storage for every custom entity type), `kontor_entity_views` migrations

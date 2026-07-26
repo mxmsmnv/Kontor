@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Custom Entities admin vertical: schema definition, typed fields,
+  dynamic records, reusable filtered/sorted views, relation links, permission
+  gates, and API-exposure visibility.
 - First Automation admin vertical: trigger rules, condition/action builder,
   JSON dry/live execution bench, and execution-log observability.
 - First Workflow admin vertical: state-machine designer, transition graph,

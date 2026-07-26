@@ -1,0 +1,19 @@
+<?php
+
+/** @var \Kontor\Entities\Domain\EntityDefinition $definition */
+/** @var \Kontor\Entities\Domain\EntityRecord|null $record */
+/** @var \Kontor\Entities\Domain\EntityField[] $fields */
+/** @var string $error */
+/** @var array<int, array<string, mixed>> $relations */
+/** @var bool $canEdit */
+/** @var string $adminUrl */
+/** @var string $csrfName */
+/** @var string $csrfValue */
+/** @var callable $e */
+?>
+<div class="kontor-shell">
+  <header class="kontor-formhead"><a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>custom-entity/?id=<?= $e(rawurlencode($definition->uid->toString())) ?>"><i class="fa fa-arrow-left"></i> Back to <?= $e($definition->name) ?></a><p class="kontor-eyebrow">Custom entity · Record</p><h2><?= $e($record === null ? 'New record' : $definition->name . ' record') ?></h2></header>
+  <?php if ($error !== ''): ?><div class="kontor-warning"><strong><?= $e($error) ?></strong></div><?php endif; ?>
+  <form class="kontor-card kontor-nativeform" method="post" action="./"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="definition_uid" value="<?= $e($definition->uid->toString()) ?>"><?php foreach ($fields as $field): ?><?php $value = $record?->data[$field->fieldKey] ?? null; ?><label class="kontor-nativefield<?= $field->fieldType === 'string' ? ' kontor-nativefield--wide' : '' ?>"><span><?= $e($field->label) ?><?= $field->required ? ' *' : '' ?></span><?php if ($field->fieldType === 'bool'): ?><input type="checkbox" name="<?= $e($field->fieldKey) ?>" value="1"<?= $value ? ' checked' : '' ?>><?php else: ?><input name="<?= $e($field->fieldKey) ?>" type="<?= $field->fieldType === 'date' ? 'date' : ($field->fieldType === 'datetime' ? 'datetime-local' : ($field->fieldType === 'string' ? 'text' : 'number')) ?>"<?= $field->fieldType === 'decimal' ? ' step="any"' : '' ?> value="<?= $e((string) ($value ?? '')) ?>"<?= $field->required ? ' required' : '' ?>><?php endif; ?></label><?php endforeach; ?><?php if ($canEdit): ?><div class="kontor-nativeform__actions"><button class="kontor-button" type="submit" name="submit_save" value="1">Save record</button></div><?php endif; ?></form>
+  <?php if ($record !== null): ?><section class="kontor-card kontor-tablewrap"><header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Cross-component graph</p><h3>Relations</h3></div></header><?php if ($canEdit): ?><form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>custom-entity-relation/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="record_uid" value="<?= $e($record->uid->toString()) ?>"><label class="kontor-nativefield"><span>Target type *</span><input name="target_type" placeholder="company" required></label><label class="kontor-nativefield"><span>Target UID *</span><input name="target_uid" required></label><label class="kontor-nativefield"><span>Relation type *</span><input name="relation_type" value="relates_to" required></label><div class="kontor-nativeform__actions"><button class="kontor-button kontor-button--ghost" type="submit">Link record</button></div></form><?php endif; ?><?php if ($relations !== []): ?><table class="kontor-table"><thead><tr><th>Relation</th><th>Target type</th><th>Target UID</th><th>Direction</th></tr></thead><tbody><?php foreach ($relations as $relation): ?><tr><td><?= $e((string) $relation['relationType']) ?></td><td><?= $e((string) $relation['targetType']) ?></td><td><code><?= $e((string) $relation['targetUid']) ?></code></td><td><?= $e((string) $relation['direction']) ?></td></tr><?php endforeach; ?></tbody></table><?php else: ?><div class="kontor-empty"><p>No relations yet.</p></div><?php endif; ?></section><?php endif; ?>
+</div>
