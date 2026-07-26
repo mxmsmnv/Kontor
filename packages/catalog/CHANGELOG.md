@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped Catalog item filtering by sales currency.
 - Unit-of-measure and tax-code item filtering with reference usage drill-down.
 - Organization-scoped price-list currency filtering.
 - Price-list validity filtering for current, upcoming, and expired windows.

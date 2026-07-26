@@ -182,6 +182,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?bool $trackInventory = null,
         ?string $unitCode = null,
         ?string $taxCode = null,
+        ?string $salesCurrency = null,
     ): array {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -193,6 +194,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $trackInventory,
             $unitCode,
             $taxCode,
+            $salesCurrency,
         );
         $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
@@ -221,6 +223,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?bool $trackInventory = null,
         ?string $unitCode = null,
         ?string $taxCode = null,
+        ?string $salesCurrency = null,
     ): int {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -232,6 +235,7 @@ final class CatalogItemRepository implements RepositoryInterface
             $trackInventory,
             $unitCode,
             $taxCode,
+            $salesCurrency,
             true,
         );
         $statement = $this->pdo->prepare($sql);
@@ -266,6 +270,26 @@ final class CatalogItemRepository implements RepositoryInterface
         }
 
         return $usage;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function salesCurrencies(string $organizationUid): array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT DISTINCT sales_currency
+             FROM kontor_catalog_items
+             WHERE organization_id = :organization_id
+               AND sales_currency IS NOT NULL
+               AND sales_currency <> ''
+             ORDER BY sales_currency"
+        );
+        $statement->execute([
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ]);
+
+        return array_map('strval', $statement->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     /**
@@ -333,6 +357,7 @@ final class CatalogItemRepository implements RepositoryInterface
         ?bool $trackInventory,
         ?string $unitCode,
         ?string $taxCode,
+        ?string $salesCurrency,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -371,6 +396,11 @@ final class CatalogItemRepository implements RepositoryInterface
         if ($taxCode !== null) {
             $sql .= ' AND tax_code = :tax_code';
             $params['tax_code'] = $taxCode;
+        }
+
+        if ($salesCurrency !== null) {
+            $sql .= ' AND sales_currency = :sales_currency';
+            $params['sales_currency'] = $salesCurrency;
         }
 
         if ($query !== '') {

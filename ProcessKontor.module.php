@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '054',
+            'version' => '055',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -508,6 +508,12 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('tax'),
             array_keys($taxOptions)
         );
+        $salesCurrency = strtoupper($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('currency')
+        ));
+        $salesCurrency = preg_match('/^[A-Z]{3}$/', $salesCurrency) === 1
+            ? $salesCurrency
+            : null;
         $trackInventory = $inventory === null ? null : $inventory === 'tracked';
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
         $organizationUid = $this->organizationUid();
@@ -522,6 +528,7 @@ class ProcessKontor extends Process
             trackInventory: $trackInventory,
             unitCode: $unitCode,
             taxCode: $taxCode,
+            salesCurrency: $salesCurrency,
         );
         $totalPages = max(1, (int) ceil($totalItems / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
@@ -537,6 +544,7 @@ class ProcessKontor extends Process
             trackInventory: $trackInventory,
             unitCode: $unitCode,
             taxCode: $taxCode,
+            salesCurrency: $salesCurrency,
         );
         $categoryOptions = [];
         $categoryNames = [];
@@ -571,6 +579,8 @@ class ProcessKontor extends Process
             'selectedInventory' => $inventory,
             'selectedUnit' => $unitCode,
             'selectedTax' => $taxCode,
+            'selectedCurrency' => $salesCurrency,
+            'currencyOptions' => $this->catalogItemRepository()->salesCurrencies($organizationUid),
             'unitOptions' => $unitOptions,
             'taxOptions' => $taxOptions,
             'categoryOptions' => $categoryOptions,
@@ -3808,6 +3818,10 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('return_tax'),
             array_keys((new TaxCode())->all())
         );
+        $currency = strtoupper($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('return_currency')
+        ));
+        $currency = preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
         $archived = (string) $this->wire()->input->post('return_archived') === '1';
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
@@ -3818,6 +3832,7 @@ class ProcessKontor extends Process
             'inventory' => $inventory,
             'unit' => $unit,
             'tax' => $tax,
+            'currency' => $currency,
             'archived' => $archived ? 1 : null,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');

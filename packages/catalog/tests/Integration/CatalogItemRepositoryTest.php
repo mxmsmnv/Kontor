@@ -262,6 +262,40 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function test_sales_currency_filter_and_options_are_organization_scoped(): void
+    {
+        $repository = $this->repository();
+        $organizations = new OrganizationRepository($this->pdo);
+        $euro = CatalogItem::create($this->organizationUid, ['en' => 'Euro item']);
+        $euro->salesPrice = Money::ofMinor(1000, 'EUR');
+        $dollar = CatalogItem::create($this->organizationUid, ['en' => 'Dollar item']);
+        $dollar->salesPrice = Money::ofMinor(1200, 'USD');
+        $otherOrganization = Organization::createDefault('GB', 'en', 'GBP');
+        $otherOrganization->name = 'Other organization';
+        $organizations->save($otherOrganization);
+        $pound = CatalogItem::create(
+            $otherOrganization->uid->toString(),
+            ['en' => 'Pound item'],
+            salesPrice: Money::ofMinor(900, 'GBP'),
+        );
+        $repository->save($euro);
+        $repository->save($dollar);
+        $repository->save($pound);
+
+        $this->assertSame(['EUR', 'USD'], $repository->salesCurrencies($this->organizationUid));
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            salesCurrency: 'USD',
+        ));
+        $this->assertSame(
+            $dollar->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                salesCurrency: 'USD',
+            )[0]->uid->toString(),
+        );
+    }
+
     public function test_status_filter_returns_only_matching_items(): void
     {
         $repository = $this->repository();

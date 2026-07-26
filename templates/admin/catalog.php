@@ -8,8 +8,10 @@
 /** @var string|null $selectedInventory */
 /** @var string|null $selectedUnit */
 /** @var string|null $selectedTax */
+/** @var string|null $selectedCurrency */
 /** @var array<string, string> $unitOptions */
 /** @var array<string, string> $taxOptions */
+/** @var string[] $currencyOptions */
 /** @var array<string, string> $categoryOptions */
 /** @var array<string, string> $categoryNames */
 /** @var bool $showArchived */
@@ -22,7 +24,7 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 
-$url = static function (int $targetPage, bool $archived) use ($query, $selectedType, $selectedCategory, $selectedStatus, $selectedInventory, $selectedUnit, $selectedTax): string {
+$url = static function (int $targetPage, bool $archived) use ($query, $selectedType, $selectedCategory, $selectedStatus, $selectedInventory, $selectedUnit, $selectedTax, $selectedCurrency): string {
     $parameters = http_build_query(array_filter([
         'q' => $query,
         'type' => $selectedType,
@@ -31,6 +33,7 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedT
         'inventory' => $selectedInventory,
         'unit' => $selectedUnit,
         'tax' => $selectedTax,
+        'currency' => $selectedCurrency,
         'archived' => $archived ? 1 : '',
         'page' => $targetPage > 1 ? $targetPage : '',
     ], static fn (string|int|null $value): bool => $value !== null && $value !== ''));
@@ -43,7 +46,8 @@ $hasFilters = $query !== ''
     || $selectedStatus !== null
     || $selectedInventory !== null
     || $selectedUnit !== null
-    || $selectedTax !== null;
+    || $selectedTax !== null
+    || $selectedCurrency !== null;
 $clearFiltersUrl = $showArchived ? './?archived=1' : './';
 $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     if ($value === null) {
@@ -126,6 +130,12 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         <option value="<?= $e($code) ?>"<?= $selectedTax === $code ? ' selected' : '' ?>><?= $e($label) ?></option>
       <?php endforeach; ?>
     </select>
+    <select name="currency" aria-label="Sales currency">
+      <option value="">All sales currencies</option>
+      <?php foreach ($currencyOptions as $code): ?>
+        <option value="<?= $e($code) ?>"<?= $selectedCurrency === $code ? ' selected' : '' ?>><?= $e($code) ?></option>
+      <?php endforeach; ?>
+    </select>
     <button class="kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
@@ -162,6 +172,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <input type="hidden" name="return_inventory" value="<?= $e($selectedInventory ?? '') ?>">
       <input type="hidden" name="return_unit" value="<?= $e($selectedUnit ?? '') ?>">
       <input type="hidden" name="return_tax" value="<?= $e($selectedTax ?? '') ?>">
+      <input type="hidden" name="return_currency" value="<?= $e($selectedCurrency ?? '') ?>">
       <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
@@ -268,8 +279,8 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-cubes"></i>
-      <h3><?= $query !== '' || $selectedType !== null || $selectedCategory !== null || $selectedStatus !== null || $selectedInventory !== null || $showArchived ? 'No matching items' : 'Your catalog is empty' ?></h3>
-      <p><?= $query !== '' || $selectedType !== null || $selectedCategory !== null || $selectedStatus !== null || $selectedInventory !== null || $showArchived ? 'Try another search, type, category, status, inventory mode, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>
+      <h3><?= $hasFilters || $showArchived ? 'No matching items' : 'Your catalog is empty' ?></h3>
+      <p><?= $hasFilters || $showArchived ? 'Try another search, type, category, status, inventory mode, unit, tax code, currency, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>
     </div>
   <?php endif; ?>
 </div>

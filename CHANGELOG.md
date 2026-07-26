@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped sales-currency filtering for Catalog items, preserved
+  across pagination, archive views, and bulk actions.
 - Unit-of-measure and tax-code filters for Catalog items, including direct
   drill-down links from the References workspace.
 - Organization-scoped currency filtering for Catalog price lists, preserved
