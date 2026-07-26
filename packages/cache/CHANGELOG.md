@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Cache admin vertical: live adapter health, organization-scoped
+  namespace workbench, JSON set/get/delete operations, TTLs, tags, and
+  generation-based tag or namespace invalidation with dedicated permissions.
 - Initial alpha (Substage 2.3): `TaggedCache` (namespaces + tag-based
   invalidation via version counters, over any `CacheStoreInterface`);
   `CacheManager::forNamespace()`; `InMemoryCacheStore`;

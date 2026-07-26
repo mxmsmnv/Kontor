@@ -87,7 +87,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '111',
+            'version' => '112',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -213,6 +213,12 @@ class ProcessKontor extends Process
                     'label' => 'Files',
                     'icon' => 'folder-open',
                     'permission' => 'kontor-files-file-view',
+                ],
+                [
+                    'url' => 'cache/',
+                    'label' => 'Cache',
+                    'icon' => 'bolt',
+                    'permission' => 'kontor-cache-view',
                 ],
                 [
                     'url' => 'documents/',
@@ -4575,6 +4581,135 @@ class ProcessKontor extends Process
         fpassthru($stream);
         fclose($stream);
         exit;
+    }
+
+    public function ___executeCache(): string
+    {
+        $this->requireCache();
+        $this->requirePermission('kontor-cache-view');
+        $state = $this->wire()->session->get('kontorCacheWorkbench');
+        $state = is_array($state) ? $state : [];
+        $this->wire()->session->set('kontorCacheWorkbench', null);
+        $this->setPageTitle($this->_('Kontor · Cache'));
+
+        return $this->renderTemplate('cache', [
+            'health' => $this->cacheModule()->healthCheck()->run(),
+            'state' => array_replace([
+                'namespace' => 'operations',
+                'key' => 'example',
+                'tags' => 'demo',
+                'ttl' => '300',
+                'valueJson' => '{"status":"ready"}',
+                'result' => null,
+            ], $state),
+            'effectiveNamespacePrefix' => 'kontor-admin-org-' . $this->organizationInternalId() . '-',
+            'canManage' => $this->can('kontor-cache-manage'),
+            'canFlush' => $this->can('kontor-cache-flush'),
+        ]);
+    }
+
+    public function ___executeCacheOperate(): void
+    {
+        $this->requirePost();
+        $this->requireCache();
+        $this->requirePermission('kontor-cache-manage');
+        $action = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action')
+        ));
+        $this->requireAction($action, ['set', 'get', 'delete']);
+        $input = $this->cacheWorkbenchInput();
+        $cache = $this->cacheModule()->manager()->forNamespace($input['effectiveNamespace']);
+        $result = null;
+
+        if ($action === 'set') {
+            $value = $this->cacheValueFromPost($input['valueJson']);
+            $cache->set($input['key'], $value, $input['ttl'], $input['tags']);
+            $result = [
+                'action' => 'set',
+                'hit' => true,
+                'value' => $value,
+                'message' => $this->_('Value stored in the selected namespace and tag generation.'),
+            ];
+        } elseif ($action === 'get') {
+            $hit = $cache->has($input['key'], $input['tags']);
+            $result = [
+                'action' => 'get',
+                'hit' => $hit,
+                'value' => $hit ? $cache->get($input['key'], $input['tags']) : null,
+                'message' => $hit ? $this->_('Cache hit.') : $this->_('Cache miss.'),
+            ];
+        } else {
+            $wasPresent = $cache->has($input['key'], $input['tags']);
+            $cache->delete($input['key'], $input['tags']);
+            $result = [
+                'action' => 'delete',
+                'hit' => $wasPresent,
+                'value' => null,
+                'message' => $wasPresent
+                    ? $this->_('Entry deleted from the current generation.')
+                    : $this->_('Entry was already missing.'),
+            ];
+        }
+
+        $this->wire()->session->set('kontorCacheWorkbench', [
+            'namespace' => $input['namespace'],
+            'key' => $input['key'],
+            'tags' => implode(', ', $input['tags']),
+            'ttl' => (string) ($input['ttl'] ?? 0),
+            'valueJson' => $input['valueJson'],
+            'result' => $result,
+        ]);
+        $this->audit('cache', 'namespace', $this->organizationUid(), $action, metadata: [
+            'namespace' => $input['namespace'],
+            'key' => $input['key'],
+            'tags' => $input['tags'],
+            'ttl' => $input['ttl'],
+            'hit' => $result['hit'],
+        ]);
+        $this->message($result['message']);
+        $this->wire()->session->redirect('../cache/');
+    }
+
+    public function ___executeCacheFlush(): void
+    {
+        $this->requirePost();
+        $this->requireCache();
+        $this->requirePermission('kontor-cache-flush');
+        $action = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action')
+        ));
+        $this->requireAction($action, ['flush-tag', 'flush-namespace']);
+        $input = $this->cacheWorkbenchInput();
+        $cache = $this->cacheModule()->manager()->forNamespace($input['effectiveNamespace']);
+        if ($action === 'flush-tag') {
+            if (count($input['tags']) !== 1) {
+                throw new WireException($this->_('Tag invalidation requires exactly one tag.'));
+            }
+            $cache->flushTag($input['tags'][0]);
+            $message = $this->_('Tag generation invalidated; matching entries now miss.');
+        } else {
+            $cache->flushNamespace();
+            $message = $this->_('Namespace generation invalidated; all its entries now miss.');
+        }
+        $this->wire()->session->set('kontorCacheWorkbench', [
+            'namespace' => $input['namespace'],
+            'key' => $input['key'],
+            'tags' => implode(', ', $input['tags']),
+            'ttl' => (string) ($input['ttl'] ?? 0),
+            'valueJson' => $input['valueJson'],
+            'result' => [
+                'action' => $action,
+                'hit' => false,
+                'value' => null,
+                'message' => $message,
+            ],
+        ]);
+        $this->audit('cache', 'namespace', $this->organizationUid(), $action, metadata: [
+            'namespace' => $input['namespace'],
+            'tag' => $action === 'flush-tag' ? $input['tags'][0] : null,
+        ]);
+        $this->message($message);
+        $this->wire()->session->redirect('../cache/');
     }
 
     public function ___executeDocuments(): string
@@ -9420,6 +9555,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorFiles');
     }
 
+    private function cacheReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorCache');
+    }
+
     private function documentsReady(): bool
     {
         return $this->wire()->modules->isInstalled('KontorDocuments');
@@ -9591,6 +9731,13 @@ class ProcessKontor extends Process
     {
         if (!$this->filesReady()) {
             throw new WireException($this->_('The Kontor Files component is not installed.'));
+        }
+    }
+
+    private function requireCache(): void
+    {
+        if (!$this->cacheReady()) {
+            throw new WireException($this->_('The Kontor Cache component is not installed.'));
         }
     }
 
@@ -9797,6 +9944,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorFiles $module */
         $module = $this->wire()->modules->get('KontorFiles');
+
+        return $module;
+    }
+
+    private function cacheModule(): KontorCache
+    {
+        /** @var KontorCache $module */
+        $module = $this->wire()->modules->get('KontorCache');
 
         return $module;
     }
@@ -10121,6 +10276,85 @@ class ProcessKontor extends Process
         }
 
         return $metadata;
+    }
+
+    /**
+     * @return array{
+     *   namespace: string,
+     *   effectiveNamespace: string,
+     *   key: string,
+     *   tags: string[],
+     *   ttl: int|null,
+     *   valueJson: string
+     * }
+     */
+    private function cacheWorkbenchInput(): array
+    {
+        $namespace = strtolower(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('namespace')
+        )));
+        $key = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('key')
+        ));
+        if (preg_match('/^[a-z][a-z0-9_-]{0,39}$/', $namespace) !== 1) {
+            throw new WireException($this->_('Namespace must start with a letter and use up to 40 safe characters.'));
+        }
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$/', $key) !== 1) {
+            throw new WireException($this->_('Cache key must use 1–128 safe characters.'));
+        }
+        $tagsRaw = trim((string) $this->wire()->input->post('tags'));
+        $tags = [];
+        if ($tagsRaw !== '') {
+            foreach (array_filter(array_map('trim', explode(',', strtolower($tagsRaw)))) as $tag) {
+                if (preg_match('/^[a-z][a-z0-9_-]{0,39}$/', $tag) !== 1) {
+                    throw new WireException($this->_('Each tag must start with a letter and use up to 40 safe characters.'));
+                }
+                $tags[$tag] = $tag;
+            }
+        }
+        $tags = array_values($tags);
+        if (count($tags) > 10) {
+            throw new WireException($this->_('At most 10 cache tags are allowed.'));
+        }
+        sort($tags);
+        $ttlRaw = trim((string) $this->wire()->input->post('ttl'));
+        if ($ttlRaw === '') {
+            $ttlRaw = '0';
+        }
+        if (preg_match('/^\d{1,5}$/', $ttlRaw) !== 1 || (int) $ttlRaw > 86400) {
+            throw new WireException($this->_('TTL must be between 0 and 86400 seconds.'));
+        }
+        $ttl = (int) $ttlRaw;
+        $valueJson = trim((string) $this->wire()->input->post('value_json'));
+        if (strlen($valueJson) > 65536) {
+            throw new WireException($this->_('Cached JSON must be at most 64 KB.'));
+        }
+
+        return [
+            'namespace' => $namespace,
+            'effectiveNamespace' => 'kontor-admin-org-' . $this->organizationInternalId() . '-' . $namespace,
+            'key' => $key,
+            'tags' => $tags,
+            'ttl' => $ttl > 0 ? $ttl : null,
+            'valueJson' => $valueJson,
+        ];
+    }
+
+    private function cacheValueFromPost(string $raw): mixed
+    {
+        if ($raw === '') {
+            throw new WireException($this->_('Cached JSON value is required for set.'));
+        }
+        try {
+            $value = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new WireException($this->_('Cached value must be valid JSON.'));
+        }
+        if ($value === null) {
+            throw new WireException($this->_('A JSON null cannot be distinguished from a cache miss.'));
+        }
+
+        return $value;
     }
 
     /**

@@ -29,13 +29,18 @@ class KontorCache extends WireData implements Module
         return [
             'title' => 'Kontor Cache',
             'summary' => 'Namespaced, tag-invalidated caching over a swappable store.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCache',
             'icon' => 'bolt',
             'singular' => true,
             'autoload' => true,
             'requires' => ['Kontor'],
+            'permissions' => [
+                'kontor-cache-view' => 'View Kontor cache health and workbench',
+                'kontor-cache-manage' => 'Read, write and delete Kontor cache workbench entries',
+                'kontor-cache-flush' => 'Invalidate Kontor cache workbench tags and namespaces',
+            ],
         ];
     }
 
@@ -73,6 +78,23 @@ class KontorCache extends WireData implements Module
 
     public function ___install(): void
     {
+        $components = new ComponentRegistry($this->wire()->database->pdo());
+        $components->markInstalled('cache', self::getModuleInfo()['version'], 'cache');
+        $components->enable('cache');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        foreach (self::getModuleInfo()['permissions'] as $name => $title) {
+            $permission = $this->wire()->permissions->get($name);
+            if ($permission->id) {
+                continue;
+            }
+            $permission = $this->wire()->permissions->add($name);
+            $permission->title = $title;
+            $this->wire()->permissions->save($permission);
+        }
+
         $components = new ComponentRegistry($this->wire()->database->pdo());
         $components->markInstalled('cache', self::getModuleInfo()['version'], 'cache');
         $components->enable('cache');

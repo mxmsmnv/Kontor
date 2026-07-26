@@ -22,6 +22,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Cache admin vertical: live ProcessWire adapter health,
+  organization-scoped namespace workbench, JSON values, TTLs, tags, and
+  generation-based tag or namespace invalidation.
 - First Files admin vertical: private uploads, checksum and metadata detail,
   entity-bound versions, signed authenticated downloads, and reversible
   archive/restore lifecycle.

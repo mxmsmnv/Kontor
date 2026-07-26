@@ -28,6 +28,11 @@ One consequence: **the same `$tags` must be passed on both `set()` and
 which "generation" of a value is current, not metadata attached after the
 fact. This matches how e.g. Laravel's tagged cache works.
 
+The ProcessWire admin includes an organization-scoped workbench for proving
+this behavior against the configured adapter. Its namespaces are prefixed
+with `kontor-admin-org-{id}-`, so operational tests cannot collide across
+organizations or with component-owned namespaces.
+
 ## Contents
 
 - `src/Infrastructure/TaggedCache.php` — the namespace/tag/invalidation
