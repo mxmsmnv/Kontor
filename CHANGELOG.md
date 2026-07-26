@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Bulk Activate/Deactivate controls for Catalog price lists, preserving list
+  filters and recording tenant-scoped audit events.
 - Bulk archive/restore controls for Catalog categories, with tenant-scoped
   transactional persistence and select-all behavior.
 - One-click Catalog price-list duplication that transactionally copies all

@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '040',
+            'version' => '041',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1003,6 +1003,50 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect(
             '../catalog-price-list/?id=' . rawurlencode($duplicate->uid->toString())
         );
+    }
+
+    public function ___executeCatalogPriceListBulkAction(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-pricelist-edit');
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['activate', 'deactivate']
+        );
+        $this->requireAction($action, ['activate', 'deactivate']);
+        $ids = $this->wire()->sanitizer->arrayVal(
+            $this->wire()->input->post('ids'),
+            ['maxItems' => 100, 'sanitizer' => 'text']
+        );
+        $redirect = $this->catalogPriceListRedirect();
+
+        if ($ids === []) {
+            $this->warning($this->_('Select at least one price list.'));
+            $this->wire()->session->redirect($redirect);
+        }
+
+        $changedIds = $action === 'activate'
+            ? $this->priceListRepository()->activateMany($this->organizationUid(), $ids)
+            : $this->priceListRepository()->deactivateMany($this->organizationUid(), $ids);
+
+        foreach ($changedIds as $id) {
+            $this->audit(
+                'catalog',
+                'catalog_price_list',
+                $id,
+                $action === 'activate' ? 'activated' : 'deactivated',
+                metadata: ['bulk' => true],
+            );
+        }
+
+        $this->message(sprintf(
+            $action === 'activate'
+                ? $this->_('%d price list(s) activated.')
+                : $this->_('%d price list(s) deactivated.'),
+            count($changedIds),
+        ));
+        $this->wire()->session->redirect($redirect);
     }
 
     public function ___executeCatalogPriceEntry(): string
@@ -3611,6 +3655,25 @@ class ProcessKontor extends Process
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
 
         return '../catalog-categories/' . ($parameters === [] ? '' : '?' . http_build_query($parameters));
+    }
+
+    private function catalogPriceListRedirect(): string
+    {
+        $query = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('return_q')
+        );
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_status'),
+            ['active', 'inactive']
+        );
+        $page = max(1, (int) $this->wire()->input->post('return_page'));
+        $parameters = array_filter([
+            'q' => $query,
+            'status' => $status,
+            'page' => $page > 1 ? $page : null,
+        ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
+
+        return '../catalog-price-lists/' . ($parameters === [] ? '' : '?' . http_build_query($parameters));
     }
 
     /**

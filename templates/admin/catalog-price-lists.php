@@ -8,6 +8,8 @@
 /** @var int $totalPages */
 /** @var int $totalPriceLists */
 /** @var string $adminUrl */
+/** @var string $csrfName */
+/** @var string $csrfValue */
 /** @var callable $e */
 
 $url = static function (int $targetPage) use ($query, $selectedStatus): string {
@@ -59,15 +61,66 @@ $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d
   </form>
 
   <?php if ($priceLists): ?>
+    <form
+      class="kontor-bulkactions"
+      id="catalog-price-list-bulk-form"
+      method="post"
+      action="<?= $e($adminUrl) ?>catalog-price-list-bulk-action/"
+      data-kontor-bulk-form
+      data-entity-label="price list"
+    >
+      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+      <input type="hidden" name="return_q" value="<?= $e($query) ?>">
+      <input type="hidden" name="return_status" value="<?= $e($selectedStatus ?? '') ?>">
+      <input type="hidden" name="return_page" value="<?= $e($page) ?>">
+      <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
+      <button
+        class="kontor-button kontor-button--ghost"
+        type="submit"
+        name="action"
+        value="activate"
+        data-action-label="Activate"
+      >
+        <i class="fa fa-play"></i> Activate selected
+      </button>
+      <button
+        class="kontor-button kontor-button--ghost"
+        type="submit"
+        name="action"
+        value="deactivate"
+        data-action-label="Deactivate"
+      >
+        <i class="fa fa-pause"></i> Deactivate selected
+      </button>
+    </form>
     <section class="kontor-card kontor-tablewrap">
       <table class="kontor-table">
         <thead>
-          <tr><th>Price list</th><th>Currency</th><th>Validity</th><th>Price tiers</th><th>Status</th></tr>
+          <tr>
+            <th class="kontor-selectcell">
+              <input
+                type="checkbox"
+                data-kontor-select-all="catalog-price-list-bulk-form"
+                aria-label="Select all shown price lists"
+              >
+            </th>
+            <th>Price list</th><th>Currency</th><th>Validity</th><th>Price tiers</th><th>Status</th>
+          </tr>
         </thead>
         <tbody>
           <?php foreach ($priceLists as $priceList): ?>
             <?php $uid = $priceList->uid->toString(); ?>
             <tr>
+              <td class="kontor-selectcell">
+                <input
+                  type="checkbox"
+                  name="ids[]"
+                  value="<?= $e($uid) ?>"
+                  form="catalog-price-list-bulk-form"
+                  data-kontor-select-item="catalog-price-list-bulk-form"
+                  aria-label="Select <?= $e($priceList->name) ?>"
+                >
+              </td>
               <td><strong><a href="<?= $e($adminUrl) ?>catalog-price-list/?id=<?= $e(rawurlencode($uid)) ?>"><?= $e($priceList->name) ?></a></strong></td>
               <td><code><?= $e($priceList->currencyCode) ?></code></td>
               <td><?= $e($date($priceList->validFrom)) ?> → <?= $e($date($priceList->validTo)) ?></td>

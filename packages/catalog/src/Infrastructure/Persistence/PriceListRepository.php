@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Catalog\Infrastructure\Persistence;
 
+use InvalidArgumentException;
 use Kontor\Catalog\Domain\PriceList;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\ValueObjects\Uid;
@@ -103,6 +104,28 @@ final class PriceListRepository
     }
 
     /**
+     * Activate up to 100 price lists belonging to the requested organization.
+     *
+     * @param string[] $ids
+     * @return string[] Uids whose state changed
+     */
+    public function activateMany(string $organizationUid, array $ids): array
+    {
+        return $this->setStatusMany($organizationUid, $ids, 'active');
+    }
+
+    /**
+     * Deactivate up to 100 price lists belonging to the requested organization.
+     *
+     * @param string[] $ids
+     * @return string[] Uids whose state changed
+     */
+    public function deactivateMany(string $organizationUid, array $ids): array
+    {
+        return $this->setStatusMany($organizationUid, $ids, 'inactive');
+    }
+
+    /**
      * @return array{0: string, 1: array<string, int|string>}
      */
     private function listQuery(
@@ -134,6 +157,71 @@ final class PriceListRepository
             ),
             $parameters,
         ];
+    }
+
+    /**
+     * @param string[] $ids
+     * @return string[]
+     */
+    private function setStatusMany(string $organizationUid, array $ids, string $status): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            $ids,
+            static fn (mixed $id): bool => is_string($id)
+                && preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/', $id) === 1
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        if (count($ids) > 100) {
+            throw new InvalidArgumentException('At most 100 price lists can be changed at once.');
+        }
+
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $select = $this->pdo->prepare(
+                "SELECT uid
+                 FROM kontor_catalog_price_lists
+                 WHERE organization_id = ?
+                   AND uid IN ({$placeholders})
+                   AND status <> ?
+                 FOR UPDATE"
+            );
+            $select->execute([$organizationId, ...$ids, $status]);
+            $changedIds = array_map('strval', $select->fetchAll(\PDO::FETCH_COLUMN));
+
+            if ($changedIds !== []) {
+                $changedPlaceholders = implode(', ', array_fill(0, count($changedIds), '?'));
+                $update = $this->pdo->prepare(
+                    "UPDATE kontor_catalog_price_lists
+                     SET status = ?
+                     WHERE organization_id = ?
+                       AND uid IN ({$changedPlaceholders})"
+                );
+                $update->execute([$status, $organizationId, ...$changedIds]);
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $changedIds;
+        } catch (\Throwable $exception) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     private function hydrate(array $row): PriceList

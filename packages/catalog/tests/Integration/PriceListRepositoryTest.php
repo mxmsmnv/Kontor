@@ -6,6 +6,7 @@ namespace Kontor\Catalog\Tests\Integration;
 
 use Kontor\Catalog\Domain\PriceList;
 use Kontor\Catalog\Infrastructure\Persistence\PriceListRepository;
+use Kontor\Core\Domain\Organization;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 
 final class PriceListRepositoryTest extends DatabaseTestCase
@@ -54,5 +55,50 @@ final class PriceListRepositoryTest extends DatabaseTestCase
 
         $this->expectException(\RuntimeException::class);
         $repository->require('01ARZ3NDEKTSV4RRFFQ69G5FAV');
+    }
+
+    public function test_bulk_status_changes_are_tenant_scoped_and_idempotent(): void
+    {
+        $organizations = new OrganizationRepository($this->pdo);
+        $repository = new PriceListRepository($this->pdo, $organizations);
+        $first = PriceList::create($this->organizationUid, 'Retail', 'EUR');
+        $second = PriceList::create($this->organizationUid, 'Wholesale', 'EUR');
+        $otherOrganization = Organization::createDefault('DE', 'de', 'EUR');
+        $otherOrganization->name = 'Other organization';
+        $organizations->save($otherOrganization);
+        $other = PriceList::create(
+            $otherOrganization->uid->toString(),
+            'Other tenant retail',
+            'EUR',
+        );
+
+        foreach ([$first, $second, $other] as $priceList) {
+            $repository->save($priceList);
+        }
+
+        $deactivated = $repository->deactivateMany($this->organizationUid, [
+            $first->uid->toString(),
+            $second->uid->toString(),
+            $other->uid->toString(),
+            $first->uid->toString(),
+            'invalid',
+        ]);
+
+        $this->assertEqualsCanonicalizing(
+            [$first->uid->toString(), $second->uid->toString()],
+            $deactivated,
+        );
+        $this->assertSame([], $repository->deactivateMany($this->organizationUid, $deactivated));
+        $this->assertSame(2, $repository->countMatching($this->organizationUid, status: 'inactive'));
+        $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString(), status: 'active'));
+
+        $activated = $repository->activateMany($this->organizationUid, [
+            $first->uid->toString(),
+            $other->uid->toString(),
+        ]);
+
+        $this->assertSame([$first->uid->toString()], $activated);
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, status: 'inactive'));
+        $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString(), status: 'active'));
     }
 }

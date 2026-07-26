@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const action = form.dataset.actionLabel || 'change';
+      const action = event.submitter?.dataset.actionLabel || form.dataset.actionLabel || 'Change';
 
       if (!window.confirm(`${action} ${selected} selected ${entityLabel}(s)?`)) {
         event.preventDefault();
