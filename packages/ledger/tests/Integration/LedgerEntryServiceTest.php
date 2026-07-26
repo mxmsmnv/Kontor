@@ -134,4 +134,45 @@ final class LedgerEntryServiceTest extends DatabaseTestCase
             ],
         );
     }
+
+    public function test_an_archived_account_cannot_receive_a_new_entry(): void
+    {
+        $chartOfAccounts = new ChartOfAccountsService($this->accounts());
+        $cash = $chartOfAccounts->createAccount($this->organizationUid, '1000', 'Cash', 'asset', 'EUR');
+        $revenue = $chartOfAccounts->createAccount($this->organizationUid, '4000', 'Sales Revenue', 'revenue', 'EUR');
+        $chartOfAccounts->archive($revenue->uid->toString());
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('is not active');
+
+        $this->service()->record(
+            $this->organizationUid,
+            'Attempt against archived account',
+            new \DateTimeImmutable('2026-01-01'),
+            [
+                LedgerLineInput::debit($cash->uid->toString(), Money::ofMinor(100, 'EUR')),
+                LedgerLineInput::credit($revenue->uid->toString(), Money::ofMinor(100, 'EUR')),
+            ],
+        );
+    }
+
+    public function test_an_entry_must_use_each_accounts_currency(): void
+    {
+        $chartOfAccounts = new ChartOfAccountsService($this->accounts());
+        $cash = $chartOfAccounts->createAccount($this->organizationUid, '1000', 'Cash', 'asset', 'EUR');
+        $revenue = $chartOfAccounts->createAccount($this->organizationUid, '4000', 'Sales Revenue', 'revenue', 'EUR');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('uses EUR, not USD');
+
+        $this->service()->record(
+            $this->organizationUid,
+            'Wrong-currency attempt',
+            new \DateTimeImmutable('2026-01-01'),
+            [
+                LedgerLineInput::debit($cash->uid->toString(), Money::ofMinor(100, 'USD')),
+                LedgerLineInput::credit($revenue->uid->toString(), Money::ofMinor(100, 'USD')),
+            ],
+        );
+    }
 }

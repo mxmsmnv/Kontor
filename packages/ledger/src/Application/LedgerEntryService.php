@@ -50,6 +50,14 @@ final class LedgerEntryService
             if ($account->organizationId !== $organizationId) {
                 throw new RuntimeException("Account \"{$input->accountUid}\" does not belong to this organization.");
             }
+            if (!$account->isActive()) {
+                throw new RuntimeException("Account \"{$input->accountUid}\" is not active.");
+            }
+            if ($account->currencyCode !== $input->debit->currencyCode()) {
+                throw new RuntimeException(
+                    "Account \"{$input->accountUid}\" uses {$account->currencyCode}, not {$input->debit->currencyCode()}."
+                );
+            }
         }
 
         $entry = LedgerEntry::create($organizationId, $description, $entryDate, $referenceType, $referenceUid, $createdBy);

@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Admin chart-of-accounts and journal workbench with live balances,
+  balanced two-line posting, immutable entry detail, account lifecycle,
+  and optional business-document references.
 - Initial alpha (Substage 9.4): `kontor_ledger_accounts`,
   `kontor_ledger_entries`, `kontor_ledger_lines` migrations (kontor.md,
   full gap-fill; entries/lines are append-only, standard columns apply
@@ -22,3 +25,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   (re-derives every entry's balance directly from the database as
   defense in depth); permissions; en/fr/de/es translations. Fourth
   component of Stage 9 (Advanced capabilities).
+
+### Fixed
+
+- Account hydration now exposes archive state, lifecycle updates advance
+  standard metadata, and the posting service rejects archived accounts and
+  account-currency mismatches.

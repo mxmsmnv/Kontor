@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Archived ledger accounts are represented in the domain and rejected by
+  the posting service, which also prevents account-currency mismatches.
 - Documents now loads its PDF runtime from the root application dependency
   graph, publishes language families independently of English fallback, and
   keeps exactly one restored version active per family.
@@ -15,6 +17,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Ledger admin vertical: chart-of-accounts creation and lifecycle,
+  live normal-side balances, balanced two-line journal posting, immutable
+  entry detail, and optional business-document references.
 - First AI admin vertical: production-provider visibility, deterministic
   network-free capability previews, summaries and extraction, plus a human
   approval queue that withholds critical draft output until a decision.

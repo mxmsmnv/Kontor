@@ -83,14 +83,25 @@ final class AccountRepository implements RepositoryInterface
 
     public function archive(string $id): void
     {
-        $statement = $this->pdo->prepare('UPDATE kontor_ledger_accounts SET archived_at = :now WHERE uid = :uid');
+        $statement = $this->pdo->prepare(
+            'UPDATE kontor_ledger_accounts
+             SET archived_at = :now, updated_at = :now, version = version + 1
+             WHERE uid = :uid'
+        );
         $statement->execute(['now' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'), 'uid' => $id]);
     }
 
     public function restore(string $id): void
     {
-        $statement = $this->pdo->prepare('UPDATE kontor_ledger_accounts SET archived_at = NULL WHERE uid = :uid');
-        $statement->execute(['uid' => $id]);
+        $statement = $this->pdo->prepare(
+            'UPDATE kontor_ledger_accounts
+             SET archived_at = NULL, updated_at = :now, version = version + 1
+             WHERE uid = :uid'
+        );
+        $statement->execute([
+            'now' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'),
+            'uid' => $id,
+        ]);
     }
 
     /**
@@ -120,6 +131,7 @@ final class AccountRepository implements RepositoryInterface
             createdAt: new \DateTimeImmutable($row['created_at']),
             updatedAt: new \DateTimeImmutable($row['updated_at']),
             createdBy: $row['created_by'] !== null ? (int) $row['created_by'] : null,
+            archivedAt: $row['archived_at'] !== null ? new \DateTimeImmutable($row['archived_at']) : null,
         );
     }
 

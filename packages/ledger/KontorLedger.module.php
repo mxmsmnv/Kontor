@@ -31,7 +31,7 @@ class KontorLedger extends WireData implements Module
         return [
             'title' => 'Kontor Ledger',
             'summary' => 'Double-entry foundations, chart of accounts.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorLedger',
             'icon' => 'balance-scale',
@@ -133,6 +133,13 @@ class KontorLedger extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('ledger', self::getModuleInfo()['version'], 'ledger');
+        $components->enable('ledger');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('ledger', self::getModuleInfo()['version'], 'ledger');
         $components->enable('ledger');
     }

@@ -49,6 +49,8 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Expenses\Domain\Expense;
 use Kontor\Expenses\Domain\ExpenseCategory;
 use Kontor\Inventory\Domain\Warehouse;
+use Kontor\Ledger\Domain\Account;
+use Kontor\Ledger\DTO\LedgerLineInput;
 use Kontor\Payments\Domain\Payment;
 use Kontor\Projects\Domain\BillableItem;
 use Kontor\Projects\Domain\Project;
@@ -82,7 +84,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '108',
+            'version' => '109',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -214,6 +216,12 @@ class ProcessKontor extends Process
                     'label' => 'AI',
                     'icon' => 'magic',
                     'permission' => 'kontor-ai-action-approve',
+                ],
+                [
+                    'url' => 'ledger/',
+                    'label' => 'Ledger',
+                    'icon' => 'balance-scale',
+                    'permission' => 'kontor-ledger-entry-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -4667,6 +4675,218 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect('../ai/?id=' . rawurlencode($uid));
     }
 
+    public function ___executeLedger(): string
+    {
+        $this->requireLedger();
+        $this->requirePermission('kontor-ledger-entry-view');
+        $module = $this->ledgerModule();
+        $accounts = $module->accountRepository()->forOrganization($this->organizationUid());
+        $accountRows = [];
+        foreach ($accounts as $account) {
+            $accountRows[] = [
+                'account' => $account,
+                'balance' => $module->balances()->balance($account->uid->toString()),
+            ];
+        }
+        $entries = $module->entryRepository()->forOrganization($this->organizationUid());
+        $entryRows = [];
+        foreach ($entries as $entry) {
+            $lines = $module->lineRepository()->forEntry($entry->uid->toString());
+            $debitMinor = array_sum(array_map(
+                static fn ($line): int => $line->debit->amountMinor(),
+                $lines,
+            ));
+            $currencyCode = $lines !== []
+                ? $lines[0]->debit->currencyCode()
+                : $this->organization()->defaultCurrency;
+            $entryRows[] = [
+                'entry' => $entry,
+                'amount' => Money::ofMinor($debitMinor, $currencyCode),
+            ];
+        }
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $selected = $id !== '' ? $module->entryRepository()->require($id) : null;
+        if ($selected !== null) {
+            $this->requireSameOrganization($selected->organizationId);
+        }
+        $accountLabels = [];
+        foreach ($accounts as $account) {
+            $accountLabels[$account->uid->toString()] = $account->code . ' · ' . $account->name;
+        }
+        $this->setPageTitle($this->_('Kontor · Ledger'));
+
+        return $this->renderTemplate('ledger', [
+            'accountRows' => $accountRows,
+            'activeAccounts' => array_values(array_filter(
+                $accounts,
+                static fn (Account $account): bool => $account->isActive(),
+            )),
+            'entryRows' => $entryRows,
+            'selected' => $selected,
+            'selectedLines' => $selected !== null
+                ? $module->lineRepository()->forEntry($selected->uid->toString())
+                : [],
+            'accountLabels' => $accountLabels,
+            'defaultCurrency' => $this->organization()->defaultCurrency,
+            'canManageAccounts' => $this->can('kontor-ledger-account-manage'),
+            'canRecordEntries' => $this->can('kontor-ledger-entry-record'),
+        ]);
+    }
+
+    public function ___executeLedgerAccountCreate(): void
+    {
+        $this->requirePost();
+        $this->requireLedger();
+        $this->requirePermission('kontor-ledger-account-manage');
+        $code = strtoupper(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('code')
+        )));
+        $name = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        $type = $this->wire()->sanitizer->text((string) $this->wire()->input->post('type'));
+        $currency = strtoupper(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('currency_code')
+        )));
+        $parentUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('parent_uid')
+        );
+        if (preg_match('/^[A-Z0-9._-]{1,20}$/', $code) !== 1) {
+            throw new WireException($this->_('Account code may contain letters, numbers, dots, underscores, and hyphens.'));
+        }
+        if ($name === '') {
+            throw new WireException($this->_('Account name is required.'));
+        }
+        $this->requireAction($type, Account::TYPES);
+        if (preg_match('/^[A-Z]{3}$/', $currency) !== 1) {
+            throw new WireException($this->_('Currency must be a three-letter code.'));
+        }
+        if ($parentUid !== '') {
+            $parent = $this->ledgerModule()->accountRepository()->require($parentUid);
+            $this->requireSameOrganization($parent->organizationId);
+            if (!$parent->isActive()) {
+                throw new WireException($this->_('Parent account must be active.'));
+            }
+        }
+        $account = $this->ledgerModule()->chartOfAccounts()->createAccount(
+            $this->organizationUid(),
+            $code,
+            mb_substr($name, 0, 255),
+            $type,
+            $currency,
+            $parentUid ?: null,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('ledger', 'account', $account->uid->toString(), 'created', current: [
+            'code' => $account->code,
+            'name' => $account->name,
+            'type' => $account->type,
+        ]);
+        $this->message($this->_('Ledger account created.'));
+        $this->wire()->session->redirect('../ledger/');
+    }
+
+    public function ___executeLedgerAccountAction(): void
+    {
+        $this->requirePost();
+        $this->requireLedger();
+        $this->requirePermission('kontor-ledger-account-manage');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('account_uid')
+        );
+        $action = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action')
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $account = $this->ledgerModule()->accountRepository()->require($uid);
+        $this->requireSameOrganization($account->organizationId);
+        if ($action === 'archive') {
+            $this->ledgerModule()->chartOfAccounts()->archive($uid);
+        } else {
+            $this->ledgerModule()->chartOfAccounts()->restore($uid);
+        }
+        $this->audit('ledger', 'account', $uid, $action . 'd');
+        $this->message($action === 'archive'
+            ? $this->_('Ledger account archived.')
+            : $this->_('Ledger account restored.'));
+        $this->wire()->session->redirect('../ledger/');
+    }
+
+    public function ___executeLedgerEntryRecord(): void
+    {
+        $this->requirePost();
+        $this->requireLedger();
+        $this->requirePermission('kontor-ledger-entry-record');
+        $description = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('description')
+        ));
+        if ($description === '') {
+            throw new WireException($this->_('Entry description is required.'));
+        }
+        $dateText = trim((string) $this->wire()->input->post('entry_date'));
+        $entryDate = \DateTimeImmutable::createFromFormat('!Y-m-d', $dateText);
+        if ($entryDate === false || $entryDate->format('Y-m-d') !== $dateText) {
+            throw new WireException($this->_('Entry date must use YYYY-MM-DD.'));
+        }
+        $debitUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('debit_account_uid')
+        );
+        $creditUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('credit_account_uid')
+        );
+        if ($debitUid === $creditUid) {
+            throw new WireException($this->_('Debit and credit accounts must differ.'));
+        }
+        $accounts = $this->ledgerModule()->accountRepository();
+        $debitAccount = $accounts->require($debitUid);
+        $creditAccount = $accounts->require($creditUid);
+        $this->requireSameOrganization($debitAccount->organizationId);
+        $this->requireSameOrganization($creditAccount->organizationId);
+        if (!$debitAccount->isActive() || !$creditAccount->isActive()) {
+            throw new WireException($this->_('Both ledger accounts must be active.'));
+        }
+        if ($debitAccount->currencyCode !== $creditAccount->currencyCode) {
+            throw new WireException($this->_('Debit and credit accounts must use the same currency.'));
+        }
+        $amount = Money::ofMinor(
+            $this->ledgerAmountMinorFromPost(),
+            $debitAccount->currencyCode,
+        );
+        $referenceType = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('reference_type')
+        ));
+        $referenceUid = strtoupper(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('reference_uid')
+        )));
+        if (($referenceType === '') !== ($referenceUid === '')) {
+            throw new WireException($this->_('Reference type and UID must be provided together.'));
+        }
+        if ($referenceUid !== '' && preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/', $referenceUid) !== 1) {
+            throw new WireException($this->_('Reference UID must be a valid ULID.'));
+        }
+        $entry = $this->ledgerModule()->entries()->record(
+            $this->organizationUid(),
+            mb_substr($description, 0, 500),
+            $entryDate,
+            [
+                LedgerLineInput::debit($debitUid, $amount),
+                LedgerLineInput::credit($creditUid, $amount),
+            ],
+            $referenceType ?: null,
+            $referenceUid ?: null,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('ledger', 'entry', $entry->uid->toString(), 'recorded', current: [
+            'description' => $entry->description,
+            'amountMinor' => $amount->amountMinor(),
+            'currencyCode' => $amount->currencyCode(),
+        ]);
+        $this->message($this->_('Balanced ledger entry recorded.'));
+        $this->wire()->session->redirect(
+            '../ledger/?id=' . rawurlencode($entry->uid->toString())
+        );
+    }
+
     public function ___executeMarketplace(): string
     {
         $this->requireMarketplace();
@@ -8807,6 +9027,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorAI');
     }
 
+    private function ledgerReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorLedger');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8965,6 +9190,13 @@ class ProcessKontor extends Process
     {
         if (!$this->aiReady()) {
             throw new WireException($this->_('The Kontor AI component is not installed.'));
+        }
+    }
+
+    private function requireLedger(): void
+    {
+        if (!$this->ledgerReady()) {
+            throw new WireException($this->_('The Kontor Ledger component is not installed.'));
         }
     }
 
@@ -9151,6 +9383,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorAI $module */
         $module = $this->wire()->modules->get('KontorAI');
+
+        return $module;
+    }
+
+    private function ledgerModule(): KontorLedger
+    {
+        /** @var KontorLedger $module */
+        $module = $this->wire()->modules->get('KontorLedger');
 
         return $module;
     }
@@ -9366,6 +9606,21 @@ class ProcessKontor extends Process
         }
 
         return $value;
+    }
+
+    private function ledgerAmountMinorFromPost(): int
+    {
+        $raw = str_replace(',', '.', trim((string) $this->wire()->input->post('amount')));
+        if (preg_match('/^\d{1,15}(?:\.\d{1,2})?$/', $raw) !== 1) {
+            throw new WireException($this->_('Amount must be positive with at most two decimal places.'));
+        }
+        [$whole, $fraction] = array_pad(explode('.', $raw, 2), 2, '');
+        $minor = ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
+        if ($minor <= 0) {
+            throw new WireException($this->_('Amount must be greater than zero.'));
+        }
+
+        return $minor;
     }
 
     /**

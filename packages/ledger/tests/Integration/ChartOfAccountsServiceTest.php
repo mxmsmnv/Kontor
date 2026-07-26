@@ -59,9 +59,12 @@ final class ChartOfAccountsServiceTest extends DatabaseTestCase
         $service->archive($account->uid->toString());
         $row = $this->pdo->query("SELECT archived_at FROM kontor_ledger_accounts WHERE uid = '{$account->uid->toString()}'")->fetch(\PDO::FETCH_ASSOC);
         $this->assertNotNull($row['archived_at']);
+        $this->assertTrue($this->accounts()->require($account->uid->toString())->isArchived());
+        $this->assertFalse($this->accounts()->require($account->uid->toString())->isActive());
 
         $service->restore($account->uid->toString());
         $row = $this->pdo->query("SELECT archived_at FROM kontor_ledger_accounts WHERE uid = '{$account->uid->toString()}'")->fetch(\PDO::FETCH_ASSOC);
         $this->assertNull($row['archived_at']);
+        $this->assertFalse($this->accounts()->require($account->uid->toString())->isArchived());
     }
 }

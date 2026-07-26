@@ -29,6 +29,7 @@ final class Account
         public readonly \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $updatedAt,
         public readonly ?int $createdBy,
+        public readonly ?\DateTimeImmutable $archivedAt = null,
     ) {
     }
 
@@ -59,12 +60,18 @@ final class Account
             createdAt: $now,
             updatedAt: $now,
             createdBy: $createdBy,
+            archivedAt: null,
         );
     }
 
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === 'active' && !$this->isArchived();
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archivedAt !== null;
     }
 
     /**
