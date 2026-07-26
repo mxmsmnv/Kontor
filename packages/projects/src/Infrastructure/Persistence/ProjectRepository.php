@@ -34,6 +34,26 @@ final class ProjectRepository implements RepositoryInterface
         return $this->find($id) ?? throw new RuntimeException("Project \"{$id}\" was not found.");
     }
 
+    /**
+     * @return Project[]
+     */
+    public function forOrganization(string $organizationUid, int $limit = 100): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT p.*
+             FROM kontor_projects p
+             INNER JOIN kontor_organizations o ON o.id = p.organization_id
+             WHERE o.uid = :organization_uid AND p.archived_at IS NULL
+             ORDER BY p.updated_at DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue('organization_uid', $organizationUid);
+        $statement->bindValue('limit', max(1, min($limit, 500)), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     public function save(object $entity): void
     {
         if (!$entity instanceof Project) {

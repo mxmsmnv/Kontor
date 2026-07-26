@@ -32,7 +32,7 @@ class KontorProjects extends WireData implements Module
         return [
             'title' => 'Kontor Projects',
             'summary' => 'Projects, milestones, time tracking, billable items, invoicing integration.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorProjects',
             'icon' => 'tasks',
@@ -158,6 +158,13 @@ class KontorProjects extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('projects', self::getModuleInfo()['version'], 'projects');
+        $components->enable('projects');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('projects', self::getModuleInfo()['version'], 'projects');
         $components->enable('projects');
     }

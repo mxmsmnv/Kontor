@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Projects admin vertical: customer-backed projects, milestones,
+  billable time and items, and generation of real draft invoices.
 - First Expenses admin vertical: category creation, expense drafts, optional
   supplier and receipt references, submission, approval/rejection, cancellation,
   and reimbursement.

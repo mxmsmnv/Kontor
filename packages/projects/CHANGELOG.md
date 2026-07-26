@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: tenant-scoped project listing and
+  creation, milestone workflow, billable time and item capture, and draft
+  invoice generation through the existing Sales and Invoices components.
 - Initial alpha (Substage 6.4): `kontor_projects`,
   `kontor_project_milestones`, `kontor_project_time_entries`,
   `kontor_project_billable_items` migrations (full schema gap-fill, no

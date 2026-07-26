@@ -50,6 +50,9 @@ use Kontor\Expenses\Domain\Expense;
 use Kontor\Expenses\Domain\ExpenseCategory;
 use Kontor\Inventory\Domain\Warehouse;
 use Kontor\Payments\Domain\Payment;
+use Kontor\Projects\Domain\BillableItem;
+use Kontor\Projects\Domain\Project;
+use Kontor\Projects\Domain\ProjectMilestone;
 use Kontor\Purchasing\Domain\PurchaseOrder;
 use Kontor\Purchasing\Domain\Supplier;
 use Kontor\Queue\Infrastructure\Persistence\JobRepository;
@@ -76,7 +79,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '097',
+            'version' => '098',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -142,6 +145,12 @@ class ProcessKontor extends Process
                     'label' => 'Expenses',
                     'icon' => 'credit-card',
                     'permission' => 'kontor-expenses-expense-view',
+                ],
+                [
+                    'url' => 'projects/',
+                    'label' => 'Projects',
+                    'icon' => 'tasks',
+                    'permission' => 'kontor-projects-project-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3162,6 +3171,282 @@ class ProcessKontor extends Process
         );
         $this->message($this->_('Expense workflow updated.'));
         $this->wire()->session->redirect('../expense/?id=' . rawurlencode($id));
+    }
+
+    public function ___executeProjects(): string
+    {
+        $this->requireProjects();
+        $this->requirePermission('kontor-projects-project-view');
+        $this->setPageTitle($this->_('Kontor · Projects'));
+
+        return $this->renderTemplate('projects', [
+            'projects' => $this->projectsModule()->projectRepository()
+                ->forOrganization($this->organizationUid()),
+            'customerLabels' => $this->salesCustomerLabels(),
+            'canCreate' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-projects-project-create'),
+        ]);
+    }
+
+    public function ___executeProject(): string
+    {
+        $this->requireProjects();
+        $module = $this->projectsModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $project = $id !== '' ? $module->projectRepository()->require($id) : null;
+        if ($project !== null) {
+            $this->requireSameOrganization($project->organizationId);
+            $this->requirePermission('kontor-projects-project-view');
+        } else {
+            $this->requirePermission('kontor-projects-project-create');
+        }
+        $customers = $this->salesCustomerLabels();
+        $values = [
+            'code' => '',
+            'name' => '',
+            'customer' => '',
+            'hourlyRate' => '',
+            'currencyCode' => $this->organization()->defaultCurrency,
+        ];
+        $error = '';
+
+        if ($project === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'code' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('code')
+                )),
+                'name' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('name')
+                )),
+                'customer' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('customer')
+                ),
+                'hourlyRate' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('hourly_rate')
+                ),
+                'currencyCode' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency_code')
+                )),
+            ];
+            $rate = str_replace(',', '.', $values['hourlyRate']);
+            if ($values['code'] === '' || preg_match('/^[A-Z0-9_-]{1,50}$/', $values['code']) !== 1) {
+                $error = $this->_('Project code must use letters, numbers, hyphens, or underscores.');
+            } elseif ($values['name'] === '') {
+                $error = $this->_('Project name is required.');
+            } elseif (!isset($customers[$values['customer']])) {
+                $error = $this->_('Select a customer.');
+            } elseif ($rate === '' || !is_numeric($rate) || (float) $rate <= 0) {
+                $error = $this->_('Hourly rate must be greater than zero.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currencyCode']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            }
+            if ($error === '') {
+                [$customerType, $customerUid] = explode(':', $values['customer'], 2);
+                $project = Project::create(
+                    $this->organizationUid(),
+                    $values['code'],
+                    mb_substr($values['name'], 0, 191),
+                    $customerType,
+                    $customerUid,
+                    (int) round((float) $rate * 100),
+                    $values['currencyCode'],
+                    (int) $this->wire()->user->id,
+                );
+                try {
+                    $module->projectRepository()->save($project);
+                } catch (\PDOException $exception) {
+                    $error = $exception->getCode() === '23000'
+                        ? $this->_('That project code is already in use.')
+                        : $this->_('Project could not be saved.');
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'projects',
+                        'project',
+                        $project->uid->toString(),
+                        'created',
+                        current: ['code' => $project->code, 'name' => $project->name],
+                    );
+                    $this->message($this->_('Project created.'));
+                    $this->wire()->session->redirect(
+                        '../project/?id=' . rawurlencode($project->uid->toString())
+                    );
+                }
+            }
+        }
+
+        $this->setPageTitle($project === null
+            ? $this->_('Kontor · New project')
+            : sprintf($this->_('Kontor · %s'), $project->name));
+
+        return $this->renderTemplate('project', [
+            'project' => $project,
+            'values' => $values,
+            'error' => $error,
+            'customers' => $customers,
+            'customerLabel' => $project !== null
+                ? ($customers[($project->customerType ?? '') . ':' . ($project->customerUid ?? '')] ?? '—')
+                : '—',
+            'milestones' => $project !== null
+                ? $module->milestoneRepository()->forProject($project->uid->toString())
+                : [],
+            'timeEntries' => $project !== null
+                ? array_reverse($module->timeEntryRepository()->forProject($project->uid->toString()))
+                : [],
+            'billableItems' => $project !== null
+                ? array_reverse($module->billableItemRepository()->forProject($project->uid->toString()))
+                : [],
+            'canManageMilestones' => $this->can('kontor-projects-milestone-manage'),
+            'canTrackTime' => $this->can('kontor-projects-time-track'),
+            'canManageBillable' => $this->can('kontor-projects-billable-item-manage'),
+            'canGenerateInvoice' => $this->can('kontor-projects-invoice-generate'),
+        ]);
+    }
+
+    public function ___executeProjectMilestone(): void
+    {
+        $this->requirePost();
+        $this->requireProjects();
+        $this->requirePermission('kontor-projects-milestone-manage');
+        $project = $this->requireProjectFromPost();
+        $name = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        if ($name === '') {
+            throw new WireException($this->_('Milestone name is required.'));
+        }
+        $due = $this->wire()->sanitizer->text((string) $this->wire()->input->post('due_date'));
+        $milestone = ProjectMilestone::create(
+            $this->organizationUid(),
+            $project->uid->toString(),
+            mb_substr($name, 0, 191),
+            $due !== '' ? new \DateTimeImmutable($due) : null,
+        );
+        $this->projectsModule()->milestoneRepository()->save($milestone);
+        $this->audit('projects', 'milestone', $milestone->uid->toString(), 'created');
+        $this->message($this->_('Milestone created.'));
+        $this->redirectToProject($project->uid->toString());
+    }
+
+    public function ___executeProjectMilestoneAction(): void
+    {
+        $this->requirePost();
+        $this->requireProjects();
+        $this->requirePermission('kontor-projects-milestone-manage');
+        $project = $this->requireProjectFromPost();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['complete', 'reopen']
+        );
+        $this->requireAction($action, ['complete', 'reopen']);
+        $milestoneUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('milestone_uid')
+        );
+        $milestone = $this->projectsModule()->milestoneRepository()->require($milestoneUid);
+        if ($milestone->projectUid !== $project->uid->toString()) {
+            throw new WirePermissionException($this->_('Milestone does not belong to this project.'));
+        }
+        $action === 'complete'
+            ? $this->projectsModule()->milestones()->complete($milestoneUid)
+            : $this->projectsModule()->milestones()->reopen($milestoneUid);
+        $this->audit('projects', 'milestone', $milestoneUid, $action);
+        $this->message($this->_('Milestone updated.'));
+        $this->redirectToProject($project->uid->toString());
+    }
+
+    public function ___executeProjectTime(): void
+    {
+        $this->requirePost();
+        $this->requireProjects();
+        $this->requirePermission('kontor-projects-time-track');
+        $project = $this->requireProjectFromPost();
+        $description = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('description')
+        ));
+        $minutes = (int) $this->wire()->input->post('minutes');
+        if ($description === '' || $minutes < 1 || $minutes > 14400) {
+            throw new WireException($this->_('Description and a duration from 1 to 14,400 minutes are required.'));
+        }
+        $milestoneUid = $this->validatedProjectMilestoneUid(
+            $project->uid->toString(),
+            (string) $this->wire()->input->post('milestone_uid')
+        );
+        $endedAt = new \DateTimeImmutable();
+        $entry = $this->projectsModule()->timeTracking()->logManual(
+            $this->organizationUid(),
+            $project->uid->toString(),
+            (int) $this->wire()->user->id,
+            $endedAt->modify("-{$minutes} minutes"),
+            $endedAt,
+            mb_substr($description, 0, 500),
+            $milestoneUid,
+            true,
+            null,
+            $project->currencyCode,
+        );
+        $this->audit('projects', 'time_entry', $entry->uid->toString(), 'logged');
+        $this->message($this->_('Time entry logged.'));
+        $this->redirectToProject($project->uid->toString());
+    }
+
+    public function ___executeProjectBillableItem(): void
+    {
+        $this->requirePost();
+        $this->requireProjects();
+        $this->requirePermission('kontor-projects-billable-item-manage');
+        $project = $this->requireProjectFromPost();
+        $description = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('description')
+        ));
+        $quantity = (float) str_replace(',', '.', (string) $this->wire()->input->post('quantity'));
+        $price = (float) str_replace(',', '.', (string) $this->wire()->input->post('unit_price'));
+        if ($description === '' || $quantity <= 0 || $price < 0 || $project->currencyCode === null) {
+            throw new WireException($this->_('Description, positive quantity, and a valid unit price are required.'));
+        }
+        $milestoneUid = $this->validatedProjectMilestoneUid(
+            $project->uid->toString(),
+            (string) $this->wire()->input->post('milestone_uid')
+        );
+        $item = BillableItem::create(
+            $this->organizationUid(),
+            $project->uid->toString(),
+            mb_substr($description, 0, 500),
+            $quantity,
+            Money::ofMinor((int) round($price * 100), $project->currencyCode),
+            $milestoneUid,
+        );
+        $this->projectsModule()->billableItemRepository()->save($item);
+        $this->audit('projects', 'billable_item', $item->uid->toString(), 'created');
+        $this->message($this->_('Billable item added.'));
+        $this->redirectToProject($project->uid->toString());
+    }
+
+    public function ___executeProjectInvoice(): void
+    {
+        $this->requirePost();
+        $this->requireProjects();
+        $this->requirePermission('kontor-projects-invoice-generate');
+        $project = $this->requireProjectFromPost();
+        try {
+            $invoice = $this->projectsModule()->invoicing()->generateInvoice(
+                $project->uid->toString()
+            );
+        } catch (\RuntimeException $exception) {
+            $this->error($exception->getMessage());
+            $this->redirectToProject($project->uid->toString());
+        }
+        $this->audit(
+            'projects',
+            'project',
+            $project->uid->toString(),
+            'invoice_generated',
+            current: ['invoiceUid' => $invoice->uid->toString()],
+        );
+        $this->message($this->_('Draft invoice generated from project work.'));
+        $this->wire()->session->redirect(
+            '../invoice/?id=' . rawurlencode($invoice->uid->toString())
+        );
     }
 
     public function ___executeCompany(): string
@@ -6640,6 +6925,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorExpenses');
     }
 
+    private function projectsReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorProjects');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -6721,6 +7011,13 @@ class ProcessKontor extends Process
     {
         if (!$this->expensesReady()) {
             throw new WireException($this->_('The Kontor Expenses component is not installed.'));
+        }
+    }
+
+    private function requireProjects(): void
+    {
+        if (!$this->projectsReady()) {
+            throw new WireException($this->_('The Kontor Projects component is not installed.'));
         }
     }
 
@@ -6821,6 +7118,50 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorExpenses');
 
         return $module;
+    }
+
+    private function projectsModule(): KontorProjects
+    {
+        /** @var KontorProjects $module */
+        $module = $this->wire()->modules->get('KontorProjects');
+
+        return $module;
+    }
+
+    private function can(string $permission): bool
+    {
+        return $this->wire()->user->isSuperuser()
+            || $this->wire()->user->hasPermission($permission);
+    }
+
+    private function requireProjectFromPost(): Project
+    {
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('project_uid'));
+        $project = $this->projectsModule()->projectRepository()->require($id);
+        $this->requireSameOrganization($project->organizationId);
+
+        return $project;
+    }
+
+    private function validatedProjectMilestoneUid(string $projectUid, string $milestoneUid): ?string
+    {
+        $milestoneUid = $this->wire()->sanitizer->text($milestoneUid);
+        if ($milestoneUid === '') {
+            return null;
+        }
+        $milestone = $this->projectsModule()->milestoneRepository()->require($milestoneUid);
+        if ($milestone->projectUid !== $projectUid || $milestone->organizationId !== $this->organizationUid()) {
+            throw new WirePermissionException($this->_('Milestone does not belong to this project.'));
+        }
+
+        return $milestoneUid;
+    }
+
+    private function redirectToProject(string $projectUid): void
+    {
+        $this->wire()->session->redirect(
+            '../project/?id=' . rawurlencode($projectUid)
+        );
     }
 
     /**
