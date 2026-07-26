@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Sections now uses a clearer launcher UI with full-card navigation, live
+  result counts, accessible pin controls and underline-free links.
 - The complete component directory and per-user quick-access editor now live
   on their own `Sections & quick access` page instead of expanding Dashboard.
 - Standardized every Kontor admin screen on the ProcessWire design system:

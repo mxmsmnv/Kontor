@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const items = Array.from(directory.querySelectorAll('[data-kontor-directory-item]'));
     const toggles = Array.from(directory.querySelectorAll('[data-kontor-quick-toggle]'));
     const count = directory.querySelector('[data-kontor-quick-count]');
+    const visibleCount = directory.querySelector('[data-kontor-directory-visible-count]');
+    const empty = directory.querySelector('[data-kontor-directory-empty]');
     const limit = Number.parseInt(directory.dataset.limit || '8', 10);
 
     const updateQuickAccess = () => {
@@ -87,13 +89,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     search?.addEventListener('input', () => {
       const query = search.value.trim().toLocaleLowerCase();
+      let visible = 0;
 
       items.forEach((item) => {
         item.hidden = query !== '' && !item.dataset.search.includes(query);
+        if (!item.hidden) {
+          visible += 1;
+        }
       });
       directory.querySelectorAll('.kontor-directory__group').forEach((group) => {
         group.hidden = !group.querySelector('[data-kontor-directory-item]:not([hidden])');
       });
+      if (visibleCount) {
+        visibleCount.textContent = String(visible);
+      }
+      if (empty) {
+        empty.hidden = visible !== 0;
+      }
     });
 
     toggles.forEach((toggle) => toggle.addEventListener('change', updateQuickAccess));
