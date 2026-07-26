@@ -289,7 +289,7 @@
   padding-top: 0;
 }
 
-.kontor-directory__group h4 {
+.kontor-directory__group h3 {
   color: var(--pw-muted-color);
   font-size: 0.72rem;
   letter-spacing: 0.12em;

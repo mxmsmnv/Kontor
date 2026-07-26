@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- The complete component directory and per-user quick-access editor now live
+  on their own `Sections & quick access` page instead of expanding Dashboard.
 - Standardized every Kontor admin screen on the ProcessWire design system:
   native UIkit cards, buttons, tables, forms, labels, alerts and empty states
   now share the live AdminTheme tokens instead of hardcoded colors and

@@ -102,7 +102,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '139',
+            'version' => '140',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -144,7 +144,7 @@ class ProcessKontor extends Process
                     'icon' => 'check-square-o',
                     'permission' => 'kontor-tasks-task-view',
                 ],
-                ['url' => '#kontor-component-directory', 'label' => 'All sections', 'icon' => 'th-large'],
+                ['url' => 'sections/', 'label' => 'All sections', 'icon' => 'th-large'],
             ],
             'kontorNavigation' => [
                 ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
@@ -405,7 +405,7 @@ class ProcessKontor extends Process
                         );
                     }
                     $children[] = $this->primaryNavigationChild([
-                        'url' => '#kontor-component-directory',
+                        'url' => 'sections/',
                         'label' => 'All sections & quick access',
                         'icon' => 'th-large',
                     ], (int) ($item['id'] ?? 0));
@@ -426,7 +426,7 @@ class ProcessKontor extends Process
     {
         $moduleInfo = self::getModuleInfo();
         $signature = hash('sha256', json_encode(
-            ['mode' => 'personal-quick-access-v2', 'items' => $moduleInfo['kontorNavigation'] ?? []],
+            ['mode' => 'personal-quick-access-v3', 'items' => $moduleInfo['kontorNavigation'] ?? []],
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
         ));
         $session = $this->wire()->session;
@@ -663,6 +663,16 @@ class ProcessKontor extends Process
             'availableDashboardWidgets' => $availableDashboardWidgets,
             'navigationGroups' => $this->navigationGroups(),
             'quickNavigationKeys' => $this->quickNavigationKeys(),
+        ]);
+    }
+
+    public function ___executeSections(): string
+    {
+        $this->setPageTitle($this->_('Kontor · Sections & quick access'));
+
+        return $this->renderTemplate('sections', [
+            'navigationGroups' => $this->navigationGroups(),
+            'quickNavigationKeys' => $this->quickNavigationKeys(),
             'quickNavigationLimit' => self::QUICK_NAVIGATION_LIMIT,
         ]);
     }
@@ -690,7 +700,7 @@ class ProcessKontor extends Process
             $this->_('Quick access updated: %d section(s).'),
             count($keys),
         ));
-        $this->wire()->session->redirect('../#kontor-component-directory');
+        $this->wire()->session->redirect('../sections/');
     }
 
     public function ___executeDashboardSave(): void
