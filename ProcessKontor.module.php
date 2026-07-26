@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '046',
+            'version' => '047',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -787,22 +787,28 @@ class ProcessKontor extends Process
         $this->requireCatalog();
         $this->setPageTitle($this->_('Kontor · Catalog categories'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['active', 'inactive']
+        );
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
         $organizationUid = $this->organizationUid();
         $pageSize = 25;
         $totalCategories = $this->categoryRepository()->countMatching(
-            $organizationUid,
-            $query,
-            $showArchived,
+            organizationUid: $organizationUid,
+            query: $query,
+            archived: $showArchived,
+            status: $status,
         );
         $totalPages = max(1, (int) ceil($totalCategories / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
         $categories = $this->categoryRepository()->findAll(
-            $organizationUid,
-            $query,
-            $showArchived,
-            $pageSize,
-            ($page - 1) * $pageSize,
+            organizationUid: $organizationUid,
+            query: $query,
+            archived: $showArchived,
+            limit: $pageSize,
+            offset: ($page - 1) * $pageSize,
+            status: $status,
         );
         $categoryNames = [];
 
@@ -816,6 +822,7 @@ class ProcessKontor extends Process
             'itemCounts' => $this->catalogItemRepository()->categoryUsage($organizationUid),
             'displayLanguage' => $this->organization()->defaultLanguage,
             'query' => $query,
+            'selectedStatus' => $status,
             'showArchived' => $showArchived,
             'page' => $page,
             'totalPages' => $totalPages,
@@ -3734,10 +3741,15 @@ class ProcessKontor extends Process
         $query = $this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('return_q')
         );
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_status'),
+            ['active', 'inactive']
+        );
         $archived = (string) $this->wire()->input->post('return_archived') === '1';
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
             'q' => $query,
+            'status' => $status,
             'archived' => $archived ? 1 : null,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');

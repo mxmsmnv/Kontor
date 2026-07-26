@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog category status filtering, preserved across pagination and bulk
+  archive/restore flows.
 - Catalog item status filtering, preserved across pagination and bulk
   archive/restore flows.
 - Uncategorized filtering in Catalog, preserved across pagination and bulk

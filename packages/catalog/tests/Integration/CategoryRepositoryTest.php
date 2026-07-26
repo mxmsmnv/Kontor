@@ -75,6 +75,31 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         $this->assertSame($first[0]->uid->toString(), $repository->require($first[0]->uid->toString())->uid->toString());
     }
 
+    public function test_status_filter_returns_only_matching_categories(): void
+    {
+        $repository = $this->repository();
+        $active = Category::create($this->organizationUid, ['en' => 'Active category']);
+        $inactive = Category::create(
+            $this->organizationUid,
+            ['en' => 'Inactive category'],
+            status: 'inactive',
+        );
+        $repository->save($active);
+        $repository->save($inactive);
+
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            status: 'inactive',
+        ));
+        $this->assertSame(
+            $inactive->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                status: 'inactive',
+            )[0]->uid->toString(),
+        );
+    }
+
     public function test_bulk_archive_and_restore_are_tenant_scoped_and_idempotent(): void
     {
         $organizations = new OrganizationRepository($this->pdo);

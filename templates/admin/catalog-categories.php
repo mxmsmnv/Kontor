@@ -5,6 +5,7 @@
 /** @var array<string, int> $itemCounts */
 /** @var string $displayLanguage */
 /** @var string $query */
+/** @var string|null $selectedStatus */
 /** @var bool $showArchived */
 /** @var int $page */
 /** @var int $totalPages */
@@ -14,12 +15,13 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 
-$url = static function (int $targetPage, bool $archived) use ($query): string {
+$url = static function (int $targetPage, bool $archived) use ($query, $selectedStatus): string {
     $parameters = http_build_query(array_filter([
         'q' => $query,
+        'status' => $selectedStatus,
         'archived' => $archived ? 1 : '',
         'page' => $targetPage > 1 ? $targetPage : '',
-    ], static fn (string|int $value): bool => $value !== ''));
+    ], static fn (string|int|null $value): bool => $value !== null && $value !== ''));
 
     return $parameters === '' ? './' : './?' . $parameters;
 };
@@ -52,7 +54,12 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
       <i class="fa fa-search"></i>
       <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Category name">
     </label>
-    <button class="kontor-button" type="submit">Search</button>
+    <select name="status" aria-label="Category status">
+      <option value="">All statuses</option>
+      <option value="active"<?= $selectedStatus === 'active' ? ' selected' : '' ?>>Active</option>
+      <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
+    </select>
+    <button class="kontor-button" type="submit">Filter</button>
     <a class="kontor-viewtoggle" href="<?= $e($url(1, !$showArchived)) ?>">
       <i class="fa fa-<?= $showArchived ? 'folder-open' : 'archive' ?>"></i>
       <?= $showArchived ? 'Active categories' : 'Archive' ?>
@@ -73,6 +80,7 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">
       <input type="hidden" name="return_q" value="<?= $e($query) ?>">
+      <input type="hidden" name="return_status" value="<?= $e($selectedStatus ?? '') ?>">
       <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
@@ -151,8 +159,8 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
   <?php else: ?>
     <div class="kontor-card kontor-empty">
       <i class="fa fa-folder-open"></i>
-      <h3><?= $query !== '' || $showArchived ? 'No matching categories' : 'No categories yet' ?></h3>
-      <p><?= $query !== '' || $showArchived ? 'Try another search or category view.' : 'Create a category to organize the catalog.' ?></p>
+      <h3><?= $query !== '' || $selectedStatus !== null || $showArchived ? 'No matching categories' : 'No categories yet' ?></h3>
+      <p><?= $query !== '' || $selectedStatus !== null || $showArchived ? 'Try another search, status, or category view.' : 'Create a category to organize the catalog.' ?></p>
     </div>
   <?php endif; ?>
 </div>

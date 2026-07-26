@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Category status filtering for active and archived Catalog views.
 - Item status filtering for active and archived Catalog views.
 - Explicit Uncategorized filtering for active and archived Catalog items.
 - Direct new-tier flow from a Catalog item with the item preselected in the

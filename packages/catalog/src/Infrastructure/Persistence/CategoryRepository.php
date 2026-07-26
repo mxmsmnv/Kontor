@@ -68,8 +68,9 @@ final class CategoryRepository
         bool $archived = false,
         int $limit = 100,
         int $offset = 0,
+        ?string $status = null,
     ): array {
-        [$sql, $params] = $this->listQuery($organizationUid, $query, $archived);
+        [$sql, $params] = $this->listQuery($organizationUid, $query, $archived, $status);
         $sql .= ' ORDER BY sort_order ASC, id ASC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
 
@@ -91,8 +92,9 @@ final class CategoryRepository
         string $organizationUid,
         string $query = '',
         bool $archived = false,
+        ?string $status = null,
     ): int {
-        [$sql, $params] = $this->listQuery($organizationUid, $query, $archived, true);
+        [$sql, $params] = $this->listQuery($organizationUid, $query, $archived, $status, true);
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params);
 
@@ -168,6 +170,7 @@ final class CategoryRepository
         string $organizationUid,
         string $query,
         bool $archived,
+        ?string $status,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -175,6 +178,11 @@ final class CategoryRepository
             WHERE organization_id = :organization_id
               AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
         $query = trim($query);
+
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
 
         if ($query !== '') {
             $sql .= ' AND name_json LIKE :query';
