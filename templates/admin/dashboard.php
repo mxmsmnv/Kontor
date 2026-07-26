@@ -171,8 +171,20 @@ $enabledComponents = count(array_filter(
                 <i class="fa fa-<?= $event->entityType === 'backup' ? 'database' : ($event->entityType === 'job' ? 'tasks' : 'history') ?>"></i>
               </span>
               <div>
-                <strong><?= $e(ucwords(str_replace(['.', '_'], ' ', $event->action))) ?></strong>
-                <p><?= $e(ucfirst($event->entityType)) ?> · <?= $e($event->component) ?></p>
+                <strong>
+                  <a href="<?= $e($adminUrl) ?>activity/?action=<?= $e(rawurlencode($event->action)) ?>">
+                    <?= $e(ucwords(str_replace(['.', '_'], ' ', $event->action))) ?>
+                  </a>
+                </strong>
+                <p>
+                  <a href="<?= $e($adminUrl) ?>activity/?entity_type=<?= $e(rawurlencode($event->entityType)) ?>">
+                    <?= $e(ucfirst($event->entityType)) ?>
+                  </a>
+                  ·
+                  <a href="<?= $e($adminUrl) ?>activity/?component=<?= $e(rawurlencode($event->component)) ?>">
+                    <?= $e($event->component) ?>
+                  </a>
+                </p>
               </div>
               <time datetime="<?= $e($event->occurredAt->format(DATE_ATOM)) ?>">
                 <?= $e($event->occurredAt->format('M j, H:i')) ?>

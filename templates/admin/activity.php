@@ -38,6 +38,9 @@ $pageQuery = array_filter([
 $pageUrl = static function (int $targetPage) use ($pageQuery): string {
     return './?' . http_build_query([...$pageQuery, 'page' => $targetPage]);
 };
+$filterUrl = static function (string $facet, string $value): string {
+    return './?' . http_build_query([$facet => $value]);
+};
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -89,11 +92,19 @@ $pageUrl = static function (int $targetPage) use ($pageQuery): string {
           </span>
           <div class="kontor-activity__body">
             <div class="kontor-activity__title">
-              <strong><?= $e($actionLabel($event->action)) ?></strong>
-              <span class="kontor-pill kontor-pill--inactive"><?= $e($event->component) ?></span>
+              <strong>
+                <a class="kontor-activity__facet" href="<?= $e($filterUrl('action', $event->action)) ?>">
+                  <?= $e($actionLabel($event->action)) ?>
+                </a>
+              </strong>
+              <a class="kontor-pill kontor-pill--inactive" href="<?= $e($filterUrl('component', $event->component)) ?>">
+                <?= $e($event->component) ?>
+              </a>
             </div>
             <p>
-              <?= $e(ucfirst($event->entityType)) ?>
+              <a class="kontor-activity__facet" href="<?= $e($filterUrl('entity_type', $event->entityType)) ?>">
+                <?= $e(ucfirst($event->entityType)) ?>
+              </a>
               <?php if ($canLink): ?>
                 <a href="<?= $e($adminUrl . $event->entityType . '/?id=' . rawurlencode($event->entityUid)) ?>"><?= $e($event->entityUid) ?></a>
               <?php else: ?>

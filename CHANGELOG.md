@@ -42,6 +42,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   composable with the existing free-text search.
 - Paginated Activity results with filter-preserving previous/next navigation
   and an exact matching-event count.
+- Direct Activity drill-down links from event actions, components, entity
+  types, and the Dashboard's recent-activity feed.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

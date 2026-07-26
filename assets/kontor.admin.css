@@ -1107,6 +1107,22 @@
   gap: 0.55rem;
 }
 
+.kontor-activity__title .kontor-pill {
+  text-decoration: none;
+}
+
+.kontor-activity__facet,
+.kontor-dashboardactivity__list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-activity__facet:hover,
+.kontor-dashboardactivity__list a:hover {
+  color: var(--kontor-brand);
+  text-decoration: underline;
+}
+
 .kontor-activity__body p,
 .kontor-backup__body p {
   color: var(--kontor-muted);
