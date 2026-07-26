@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Automation admin vertical: trigger rules, condition/action builder,
+  JSON dry/live execution bench, and execution-log observability.
 - First Workflow admin vertical: state-machine designer, transition graph,
   runtime instances, approval decisions, and transition history.
 - First Projects admin vertical: customer-backed projects, milestones,

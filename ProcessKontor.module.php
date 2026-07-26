@@ -64,6 +64,7 @@ use Kontor\SDK\DTO\ExportContext;
 use Kontor\SDK\DTO\ImportContext;
 use Kontor\SDK\DTO\ReportQuery;
 use Kontor\SDK\DTO\SearchQuery;
+use Kontor\SDK\Events\KontorEvent;
 use Kontor\SDK\ValueObjects\Money;
 use Kontor\SDK\ValueObjects\Uid;
 use Kontor\Tasks\Domain\Task;
@@ -80,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '099',
+            'version' => '100',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -158,6 +159,12 @@ class ProcessKontor extends Process
                     'label' => 'Workflows',
                     'icon' => 'sitemap',
                     'permission' => 'kontor-workflow-definition-view',
+                ],
+                [
+                    'url' => 'automations/',
+                    'label' => 'Automations',
+                    'icon' => 'bolt',
+                    'permission' => 'kontor-automation-rule-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3753,6 +3760,201 @@ class ProcessKontor extends Process
         );
     }
 
+    public function ___executeAutomations(): string
+    {
+        $this->requireAutomation();
+        $this->requirePermission('kontor-automation-rule-view');
+        $module = $this->automationModule();
+        $this->setPageTitle($this->_('Kontor · Automations'));
+
+        return $this->renderTemplate('automations', [
+            'rules' => $module->ruleRepository()->forOrganization($this->organizationUid()),
+            'logs' => array_slice(
+                $module->executionLogRepository()->forOrganization($this->organizationUid()),
+                0,
+                25,
+            ),
+            'canManage' => $this->can('kontor-automation-rule-manage'),
+        ]);
+    }
+
+    public function ___executeAutomation(): string
+    {
+        $this->requireAutomation();
+        $module = $this->automationModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $rule = $id !== '' ? $module->ruleRepository()->require($id) : null;
+        if ($rule !== null) {
+            $this->requireSameOrganization($rule->organizationId);
+            $this->requirePermission('kontor-automation-rule-view');
+        } else {
+            $this->requirePermission('kontor-automation-rule-manage');
+        }
+        $values = ['name' => '', 'triggerEvent' => 'demo.request.received'];
+        $error = '';
+        if ($rule === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'name' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('name')
+                )),
+                'triggerEvent' => strtolower($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('trigger_event')
+                )),
+            ];
+            if ($values['name'] === '') {
+                $error = $this->_('Rule name is required.');
+            } elseif (preg_match('/^[a-z][a-z0-9_.-]{2,190}$/', $values['triggerEvent']) !== 1) {
+                $error = $this->_('Trigger event must be a dot-separated lowercase identifier.');
+            }
+            if ($error === '') {
+                $rule = $module->definitions()->defineRule(
+                    $this->organizationUid(),
+                    mb_substr($values['name'], 0, 191),
+                    $values['triggerEvent'],
+                    (int) $this->wire()->user->id,
+                );
+                $this->audit(
+                    'automation',
+                    'rule',
+                    $rule->uid->toString(),
+                    'created',
+                    current: ['name' => $rule->name, 'triggerEvent' => $rule->triggerEvent],
+                );
+                $this->message($this->_('Automation rule created.'));
+                $this->wire()->session->redirect(
+                    '../automation/?id=' . rawurlencode($rule->uid->toString())
+                );
+            }
+        }
+        $this->setPageTitle($rule === null
+            ? $this->_('Kontor · New automation')
+            : sprintf($this->_('Kontor · %s'), $rule->name));
+
+        return $this->renderTemplate('automation', [
+            'rule' => $rule,
+            'values' => $values,
+            'error' => $error,
+            'conditions' => $rule !== null
+                ? $module->conditionRepository()->forRule($rule->uid->toString())
+                : [],
+            'actions' => $rule !== null
+                ? $module->actionRepository()->forRule($rule->uid->toString())
+                : [],
+            'logs' => $rule !== null
+                ? $module->executionLogRepository()->forRule($rule->uid->toString())
+                : [],
+            'actionHandlers' => array_keys($module->actionHandlerRegistry()->all()),
+            'canManage' => $this->can('kontor-automation-rule-manage'),
+            'canDryRun' => $this->can('kontor-automation-dry-run'),
+        ]);
+    }
+
+    public function ___executeAutomationCondition(): void
+    {
+        $this->requirePost();
+        $this->requireAutomation();
+        $this->requirePermission('kontor-automation-rule-manage');
+        $rule = $this->requireAutomationRuleFromPost();
+        $field = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('field')
+        ));
+        $operator = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('operator'),
+            \Kontor\Automation\Domain\RuleCondition::OPERATORS,
+        );
+        $value = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('value')
+        ));
+        if ($field === '' || $operator === null) {
+            throw new WireException($this->_('Condition field and operator are required.'));
+        }
+        $condition = $this->automationModule()->definitions()->addCondition(
+            $rule->uid->toString(),
+            $field,
+            $operator,
+            $value !== '' ? $value : null,
+        );
+        $this->audit('automation', 'condition', $condition->uid->toString(), 'created');
+        $this->message($this->_('Condition added.'));
+        $this->redirectToAutomation($rule->uid->toString());
+    }
+
+    public function ___executeAutomationAction(): void
+    {
+        $this->requirePost();
+        $this->requireAutomation();
+        $this->requirePermission('kontor-automation-rule-manage');
+        $rule = $this->requireAutomationRuleFromPost();
+        $actionKey = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action_key')
+        );
+        $paramsJson = trim((string) $this->wire()->input->post('params_json'));
+        try {
+            $params = $paramsJson !== ''
+                ? json_decode($paramsJson, associative: true, flags: JSON_THROW_ON_ERROR)
+                : [];
+        } catch (\JsonException $exception) {
+            throw new WireException($this->_('Action parameters must be valid JSON.'));
+        }
+        if (!is_array($params)) {
+            throw new WireException($this->_('Action parameters must be a JSON object.'));
+        }
+        $action = $this->automationModule()->definitions()->addAction(
+            $rule->uid->toString(),
+            $actionKey,
+            $params,
+        );
+        $this->audit('automation', 'action', $action->uid->toString(), 'created');
+        $this->message($this->_('Action added.'));
+        $this->redirectToAutomation($rule->uid->toString());
+    }
+
+    public function ___executeAutomationRun(): void
+    {
+        $this->requirePost();
+        $this->requireAutomation();
+        $this->requirePermission('kontor-automation-dry-run');
+        $rule = $this->requireAutomationRuleFromPost();
+        $payloadJson = trim((string) $this->wire()->input->post('payload_json'));
+        try {
+            $payload = json_decode($payloadJson, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new WireException($this->_('Event payload must be valid JSON.'));
+        }
+        if (!is_array($payload)) {
+            throw new WireException($this->_('Event payload must be a JSON object.'));
+        }
+        $dryRun = (bool) $this->wire()->input->post('dry_run');
+        $results = $this->automationModule()->engine()->handleEvent(
+            KontorEvent::create(
+                $rule->triggerEvent,
+                $this->organizationUid(),
+                'automation_probe',
+                $rule->uid->toString(),
+                'user',
+                (string) $this->wire()->user->id,
+                $payload,
+            ),
+            $dryRun,
+        );
+        $matched = array_filter($results, static fn (array $result): bool => $result['matched']);
+        $this->audit(
+            'automation',
+            'rule',
+            $rule->uid->toString(),
+            $dryRun ? 'dry_run' : 'executed',
+            current: ['evaluated' => count($results), 'matched' => count($matched)],
+        );
+        $this->message(sprintf(
+            $dryRun
+                ? $this->_('Dry run completed: %d matching rule(s).')
+                : $this->_('Automation run completed: %d matching rule(s).'),
+            count($matched),
+        ));
+        $this->redirectToAutomation($rule->uid->toString());
+    }
+
     public function ___executeCompany(): string
     {
         $this->requireContacts();
@@ -7239,6 +7441,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorWorkflow');
     }
 
+    private function automationReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorAutomation');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -7334,6 +7541,13 @@ class ProcessKontor extends Process
     {
         if (!$this->workflowReady()) {
             throw new WireException($this->_('The Kontor Workflow component is not installed.'));
+        }
+    }
+
+    private function requireAutomation(): void
+    {
+        if (!$this->automationReady()) {
+            throw new WireException($this->_('The Kontor Automation component is not installed.'));
         }
     }
 
@@ -7452,6 +7666,14 @@ class ProcessKontor extends Process
         return $module;
     }
 
+    private function automationModule(): KontorAutomation
+    {
+        /** @var KontorAutomation $module */
+        $module = $this->wire()->modules->get('KontorAutomation');
+
+        return $module;
+    }
+
     private function can(string $permission): bool
     {
         return $this->wire()->user->isSuperuser()
@@ -7503,6 +7725,24 @@ class ProcessKontor extends Process
     {
         $this->wire()->session->redirect(
             '../workflow/?id=' . rawurlencode($definitionUid)
+        );
+    }
+
+    private function requireAutomationRuleFromPost(): \Kontor\Automation\Domain\AutomationRule
+    {
+        $id = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('rule_uid')
+        );
+        $rule = $this->automationModule()->ruleRepository()->require($id);
+        $this->requireSameOrganization($rule->organizationId);
+
+        return $rule;
+    }
+
+    private function redirectToAutomation(string $ruleUid): void
+    {
+        $this->wire()->session->redirect(
+            '../automation/?id=' . rawurlencode($ruleUid)
         );
     }
 

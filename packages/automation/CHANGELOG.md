@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: rule authoring, condition and registered
+  action configuration, JSON event test bench, dry/live execution, and logs.
 - Initial alpha (Substage 7.2): `kontor_automation_rules`,
   `kontor_automation_conditions`, `kontor_automation_actions`,
   `kontor_automation_execution_logs` migrations (kontor.md#30's

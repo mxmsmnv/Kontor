@@ -41,7 +41,7 @@ class KontorAutomation extends WireData implements Module
         return [
             'title' => 'Kontor Automation',
             'summary' => 'Triggers, conditions, actions, dry run, logs, recursion protection.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorAutomation',
             'icon' => 'bolt',
@@ -165,6 +165,13 @@ class KontorAutomation extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('automation', self::getModuleInfo()['version'], 'automation');
+        $components->enable('automation');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('automation', self::getModuleInfo()['version'], 'automation');
         $components->enable('automation');
     }
