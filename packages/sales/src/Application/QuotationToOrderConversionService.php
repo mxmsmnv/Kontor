@@ -38,6 +38,13 @@ final class QuotationToOrderConversionService
             );
         }
 
+        $existingOrder = $this->orders->findByQuotation($quotationUid);
+        if ($existingOrder !== null) {
+            throw new RuntimeException(
+                "Quotation \"{$quotationUid}\" was already converted to order \"{$existingOrder->uid}\"."
+            );
+        }
+
         $order = Order::create(
             organizationId: $quotation->organizationId,
             customerType: $quotation->customerType,

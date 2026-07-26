@@ -40,4 +40,43 @@ final class OrderRepositoryTest extends DatabaseTestCase
 
         $this->repository()->save(new \stdClass());
     }
+
+    public function test_find_by_quotation_and_matching_filters(): void
+    {
+        $repository = $this->repository();
+        $matching = Order::create(
+            $this->organizationUid,
+            'contact',
+            'ct_northwind',
+            'EUR',
+            quotationUid: 'qt_northwind',
+        );
+        $matching->number = 'SO-NORTHWIND';
+        $matching->orderStatus = 'confirmed';
+        $repository->save($matching);
+        $repository->save(Order::create($this->organizationUid, 'contact', 'ct_other', 'EUR'));
+
+        $this->assertSame(
+            $matching->uid->toString(),
+            $repository->findByQuotation('qt_northwind')?->uid->toString()
+        );
+        $this->assertSame(
+            [$matching->uid->toString()],
+            array_map(
+                static fn (Order $order): string => $order->uid->toString(),
+                $repository->findMatching($this->organizationUid, 'NORTHWIND', 'confirmed')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'NORTHWIND', 'confirmed'));
+
+        $repository->archive($matching->uid->toString());
+
+        $this->assertSame(0, $repository->countMatching($this->organizationUid, 'NORTHWIND', 'confirmed'));
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            'NORTHWIND',
+            'confirmed',
+            true,
+        ));
+    }
 }

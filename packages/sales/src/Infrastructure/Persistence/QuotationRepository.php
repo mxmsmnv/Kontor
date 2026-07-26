@@ -104,6 +104,86 @@ final class QuotationRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
+    /**
+     * @return array<int, Quotation>
+     */
+    public function findMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+        int $limit = 50,
+        int $offset = 0,
+    ): array
+    {
+        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived);
+        $statement = $this->pdo->prepare(
+            'SELECT q.* FROM kontor_sales_quotations q
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY q.updated_at DESC, q.id DESC
+             LIMIT :limit OFFSET :offset'
+        );
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn (array $row): Quotation => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $status = null,
+        bool $archived = false,
+    ): int
+    {
+        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived);
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM kontor_sales_quotations q WHERE ' . implode(' AND ', $where)
+        );
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, int|string>}
+     */
+    private function matchingConditions(
+        string $organizationUid,
+        string $query,
+        ?string $status,
+        bool $archived,
+    ): array
+    {
+        $where = [
+            'q.organization_id = :organization_id',
+            'q.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL'),
+        ];
+        $params = [
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ];
+
+        if ($status !== null) {
+            $where[] = 'q.status = :status';
+            $params['status'] = $status;
+        }
+
+        $query = trim($query);
+        if ($query !== '') {
+            $where[] = '(q.number LIKE :query OR q.customer_uid LIKE :query)';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        return [$where, $params];
+    }
+
     private function hydrate(array $row): Quotation
     {
         return new Quotation(

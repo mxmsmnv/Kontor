@@ -31,7 +31,7 @@ class KontorSales extends WireData implements Module
         return [
             'title' => 'Kontor Sales',
             'summary' => 'Quotations, orders, document lines, quotation-to-order conversion and status workflows.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorSales',
             'icon' => 'file-text-o',
@@ -156,6 +156,13 @@ class KontorSales extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('sales', self::getModuleInfo()['version'], 'sales');
+        $components->enable('sales');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('sales', self::getModuleInfo()['version'], 'sales');
         $components->enable('sales');
     }

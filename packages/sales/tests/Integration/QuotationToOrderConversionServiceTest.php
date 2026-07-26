@@ -100,4 +100,15 @@ final class QuotationToOrderConversionServiceTest extends DatabaseTestCase
 
         $this->conversion->convert($quotation->uid->toString());
     }
+
+    public function test_refuses_to_convert_the_same_quotation_twice(): void
+    {
+        $quotation = $this->acceptedQuotationWithLines();
+        $this->conversion->convert($quotation->uid->toString());
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('already converted');
+
+        $this->conversion->convert($quotation->uid->toString());
+    }
 }

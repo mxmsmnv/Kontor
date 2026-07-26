@@ -62,4 +62,33 @@ final class QuotationRepositoryTest extends DatabaseTestCase
         $row = $this->pdo->query('SELECT archived_at FROM kontor_sales_quotations')->fetch(\PDO::FETCH_ASSOC);
         $this->assertNull($row['archived_at']);
     }
+
+    public function test_matching_search_status_archive_and_count(): void
+    {
+        $repository = $this->repository();
+        $matching = Quotation::create($this->organizationUid, 'contact', 'ct_northwind', 'EUR');
+        $matching->number = 'QUO-NORTHWIND';
+        $matching->status = 'issued';
+        $repository->save($matching);
+        $repository->save(Quotation::create($this->organizationUid, 'contact', 'ct_other', 'EUR'));
+
+        $this->assertSame(
+            [$matching->uid->toString()],
+            array_map(
+                static fn (Quotation $quotation): string => $quotation->uid->toString(),
+                $repository->findMatching($this->organizationUid, 'NORTHWIND', 'issued')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'NORTHWIND', 'issued'));
+
+        $repository->archive($matching->uid->toString());
+
+        $this->assertSame(0, $repository->countMatching($this->organizationUid, 'NORTHWIND', 'issued'));
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            'NORTHWIND',
+            'issued',
+            true,
+        ));
+    }
 }
