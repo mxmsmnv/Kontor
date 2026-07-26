@@ -51,7 +51,15 @@
               <td><strong><?= $e($reference['label']) ?></strong></td>
               <td><span class="kontor-pill"><?= $reference['type'] === 'unit' ? 'Unit' : 'Tax code' ?></span></td>
               <td><code><?= $e($reference['code']) ?></code></td>
-              <td><?= $e($reference['usage']) ?></td>
+              <td>
+                <?php if ($reference['usage'] > 0): ?>
+                  <a href="<?= $e($adminUrl) ?>catalog/?<?= $reference['type'] === 'unit' ? 'unit' : 'tax' ?>=<?= rawurlencode($reference['code']) ?>">
+                    <?= $e($reference['usage']) ?>
+                  </a>
+                <?php else: ?>
+                  0
+                <?php endif; ?>
+              </td>
             </tr>
           <?php endforeach; ?>
         </tbody>

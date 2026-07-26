@@ -180,6 +180,8 @@ final class CatalogItemRepository implements RepositoryInterface
         int $offset = 0,
         ?string $status = null,
         ?bool $trackInventory = null,
+        ?string $unitCode = null,
+        ?string $taxCode = null,
     ): array {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -189,6 +191,8 @@ final class CatalogItemRepository implements RepositoryInterface
             $categoryUid,
             $status,
             $trackInventory,
+            $unitCode,
+            $taxCode,
         );
         $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
@@ -215,6 +219,8 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $categoryUid = null,
         ?string $status = null,
         ?bool $trackInventory = null,
+        ?string $unitCode = null,
+        ?string $taxCode = null,
     ): int {
         [$sql, $params] = $this->listQuery(
             $organizationUid,
@@ -224,6 +230,8 @@ final class CatalogItemRepository implements RepositoryInterface
             $categoryUid,
             $status,
             $trackInventory,
+            $unitCode,
+            $taxCode,
             true,
         );
         $statement = $this->pdo->prepare($sql);
@@ -323,6 +331,8 @@ final class CatalogItemRepository implements RepositoryInterface
         ?string $categoryUid,
         ?string $status,
         ?bool $trackInventory,
+        ?string $unitCode,
+        ?string $taxCode,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -351,6 +361,16 @@ final class CatalogItemRepository implements RepositoryInterface
         if ($trackInventory !== null) {
             $sql .= ' AND track_inventory = :track_inventory';
             $params['track_inventory'] = $trackInventory ? 1 : 0;
+        }
+
+        if ($unitCode !== null) {
+            $sql .= ' AND unit_code = :unit_code';
+            $params['unit_code'] = $unitCode;
+        }
+
+        if ($taxCode !== null) {
+            $sql .= ' AND tax_code = :tax_code';
+            $params['tax_code'] = $taxCode;
         }
 
         if ($query !== '') {

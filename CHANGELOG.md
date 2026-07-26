@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Unit-of-measure and tax-code filters for Catalog items, including direct
+  drill-down links from the References workspace.
 - Organization-scoped currency filtering for Catalog price lists, preserved
   across pagination and bulk status actions.
 - Current, upcoming, and expired validity filters for Catalog price lists,

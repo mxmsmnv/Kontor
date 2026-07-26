@@ -89,6 +89,8 @@ Catalog filters include an explicit Uncategorized view for finding items that
 still need classification.
 Catalog items can also be filtered by active, inactive, or discontinued status.
 Inventory-tracked and untracked items can be filtered independently.
+Unit-of-measure and tax-code filters can be opened directly from reference
+usage counts.
 Filtered item, category, and price-list views expose a one-click reset action.
 The package itself remains UI-framework agnostic.
 

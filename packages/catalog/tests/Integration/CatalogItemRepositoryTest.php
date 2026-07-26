@@ -237,6 +237,31 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         ], $repository->referenceUsage($this->organizationUid));
     }
 
+    public function test_unit_and_tax_filters_return_only_matching_items(): void
+    {
+        $repository = $this->repository();
+        $piece = CatalogItem::create($this->organizationUid, ['en' => 'Piece']);
+        $piece->unitCode = 'pcs';
+        $piece->taxCode = 'standard';
+        $box = CatalogItem::create($this->organizationUid, ['en' => 'Box']);
+        $box->unitCode = 'box';
+        $box->taxCode = 'reduced';
+        $repository->save($piece);
+        $repository->save($box);
+
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            unitCode: 'pcs',
+        ));
+        $this->assertSame(
+            $piece->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                taxCode: 'standard',
+            )[0]->uid->toString(),
+        );
+    }
+
     public function test_status_filter_returns_only_matching_items(): void
     {
         $repository = $this->repository();

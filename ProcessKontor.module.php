@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '053',
+            'version' => '054',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -498,6 +498,16 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('inventory'),
             ['tracked', 'untracked']
         );
+        $unitOptions = (new UnitOfMeasure())->all();
+        $taxOptions = (new TaxCode())->all();
+        $unitCode = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('unit'),
+            array_keys($unitOptions)
+        );
+        $taxCode = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('tax'),
+            array_keys($taxOptions)
+        );
         $trackInventory = $inventory === null ? null : $inventory === 'tracked';
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
         $organizationUid = $this->organizationUid();
@@ -510,6 +520,8 @@ class ProcessKontor extends Process
             categoryUid: $categoryUid,
             status: $status,
             trackInventory: $trackInventory,
+            unitCode: $unitCode,
+            taxCode: $taxCode,
         );
         $totalPages = max(1, (int) ceil($totalItems / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
@@ -523,6 +535,8 @@ class ProcessKontor extends Process
             offset: ($page - 1) * $pageSize,
             status: $status,
             trackInventory: $trackInventory,
+            unitCode: $unitCode,
+            taxCode: $taxCode,
         );
         $categoryOptions = [];
         $categoryNames = [];
@@ -555,13 +569,17 @@ class ProcessKontor extends Process
             'selectedCategory' => $categoryUid,
             'selectedStatus' => $status,
             'selectedInventory' => $inventory,
+            'selectedUnit' => $unitCode,
+            'selectedTax' => $taxCode,
+            'unitOptions' => $unitOptions,
+            'taxOptions' => $taxOptions,
             'categoryOptions' => $categoryOptions,
             'categoryNames' => $categoryNames,
             'showArchived' => $showArchived,
             'page' => $page,
             'totalPages' => $totalPages,
             'totalItems' => $totalItems,
-            'unitLabels' => (new UnitOfMeasure())->all(),
+            'unitLabels' => $unitOptions,
         ]);
     }
 
@@ -3782,6 +3800,14 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('return_inventory'),
             ['tracked', 'untracked']
         );
+        $unit = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_unit'),
+            array_keys((new UnitOfMeasure())->all())
+        );
+        $tax = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_tax'),
+            array_keys((new TaxCode())->all())
+        );
         $archived = (string) $this->wire()->input->post('return_archived') === '1';
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
@@ -3790,6 +3816,8 @@ class ProcessKontor extends Process
             'category' => $categoryUid,
             'status' => $status,
             'inventory' => $inventory,
+            'unit' => $unit,
+            'tax' => $tax,
             'archived' => $archived ? 1 : null,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
