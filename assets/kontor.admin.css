@@ -2201,6 +2201,40 @@
   text-align: center;
 }
 
+.kontor-documenthead {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.kontor-documenthead > div {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kontor-documenthead > div > span:last-child {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+}
+
+.kontor-documenthead > strong {
+  font-size: 1.3rem;
+}
+
+.kontor-documentactions,
+.kontor-documentactions form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components,

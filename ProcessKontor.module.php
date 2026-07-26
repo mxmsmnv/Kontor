@@ -46,6 +46,8 @@ use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Queue\Infrastructure\Persistence\JobRepository;
+use Kontor\Sales\Domain\DocumentLine;
+use Kontor\Sales\Domain\Quotation;
 use Kontor\Search\Application\GlobalSearchService;
 use Kontor\SDK\DTO\BackupVerification;
 use Kontor\SDK\DTO\ExportContext;
@@ -65,7 +67,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '087',
+            'version' => '088',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -131,6 +133,12 @@ class ProcessKontor extends Process
                     'label' => 'CRM',
                     'icon' => 'handshake-o',
                     'permission' => 'kontor-crm-lead-view',
+                ],
+                [
+                    'url' => 'sales/',
+                    'label' => 'Sales',
+                    'icon' => 'file-text-o',
+                    'permission' => 'kontor-sales-quotation-view',
                 ],
                 [
                     'url' => 'components/',
@@ -924,6 +932,303 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect(
             '../crm-deals/?pipeline=' . rawurlencode($deal->pipelineUid)
         );
+    }
+
+    public function ___executeSales(): string
+    {
+        $this->requireSales();
+        $this->requirePermission('kontor-sales-quotation-view');
+        $this->setPageTitle($this->_('Kontor · Sales'));
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+
+        return $this->renderTemplate('sales', [
+            'quotations' => $sales->quotationRepository()->findMatching(
+                $this->organizationUid(),
+                limit: 50,
+            ),
+            'orders' => $this->wire()->user->hasPermission('kontor-sales-order-view')
+                ? $sales->orderRepository()->findMatching($this->organizationUid(), limit: 50)
+                : [],
+            'customerLabels' => $this->salesCustomerLabels(),
+        ]);
+    }
+
+    public function ___executeSalesQuotation(): string
+    {
+        $this->requireSales();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+        $quotation = $id !== '' ? $sales->quotationRepository()->require($id) : null;
+
+        if ($quotation !== null) {
+            $this->requirePermission('kontor-sales-quotation-view');
+            $this->requireSameOrganization($quotation->organizationId);
+        } else {
+            $this->requirePermission('kontor-sales-quotation-create');
+        }
+
+        $values = [
+            'customer' => '',
+            'currency' => 'EUR',
+            'validUntil' => '',
+            'language' => 'en',
+            'lineTitle' => '',
+            'quantity' => '1',
+            'unitCode' => 'pcs',
+            'unitPrice' => '',
+            'taxRate' => '0',
+        ];
+        $error = '';
+
+        if ($quotation === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'customer' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('customer')),
+                'currency' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency')
+                )),
+                'validUntil' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('valid_until')
+                ),
+                'language' => $this->wire()->sanitizer->option(
+                    (string) $this->wire()->input->post('language'),
+                    ['en', 'de', 'fr', 'es']
+                ) ?? 'en',
+                'lineTitle' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('line_title')
+                ),
+                'quantity' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('quantity')
+                ),
+                'unitCode' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('unit_code')
+                ),
+                'unitPrice' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('unit_price')
+                ),
+                'taxRate' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('tax_rate')
+                ),
+            ];
+            [$customerType, $customerUid] = array_pad(explode(':', $values['customer'], 2), 2, '');
+
+            if (!isset($this->salesCustomerLabels()[$values['customer']])) {
+                $error = $this->_('Select a valid customer.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currency']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            } elseif ($values['lineTitle'] === '') {
+                $error = $this->_('The first line title is required.');
+            } elseif (!is_numeric($values['quantity']) || (float) $values['quantity'] <= 0) {
+                $error = $this->_('Quantity must be greater than zero.');
+            } elseif (!is_numeric(str_replace(',', '.', $values['unitPrice']))
+                || (float) str_replace(',', '.', $values['unitPrice']) < 0) {
+                $error = $this->_('Unit price must be zero or greater.');
+            } elseif (!is_numeric($values['taxRate'])
+                || (float) $values['taxRate'] < 0
+                || (float) $values['taxRate'] > 100) {
+                $error = $this->_('Tax rate must be between 0 and 100.');
+            } elseif ($values['unitCode'] === '') {
+                $error = $this->_('Unit code is required.');
+            }
+
+            $validUntil = null;
+            if ($error === '' && $values['validUntil'] !== '') {
+                try {
+                    $validUntil = new \DateTimeImmutable($values['validUntil']);
+                } catch (\Throwable) {
+                    $error = $this->_('Valid-until date is invalid.');
+                }
+            }
+
+            if ($error === '') {
+                $quotation = Quotation::create(
+                    $this->organizationUid(),
+                    $customerType,
+                    $customerUid,
+                    $values['currency'],
+                    contactUid: $customerType === 'contact' ? $customerUid : null,
+                    validUntil: $validUntil,
+                    documentLanguage: $values['language'],
+                );
+                $line = DocumentLine::create(
+                    $this->organizationUid(),
+                    'quotation',
+                    $quotation->uid->toString(),
+                    $values['lineTitle'],
+                    (float) $values['quantity'],
+                    Money::ofMinor(
+                        (int) round((float) str_replace(',', '.', $values['unitPrice']) * 100),
+                        $values['currency']
+                    ),
+                    unitCode: $values['unitCode'],
+                    taxRate: (float) $values['taxRate'],
+                );
+                $pdo = $this->wire()->database->pdo();
+                $pdo->beginTransaction();
+                try {
+                    $sales->quotationRepository()->save($quotation);
+                    $sales->documentLineRepository()->save($line);
+                    $quotation->applyTotalsFromLines([$line]);
+                    $sales->quotationRepository()->save($quotation);
+                    $pdo->commit();
+                } catch (\Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+                $this->audit(
+                    'sales',
+                    'quotation',
+                    $quotation->uid->toString(),
+                    'created',
+                    current: [
+                        'customerType' => $quotation->customerType,
+                        'customerUid' => $quotation->customerUid,
+                        'totalMinor' => $quotation->total->amountMinor(),
+                    ],
+                );
+                $this->message($this->_('Quotation draft created.'));
+                $this->wire()->session->redirect(
+                    '../sales-quotation/?id=' . rawurlencode($quotation->uid->toString())
+                );
+            }
+        }
+
+        $lines = $quotation !== null
+            ? $sales->documentLineRepository()->forDocument('quotation', $quotation->uid->toString())
+            : [];
+        $existingOrder = $quotation !== null
+            ? $sales->orderRepository()->findByQuotation($quotation->uid->toString())
+            : null;
+        $this->setPageTitle($quotation === null
+            ? $this->_('Kontor · New quotation')
+            : sprintf($this->_('Kontor · %s'), $quotation->number ?? $this->_('Draft quotation')));
+
+        return $this->renderTemplate('sales-quotation', [
+            'quotation' => $quotation,
+            'lines' => $lines,
+            'existingOrder' => $existingOrder,
+            'values' => $values,
+            'customers' => $this->salesCustomerLabels(),
+            'error' => $error,
+        ]);
+    }
+
+    public function ___executeSalesQuotationAction(): void
+    {
+        $this->requirePost();
+        $this->requireSales();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['issue', 'accept', 'convert', 'cancel', 'archive', 'restore']
+        );
+        $this->requireAction($action, ['issue', 'accept', 'convert', 'cancel', 'archive', 'restore']);
+        $permissions = [
+            'issue' => 'kontor-sales-quotation-issue',
+            'accept' => 'kontor-sales-quotation-accept',
+            'convert' => 'kontor-sales-order-create',
+            'cancel' => 'kontor-sales-quotation-cancel',
+            'archive' => 'kontor-sales-quotation-edit',
+            'restore' => 'kontor-sales-quotation-edit',
+        ];
+        $this->requirePermission($permissions[$action]);
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $quotation = $sales->quotationRepository()->require($id);
+        $this->requireSameOrganization($quotation->organizationId);
+
+        if ($action === 'issue') {
+            $sales->quotationWorkflow()->issue($id);
+        } elseif ($action === 'accept') {
+            $sales->quotationWorkflow()->accept($id);
+        } elseif ($action === 'convert') {
+            $order = $sales->conversionService()->convert($id);
+            $this->audit(
+                'sales',
+                'order',
+                $order->uid->toString(),
+                'created',
+                current: ['quotationUid' => $id, 'number' => $order->number],
+            );
+            $this->message($this->_('Sales order created.'));
+            $this->wire()->session->redirect(
+                '../sales-order/?id=' . rawurlencode($order->uid->toString())
+            );
+        } elseif ($action === 'cancel') {
+            $sales->quotationWorkflow()->cancel($id);
+        } elseif ($action === 'restore') {
+            $sales->quotationRepository()->restore($id);
+        } else {
+            $sales->quotationRepository()->archive($id);
+        }
+
+        $this->audit('sales', 'quotation', $id, $action);
+        $this->message($this->_('Quotation updated.'));
+        $this->wire()->session->redirect('../sales-quotation/?id=' . rawurlencode($id));
+    }
+
+    public function ___executeSalesOrder(): string
+    {
+        $this->requireSales();
+        $this->requirePermission('kontor-sales-order-view');
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $order = $sales->orderRepository()->require($id);
+        $this->requireSameOrganization($order->organizationId);
+        $this->setPageTitle(sprintf($this->_('Kontor · %s'), $order->number ?? $this->_('Sales order')));
+
+        return $this->renderTemplate('sales-order', [
+            'order' => $order,
+            'lines' => $sales->documentLineRepository()->forDocument('order', $id),
+            'customerLabel' => $this->salesCustomerLabels()[
+                $order->customerType . ':' . $order->customerUid
+            ] ?? $order->customerUid,
+        ]);
+    }
+
+    public function ___executeSalesOrderAction(): void
+    {
+        $this->requirePost();
+        $this->requireSales();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['confirm', 'complete', 'cancel', 'archive', 'restore']
+        );
+        $this->requireAction($action, ['confirm', 'complete', 'cancel', 'archive', 'restore']);
+        $permissions = [
+            'confirm' => 'kontor-sales-order-confirm',
+            'complete' => 'kontor-sales-order-complete',
+            'cancel' => 'kontor-sales-order-cancel',
+            'archive' => 'kontor-sales-order-edit',
+            'restore' => 'kontor-sales-order-edit',
+        ];
+        $this->requirePermission($permissions[$action]);
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $order = $sales->orderRepository()->require($id);
+        $this->requireSameOrganization($order->organizationId);
+
+        if ($action === 'confirm') {
+            $sales->orderWorkflow()->confirm($id);
+        } elseif ($action === 'complete') {
+            $sales->orderWorkflow()->complete($id);
+        } elseif ($action === 'cancel') {
+            $sales->orderWorkflow()->cancel($id);
+        } elseif ($action === 'restore') {
+            $sales->orderRepository()->restore($id);
+        } else {
+            $sales->orderRepository()->archive($id);
+        }
+
+        $this->audit('sales', 'order', $id, $action);
+        $this->message($this->_('Sales order updated.'));
+        $this->wire()->session->redirect('../sales-order/?id=' . rawurlencode($id));
     }
 
     public function ___executeCompany(): string
@@ -4352,6 +4657,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorCRM');
     }
 
+    private function salesReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorSales');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -4366,11 +4676,38 @@ class ProcessKontor extends Process
         }
     }
 
+    private function requireSales(): void
+    {
+        if (!$this->salesReady()) {
+            throw new WireException($this->_('The Kontor Sales component is not installed.'));
+        }
+    }
+
     private function requireContacts(): void
     {
         if (!$this->contactsReady()) {
             throw new WireException($this->_('The Kontor Contacts component is not installed.'));
         }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function salesCustomerLabels(): array
+    {
+        if (!$this->contactsReady()) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($this->contactRepository()->findAll($this->organizationUid(), limit: 250) as $contact) {
+            $labels['contact:' . $contact->uid->toString()] = $this->_('Contact') . ' · ' . $contact->displayName;
+        }
+        foreach ($this->companyRepository()->findAll($this->organizationUid(), limit: 250) as $company) {
+            $labels['company:' . $company->uid->toString()] = $this->_('Company') . ' · ' . $company->legalName;
+        }
+
+        return $labels;
     }
 
     private function requireDataExchangeEntity(string $entityType): void

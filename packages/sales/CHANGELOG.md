@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Shared admin integration for quotation and order lifecycle workflows.
 - Organization-scoped quotation and order search, status, archive, count, and
   pagination queries for the shared admin workflow.
 - Order lookup by source quotation.
