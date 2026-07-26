@@ -6,6 +6,8 @@
 /** @var int $totalReferences */
 /** @var string $adminUrl */
 /** @var callable $e */
+
+$hasFilters = $query !== '' || $selectedType !== null;
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -38,6 +40,11 @@
       <option value="tax"<?= $selectedType === 'tax' ? ' selected' : '' ?>>Tax codes</option>
     </select>
     <button class="kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?>
+      <a class="kontor-viewtoggle" href="./">
+        <i class="fa fa-times"></i> Clear filters
+      </a>
+    <?php endif; ?>
     <span class="kontor-secondary"><?= $e($totalReferences) ?> registered · <?= $e(count($references)) ?> shown</span>
   </form>
 
