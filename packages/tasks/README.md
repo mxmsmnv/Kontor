@@ -2,7 +2,8 @@
 
 `kontor/tasks` — tasks, reminders, recurrence, calendar, and entity
 relations. First business component of Stage 5 (kontor.md#36). Depends
-on `kontor/core`, plus Queue and Mail for delayed email reminder delivery.
+on `kontor/core`, plus Automation for `tasks.create`, and Queue/Mail for
+delayed email reminder delivery.
 
 ## A fourth Core gap, filled here
 
@@ -45,6 +46,10 @@ Sections 11–16 of kontor.md never gave Tasks a schema section, so
   sets `sent_at`; transport failures remain eligible for Queue retry.
 - `src/Application/TaskRelationService.php` — the "entity relations"
   milestone, thin wrapper over `RelationRepository`.
+- `CreateTaskActionHandler` registers `tasks.create` with Automation. It
+  interpolates `{{ dot.path }}` values from the trigger payload, creates the
+  organization-scoped task, optionally links it to the triggering entity, and
+  can schedule the existing Queue → Mail reminder path.
 - `TaskRepository::dueBetween()` — the "calendar" milestone's actual query
   surface: tasks with a due date inside a range. This is the data a future
   calendar view would render.
@@ -74,4 +79,4 @@ also schedule email reminders and shows their scheduled/sent lifecycle.
 No API endpoints or calendar rendering. Task assignment (`assigned_to`) stores
 a plain ProcessWire user id, matching `created_by`/`updated_by`'s convention
 (kontor.md#10.4). Assignment itself does not notify; a reminder must be
-scheduled explicitly.
+scheduled explicitly, including when configured in a `tasks.create` action.

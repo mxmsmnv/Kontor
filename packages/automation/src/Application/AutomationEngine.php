@@ -86,9 +86,11 @@ final class AutomationEngine
         $error = null;
 
         if ($matched && !$dryRun) {
+            $actionData = $event->data;
+            $actionData['_event'] = $event->toArray();
             foreach ($this->actions->forRule($ruleUid) as $action) {
                 try {
-                    $result = $this->actionHandlers->get($action->actionKey)->execute($event->data, $action->params);
+                    $result = $this->actionHandlers->get($action->actionKey)->execute($actionData, $action->params);
                     $actionsResult[] = ['actionKey' => $action->actionKey, 'result' => $result];
                 } catch (\Throwable $e) {
                     // One action failing does not stop the rest, mirroring

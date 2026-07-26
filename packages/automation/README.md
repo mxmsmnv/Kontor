@@ -36,10 +36,9 @@ acceptable for a synchronous, in-process bus.
   milestone's extension point. Not an SDK contract (kontor.md section 9
   has no automation-action entry) — same status as `kontor/dashboard`'s
   `WidgetProviderInterface`. `src/ActionHandlers/LogActionHandler.php` is
-  a trivial built-in handler proving the pipeline end-to-end (and
-  genuinely useful on its own as a debug/audit action) — real
-  per-component handlers (send an email, create a task, …) are future work
-  for those packages to build once this one exists to depend on.
+  the dependency-free debug/audit action. Business components register
+  their own mutation handlers: Tasks contributes `tasks.create`, which can
+  create and link a task and optionally enqueue its Mail reminder.
 - `src/Application/ConditionEvaluator.php` — the "conditions" milestone's
   actual evaluation: `equals`/`not_equals`/`greater_than`/`less_than`/
   `contains`, resolving a dot-path field against the triggering event's
@@ -56,6 +55,9 @@ acceptable for a synchronous, in-process bus.
     order, logging each one's result; **one action failing doesn't stop
     the rest**, mirroring `EventDispatcher`'s own "a listener throwing
     does not stop the remaining listeners" behavior — "actions".
+    Handlers receive the original payload plus a reserved `_event` canonical
+    envelope with organization, entity, actor, correlation, and causation
+    identity; conditions continue to evaluate only the original payload.
   - `$dryRun = true` reports what would match without invoking any
     handler — "dry run".
   - **Recursion protection**: a plain instance depth counter. Core's
@@ -87,7 +89,6 @@ custom action handler that calls `handleEvent()` again.
 
 Idempotency, retries, rate limits, version history and approval gates
 (kontor.md#30's fuller feature list) — none are this substage's own
-milestones. No admin UI/API endpoints — rule authoring is
-`RuleDefinitionService`'s method calls; a visual rule builder is future
-work, same as `kontor/workflow`'s deferred visual editor. No built-in
-action handlers beyond the one proving the pipeline.
+milestones. The admin supports rule/condition/action authoring and a JSON
+test bench, but no node-graph canvas or API endpoints. Cross-component
+actions remain owned by the component that performs the mutation.

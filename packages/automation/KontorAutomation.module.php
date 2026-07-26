@@ -41,7 +41,7 @@ class KontorAutomation extends WireData implements Module
         return [
             'title' => 'Kontor Automation',
             'summary' => 'Triggers, conditions, actions, dry run, logs, recursion protection.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorAutomation',
             'icon' => 'bolt',

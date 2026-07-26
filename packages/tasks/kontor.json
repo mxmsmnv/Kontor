@@ -20,12 +20,12 @@
         "php": ">=8.2",
         "processwire": ">=3.0.240",
         "kontor/sdk": "^0.2.1",
-        "kontor/core": "^0.1"
+        "kontor/core": "^0.1",
+        "kontor/automation": "^0.1",
+        "kontor/mail": "^0.1",
+        "kontor/queue": "^0.1"
     },
-    "suggests": {
-        "kontor/queue": "^0.1",
-        "kontor/mail": "^0.1"
-    },
+    "suggests": {},
     "conflicts": {},
     "capabilities": [],
     "permissions": [

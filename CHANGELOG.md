@@ -27,6 +27,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Automation now drives real Tasks work through the component-owned
+  `tasks.create` action, including trigger relations and optional delayed
+  Queue → Mail reminders.
 - Scheduled Reports now dispatch idempotent Queue jobs from LazyCron and
   deliver confidential versioned exports to Files, with schedule management
   and manual due dispatch in the Reports workspace.

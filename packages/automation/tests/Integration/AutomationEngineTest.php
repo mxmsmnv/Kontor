@@ -64,6 +64,14 @@ final class AutomationEngineTest extends DatabaseTestCase
         $this->assertCount(1, $results);
         $this->assertTrue($results[0]['matched']);
         $this->assertSame('log', $results[0]['actionsResult'][0]['actionKey']);
+        $this->assertSame(
+            $this->organizationUid,
+            $results[0]['actionsResult'][0]['result']['loggedEventData']['_event']['organizationId'],
+        );
+        $this->assertSame(
+            'inventory_movement',
+            $results[0]['actionsResult'][0]['result']['loggedEventData']['_event']['entityType'],
+        );
 
         $logs = $this->logs->forRule($rule->uid->toString());
         $this->assertCount(1, $logs);

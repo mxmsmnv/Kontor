@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Action handlers now receive the canonical event envelope under `_event`;
+  Tasks uses it to register the first business mutation handler,
+  `tasks.create`, while payload-only condition semantics remain unchanged.
 - First ProcessKontor admin vertical: rule authoring, condition and registered
   action configuration, JSON event test bench, dry/live execution, and logs.
 - Initial alpha (Substage 7.2): `kontor_automation_rules`,

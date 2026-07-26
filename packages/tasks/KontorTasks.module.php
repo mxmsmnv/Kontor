@@ -14,6 +14,7 @@ use Kontor\Tasks\Application\TaskWorkflowService;
 use Kontor\Tasks\Health\TasksHealthCheck;
 use Kontor\Tasks\Infrastructure\Persistence\TaskReminderRepository;
 use Kontor\Tasks\Infrastructure\Persistence\TaskRepository;
+use Kontor\Tasks\Infrastructure\Automation\CreateTaskActionHandler;
 use Kontor\Tasks\Infrastructure\Queue\TaskReminderDeliveryJob;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
@@ -31,13 +32,13 @@ class KontorTasks extends WireData implements Module
         return [
             'title' => 'Kontor Tasks',
             'summary' => 'Tasks, reminders, recurrence, calendar, entity relations.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorTasks',
             'icon' => 'check-square-o',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor', 'KontorQueue', 'KontorMail'],
+            'requires' => ['Kontor', 'KontorQueue', 'KontorMail', 'KontorAutomation'],
             'permissions' => [
                 'kontor-tasks-task-view' => 'View tasks',
                 'kontor-tasks-task-create' => 'Create tasks',
@@ -74,6 +75,14 @@ class KontorTasks extends WireData implements Module
                 $mail->entityLinking(),
             ),
         );
+
+        /** @var KontorAutomation $automation */
+        $automation = $this->wire()->modules->get('KontorAutomation');
+        $automation->actionHandlerRegistry()->register(new CreateTaskActionHandler(
+            $this->taskRepository(),
+            $this->relations(),
+            $this->reminderDispatcher(),
+        ));
     }
 
     private function registerTranslations(TranslationRegistry $translations): void
