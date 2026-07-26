@@ -87,4 +87,22 @@ final class PortalAuthenticationServiceTest extends DatabaseTestCase
 
         $service->authenticate($this->organizationUid, 'customer@example.com', 'correct-horse');
     }
+
+    public function test_accounts_can_be_listed_for_their_organization(): void
+    {
+        $service = $this->service();
+        $service->register($this->organizationUid, 'contact_1', 'first@example.com', 'correct-horse');
+        $service->register($this->organizationUid, 'contact_2', 'second@example.com', 'correct-horse');
+
+        $accounts = (new PortalAccountRepository(
+            $this->pdo,
+            new OrganizationRepository($this->pdo),
+        ))->forOrganization($this->organizationUid);
+
+        $this->assertCount(2, $accounts);
+        $this->assertSame(
+            ['second@example.com', 'first@example.com'],
+            array_column($accounts, 'email'),
+        );
+    }
 }

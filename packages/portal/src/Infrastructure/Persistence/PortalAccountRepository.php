@@ -46,6 +46,23 @@ final class PortalAccountRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    /**
+     * @return PortalAccount[] newest first
+     */
+    public function forOrganization(string $organizationUid): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_portal_accounts
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY created_at DESC'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     public function save(object $entity): void
     {
         if (!$entity instanceof PortalAccount) {

@@ -35,4 +35,15 @@ final class PortalAccountTest extends TestCase
         $this->assertFalse($account->isActive());
         $this->assertSame('disabled', $account->status);
     }
+
+    public function test_enable_reactivates_a_disabled_account(): void
+    {
+        $account = PortalAccount::create('org_1', 'contact_1', 'customer@example.com', 'hash');
+        $account->disable();
+
+        $account->enable();
+
+        $this->assertTrue($account->isActive());
+        $this->assertSame('active', $account->status);
+    }
 }

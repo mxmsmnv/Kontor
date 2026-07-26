@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Portal admin vertical: customer-account provisioning and lifecycle,
+  credential verification, safe profile editing, and customer-scoped previews
+  of quotations, invoices, payments, and signed file downloads.
 - First Mail admin vertical: shared mailboxes, safe outbound simulation with
   persistent history, raw-email inbound adapter, message detail, and entity
   linking.

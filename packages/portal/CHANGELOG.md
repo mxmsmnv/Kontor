@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: account provisioning and lifecycle,
+  credential verification, safe profile editing, plus customer-scoped
+  quotation, invoice, payment, and file previews.
 - Initial alpha (Substage 9.2): `kontor_portal_accounts` migration
   (kontor.md, full gap-fill); `PortalAccount` domain +
   `PortalAccountRepository`; `PortalAuthenticationService` (the "customer

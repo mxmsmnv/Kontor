@@ -61,4 +61,10 @@ final class PortalAccount
         $this->status = 'disabled';
         $this->updatedAt = new \DateTimeImmutable();
     }
+
+    public function enable(): void
+    {
+        $this->status = 'active';
+        $this->updatedAt = new \DateTimeImmutable();
+    }
 }

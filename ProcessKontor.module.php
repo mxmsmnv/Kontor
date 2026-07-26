@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '105',
+            'version' => '106',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -195,6 +195,12 @@ class ProcessKontor extends Process
                     'label' => 'Mail',
                     'icon' => 'envelope',
                     'permission' => 'kontor-mail-message-view',
+                ],
+                [
+                    'url' => 'portal/',
+                    'label' => 'Portal',
+                    'icon' => 'user-circle',
+                    'permission' => 'kontor-portal-account-manage',
                 ],
                 [
                     'url' => 'contacts/',
@@ -4152,6 +4158,199 @@ class ProcessKontor extends Process
         $this->audit('mail', 'relation', $relationUid, 'created');
         $this->message($this->_('Message linked to entity.'));
         $this->wire()->session->redirect('../mail/?id=' . rawurlencode($uid));
+    }
+
+    public function ___executePortal(): string
+    {
+        $this->requirePortal();
+        $this->requirePermission('kontor-portal-account-manage');
+        $module = $this->portalModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $selected = $id !== '' ? $module->accountRepository()->require($id) : null;
+        if ($selected !== null) {
+            $this->requireSameOrganization($selected->organizationId);
+        }
+
+        $contact = null;
+        $quotationRows = [];
+        $invoiceRows = [];
+        if ($selected !== null) {
+            $contact = $module->profile()->view($selected->contactUid);
+            $this->requireSameOrganization($contact->organizationId);
+            foreach ($module->quotationRepository()->forContact(
+                $this->organizationUid(),
+                $selected->contactUid,
+            ) as $quotation) {
+                $files = $module->files()->filesForDocument(
+                    'quotation',
+                    $quotation->uid->toString(),
+                );
+                $quotationRows[] = [
+                    'quotation' => $quotation,
+                    'files' => array_map(
+                        fn (array $file): array => $file + [
+                            'downloadUrl' => $module->files()->downloadUrl(
+                                (string) $file['uid'],
+                                new \DateTimeImmutable('+15 minutes'),
+                            ),
+                        ],
+                        $files,
+                    ),
+                ];
+            }
+            foreach ($module->invoiceRepository()->forContact(
+                $this->organizationUid(),
+                $selected->contactUid,
+            ) as $invoice) {
+                $files = $module->files()->filesForDocument(
+                    'invoice',
+                    $invoice->uid->toString(),
+                );
+                $invoiceRows[] = [
+                    'invoice' => $invoice,
+                    'payments' => $module->payments()->paymentsForInvoice(
+                        $invoice->uid->toString()
+                    ),
+                    'files' => array_map(
+                        fn (array $file): array => $file + [
+                            'downloadUrl' => $module->files()->downloadUrl(
+                                (string) $file['uid'],
+                                new \DateTimeImmutable('+15 minutes'),
+                            ),
+                        ],
+                        $files,
+                    ),
+                ];
+            }
+        }
+
+        $verification = $this->wire()->session->get('kontorPortalVerification');
+        $this->wire()->session->set('kontorPortalVerification', null);
+        $this->setPageTitle($this->_('Kontor · Portal'));
+
+        return $this->renderTemplate('portal', [
+            'accounts' => $module->accountRepository()->forOrganization($this->organizationUid()),
+            'contacts' => $this->contactRepository()->findAll($this->organizationUid(), limit: 250),
+            'selected' => $selected,
+            'contact' => $contact,
+            'quotationRows' => $quotationRows,
+            'invoiceRows' => $invoiceRows,
+            'verification' => is_array($verification) ? $verification : null,
+        ]);
+    }
+
+    public function ___executePortalAccount(): void
+    {
+        $this->requirePost();
+        $this->requirePortal();
+        $this->requirePermission('kontor-portal-account-manage');
+        $contactUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('contact_uid')
+        );
+        $contact = $this->contactRepository()->require($contactUid);
+        $this->requireSameOrganization($contact->organizationId);
+        $email = strtolower(trim((string) $this->wire()->input->post('email')));
+        $password = (string) $this->wire()->input->post('password');
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false || strlen($password) < 12) {
+            throw new WireException($this->_('A valid email and password of at least 12 characters are required.'));
+        }
+        if ($this->portalModule()->accountRepository()->findByEmail(
+            $this->organizationUid(),
+            $email,
+        ) !== null) {
+            throw new WireException($this->_('A portal account already uses this email address.'));
+        }
+        $account = $this->portalModule()->authentication()->register(
+            $this->organizationUid(),
+            $contactUid,
+            $email,
+            $password,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('portal', 'account', $account->uid->toString(), 'created');
+        $this->message($this->_('Portal account created.'));
+        $this->wire()->session->redirect(
+            '../portal/?id=' . rawurlencode($account->uid->toString())
+        );
+    }
+
+    public function ___executePortalVerify(): void
+    {
+        $this->requirePost();
+        $this->requirePortal();
+        $this->requirePermission('kontor-portal-account-manage');
+        $email = strtolower(trim((string) $this->wire()->input->post('email')));
+        $password = (string) $this->wire()->input->post('password');
+        $accountUid = '';
+        try {
+            $account = $this->portalModule()->authentication()->authenticate(
+                $this->organizationUid(),
+                $email,
+                $password,
+            );
+            $accountUid = $account->uid->toString();
+            $this->wire()->session->set('kontorPortalVerification', [
+                'ok' => true,
+                'message' => $this->_('Credentials accepted; login timestamp recorded.'),
+            ]);
+            $this->audit('portal', 'account', $accountUid, 'login_verified');
+        } catch (\Kontor\Portal\Application\PortalAuthenticationFailedException) {
+            $this->wire()->session->set('kontorPortalVerification', [
+                'ok' => false,
+                'message' => $this->_('Credentials rejected.'),
+            ]);
+        }
+        $redirect = '../portal/';
+        if ($accountUid !== '') {
+            $redirect .= '?id=' . rawurlencode($accountUid);
+        }
+        $this->wire()->session->redirect($redirect);
+    }
+
+    public function ___executePortalStatus(): void
+    {
+        $this->requirePost();
+        $this->requirePortal();
+        $this->requirePermission('kontor-portal-account-manage');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('account_uid')
+        );
+        $action = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action')
+        );
+        $this->requireAction($action, ['enable', 'disable']);
+        $account = $this->portalModule()->accountRepository()->require($uid);
+        $this->requireSameOrganization($account->organizationId);
+        $action === 'enable' ? $account->enable() : $account->disable();
+        $this->portalModule()->accountRepository()->save($account);
+        $this->audit('portal', 'account', $uid, $action . 'd');
+        $this->message($action === 'enable'
+            ? $this->_('Portal account enabled.')
+            : $this->_('Portal account disabled.'));
+        $this->wire()->session->redirect('../portal/?id=' . rawurlencode($uid));
+    }
+
+    public function ___executePortalProfile(): void
+    {
+        $this->requirePost();
+        $this->requirePortal();
+        $this->requirePermission('kontor-portal-account-manage');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('account_uid')
+        );
+        $account = $this->portalModule()->accountRepository()->require($uid);
+        $this->requireSameOrganization($account->organizationId);
+        $changes = [];
+        foreach (['firstName', 'middleName', 'lastName', 'phone', 'mobile', 'preferredLanguage'] as $field) {
+            $changes[$field] = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post($field)
+            ));
+        }
+        $contact = $this->portalModule()->profile()->update($account->contactUid, $changes);
+        $this->requireSameOrganization($contact->organizationId);
+        $this->audit('portal', 'profile', $contact->uid->toString(), 'updated');
+        $this->message($this->_('Customer-safe profile fields updated.'));
+        $this->wire()->session->redirect('../portal/?id=' . rawurlencode($uid));
     }
 
     public function ___executeMarketplace(): string
@@ -8279,6 +8478,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorMail');
     }
 
+    private function portalReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorPortal');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8416,6 +8620,13 @@ class ProcessKontor extends Process
     {
         if (!$this->mailReady()) {
             throw new WireException($this->_('The Kontor Mail component is not installed.'));
+        }
+    }
+
+    private function requirePortal(): void
+    {
+        if (!$this->portalReady()) {
+            throw new WireException($this->_('The Kontor Portal component is not installed.'));
         }
     }
 
@@ -8578,6 +8789,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorMail $module */
         $module = $this->wire()->modules->get('KontorMail');
+
+        return $module;
+    }
+
+    private function portalModule(): KontorPortal
+    {
+        /** @var KontorPortal $module */
+        $module = $this->wire()->modules->get('KontorPortal');
 
         return $module;
     }
