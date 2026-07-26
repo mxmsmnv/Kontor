@@ -38,6 +38,32 @@ final class QuotationRepository implements RepositoryInterface
         return $this->find($id) ?? throw new RuntimeException("Quotation \"{$id}\" was not found.");
     }
 
+    /**
+     * @return array<int, Quotation>
+     */
+    public function forDeal(
+        string $organizationUid,
+        string $dealUid,
+        bool $archived = false,
+    ): array {
+        $statement = $this->pdo->prepare(
+            'SELECT q.* FROM kontor_sales_quotations q
+             WHERE q.organization_id = :organization_id
+               AND q.deal_uid = :deal_uid
+               AND q.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL') . '
+             ORDER BY q.updated_at DESC, q.id DESC'
+        );
+        $statement->execute([
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+            'deal_uid' => $dealUid,
+        ]);
+
+        return array_map(
+            fn (array $row): Quotation => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
     public function save(object $entity): void
     {
         if (!$entity instanceof Quotation) {

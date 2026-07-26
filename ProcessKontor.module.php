@@ -91,7 +91,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '129',
+            'version' => '130',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1245,6 +1245,19 @@ class ProcessKontor extends Process
             'stages' => $stages,
             'contacts' => $this->contactRepository()->findAll($this->organizationUid(), limit: 250),
             'companies' => $this->companyRepository()->findAll($this->organizationUid(), limit: 250),
+            'dealQuotations' => $deal !== null
+                && $this->salesReady()
+                && $this->can('kontor-sales-quotation-view')
+                ? $this->salesModule()->quotationRepository()->forDeal(
+                    $this->organizationUid(),
+                    $deal->uid->toString(),
+                )
+                : [],
+            'canCreateQuotation' => $deal !== null
+                && $deal->status === 'won'
+                && ($deal->companyUid !== null || $deal->contactUid !== null)
+                && $this->salesReady()
+                && $this->can('kontor-sales-quotation-create'),
             'error' => $error,
         ]);
     }
@@ -1330,18 +1343,51 @@ class ProcessKontor extends Process
             $this->requirePermission('kontor-sales-quotation-create');
         }
 
+        $sourceDeal = null;
+        $sourceDealError = '';
+        if ($quotation !== null && $quotation->dealUid !== null
+            && $this->crmReady() && $this->can('kontor-crm-deal-view')) {
+            /** @var KontorCRM $crm */
+            $crm = $this->wire()->modules->get('KontorCRM');
+            $candidate = $crm->dealRepository()->find($quotation->dealUid);
+            if ($candidate !== null && hash_equals($this->organizationUid(), $candidate->organizationId)) {
+                $sourceDeal = $candidate;
+            }
+        } elseif ($quotation === null) {
+            $dealUid = $this->wire()->sanitizer->text((string) (
+                $this->wire()->input->post('deal_uid') ?: $this->wire()->input->get('deal')
+            ));
+            if ($dealUid !== '') {
+                $this->requireCrm();
+                $this->requirePermission('kontor-crm-deal-view');
+                /** @var KontorCRM $crm */
+                $crm = $this->wire()->modules->get('KontorCRM');
+                $sourceDeal = $crm->dealRepository()->require($dealUid);
+                $this->requireSameOrganization($sourceDeal->organizationId);
+                if ($sourceDeal->status !== 'won') {
+                    $sourceDealError = $this->_('Only won deals can become quotations.');
+                } elseif ($sourceDeal->companyUid === null && $sourceDeal->contactUid === null) {
+                    $sourceDealError = $this->_('Add a contact or company to the won deal first.');
+                }
+            }
+        }
+
         $values = [
-            'customer' => '',
-            'currency' => 'EUR',
+            'customer' => $sourceDeal?->companyUid !== null
+                ? 'company:' . $sourceDeal->companyUid
+                : ($sourceDeal?->contactUid !== null ? 'contact:' . $sourceDeal->contactUid : ''),
+            'currency' => $sourceDeal?->value?->currencyCode() ?? 'EUR',
             'validUntil' => '',
             'language' => 'en',
-            'lineTitle' => '',
+            'lineTitle' => $sourceDeal?->title ?? '',
             'quantity' => '1',
             'unitCode' => 'pcs',
-            'unitPrice' => '',
+            'unitPrice' => $sourceDeal?->value !== null
+                ? number_format($sourceDeal->value->amountMinor() / 100, 2, '.', '')
+                : '',
             'taxRate' => '0',
         ];
-        $error = '';
+        $error = $sourceDealError;
 
         if ($quotation === null && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
@@ -1375,7 +1421,9 @@ class ProcessKontor extends Process
             ];
             [$customerType, $customerUid] = array_pad(explode(':', $values['customer'], 2), 2, '');
 
-            if (!isset($this->salesCustomerLabels()[$values['customer']])) {
+            if ($error !== '') {
+                // Keep the source-deal validation error.
+            } elseif (!isset($this->salesCustomerLabels()[$values['customer']])) {
                 $error = $this->_('Select a valid customer.');
             } elseif (preg_match('/^[A-Z]{3}$/', $values['currency']) !== 1) {
                 $error = $this->_('Currency must be a three-letter code.');
@@ -1409,7 +1457,9 @@ class ProcessKontor extends Process
                     $customerType,
                     $customerUid,
                     $values['currency'],
-                    contactUid: $customerType === 'contact' ? $customerUid : null,
+                    contactUid: $sourceDeal?->contactUid
+                        ?? ($customerType === 'contact' ? $customerUid : null),
+                    dealUid: $sourceDeal?->uid->toString(),
                     validUntil: $validUntil,
                     documentLanguage: $values['language'],
                 );
@@ -1448,6 +1498,7 @@ class ProcessKontor extends Process
                     current: [
                         'customerType' => $quotation->customerType,
                         'customerUid' => $quotation->customerUid,
+                        'dealUid' => $quotation->dealUid,
                         'totalMinor' => $quotation->total->amountMinor(),
                     ],
                 );
@@ -1493,6 +1544,7 @@ class ProcessKontor extends Process
             'issuedFile' => $issuedFiles[0] ?? null,
             'values' => $values,
             'customers' => $this->salesCustomerLabels(),
+            'sourceDeal' => $sourceDeal,
             'error' => $error,
         ]);
     }
@@ -10525,6 +10577,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorInvoices $module */
         $module = $this->wire()->modules->get('KontorInvoices');
+
+        return $module;
+    }
+
+    private function salesModule(): KontorSales
+    {
+        /** @var KontorSales $module */
+        $module = $this->wire()->modules->get('KontorSales');
 
         return $module;
     }

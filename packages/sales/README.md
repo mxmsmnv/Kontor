@@ -30,6 +30,9 @@ foreign keys"), not a hard dependency on `kontor/contacts`.
   sales order"): copies every quotation line into new order lines (new
   uids, same pricing) rather than referencing the originals, so the order
   survives even if the quotation is later archived.
+- Won CRM deals can seed the shared quotation form with their customer, title,
+  value, currency, and source deal UID. Deal and quotation screens then link
+  to one another through the organization-scoped `forDeal()` lookup.
 - Quotation issuance resolves the active `quotation.standard` Documents
   template with language fallback, writes its exact UID and immutable render
   snapshot into Sales, and stores the resulting confidential PDF through

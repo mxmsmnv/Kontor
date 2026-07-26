@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Sales\Tests\Integration;
 
+use Kontor\Core\Domain\Organization;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Sales\Domain\Quotation;
 use Kontor\Sales\Infrastructure\Persistence\QuotationRepository;
@@ -46,6 +47,57 @@ final class QuotationRepositoryTest extends DatabaseTestCase
 
         $this->assertSame('issued', $repository->find($quotation->uid->toString())->status);
         $this->assertSame(1, (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_sales_quotations')->fetchColumn());
+    }
+
+    public function test_for_deal_is_organization_scoped_and_ignores_archived_quotations(): void
+    {
+        $repository = $this->repository();
+        $matching = Quotation::create(
+            $this->organizationUid,
+            'contact',
+            'ct_01',
+            'EUR',
+            dealUid: 'deal_01',
+        );
+        $otherDeal = Quotation::create(
+            $this->organizationUid,
+            'contact',
+            'ct_02',
+            'EUR',
+            dealUid: 'deal_02',
+        );
+        $repository->save($matching);
+        $repository->save($otherDeal);
+        $organizations = new OrganizationRepository($this->pdo);
+        $otherOrganization = Organization::createDefault('DE', 'de', 'EUR');
+        $otherOrganization->name = 'Other organization';
+        $organizations->save($otherOrganization);
+        $repository->save(Quotation::create(
+            $otherOrganization->uid->toString(),
+            'contact',
+            'ct_other_tenant',
+            'EUR',
+            dealUid: 'deal_01',
+        ));
+
+        $this->assertSame(
+            [$matching->uid->toString()],
+            array_map(
+                static fn (Quotation $quotation): string => $quotation->uid->toString(),
+                $repository->forDeal($this->organizationUid, 'deal_01')
+            )
+        );
+
+        $repository->archive($matching->uid->toString());
+
+        $this->assertSame([], $repository->forDeal($this->organizationUid, 'deal_01'));
+        $this->assertSame(
+            [$matching->uid->toString()],
+            array_map(
+                static fn (Quotation $quotation): string => $quotation->uid->toString(),
+                $repository->forDeal($this->organizationUid, 'deal_01', true)
+            )
+        );
     }
 
     public function test_issued_template_and_snapshot_round_trip(): void

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Won CRM deals can now prefill quotation drafts; saved quotations retain the
+  deal UID and can be discovered from the deal workspace.
 - Quotation issuance now resolves `quotation.standard`, persists the exact
   template UID and immutable snapshot, and stores a confidential PDF through
   Files in the same database transaction.

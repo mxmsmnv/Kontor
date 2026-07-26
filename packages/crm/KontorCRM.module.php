@@ -47,7 +47,7 @@ class KontorCRM extends WireData implements Module
         return [
             'title' => 'Kontor CRM',
             'summary' => 'Leads, pipelines, stages, deals, conversion, Kanban board data and pipeline reports.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCRM',
             'icon' => 'handshake-o',

@@ -7,6 +7,7 @@
 /** @var array<string, mixed>|null $issuedFile */
 /** @var array<string, string> $values */
 /** @var array<string, string> $customers */
+/** @var \Kontor\CRM\Domain\Deal|null $sourceDeal */
 /** @var string $error */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -28,12 +29,24 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     <div class="kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
   <?php endif; ?>
 
+  <?php if ($sourceDeal !== null): ?>
+    <section class="kontor-card">
+      <p class="kontor-eyebrow">CRM · Source deal</p>
+      <h3><?= $e($sourceDeal->title) ?></h3>
+      <p><?= $e(ucfirst($sourceDeal->status)) ?><?= $sourceDeal->value !== null ? ' · ' . $e($money($sourceDeal->value)) : '' ?></p>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deal/?id=<?= $e(rawurlencode($sourceDeal->uid->toString())) ?>">Open deal</a>
+    </section>
+  <?php endif; ?>
+
   <?php if ($quotation === null): ?>
     <?php if ($customers === []): ?>
       <section class="kontor-card kontor-empty"><h3>A customer is required</h3><p>Create a contact or company before preparing a quotation.</p></section>
     <?php else: ?>
       <form class="kontor-card kontor-nativeform" method="post" action="./">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <?php if ($sourceDeal !== null): ?>
+          <input type="hidden" name="deal_uid" value="<?= $e($sourceDeal->uid->toString()) ?>">
+        <?php endif; ?>
         <label class="kontor-nativefield kontor-nativefield--wide">
           <span>Customer *</span>
           <select name="customer" required>

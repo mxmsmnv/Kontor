@@ -6,6 +6,8 @@
 /** @var \Kontor\CRM\Domain\Stage[] $stages */
 /** @var \Kontor\Contacts\Domain\Contact[] $contacts */
 /** @var \Kontor\Contacts\Domain\Company[] $companies */
+/** @var \Kontor\Sales\Domain\Quotation[] $dealQuotations */
+/** @var bool $canCreateQuotation */
 /** @var string $error */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -24,6 +26,27 @@
 
   <?php if ($error !== ''): ?>
     <div class="kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
+  <?php endif; ?>
+
+  <?php if ($deal !== null && ($dealQuotations !== [] || $canCreateQuotation)): ?>
+    <section class="kontor-card">
+      <p class="kontor-eyebrow">Sales · Quotations</p>
+      <h3>Commercial follow-through</h3>
+      <?php if ($dealQuotations !== []): ?>
+        <div class="kontor-actions">
+          <?php foreach ($dealQuotations as $quotation): ?>
+            <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>sales-quotation/?id=<?= $e(rawurlencode($quotation->uid->toString())) ?>">
+              Open <?= $e($quotation->number ?? 'draft quotation') ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+      <?php if ($canCreateQuotation): ?>
+        <a class="kontor-button" href="<?= $e($adminUrl) ?>sales-quotation/?deal=<?= $e(rawurlencode($deal->uid->toString())) ?>">
+          <i class="fa fa-file-text-o"></i> Create quotation from deal
+        </a>
+      <?php endif; ?>
+    </section>
   <?php endif; ?>
 
   <?php if ($pipelines === []): ?>

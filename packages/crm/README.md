@@ -18,8 +18,9 @@ The canonical manifest example *names* `Kontor\CRM\Contracts\CRMServiceInterface
 as the "crm" capability's contract but never shows its methods — like
 `JobInterface` and `CacheInterface` before it, this is the component's own
 design: `convertLead()`, `moveDealToStage()`, `closeDealWon()`,
-`closeDealLost()`. Other components (a future `kontor/sales` creating a
-quotation from a won deal) would consume CRM through this facade.
+`closeDealLost()`. Other components consume CRM lifecycle operations through
+this facade. The shared admin now also carries won-deal customer, title,
+value, currency, and stable UID into a prefilled Sales quotation draft.
 
 ## Contents
 
@@ -46,6 +47,9 @@ quotation from a won deal) would consume CRM through this facade.
   named in the canonical example) plus `crm.lead.converted` (not in that
   example's list, but a clearly meaningful transition the illustrative
   list just didn't happen to include).
+- Won deals with a linked contact or company expose a Sales handoff in the
+  shared admin. Quotations retain `deal_uid`, so the deal lists every active
+  commercial draft or issued document created from it.
 
 ## Filled a second Core gap
 
@@ -68,8 +72,7 @@ packages.
 
 ## Not in scope for this substage
 
-`Kontor\CRM\Admin\LeadsController`/`DealsController` are declared in
-`kontor.json`'s `admin.routes` (matching the canonical example exactly)
-but not implemented — no admin UI exists for any component yet. No
-duplicate detection for leads/deals (that milestone was Contacts', not
-CRM's).
+`Kontor\CRM\Admin\LeadsController`/`DealsController` remain declarative
+component routes in `kontor.json`; the actual UI is owned by the shared
+`ProcessKontor` application. No duplicate detection for leads/deals (that
+milestone was Contacts', not CRM's).

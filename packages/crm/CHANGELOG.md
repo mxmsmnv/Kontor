@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Won deals with a customer now connect directly to prefilled Sales quotation
+  drafts and list every active quotation created from the deal.
 - Organization-scoped lead search, status filtering, archive listing, exact
   counts, and pagination support for the Core admin workflow.
 - Organization-scoped deal search/count/archive queries for the admin board,
