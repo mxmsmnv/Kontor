@@ -1,5 +1,7 @@
 # Kontor
 
+![Kontor — modular business operations, assembled together](assets/kontor-doodle.png)
+
 Open-source modular ERP, CRM and business operations ecosystem for
 ProcessWire. Contacts, sales, invoicing, inventory, projects, a REST
 API and GraphQL layer, automation, a marketplace, and more — each as its
