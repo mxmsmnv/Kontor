@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Clear search action for the global Kontor search workspace.
 - Clear search actions for Contacts and Companies, preserving archive context.
 - Dashboard visibility for active uncategorized Catalog items with direct
   drill-down.

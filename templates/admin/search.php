@@ -24,6 +24,7 @@ $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): 
         'page' => $targetPage,
     ], static fn (string|int $value): bool => $value !== ''));
 };
+$hasSearch = $query !== '' || $selectedEntityType !== '';
 ?>
 <div class="kontor-shell">
   <header class="kontor-searchhero">
@@ -40,6 +41,11 @@ $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): 
         <?php endforeach; ?>
       </select>
       <button class="kontor-button" type="submit">Search</button>
+      <?php if ($hasSearch): ?>
+        <a class="kontor-button kontor-button--ghost" href="./">
+          <i class="fa fa-times"></i> Clear search
+        </a>
+      <?php endif; ?>
     </form>
   </header>
 
