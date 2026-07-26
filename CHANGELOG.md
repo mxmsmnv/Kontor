@@ -54,6 +54,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   ProcessWire module versions, permission-gated and fully audited.
 - Searchable Health results with status filtering, an unfiltered overall
   summary, preserved refresh filters, and component drill-down links.
+- Global Search scoping by contacts or companies, paginated results, clearer
+  result totals, preserved scope navigation, and explicit short-query help.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

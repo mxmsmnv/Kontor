@@ -48,7 +48,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '023',
+            'version' => '024',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -337,20 +337,43 @@ class ProcessKontor extends Process
         $this->requireContacts();
         $this->setPageTitle($this->_('Kontor · Search'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $entityType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('type'),
+            ['contact', 'company']
+        ) ?? '';
+        $pageSize = 20;
+        $page = max(1, (int) $this->wire()->input->get('page'));
+        $totalPages = 1;
         $result = null;
 
         if (mb_strlen($query) >= 2) {
             $result = $this->searchService()->search(new SearchQuery(
                 organizationId: $this->organizationUid(),
                 term: $query,
-                entityTypes: ['contact', 'company'],
-                limit: 30,
+                entityTypes: $entityType !== '' ? [$entityType] : ['contact', 'company'],
+                limit: $pageSize,
+                offset: ($page - 1) * $pageSize,
             ));
+            $totalPages = max(1, (int) ceil($result->total / $pageSize));
+
+            if ($page > $totalPages) {
+                $page = $totalPages;
+                $result = $this->searchService()->search(new SearchQuery(
+                    organizationId: $this->organizationUid(),
+                    term: $query,
+                    entityTypes: $entityType !== '' ? [$entityType] : ['contact', 'company'],
+                    limit: $pageSize,
+                    offset: ($page - 1) * $pageSize,
+                ));
+            }
         }
 
         return $this->renderTemplate('search', [
             'query' => $query,
             'result' => $result,
+            'selectedEntityType' => $entityType,
+            'page' => $page,
+            'totalPages' => $totalPages,
         ]);
     }
 
