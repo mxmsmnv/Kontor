@@ -11,8 +11,14 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\Core\Application\ExportManager;
+use Kontor\Core\Application\ImportManager;
+use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\SDK\DTO\ExportContext;
+use Kontor\SDK\DTO\ImportContext;
+use Kontor\SDK\ValueObjects\Uid;
 
 /**
  * The single Kontor admin application. Business components provide the
@@ -25,7 +31,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -297,6 +303,105 @@ class ProcessKontor extends Process
         }
 
         $this->wire()->session->redirect('../' . $ownerType . '/?id=' . rawurlencode($ownerUid));
+    }
+
+    public function ___executeExport(): void
+    {
+        $this->requireContacts();
+        $this->requirePermission('kontor-contacts-export');
+        $entityType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('entity'),
+            ['contact', 'company']
+        );
+        $format = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('format'),
+            ['csv', 'json', 'jsonl', 'xlsx']
+        );
+        $this->requireAction($entityType, ['contact', 'company']);
+        $this->requireAction($format, ['csv', 'json', 'jsonl', 'xlsx']);
+
+        $temporary = tempnam($this->wire()->config->paths->cache, 'kontor_export_');
+
+        if ($temporary === false) {
+            throw new WireException($this->_('Could not create an export file.'));
+        }
+
+        $path = $temporary . '.' . $format;
+        rename($temporary, $path);
+        register_shutdown_function(static function () use ($path): void {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        });
+
+        $total = $this->exportManager()->run(
+            entityType: $entityType,
+            filters: [],
+            fields: [],
+            context: new ExportContext(
+                organizationId: $this->organizationUid(),
+                actorType: 'user',
+                actorId: (string) $this->wire()->user->id,
+            ),
+            writer: (new FormatResolver())->writer($format),
+            path: $path,
+        );
+        $date = (new \DateTimeImmutable())->format('Y-m-d');
+        $filename = 'kontor-' . ($entityType === 'contact' ? 'contacts' : 'companies') . "-{$date}.{$format}";
+        $this->wire()->log->save('kontor', "Exported {$total} {$entityType} records as {$format}.");
+        wireSendFile($path, [
+            'forceDownload' => true,
+            'downloadFilename' => $filename,
+            'exit' => true,
+        ]);
+    }
+
+    public function ___executeImport(): string
+    {
+        $this->requireContacts();
+        $this->requirePermission('kontor-import');
+        $this->setPageTitle($this->_('Kontor · Import preview'));
+        $entityType = $this->wire()->sanitizer->option(
+            (string) ($this->wire()->input->post('entity') ?: $this->wire()->input->get('entity')),
+            ['contact', 'company']
+        ) ?? 'contact';
+        $result = null;
+        $filename = null;
+
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            $this->requirePost();
+
+            try {
+                [$path, $format, $filename] = $this->receiveImportFile();
+
+                try {
+                    $result = $this->importManager()->run(
+                        entityType: $entityType,
+                        reader: (new FormatResolver())->reader($format),
+                        path: $path,
+                        context: new ImportContext(
+                            organizationId: $this->organizationUid(),
+                            batchId: Uid::generate()->toString(),
+                            dryRun: true,
+                            actorType: 'user',
+                            actorId: (string) $this->wire()->user->id,
+                        ),
+                    );
+                } finally {
+                    if (is_file($path)) {
+                        unlink($path);
+                    }
+                }
+            } catch (\Throwable $exception) {
+                $this->error($this->_('Import preview failed: ') . $exception->getMessage());
+            }
+        }
+
+        return $this->renderTemplate('import', [
+            'entityType' => $entityType,
+            'result' => $result,
+            'filename' => $filename,
+        ]);
     }
 
     public function ___executeContactStatus(): void
@@ -582,6 +687,42 @@ class ProcessKontor extends Process
         return $value === '' ? null : $this->wire()->sanitizer->text($value);
     }
 
+    /**
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function receiveImportFile(): array
+    {
+        $upload = $_FILES['import_file'] ?? null;
+
+        if (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new WireException($this->_('Choose a file to preview.'));
+        }
+
+        if ((int) ($upload['size'] ?? 0) > 10 * 1024 * 1024) {
+            throw new WireException($this->_('Import files are limited to 10 MB.'));
+        }
+
+        $originalName = basename((string) ($upload['name'] ?? 'import'));
+        $format = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $format = $format === 'ndjson' ? 'jsonl' : $format;
+        $this->requireAction($format, ['csv', 'json', 'jsonl', 'xlsx']);
+        $temporary = tempnam($this->wire()->config->paths->cache, 'kontor_import_');
+
+        if ($temporary === false) {
+            throw new WireException($this->_('Could not create a temporary import file.'));
+        }
+
+        $path = $temporary . '.' . $format;
+        rename($temporary, $path);
+
+        if (!move_uploaded_file((string) $upload['tmp_name'], $path)) {
+            @unlink($path);
+            throw new WireException($this->_('Could not store the uploaded file.'));
+        }
+
+        return [$path, $format, $originalName];
+    }
+
     private function renderTemplate(string $name, array $variables): string
     {
         $variables['adminUrl'] = $this->wire()->config->urls->admin . 'kontor/';
@@ -755,5 +896,21 @@ class ProcessKontor extends Process
         $kontor = $this->wire()->modules->get('Kontor');
 
         return $kontor->container()->get(ComponentRegistry::class);
+    }
+
+    private function exportManager(): ExportManager
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(ExportManager::class);
+    }
+
+    private function importManager(): ImportManager
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(ImportManager::class);
     }
 }

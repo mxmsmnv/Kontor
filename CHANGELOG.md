@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   workflows for contacts and companies in the admin application.
 - Contact/company address management and duplicate-contact warnings in the
   admin application.
+- CSV/JSON/JSON Lines/XLSX exports and read-only import previews for
+  contacts and companies.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

@@ -16,6 +16,15 @@
       <p>Customers, partners and the organizations behind your work.</p>
     </div>
     <div class="kontor-pagehead__actions">
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>import/?entity=company">
+        <i class="fa fa-upload"></i> Import
+      </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=company&amp;format=csv">
+        <i class="fa fa-download"></i> CSV
+      </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=company&amp;format=json">
+        JSON
+      </a>
       <a class="kontor-button" href="<?= $e($adminUrl) ?>company/">
         <i class="fa fa-plus"></i> New company
       </a>

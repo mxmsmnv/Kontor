@@ -16,6 +16,15 @@
       <p>People, communication details and relationship context.</p>
     </div>
     <div class="kontor-pagehead__actions">
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>import/?entity=contact">
+        <i class="fa fa-upload"></i> Import
+      </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=contact&amp;format=csv">
+        <i class="fa fa-download"></i> CSV
+      </a>
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=contact&amp;format=json">
+        JSON
+      </a>
       <a class="kontor-button" href="<?= $e($adminUrl) ?>contact/">
         <i class="fa fa-plus"></i> New contact
       </a>
