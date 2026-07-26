@@ -73,6 +73,14 @@ Everything under `tests/Integration/` needs real MySQL (see
 `../../docker-compose.test.yml`) and is skipped otherwise, same
 `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The root `ProcessKontor` module provides a deliberately narrow first admin
+workflow: record a full or partial payment from an issued/sent invoice,
+automatically confirm and allocate it, inspect the payment and allocations,
+and reverse the receipt when necessary. Broader payment-entry and allocation
+editing remain later UI work.
+
 ## Not in scope for this substage
 
 `kontor-payments-refund-create` is registered as a permission
@@ -81,4 +89,4 @@ money back out through an external payment gateway, which no component in
 this monorepo integrates with yet; `reversePayment()`/`reverseAllocation()`
 cover the purely-internal "undo this allocation" case the "reversals"
 milestone actually asks for. No order/quotation allocation support (only
-invoices). No admin UI/API endpoints.
+invoices). No API endpoints.

@@ -6,6 +6,8 @@
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
+/** @var bool $paymentsReady */
+/** @var \Kontor\Payments\Domain\PaymentAllocation[] $allocations */
 /** @var callable $e */
 
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
@@ -43,6 +45,18 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
   </section>
 
   <div class="kontor-documentactions">
+    <?php if ($paymentsReady && in_array($invoice->status, ['issued', 'sent', 'overdue', 'partially_paid'], true) && $invoice->due->amountMinor() > 0): ?>
+      <form method="post" action="<?= $e($adminUrl) ?>payment-from-invoice/">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <input type="hidden" name="invoice_uid" value="<?= $e($invoice->uid->toString()) ?>">
+        <label>Amount <input name="amount" inputmode="decimal" value="<?= $e(number_format($invoice->due->amountMinor() / 100, 2, '.', '')) ?>" required></label>
+        <label>Method
+          <select name="method"><option value="bank_transfer">Bank transfer</option><option value="card">Card</option><option value="cash">Cash</option><option value="other">Other</option></select>
+        </label>
+        <label>Reference <input name="transaction_reference" value=""></label>
+        <button class="kontor-button" type="submit">Record payment</button>
+      </form>
+    <?php endif; ?>
     <?php if ($invoice->status === 'draft'): ?>
       <form method="post" action="<?= $e($adminUrl) ?>invoice-action/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($invoice->uid->toString()) ?>">
@@ -63,4 +77,23 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       </form>
     <?php endif; ?>
   </div>
+
+  <?php if ($allocations !== []): ?>
+    <section class="kontor-card kontor-tablewrap">
+      <h3>Payments</h3>
+      <table class="kontor-table">
+        <thead><tr><th>Payment</th><th>Amount</th><th>Allocated</th><th>Status</th></tr></thead>
+        <tbody>
+          <?php foreach ($allocations as $allocation): ?>
+            <tr>
+              <td><a href="<?= $e($adminUrl) ?>payment/?id=<?= $e(rawurlencode($allocation->paymentUid)) ?>"><?= $e($allocation->paymentUid) ?></a></td>
+              <td><?= $e($money($allocation->amount)) ?></td>
+              <td><?= $e($allocation->allocatedAt->format('Y-m-d H:i')) ?></td>
+              <td><span class="kontor-pill<?= $allocation->isReversed() ? ' kontor-pill--inactive' : '' ?>"><?= $e($allocation->isReversed() ? 'reversed' : 'active') ?></span></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </section>
+  <?php endif; ?>
 </div>

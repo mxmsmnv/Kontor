@@ -70,6 +70,10 @@ final class PaymentAllocationService
 
         $invoice = $this->invoices->require($documentUid);
 
+        if (!hash_equals($payment->organizationId, $invoice->organizationId)) {
+            throw new RuntimeException('Payment and invoice must belong to the same organization.');
+        }
+
         if (!in_array($invoice->status, ['issued', 'sent', 'overdue', 'partially_paid'], true)) {
             throw new RuntimeException("Invoice \"{$documentUid}\" cannot be allocated against from status \"{$invoice->status}\".");
         }

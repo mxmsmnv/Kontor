@@ -6,6 +6,7 @@ namespace Kontor\Payments\Tests\Integration;
 
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Persistence\SequenceService;
+use Kontor\Core\Domain\Organization;
 use Kontor\Invoices\Infrastructure\Persistence\InvoiceRepository;
 use Kontor\Payments\Application\PaymentAllocationService;
 use Kontor\Payments\Application\PaymentWorkflowService;
@@ -13,6 +14,7 @@ use Kontor\Payments\Domain\Payment;
 use Kontor\Payments\Infrastructure\Persistence\PaymentAllocationRepository;
 use Kontor\Payments\Infrastructure\Persistence\PaymentRepository;
 use Kontor\SDK\ValueObjects\Money;
+use Kontor\SDK\ValueObjects\Uid;
 
 final class PaymentAllocationServiceTest extends DatabaseTestCase
 {
@@ -147,5 +149,39 @@ final class PaymentAllocationServiceTest extends DatabaseTestCase
         $allocations = $this->allocations->forPayment($payment->uid->toString());
         $this->assertCount(1, $allocations);
         $this->assertTrue($allocations[0]->isReversed());
+    }
+
+    public function test_cannot_allocate_across_organizations(): void
+    {
+        $invoice = $this->sentInvoice();
+        $organizations = new OrganizationRepository($this->pdo);
+        $other = new Organization(
+            uid: Uid::generate(),
+            name: 'Other organization',
+            legalName: null,
+            countryCode: 'US',
+            defaultLanguage: 'en',
+            defaultCurrency: 'EUR',
+            timezone: 'UTC',
+            status: 'active',
+        );
+        $organizations->save($other);
+        $payment = Payment::create(
+            $other->uid->toString(),
+            'contact',
+            'ct_other',
+            Money::ofMinor(10000, 'EUR')
+        );
+        $this->payments->save($payment);
+        $this->paymentWorkflow->confirm($payment->uid->toString());
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('same organization');
+        $this->allocationService->allocate(
+            $payment->uid->toString(),
+            'invoice',
+            $invoice->uid->toString(),
+            Money::ofMinor(10000, 'EUR')
+        );
     }
 }

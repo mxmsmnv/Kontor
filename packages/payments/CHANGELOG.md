@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin integration: organization-scoped payment listing, invoice-backed
+  payment capture and allocation, payment detail, and reversal.
 - Initial alpha (Substage 4.4): `kontor_payments` and
   `kontor_payment_allocations` migrations (kontor.md#15.5–15.6); `Payment`
   (draft/confirmed/reversed) and `PaymentAllocation` domain objects;
@@ -19,3 +21,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   substage); `PaymentsHealthCheck`; permissions (kontor.md#19.7); en/fr/de/es
   translations. Closes out Stage 4 (Sales and finance-lite) per spec
   section 36.
+
+### Fixed
+
+- Reject allocations between payments and invoices owned by different
+  organizations.

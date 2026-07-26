@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Payments admin vertical: sent-invoice payment capture, automatic
+  confirmation and allocation, paid-state synchronization, payment listing,
+  detail, and reversal.
 - First Invoices admin vertical: completed Sales order conversion, invoice
   list/detail, issue/send lifecycle, due tracking, and credit-note action.
 - First Sales admin vertical: one-line quotation drafting, issue and

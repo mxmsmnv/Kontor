@@ -29,7 +29,7 @@ class KontorPayments extends WireData implements Module
         return [
             'title' => 'Kontor Payments',
             'summary' => 'Payments, allocations, partial payments, reversals.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPayments',
             'icon' => 'money',
@@ -136,6 +136,13 @@ class KontorPayments extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('payments', self::getModuleInfo()['version'], 'payments');
+        $components->enable('payments');
+    }
+
+    public function ___upgrade(int $fromVersion, int $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('payments', self::getModuleInfo()['version'], 'payments');
         $components->enable('payments');
     }

@@ -45,6 +45,7 @@ use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Payments\Domain\Payment;
 use Kontor\Queue\Infrastructure\Persistence\JobRepository;
 use Kontor\Sales\Domain\DocumentLine;
 use Kontor\Sales\Domain\Quotation;
@@ -67,7 +68,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '089',
+            'version' => '090',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -145,6 +146,12 @@ class ProcessKontor extends Process
                     'label' => 'Invoices',
                     'icon' => 'file-text',
                     'permission' => 'kontor-invoices-invoice-view',
+                ],
+                [
+                    'url' => 'payments/',
+                    'label' => 'Payments',
+                    'icon' => 'money',
+                    'permission' => 'kontor-payments-payment-view',
                 ],
                 [
                     'url' => 'components/',
@@ -1279,6 +1286,10 @@ class ProcessKontor extends Process
             'customerLabel' => $this->salesCustomerLabels()[
                 $invoice->customerType . ':' . $invoice->customerUid
             ] ?? $invoice->customerUid,
+            'paymentsReady' => $this->paymentsReady(),
+            'allocations' => $this->paymentsReady()
+                ? $this->paymentModule()->allocationRepository()->forDocument('invoice', $id)
+                : [],
         ]);
     }
 
@@ -1361,6 +1372,153 @@ class ProcessKontor extends Process
         $this->audit('invoices', 'invoice', $id, $action);
         $this->message($this->_('Invoice updated.'));
         $this->wire()->session->redirect('../invoice/?id=' . rawurlencode($id));
+    }
+
+    public function ___executePayments(): string
+    {
+        $this->requirePayments();
+        $this->requirePermission('kontor-payments-payment-view');
+        $this->setPageTitle($this->_('Kontor · Payments'));
+
+        return $this->renderTemplate('payments', [
+            'payments' => $this->paymentModule()->paymentRepository()->findMatching(
+                $this->organizationUid(),
+                limit: 50,
+            ),
+            'payerLabels' => $this->salesCustomerLabels(),
+        ]);
+    }
+
+    public function ___executePayment(): string
+    {
+        $this->requirePayments();
+        $this->requirePermission('kontor-payments-payment-view');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $module = $this->paymentModule();
+        $payment = $module->paymentRepository()->require($id);
+        $this->requireSameOrganization($payment->organizationId);
+        $allocations = $module->allocationRepository()->forPayment($id);
+        $invoiceLabels = [];
+
+        foreach ($allocations as $allocation) {
+            if ($allocation->documentType !== 'invoice') {
+                continue;
+            }
+            $invoice = $this->invoiceModule()->invoiceRepository()->find($allocation->documentUid);
+            if ($invoice !== null && hash_equals($invoice->organizationId, $this->organizationUid())) {
+                $invoiceLabels[$allocation->documentUid] = $invoice->number ?? $this->_('Draft invoice');
+            }
+        }
+
+        $this->setPageTitle(sprintf(
+            $this->_('Kontor · %s'),
+            $payment->number ?? $this->_('Draft payment')
+        ));
+
+        return $this->renderTemplate('payment', [
+            'payment' => $payment,
+            'allocations' => $allocations,
+            'invoiceLabels' => $invoiceLabels,
+            'payerLabel' => $this->salesCustomerLabels()[
+                $payment->payerType . ':' . $payment->payerUid
+            ] ?? $payment->payerUid,
+        ]);
+    }
+
+    public function ___executePaymentFromInvoice(): void
+    {
+        $this->requirePost();
+        $this->requirePayments();
+        $this->requirePermission('kontor-payments-payment-create');
+        $this->requirePermission('kontor-payments-payment-allocate');
+        $invoiceId = $this->wire()->sanitizer->text((string) $this->wire()->input->post('invoice_uid'));
+        $invoice = $this->invoiceModule()->invoiceRepository()->require($invoiceId);
+        $this->requireSameOrganization($invoice->organizationId);
+
+        if (!in_array($invoice->status, ['issued', 'sent', 'overdue', 'partially_paid'], true)) {
+            throw new WireException($this->_('This invoice cannot receive a payment in its current status.'));
+        }
+
+        $amountText = str_replace(',', '.', trim((string) $this->wire()->input->post('amount')));
+        if (!is_numeric($amountText) || (float) $amountText <= 0) {
+            throw new WireException($this->_('Payment amount must be greater than zero.'));
+        }
+        $amount = Money::ofMinor((int) round((float) $amountText * 100), $invoice->currencyCode);
+        if ($amount->amountMinor() > $invoice->due->amountMinor()) {
+            throw new WireException($this->_('Payment amount cannot exceed the invoice balance.'));
+        }
+
+        $method = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('method'),
+            ['bank_transfer', 'card', 'cash', 'other']
+        ) ?? 'other';
+        $reference = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('transaction_reference')
+        ));
+        $payment = Payment::create(
+            $this->organizationUid(),
+            $invoice->customerType,
+            $invoice->customerUid,
+            $amount,
+            method: $method,
+            paymentDate: new \DateTimeImmutable('today'),
+            transactionReference: $reference !== '' ? $reference : null,
+        );
+        $module = $this->paymentModule();
+        $pdo = $this->wire()->database->pdo();
+        $pdo->beginTransaction();
+        try {
+            $module->paymentRepository()->save($payment);
+            $payment = $module->workflow()->confirm($payment->uid->toString());
+            $allocation = $module->allocationService()->allocate(
+                $payment->uid->toString(),
+                'invoice',
+                $invoiceId,
+                $amount,
+            );
+            $pdo->commit();
+        } catch (\Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $exception;
+        }
+
+        $this->audit(
+            'payments',
+            'payment',
+            $payment->uid->toString(),
+            'captured',
+            current: [
+                'number' => $payment->number,
+                'amountMinor' => $amount->amountMinor(),
+                'invoiceUid' => $invoiceId,
+                'allocationUid' => $allocation->uid->toString(),
+            ],
+        );
+        $this->message($this->_('Payment recorded and allocated to the invoice.'));
+        $this->wire()->session->redirect(
+            '../payment/?id=' . rawurlencode($payment->uid->toString())
+        );
+    }
+
+    public function ___executePaymentAction(): void
+    {
+        $this->requirePost();
+        $this->requirePayments();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['reverse']
+        );
+        $this->requireAction($action, ['reverse']);
+        $this->requirePermission('kontor-payments-payment-reverse');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $payment = $this->paymentModule()->paymentRepository()->require($id);
+        $this->requireSameOrganization($payment->organizationId);
+        $this->paymentModule()->workflow()->reversePayment($id);
+        $this->audit('payments', 'payment', $id, 'reversed');
+        $this->message($this->_('Payment and its allocations were reversed.'));
+        $this->wire()->session->redirect('../payment/?id=' . rawurlencode($id));
     }
 
     public function ___executeCompany(): string
@@ -4799,6 +4957,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorInvoices');
     }
 
+    private function paymentsReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorPayments');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -4824,6 +4987,13 @@ class ProcessKontor extends Process
     {
         if (!$this->invoicesReady()) {
             throw new WireException($this->_('The Kontor Invoices component is not installed.'));
+        }
+    }
+
+    private function requirePayments(): void
+    {
+        if (!$this->paymentsReady()) {
+            throw new WireException($this->_('The Kontor Payments component is not installed.'));
         }
     }
 
@@ -4858,6 +5028,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorInvoices $module */
         $module = $this->wire()->modules->get('KontorInvoices');
+
+        return $module;
+    }
+
+    private function paymentModule(): KontorPayments
+    {
+        /** @var KontorPayments $module */
+        $module = $this->wire()->modules->get('KontorPayments');
 
         return $module;
     }
