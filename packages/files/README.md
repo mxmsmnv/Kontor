@@ -19,10 +19,9 @@ not the other way around.
   makes an S3/R2/B2/SFTP adapter (spec section 5.5) a drop-in replacement.
   Rejects path traversal (absolute paths, `..` segments).
 - `src/Infrastructure/Storage/SignedUrlSigner.php` — HMAC-SHA256 signed,
-  time-limited download links. Produces/verifies the signature only; an
-  actual HTTP endpoint that calls `verify()` and streams the file is
-  admin-route wiring for a later stage (`KontorFiles::storage()` currently
-  points `temporaryUrl()` at a placeholder admin URL).
+  time-limited download links. `ProcessKontor` verifies each signature,
+  scopes the storage path to the active organization and active metadata
+  row, then streams the private bytes through an authenticated admin route.
 - `src/Infrastructure/Persistence/FileRepository.php` — versions of "the
   same file" are separate rows sharing
   `(entity_type, entity_uid, original_name)` with an incrementing
@@ -32,7 +31,8 @@ not the other way around.
 - `src/Application/FileManager.php` — upload (auto-versions when the same
   entity + filename already has a current version), signed URLs, archive/
   restore, version history. Resolves an organization uid to its internal id
-  via Core's `OrganizationRepository`.
+  via Core's `OrganizationRepository`; every mutation and signed URL is
+  tenant-scoped.
 - `src/Health/FilesHealthCheck.php` — a real write/read/delete round-trip
   against the configured storage, not just a config check.
 

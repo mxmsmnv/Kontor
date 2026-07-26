@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Scope version families, signed links, reads, archives, and restores to the
+  owning organization; restoring an older version now archives the current
+  version in that tenant only.
+- Delete newly stored bytes if metadata persistence fails, avoiding orphaned
+  private files.
 - Use ProcessWire's general-purpose `tableSalt` (falling back to
   `userAuthSalt`) for signed URLs instead of the undefined `authSalt`
   configuration property.
@@ -14,6 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Files admin vertical: private uploads, metadata and checksum
+  inspection, entity-bound version history, 15-minute signed downloads,
+  and reversible archive/restore lifecycle.
 - Initial alpha (Substage 2.2): `kontor_files` migration; `LocalPrivateStorage`
   (`StorageInterface`, path-traversal-safe); `SignedUrlSigner` (HMAC-SHA256,
   time-limited); `FileRepository` (versioning via

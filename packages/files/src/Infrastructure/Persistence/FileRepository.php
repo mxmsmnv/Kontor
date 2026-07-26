@@ -88,25 +88,67 @@ final class FileRepository
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findByPath(int $organizationId, string $path): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_files WHERE organization_id = :organization_id AND path = :path LIMIT 1'
+        );
+        $statement->execute(['organization_id' => $organizationId, 'path' => $path]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $row;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function forOrganization(int $organizationId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_files
+             WHERE organization_id = :organization_id
+             ORDER BY created_at DESC, version_number DESC'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
      * The active (non-archived) row for a given entity + filename slot —
      * the "current version".
      *
      * @return array<string, mixed>|null
      */
-    public function findCurrentVersion(string $entityType, string $entityUid, string $originalName): ?array
+    public function findCurrentVersion(
+        string $entityType,
+        string $entityUid,
+        string $originalName,
+        ?int $organizationId = null,
+    ): ?array
     {
+        $organizationFilter = $organizationId !== null
+            ? ' AND organization_id = :organization_id'
+            : '';
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_files
              WHERE entity_type = :entity_type AND entity_uid = :entity_uid AND original_name = :original_name
                 AND archived_at IS NULL
+             ' . $organizationFilter . '
              ORDER BY version_number DESC
              LIMIT 1'
         );
-        $statement->execute([
+        $parameters = [
             'entity_type' => $entityType,
             'entity_uid' => $entityUid,
             'original_name' => $originalName,
-        ]);
+        ];
+        if ($organizationId !== null) {
+            $parameters['organization_id'] = $organizationId;
+        }
+        $statement->execute($parameters);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
@@ -116,18 +158,31 @@ final class FileRepository
     /**
      * @return array<int, array<string, mixed>> every version, newest first
      */
-    public function versionHistory(string $entityType, string $entityUid, string $originalName): array
+    public function versionHistory(
+        string $entityType,
+        string $entityUid,
+        string $originalName,
+        ?int $organizationId = null,
+    ): array
     {
+        $organizationFilter = $organizationId !== null
+            ? ' AND organization_id = :organization_id'
+            : '';
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_files
              WHERE entity_type = :entity_type AND entity_uid = :entity_uid AND original_name = :original_name
+             ' . $organizationFilter . '
              ORDER BY version_number DESC'
         );
-        $statement->execute([
+        $parameters = [
             'entity_type' => $entityType,
             'entity_uid' => $entityUid,
             'original_name' => $originalName,
-        ]);
+        ];
+        if ($organizationId !== null) {
+            $parameters['organization_id'] = $organizationId;
+        }
+        $statement->execute($parameters);
 
         return $statement->fetchAll(\PDO::FETCH_ASSOC);
     }
@@ -155,6 +210,32 @@ final class FileRepository
 
     public function restore(string $uid): void
     {
+        $file = $this->find($uid);
+        if ($file === null) {
+            return;
+        }
+
+        if ($file['entity_type'] !== null && $file['entity_uid'] !== null) {
+            $statement = $this->pdo->prepare(
+                'UPDATE kontor_files
+                 SET archived_at = :now
+                 WHERE entity_type = :entity_type
+                   AND entity_uid = :entity_uid
+                   AND original_name = :original_name
+                   AND organization_id = :organization_id
+                   AND uid <> :uid
+                   AND archived_at IS NULL'
+            );
+            $statement->execute([
+                'now' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'),
+                'entity_type' => $file['entity_type'],
+                'entity_uid' => $file['entity_uid'],
+                'original_name' => $file['original_name'],
+                'organization_id' => $file['organization_id'],
+                'uid' => $uid,
+            ]);
+        }
+
         $statement = $this->pdo->prepare('UPDATE kontor_files SET archived_at = NULL WHERE uid = :uid');
         $statement->execute(['uid' => $uid]);
     }

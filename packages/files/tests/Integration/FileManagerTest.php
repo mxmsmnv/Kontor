@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Files\Tests\Integration;
 
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use Kontor\Core\Domain\Organization;
 use Kontor\Files\Application\FileManager;
 use Kontor\Files\Infrastructure\Persistence\FileRepository;
 use Kontor\Files\Infrastructure\Storage\LocalPrivateStorage;
@@ -130,6 +131,45 @@ final class FileManagerTest extends DatabaseTestCase
         $this->assertStringContainsString('signature=', $url);
         $this->assertCount(1, $events->eventsNamed('file.uploaded'));
         $this->assertCount(1, $events->eventsNamed('file.shared'));
+    }
+
+    public function test_cross_organization_file_operations_are_rejected(): void
+    {
+        $manager = $this->manager();
+        $uid = $manager->upload($this->organizationUid, 'private.txt', 'secret')['uid'];
+        $other = Organization::createDefault('DE', 'de', 'EUR');
+        (new OrganizationRepository($this->pdo))->save($other);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('does not belong to this organization');
+
+        $manager->temporaryUrl($uid, new \DateTimeImmutable('+1 hour'), $other->uid->toString());
+    }
+
+    public function test_version_families_are_scoped_to_the_organization(): void
+    {
+        $manager = $this->manager();
+        $other = Organization::createDefault('DE', 'de', 'EUR');
+        (new OrganizationRepository($this->pdo))->save($other);
+
+        $first = $manager->upload(
+            $this->organizationUid,
+            'contract.txt',
+            'one',
+            entityType: 'deal',
+            entityUid: '01KYFM00000000000000000001',
+        );
+        $otherFirst = $manager->upload(
+            $other->uid->toString(),
+            'contract.txt',
+            'two',
+            entityType: 'deal',
+            entityUid: '01KYFM00000000000000000001',
+        );
+
+        $this->assertSame(1, $first['versionNumber']);
+        $this->assertSame(1, $otherFirst['versionNumber']);
+        $this->assertNull($manager->find($first['uid'])['archived_at']);
     }
 
     private function removeDirectory(string $directory): void

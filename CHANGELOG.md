@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Files now enforces organization boundaries across version lookup, sharing,
+  reading, archiving and restoring; restores leave exactly one active version
+  and failed metadata writes remove newly stored bytes.
 - German chart seeding is now conflict-safe and idempotent, avoiding
   partial localized charts on repeated setup runs.
 - Archived ledger accounts are represented in the domain and rejected by
@@ -19,6 +22,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Files admin vertical: private uploads, checksum and metadata detail,
+  entity-bound versions, signed authenticated downloads, and reversible
+  archive/restore lifecycle.
 - First Germany localization admin vertical: capability visibility, local
   VAT-ID checksum validation, conflict-safe illustrative SKR03 seeding into
   Ledger, and an XRechnung XML preview workbench.

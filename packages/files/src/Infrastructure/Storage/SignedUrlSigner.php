@@ -6,10 +6,8 @@ namespace Kontor\Files\Infrastructure\Storage;
 
 /**
  * HMAC-signed, time-limited download links (Substage 2.2 "signed URLs").
- * This produces and verifies the signature only — wiring an actual HTTP
- * endpoint that calls verify() and streams the file back is an admin-route
- * concern for a later stage, same as bin/kontor's restore commands not
- * being wired into a ProcessWire route yet.
+ * This produces and verifies the signature; ProcessKontor's Files download
+ * route performs organization scoping and streams the matching active file.
  */
 final class SignedUrlSigner
 {

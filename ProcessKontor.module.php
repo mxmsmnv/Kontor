@@ -87,7 +87,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '110',
+            'version' => '111',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -207,6 +207,12 @@ class ProcessKontor extends Process
                     'label' => 'Portal',
                     'icon' => 'user-circle',
                     'permission' => 'kontor-portal-account-manage',
+                ],
+                [
+                    'url' => 'files/',
+                    'label' => 'Files',
+                    'icon' => 'folder-open',
+                    'permission' => 'kontor-files-file-view',
                 ],
                 [
                     'url' => 'documents/',
@@ -4381,6 +4387,194 @@ class ProcessKontor extends Process
         $this->audit('portal', 'profile', $contact->uid->toString(), 'updated');
         $this->message($this->_('Customer-safe profile fields updated.'));
         $this->wire()->session->redirect('../portal/?id=' . rawurlencode($uid));
+    }
+
+    public function ___executeFiles(): string
+    {
+        $this->requireFiles();
+        $this->requirePermission('kontor-files-file-view');
+        $module = $this->filesModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $selected = $id !== '' ? $module->fileRepository()->find($id) : null;
+        if ($id !== '' && ($selected === null
+            || (int) $selected['organization_id'] !== $this->organizationInternalId())) {
+            throw new Wire404Exception($this->_('File metadata was not found.'));
+        }
+        $versions = [];
+        if ($selected !== null && $selected['entity_type'] !== null && $selected['entity_uid'] !== null) {
+            $versions = $module->fileManager()->versionHistory(
+                (string) $selected['entity_type'],
+                (string) $selected['entity_uid'],
+                (string) $selected['original_name'],
+                $this->organizationUid(),
+            );
+        }
+        $shareResult = $this->wire()->session->get('kontorFilesShareResult');
+        $this->wire()->session->set('kontorFilesShareResult', null);
+        $this->setPageTitle($this->_('Kontor · Files'));
+
+        return $this->renderTemplate('files', [
+            'files' => $module->fileRepository()->forOrganization($this->organizationInternalId()),
+            'selected' => $selected,
+            'versions' => $versions,
+            'shareResult' => is_array($shareResult) ? $shareResult : null,
+            'storageHealth' => $module->healthCheck()->run(),
+            'canUpload' => $this->can('kontor-files-file-upload'),
+            'canDownload' => $this->can('kontor-files-file-download'),
+            'canShare' => $this->can('kontor-files-file-share'),
+            'canDelete' => $this->can('kontor-files-file-delete'),
+        ]);
+    }
+
+    public function ___executeFilesUpload(): void
+    {
+        $this->requirePost();
+        $this->requireFiles();
+        $this->requirePermission('kontor-files-file-upload');
+        $upload = $_FILES['file_upload'] ?? null;
+        if (!is_array($upload)
+            || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
+            || !is_uploaded_file((string) ($upload['tmp_name'] ?? ''))) {
+            throw new WireException($this->_('Choose a file that completed uploading.'));
+        }
+        $size = (int) ($upload['size'] ?? 0);
+        if ($size < 1 || $size > 25 * 1024 * 1024) {
+            throw new WireException($this->_('Files must be between 1 byte and 25 MB.'));
+        }
+        $originalName = basename(str_replace('\\', '/', (string) ($upload['name'] ?? '')));
+        if ($originalName === '' || $originalName === '.' || strlen($originalName) > 255) {
+            throw new WireException($this->_('The original filename is invalid or too long.'));
+        }
+        $visibility = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('visibility')
+        ));
+        $classification = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('classification')
+        ));
+        $this->requireAction($visibility, ['private', 'internal']);
+        $this->requireAction($classification, ['general', 'financial', 'confidential', 'restricted']);
+        $entityType = strtolower(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('entity_type')
+        )));
+        $entityUid = strtoupper(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('entity_uid')
+        )));
+        if (($entityType === '') !== ($entityUid === '')) {
+            throw new WireException($this->_('Entity type and entity UID must be provided together.'));
+        }
+        if ($entityType !== ''
+            && (preg_match('/^[a-z][a-z0-9_-]{0,49}$/', $entityType) !== 1
+                || !Uid::isValid($entityUid))) {
+            throw new WireException($this->_('Use a valid entity type and ULID.'));
+        }
+        $stream = fopen((string) $upload['tmp_name'], 'rb');
+        if ($stream === false) {
+            throw new WireException($this->_('The uploaded file could not be opened.'));
+        }
+        try {
+            $result = $this->filesModule()->fileManager()->upload(
+                organizationUid: $this->organizationUid(),
+                originalName: $originalName,
+                contents: $stream,
+                visibility: $visibility,
+                classification: $classification,
+                entityType: $entityType !== '' ? $entityType : null,
+                entityUid: $entityUid !== '' ? $entityUid : null,
+                metadata: $this->fileMetadataFromPost(),
+                actorId: (int) $this->wire()->user->id,
+            );
+        } finally {
+            fclose($stream);
+        }
+        $this->audit('files', 'file', $result['uid'], 'uploaded', metadata: [
+            'version' => $result['versionNumber'],
+            'visibility' => $visibility,
+            'classification' => $classification,
+            'entityType' => $entityType !== '' ? $entityType : null,
+        ]);
+        $this->message(sprintf($this->_('File version %d uploaded.'), $result['versionNumber']));
+        $this->wire()->session->redirect('../files/?id=' . rawurlencode($result['uid']));
+    }
+
+    public function ___executeFilesAction(): void
+    {
+        $this->requirePost();
+        $this->requireFiles();
+        $this->requirePermission('kontor-files-file-delete');
+        $uid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('file_uid'));
+        $action = $this->wire()->sanitizer->text((string) $this->wire()->input->post('action'));
+        $this->requireAction($action, ['archive', 'restore']);
+        $manager = $this->filesModule()->fileManager();
+        $action === 'archive'
+            ? $manager->archive($uid, $this->organizationUid())
+            : $manager->restore($uid, $this->organizationUid());
+        $this->audit('files', 'file', $uid, $action . 'd');
+        $this->message($action === 'archive'
+            ? $this->_('File archived; its bytes remain in private storage.')
+            : $this->_('File restored as the active version.'));
+        $this->wire()->session->redirect('../files/?id=' . rawurlencode($uid));
+    }
+
+    public function ___executeFilesShare(): void
+    {
+        $this->requirePost();
+        $this->requireFiles();
+        $this->requirePermission('kontor-files-file-share');
+        $uid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('file_uid'));
+        $file = $this->filesModule()->fileRepository()->find($uid);
+        if ($file === null
+            || (int) $file['organization_id'] !== $this->organizationInternalId()
+            || $file['archived_at'] !== null) {
+            throw new WireException($this->_('Only an active file in this organization can be shared.'));
+        }
+        $expiresAt = new \DateTimeImmutable('+15 minutes');
+        $url = $this->filesModule()->fileManager()->temporaryUrl(
+            $uid,
+            $expiresAt,
+            $this->organizationUid(),
+        );
+        $this->wire()->session->set('kontorFilesShareResult', [
+            'uid' => $uid,
+            'url' => $url,
+            'expiresAt' => $expiresAt->format(DATE_ATOM),
+        ]);
+        $this->audit('files', 'file', $uid, 'shared', metadata: [
+            'expiresAt' => $expiresAt->format(DATE_ATOM),
+        ]);
+        $this->message($this->_('Signed download link generated for 15 minutes.'));
+        $this->wire()->session->redirect('../files/?id=' . rawurlencode($uid));
+    }
+
+    public function ___executeFilesDownload(): never
+    {
+        $this->requireFiles();
+        $this->requirePermission('kontor-files-file-download');
+        $path = (string) $this->wire()->input->get('path');
+        $expires = (int) $this->wire()->input->get('expires');
+        $signature = (string) $this->wire()->input->get('signature');
+        if ($path === '' || $expires < 1 || preg_match('/^[a-f0-9]{64}$/', $signature) !== 1
+            || !$this->filesModule()->verifyTemporaryUrl($path, $expires, $signature)) {
+            throw new WirePermissionException($this->_('The signed file link is invalid or expired.'));
+        }
+        $file = $this->filesModule()->fileRepository()->findByPath(
+            $this->organizationInternalId(),
+            $path,
+        );
+        if ($file === null || $file['archived_at'] !== null) {
+            throw new Wire404Exception($this->_('The active file was not found.'));
+        }
+        $stream = $this->filesModule()->fileManager()->read(
+            (string) $file['uid'],
+            $this->organizationUid(),
+        );
+        $downloadName = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) $file['original_name']) ?: 'download';
+        header('Content-Type: ' . ((string) ($file['mime_type'] ?? '') ?: 'application/octet-stream'));
+        header('Content-Length: ' . (int) $file['size_bytes']);
+        header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+        header('Cache-Control: private, no-store');
+        fpassthru($stream);
+        fclose($stream);
+        exit;
     }
 
     public function ___executeDocuments(): string
@@ -9221,6 +9415,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorPortal');
     }
 
+    private function filesReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorFiles');
+    }
+
     private function documentsReady(): bool
     {
         return $this->wire()->modules->isInstalled('KontorDocuments');
@@ -9385,6 +9584,13 @@ class ProcessKontor extends Process
     {
         if (!$this->portalReady()) {
             throw new WireException($this->_('The Kontor Portal component is not installed.'));
+        }
+    }
+
+    private function requireFiles(): void
+    {
+        if (!$this->filesReady()) {
+            throw new WireException($this->_('The Kontor Files component is not installed.'));
         }
     }
 
@@ -9583,6 +9789,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorPortal $module */
         $module = $this->wire()->modules->get('KontorPortal');
+
+        return $module;
+    }
+
+    private function filesModule(): KontorFiles
+    {
+        /** @var KontorFiles $module */
+        $module = $this->wire()->modules->get('KontorFiles');
 
         return $module;
     }
@@ -9883,6 +10097,30 @@ class ProcessKontor extends Process
         }
 
         return $date;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fileMetadataFromPost(): array
+    {
+        $raw = trim((string) $this->wire()->input->post('metadata_json'));
+        if ($raw === '') {
+            return [];
+        }
+        if (strlen($raw) > 65536) {
+            throw new WireException($this->_('File metadata JSON must be at most 64 KB.'));
+        }
+        try {
+            $metadata = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new WireException($this->_('File metadata must be valid JSON.'));
+        }
+        if (!is_array($metadata) || array_is_list($metadata)) {
+            throw new WireException($this->_('File metadata must be a JSON object.'));
+        }
+
+        return $metadata;
     }
 
     /**

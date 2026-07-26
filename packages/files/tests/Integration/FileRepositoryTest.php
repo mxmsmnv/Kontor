@@ -80,6 +80,20 @@ final class FileRepositoryTest extends DatabaseTestCase
         $this->assertNull($files->find($uid)['archived_at']);
     }
 
+    public function test_restoring_an_old_version_archives_the_current_version(): void
+    {
+        $files = new FileRepository($this->pdo);
+        $v1 = $files->insert(1, 'local', 'p1', 'contract.pdf', null, 1, 'c1', 'private', null, 'deal', 'deal_01', 1, [], null);
+        $files->archive($v1);
+        $v2 = $files->insert(1, 'local', 'p2', 'contract.pdf', null, 1, 'c2', 'private', null, 'deal', 'deal_01', 2, [], null);
+
+        $files->restore($v1);
+
+        $this->assertNull($files->find($v1)['archived_at']);
+        $this->assertNotNull($files->find($v2)['archived_at']);
+        $this->assertSame($v1, $files->findCurrentVersion('deal', 'deal_01', 'contract.pdf')['uid']);
+    }
+
     public function test_for_entity_returns_only_active_files(): void
     {
         $files = new FileRepository($this->pdo);

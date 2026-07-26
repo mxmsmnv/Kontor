@@ -28,7 +28,7 @@ class KontorFiles extends WireData implements Module
         return [
             'title' => 'Kontor Files',
             'summary' => 'Local private storage, file metadata, signed URLs and versions.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorFiles',
             'icon' => 'folder-open',
@@ -47,6 +47,7 @@ class KontorFiles extends WireData implements Module
 
     private ?StorageInterface $storage = null;
     private ?FileRepository $fileRepository = null;
+    private ?SignedUrlSigner $signer = null;
 
     public function init(): void
     {
@@ -79,16 +80,22 @@ class KontorFiles extends WireData implements Module
             ));
         }
 
-        $signer = new SignedUrlSigner(
+        $this->signer = new SignedUrlSigner(
             secret: $secret,
-            // Placeholder until ProcessKontor grows a real download route (Substage 2.2 note):
-            baseUrl: $this->wire()->config->urls->admin . 'kontor/files/download',
+            baseUrl: $this->wire()->config->urls->admin . 'kontor/files-download/',
         );
 
         return $this->storage = new LocalPrivateStorage(
             rootDir: $this->wire()->config->paths->assets . 'kontor/files',
-            signer: $signer,
+            signer: $this->signer,
         );
+    }
+
+    public function verifyTemporaryUrl(string $path, int $expires, string $signature): bool
+    {
+        $this->storage();
+
+        return $this->signer?->verify($path, $expires, $signature) ?? false;
     }
 
     public function fileRepository(): FileRepository

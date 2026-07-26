@@ -50,29 +50,34 @@ final class FileManager
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
         $existing = ($entityType !== null && $entityUid !== null)
-            ? $this->files->findCurrentVersion($entityType, $entityUid, $originalName)
+            ? $this->files->findCurrentVersion($entityType, $entityUid, $originalName, $organizationId)
             : null;
 
         $path = $this->pathFor($organizationId, $originalName);
         $stored = $this->storage->put($path, $contents);
         $versionNumber = $existing !== null ? ((int) $existing['version_number']) + 1 : 1;
 
-        $uid = $this->files->insert(
-            organizationId: $organizationId,
-            storage: $stored->storage,
-            path: $stored->path,
-            originalName: $originalName,
-            mimeType: $stored->mimeType,
-            sizeBytes: $stored->sizeBytes,
-            checksum: $stored->checksum,
-            visibility: $visibility,
-            classification: $classification,
-            entityType: $entityType,
-            entityUid: $entityUid,
-            versionNumber: $versionNumber,
-            metadata: $metadata,
-            createdBy: $actorId,
-        );
+        try {
+            $uid = $this->files->insert(
+                organizationId: $organizationId,
+                storage: $stored->storage,
+                path: $stored->path,
+                originalName: $originalName,
+                mimeType: $stored->mimeType,
+                sizeBytes: $stored->sizeBytes,
+                checksum: $stored->checksum,
+                visibility: $visibility,
+                classification: $classification,
+                entityType: $entityType,
+                entityUid: $entityUid,
+                versionNumber: $versionNumber,
+                metadata: $metadata,
+                createdBy: $actorId,
+            );
+        } catch (\Throwable $exception) {
+            $this->storage->delete($stored->path);
+            throw $exception;
+        }
 
         if ($existing !== null) {
             $this->files->archive($existing['uid']);
@@ -90,7 +95,7 @@ final class FileManager
 
     public function temporaryUrl(string $uid, \DateTimeImmutable $expiresAt, string $organizationUid): string
     {
-        $file = $this->requireFile($uid);
+        $file = $this->requireFile($uid, $organizationUid);
         $url = $this->storage->temporaryUrl($file['path'], $expiresAt);
 
         $this->emit('file.shared', $uid, $organizationUid, ['expiresAt' => $expiresAt->format(DATE_ATOM)]);
@@ -98,9 +103,9 @@ final class FileManager
         return $url;
     }
 
-    public function read(string $uid)
+    public function read(string $uid, ?string $organizationUid = null)
     {
-        return $this->storage->read($this->requireFile($uid)['path']);
+        return $this->storage->read($this->requireFile($uid, $organizationUid)['path']);
     }
 
     /**
@@ -114,9 +119,19 @@ final class FileManager
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function versionHistory(string $entityType, string $entityUid, string $originalName): array
+    public function versionHistory(
+        string $entityType,
+        string $entityUid,
+        string $originalName,
+        ?string $organizationUid = null,
+    ): array
     {
-        return $this->files->versionHistory($entityType, $entityUid, $originalName);
+        return $this->files->versionHistory(
+            $entityType,
+            $entityUid,
+            $originalName,
+            $organizationUid !== null ? $this->organizations->internalIdOf($organizationUid) : null,
+        );
     }
 
     /**
@@ -129,12 +144,14 @@ final class FileManager
 
     public function archive(string $uid, string $organizationUid): void
     {
+        $this->requireFile($uid, $organizationUid);
         $this->files->archive($uid);
         $this->emit('file.archived', $uid, $organizationUid);
     }
 
     public function restore(string $uid, string $organizationUid): void
     {
+        $this->requireFile($uid, $organizationUid);
         $this->files->restore($uid);
         $this->emit('file.restored', $uid, $organizationUid);
     }
@@ -142,9 +159,15 @@ final class FileManager
     /**
      * @return array<string, mixed>
      */
-    private function requireFile(string $uid): array
+    private function requireFile(string $uid, ?string $organizationUid = null): array
     {
-        return $this->files->find($uid) ?? throw new RuntimeException("File \"{$uid}\" was not found.");
+        $file = $this->files->find($uid) ?? throw new RuntimeException("File \"{$uid}\" was not found.");
+        if ($organizationUid !== null
+            && (int) $file['organization_id'] !== $this->organizations->internalIdOf($organizationUid)) {
+            throw new RuntimeException("File \"{$uid}\" does not belong to this organization.");
+        }
+
+        return $file;
     }
 
     private function pathFor(int $organizationId, string $originalName): string
