@@ -12,6 +12,7 @@
 /** @var array $availableCompanies */
 /** @var array $addresses */
 /** @var array $duplicates */
+/** @var array $tags */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -44,6 +45,30 @@
   <?= $form->render() ?>
 
   <?php if ($entity !== null): ?>
+    <section class="kontor-card kontor-tags">
+      <div class="kontor-sectionhead">
+        <div>
+          <p class="kontor-eyebrow">Classification</p>
+          <h3>Tags</h3>
+        </div>
+        <div class="kontor-taglist">
+          <?php foreach ($tags as $tag): ?>
+            <span class="kontor-tag"><?= $e($tag) ?></span>
+          <?php endforeach; ?>
+          <?php if (!$tags): ?><span class="kontor-secondary">No tags</span><?php endif; ?>
+        </div>
+      </div>
+      <form class="kontor-tagform" method="post" action="<?= $e($adminUrl) ?>tags/">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <input type="hidden" name="owner_type" value="<?= $e($entityType) ?>">
+        <input type="hidden" name="owner_uid" value="<?= $e($entity->uid->toString()) ?>">
+        <input type="text" name="tags" value="<?= $e(implode(', ', $tags)) ?>" placeholder="customer, partner, vip">
+        <button class="kontor-button kontor-button--ghost" type="submit">
+          <i class="fa fa-tags"></i> Update tags
+        </button>
+      </form>
+    </section>
+
     <section class="kontor-card kontor-relations">
       <div class="kontor-sectionhead">
         <div>

@@ -44,7 +44,7 @@ class KontorContacts extends WireData implements Module
         return [
             'title' => 'Kontor Contacts',
             'summary' => 'Contacts, companies, addresses, memberships, tags and duplicate detection.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorContacts',
             'icon' => 'address-book',
@@ -119,6 +119,7 @@ class KontorContacts extends WireData implements Module
             titleColumn: 'display_name',
             subtitleColumn: 'email',
             fullTextColumns: ['display_name', 'email'],
+            additionalConditions: ['deleted_at IS NULL', 'archived_at IS NULL'],
         ));
         $searchModule->providerRegistry()->register(new SqlFullTextSearchProvider(
             pdo: $this->pdo(),
@@ -130,6 +131,7 @@ class KontorContacts extends WireData implements Module
             titleColumn: 'legal_name',
             subtitleColumn: 'email',
             fullTextColumns: ['legal_name', 'trading_name', 'email'],
+            additionalConditions: ['deleted_at IS NULL', 'archived_at IS NULL'],
         ));
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));

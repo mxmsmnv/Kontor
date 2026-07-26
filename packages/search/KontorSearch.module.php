@@ -28,7 +28,7 @@ class KontorSearch extends WireData implements Module
         return [
             'title' => 'Kontor Search',
             'summary' => 'Provider registry, federated global search, SQL full-text search and asynchronous indexing.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorSearch',
             'icon' => 'search',
@@ -106,6 +106,13 @@ class KontorSearch extends WireData implements Module
      * there is nothing here to migrate.
      */
     public function ___install(): void
+    {
+        $components = new ComponentRegistry($this->wire()->database->pdo());
+        $components->markInstalled('search', self::getModuleInfo()['version'], 'search');
+        $components->enable('search');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
     {
         $components = new ComponentRegistry($this->wire()->database->pdo());
         $components->markInstalled('search', self::getModuleInfo()['version'], 'search');

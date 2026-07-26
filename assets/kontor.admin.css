@@ -512,6 +512,45 @@
   margin: 0.2rem 0 0;
 }
 
+.kontor-tags {
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-taglist {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.kontor-tag {
+  background: #eef0ff;
+  border-radius: 999px;
+  color: #565fc7;
+  font-size: 0.72rem;
+  font-weight: 720;
+  padding: 0.28rem 0.55rem;
+}
+
+.kontor-tagform {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.kontor-tagform input {
+  background: #fff;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--kontor-ink);
+  flex: 1;
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+}
+
 .kontor-relations {
   margin-top: 1rem;
   padding: 1.15rem;
@@ -819,6 +858,103 @@
   padding: 0.85rem 1rem;
 }
 
+.kontor-searchhero {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(131, 143, 255, 0.25), transparent 35%),
+    linear-gradient(135deg, #252b57, #4f58a8);
+  border-radius: 16px;
+  color: #fff;
+  padding: 2rem;
+}
+
+.kontor-searchhero .kontor-eyebrow,
+.kontor-searchhero p {
+  color: #d9ddff;
+}
+
+.kontor-searchhero h2 {
+  color: #fff;
+  font-size: clamp(1.6rem, 4vw, 2.35rem);
+  margin: 0.25rem 0;
+}
+
+.kontor-searchhero > p {
+  margin: 0 0 1.2rem;
+}
+
+.kontor-searchhero form {
+  align-items: center;
+  background: #fff;
+  border-radius: 11px;
+  display: flex;
+  gap: 0.65rem;
+  max-width: 760px;
+  padding: 0.45rem;
+}
+
+.kontor-searchhero form > i {
+  color: #8b93a7;
+  margin-left: 0.55rem;
+}
+
+.kontor-searchhero input {
+  border: 0;
+  color: var(--kontor-ink);
+  flex: 1;
+  font-size: 1rem;
+  min-width: 0;
+  outline: none;
+  padding: 0.6rem 0;
+}
+
+.kontor-searchresults {
+  margin-top: 1.25rem;
+}
+
+.kontor-resultlist {
+  margin-top: 0.85rem;
+}
+
+.kontor-result {
+  align-items: center;
+  border-bottom: 1px solid var(--kontor-line);
+  color: var(--kontor-ink);
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  text-decoration: none;
+}
+
+.kontor-result:last-child {
+  border-bottom: 0;
+}
+
+.kontor-result:hover {
+  background: #fafbff;
+}
+
+.kontor-result__icon {
+  align-items: center;
+  background: #eef0ff;
+  border-radius: 9px;
+  color: var(--kontor-brand);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.kontor-result__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.kontor-result__body span {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+}
+
 .kontor-components {
   display: grid;
   gap: 1rem;
@@ -896,5 +1032,15 @@
   .kontor-import-confirm {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .kontor-tagform,
+  .kontor-searchhero form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kontor-searchhero form > i {
+    display: none;
   }
 }

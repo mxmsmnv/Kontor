@@ -28,6 +28,8 @@ final class SqlFullTextSearchProvider implements SearchProviderInterface
 {
     /**
      * @param string[] $fullTextColumns columns covered by the table's FULLTEXT index
+     * @param string[] $additionalConditions developer-defined SQL conditions,
+     *   such as lifecycle filters for archived or deleted records
      */
     public function __construct(
         private readonly \PDO $pdo,
@@ -39,6 +41,7 @@ final class SqlFullTextSearchProvider implements SearchProviderInterface
         private readonly string $titleColumn,
         private readonly ?string $subtitleColumn,
         private readonly array $fullTextColumns,
+        private readonly array $additionalConditions = [],
     ) {
     }
 
@@ -57,12 +60,14 @@ final class SqlFullTextSearchProvider implements SearchProviderInterface
         $organizationId = $this->organizations->internalIdOf($query->organizationId);
         $matchColumns = implode(', ', $this->fullTextColumns);
         $subtitleSelect = $this->subtitleColumn !== null ? "{$this->subtitleColumn} AS subtitle" : 'NULL AS subtitle';
+        $additionalWhere = $this->additionalWhere();
 
         $sql = "SELECT {$this->uidColumn} AS uid, {$this->titleColumn} AS title, {$subtitleSelect},
                     MATCH({$matchColumns}) AGAINST (:term IN NATURAL LANGUAGE MODE) AS score
                 FROM {$this->table}
                 WHERE organization_id = :organization_id
                     AND MATCH({$matchColumns}) AGAINST (:term IN NATURAL LANGUAGE MODE)
+                    {$additionalWhere}
                 ORDER BY score DESC
                 LIMIT :limit OFFSET :offset";
 
@@ -90,10 +95,12 @@ final class SqlFullTextSearchProvider implements SearchProviderInterface
     private function countMatches(SearchQuery $query, int $organizationId): int
     {
         $matchColumns = implode(', ', $this->fullTextColumns);
+        $additionalWhere = $this->additionalWhere();
 
         $sql = "SELECT COUNT(*) FROM {$this->table}
                 WHERE organization_id = :organization_id
-                    AND MATCH({$matchColumns}) AGAINST (:term IN NATURAL LANGUAGE MODE)";
+                    AND MATCH({$matchColumns}) AGAINST (:term IN NATURAL LANGUAGE MODE)
+                    {$additionalWhere}";
 
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':term', $query->term);
@@ -101,5 +108,17 @@ final class SqlFullTextSearchProvider implements SearchProviderInterface
         $statement->execute();
 
         return (int) $statement->fetchColumn();
+    }
+
+    private function additionalWhere(): string
+    {
+        if ($this->additionalConditions === []) {
+            return '';
+        }
+
+        return 'AND ' . implode(
+            ' AND ',
+            array_map(static fn (string $condition): string => "({$condition})", $this->additionalConditions)
+        );
     }
 }

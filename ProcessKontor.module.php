@@ -3,6 +3,7 @@
 namespace ProcessWire;
 
 use Kontor\Contacts\Application\ContactDuplicateDetector;
+use Kontor\Contacts\Application\TagService;
 use Kontor\Contacts\Domain\Address;
 use Kontor\Contacts\Domain\Company;
 use Kontor\Contacts\Domain\Contact;
@@ -18,9 +19,11 @@ use Kontor\Core\Domain\ImportBatchResult;
 use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Search\Application\GlobalSearchService;
 use Kontor\SDK\DTO\BackupVerification;
 use Kontor\SDK\DTO\ExportContext;
 use Kontor\SDK\DTO\ImportContext;
+use Kontor\SDK\DTO\SearchQuery;
 use Kontor\SDK\ValueObjects\Uid;
 
 /**
@@ -34,7 +37,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '007',
+            'version' => '008',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -46,6 +49,7 @@ class ProcessKontor extends Process
             'useNavJSON' => false,
             'nav' => [
                 ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
+                ['url' => 'search/', 'label' => 'Search', 'icon' => 'search'],
                 [
                     'url' => 'contacts/',
                     'label' => 'Contacts',
@@ -171,6 +175,13 @@ class ProcessKontor extends Process
                 ? []
                 : $this->addressRepository()->forOwner('contact', $contact->uid->toString()),
             'duplicates' => $duplicates,
+            'tags' => $contact === null
+                ? []
+                : $this->tagService()->tagsFor(
+                    $this->organizationUid(),
+                    'contact',
+                    $contact->uid->toString()
+                ),
         ]);
     }
 
@@ -234,6 +245,35 @@ class ProcessKontor extends Process
                 ? []
                 : $this->addressRepository()->forOwner('company', $company->uid->toString()),
             'duplicates' => [],
+            'tags' => $company === null
+                ? []
+                : $this->tagService()->tagsFor(
+                    $this->organizationUid(),
+                    'company',
+                    $company->uid->toString()
+                ),
+        ]);
+    }
+
+    public function ___executeSearch(): string
+    {
+        $this->requireContacts();
+        $this->setPageTitle($this->_('Kontor · Search'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $result = null;
+
+        if (mb_strlen($query) >= 2) {
+            $result = $this->searchService()->search(new SearchQuery(
+                organizationId: $this->organizationUid(),
+                term: $query,
+                entityTypes: ['contact', 'company'],
+                limit: 30,
+            ));
+        }
+
+        return $this->renderTemplate('search', [
+            'query' => $query,
+            'result' => $result,
         ]);
     }
 
@@ -305,6 +345,38 @@ class ProcessKontor extends Process
             $this->message($this->_('Address added.'));
         }
 
+        $this->wire()->session->redirect('../' . $ownerType . '/?id=' . rawurlencode($ownerUid));
+    }
+
+    public function ___executeTags(): void
+    {
+        $this->requirePost();
+        $ownerType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('owner_type'),
+            ['contact', 'company']
+        );
+        $this->requireAction($ownerType, ['contact', 'company']);
+        $ownerUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('owner_uid'));
+        $owner = $ownerType === 'contact'
+            ? $this->contactRepository()->require($ownerUid)
+            : $this->companyRepository()->require($ownerUid);
+        $this->requireSameOrganization($owner->organizationId);
+        $this->requirePermission($ownerType === 'contact'
+            ? 'kontor-contacts-contact-edit'
+            : 'kontor-contacts-company-edit');
+        $rawTags = explode(',', (string) $this->wire()->input->post('tags'));
+        $tags = [];
+
+        foreach (array_slice($rawTags, 0, 20) as $rawTag) {
+            $tag = mb_substr($this->wire()->sanitizer->text(trim($rawTag)), 0, 50);
+
+            if ($tag !== '') {
+                $tags[] = $tag;
+            }
+        }
+
+        $this->tagService()->setTags($this->organizationUid(), $ownerType, $ownerUid, $tags);
+        $this->message($this->_('Tags updated.'));
         $this->wire()->session->redirect('../' . $ownerType . '/?id=' . rawurlencode($ownerUid));
     }
 
@@ -1029,6 +1101,14 @@ class ProcessKontor extends Process
         return $module->duplicateDetector();
     }
 
+    private function tagService(): TagService
+    {
+        /** @var KontorContacts $module */
+        $module = $this->wire()->modules->get('KontorContacts');
+
+        return $module->tagService();
+    }
+
     /**
      * @return array<int, array{membership: ContactCompanyMembership, entity: Company}>
      */
@@ -1124,5 +1204,13 @@ class ProcessKontor extends Process
         $kontor = $this->wire()->modules->get('Kontor');
 
         return $kontor->container()->get(BackupManager::class);
+    }
+
+    private function searchService(): GlobalSearchService
+    {
+        /** @var KontorSearch $module */
+        $module = $this->wire()->modules->get('KontorSearch');
+
+        return $module->globalSearchService();
     }
 }

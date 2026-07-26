@@ -47,7 +47,7 @@ final class SqlFullTextSearchProviderTest extends DatabaseTestCase
         );
     }
 
-    private function insertArticle(string $uid, string $title, string $body, string $summary = ''): void
+    private function insertArticle(string $uid, string $title, string $body, ?string $summary = ''): void
     {
         $organizations = new OrganizationRepository($this->pdo);
         $organizationId = $organizations->internalIdOf($this->organizationUid);
@@ -124,6 +124,29 @@ final class SqlFullTextSearchProviderTest extends DatabaseTestCase
 
         $this->assertSame([], $result->hits);
         $this->assertSame(0, $result->total);
+    }
+
+    public function test_applies_developer_defined_lifecycle_conditions(): void
+    {
+        $this->insertArticle('art_visible', 'Lifecycle Searchable', 'searchable lifecycle content', 'Published');
+        $this->insertArticle('art_hidden', 'Lifecycle Searchable', 'searchable lifecycle content', null);
+        $provider = new SqlFullTextSearchProvider(
+            pdo: $this->pdo,
+            organizations: new OrganizationRepository($this->pdo),
+            providerName: 'articles',
+            entityType: 'article',
+            table: 'kontor_search_test_articles',
+            uidColumn: 'uid',
+            titleColumn: 'title',
+            subtitleColumn: 'summary',
+            fullTextColumns: ['title', 'body'],
+            additionalConditions: ['summary IS NOT NULL'],
+        );
+
+        $result = $provider->search(new SearchQuery($this->organizationUid, 'lifecycle searchable'));
+
+        $this->assertSame(1, $result->total);
+        $this->assertSame('art_visible', $result->hits[0]->entityUid);
     }
 
     public function test_respects_limit_and_offset(): void

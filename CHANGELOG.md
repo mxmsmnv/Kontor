@@ -20,6 +20,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   contacts and companies.
 - Two-step live imports gated by an automatically created and verified
   Contacts snapshot, with automatic restore on import failure.
+- Tag management in contact/company cards and a federated global directory
+  search page.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

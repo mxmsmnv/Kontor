@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Optional developer-defined SQL conditions for lifecycle-aware full-text
+  providers.
 - Initial alpha (Substage 2.4): `SearchProviderRegistry`; `GlobalSearchService`
   (federated aggregation across providers, itself a `SearchProviderInterface`);
   `SqlFullTextSearchProvider` (reusable MySQL FULLTEXT provider, resolves
