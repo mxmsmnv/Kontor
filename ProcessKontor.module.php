@@ -12,11 +12,13 @@ use Kontor\Contacts\Infrastructure\Persistence\AddressRepository;
 use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Infrastructure\Persistence\MembershipRepository;
+use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Domain\ImportBatchResult;
 use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
+use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Search\Application\GlobalSearchService;
@@ -37,7 +39,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '008',
+            'version' => '009',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -50,6 +52,18 @@ class ProcessKontor extends Process
             'nav' => [
                 ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
                 ['url' => 'search/', 'label' => 'Search', 'icon' => 'search'],
+                [
+                    'url' => 'activity/',
+                    'label' => 'Activity',
+                    'icon' => 'history',
+                    'permission' => 'kontor-audit-view',
+                ],
+                [
+                    'url' => 'backups/',
+                    'label' => 'Backups',
+                    'icon' => 'database',
+                    'permission' => 'kontor-backups-view',
+                ],
                 [
                     'url' => 'contacts/',
                     'label' => 'Contacts',
@@ -97,6 +111,10 @@ class ProcessKontor extends Process
             'contactCount' => $contacts,
             'companyCount' => $companies,
             'recentContacts' => $recentContacts,
+            'canViewActivity' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-audit-view'),
+            'canViewBackups' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-backups-view'),
         ]);
     }
 
@@ -129,6 +147,8 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New contact')
             : sprintf($this->_('Kontor · %s'), $contact->displayName));
 
+        $isNew = $contact === null;
+        $previous = $contact === null ? null : $this->contactAuditSnapshot($contact);
         $form = $this->buildContactForm($contact);
         $duplicates = [];
 
@@ -148,6 +168,14 @@ class ProcessKontor extends Process
                     $this->addDuplicateConfirmation($form);
                 } else {
                     $contact = $this->saveContactFromForm($form, $contact);
+                    $this->audit(
+                        component: 'contacts',
+                        entityType: 'contact',
+                        entityUid: $contact->uid->toString(),
+                        action: $isNew ? 'created' : 'updated',
+                        previous: $previous,
+                        current: $this->contactAuditSnapshot($contact),
+                    );
                     $this->message($this->_('Contact saved.'));
                     $this->wire()->session->redirect('../contact/?id=' . rawurlencode($contact->uid->toString()));
                 }
@@ -214,6 +242,8 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New company')
             : sprintf($this->_('Kontor · %s'), $company->legalName));
 
+        $isNew = $company === null;
+        $previous = $company === null ? null : $this->companyAuditSnapshot($company);
         $form = $this->buildCompanyForm($company);
 
         if ($this->wire()->input->post('submit_save')) {
@@ -221,6 +251,14 @@ class ProcessKontor extends Process
 
             if (!$form->getErrors()) {
                 $company = $this->saveCompanyFromForm($form, $company);
+                $this->audit(
+                    component: 'contacts',
+                    entityType: 'company',
+                    entityUid: $company->uid->toString(),
+                    action: $isNew ? 'created' : 'updated',
+                    previous: $previous,
+                    current: $this->companyAuditSnapshot($company),
+                );
                 $this->message($this->_('Company saved.'));
                 $this->wire()->session->redirect('../company/?id=' . rawurlencode($company->uid->toString()));
             }
@@ -277,6 +315,72 @@ class ProcessKontor extends Process
         ]);
     }
 
+    public function ___executeActivity(): string
+    {
+        $this->requirePermission('kontor-audit-view');
+        $this->setPageTitle($this->_('Kontor · Activity'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+
+        return $this->renderTemplate('activity', [
+            'events' => $this->auditEventRepository()->findRecent(
+                $this->organizationInternalId(),
+                $query,
+                150
+            ),
+            'query' => $query,
+        ]);
+    }
+
+    public function ___executeBackups(): string
+    {
+        $this->requirePermission('kontor-backups-view');
+        $this->setPageTitle($this->_('Kontor · Backups'));
+
+        return $this->renderTemplate('backups', [
+            'backups' => $this->backupSummaries(),
+        ]);
+    }
+
+    public function ___executeBackupCreate(): void
+    {
+        $this->requirePost();
+        $this->requirePermission('kontor-backups-create');
+        $component = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('component'),
+            ['core', 'contacts']
+        );
+        $this->requireAction($component, ['core', 'contacts']);
+        $backup = $this->backupManager()->create(
+            component: $component,
+            kind: 'snapshot',
+            organizationId: $this->organizationUid(),
+            reason: 'Manual admin snapshot',
+        );
+        $this->audit(
+            component: 'core',
+            entityType: 'backup',
+            entityUid: $backup->id,
+            action: $backup->verified ? 'created' : 'verification_failed',
+            metadata: [
+                'backupComponent' => $component,
+                'itemCount' => $backup->itemCount,
+                'checksum' => $backup->checksum,
+            ],
+        );
+
+        if ($backup->verified) {
+            $this->message(sprintf(
+                $this->_('Verified %s snapshot created with %d items.'),
+                $component,
+                $backup->itemCount
+            ));
+        } else {
+            $this->error($this->_('Backup was created but verification failed.'));
+        }
+
+        $this->wire()->session->redirect('../backups/');
+    }
+
     public function ___executeAddress(): void
     {
         $this->requirePost();
@@ -313,6 +417,14 @@ class ProcessKontor extends Process
             }
 
             $this->addressRepository()->delete($addressUid);
+            $this->audit(
+                'contacts',
+                'address',
+                $addressUid,
+                'deleted',
+                previous: $this->addressAuditSnapshot($address),
+                metadata: ['ownerType' => $ownerType, 'ownerUid' => $ownerUid],
+            );
             $this->message($this->_('Address removed.'));
         } else {
             $line1 = $this->wire()->sanitizer->text(trim((string) $this->wire()->input->post('line1')));
@@ -329,7 +441,7 @@ class ProcessKontor extends Process
                 (string) $this->wire()->input->post('address_type'),
                 ['billing', 'shipping', 'home', 'work', 'other']
             ) ?? 'billing';
-            $this->addressRepository()->save(Address::create(
+            $address = Address::create(
                 organizationId: $this->organizationUid(),
                 ownerType: $ownerType,
                 ownerUid: $ownerUid,
@@ -341,7 +453,16 @@ class ProcessKontor extends Process
                 region: $this->nullablePostText('region'),
                 postalCode: $this->nullablePostText('postal_code'),
                 isPrimary: $addresses === [] || (bool) $this->wire()->input->post('is_primary'),
-            ));
+            );
+            $this->addressRepository()->save($address);
+            $this->audit(
+                'contacts',
+                'address',
+                $address->uid->toString(),
+                'created',
+                current: $this->addressAuditSnapshot($address),
+                metadata: ['ownerType' => $ownerType, 'ownerUid' => $ownerUid],
+            );
             $this->message($this->_('Address added.'));
         }
 
@@ -364,6 +485,7 @@ class ProcessKontor extends Process
         $this->requirePermission($ownerType === 'contact'
             ? 'kontor-contacts-contact-edit'
             : 'kontor-contacts-company-edit');
+        $previousTags = $this->tagService()->tagsFor($this->organizationUid(), $ownerType, $ownerUid);
         $rawTags = explode(',', (string) $this->wire()->input->post('tags'));
         $tags = [];
 
@@ -376,6 +498,15 @@ class ProcessKontor extends Process
         }
 
         $this->tagService()->setTags($this->organizationUid(), $ownerType, $ownerUid, $tags);
+        $currentTags = $this->tagService()->tagsFor($this->organizationUid(), $ownerType, $ownerUid);
+        $this->audit(
+            'contacts',
+            $ownerType,
+            $ownerUid,
+            'tags_updated',
+            previous: ['tags' => $previousTags],
+            current: ['tags' => $currentTags],
+        );
         $this->message($this->_('Tags updated.'));
         $this->wire()->session->redirect('../' . $ownerType . '/?id=' . rawurlencode($ownerUid));
     }
@@ -423,6 +554,13 @@ class ProcessKontor extends Process
         );
         $date = (new \DateTimeImmutable())->format('Y-m-d');
         $filename = 'kontor-' . ($entityType === 'contact' ? 'contacts' : 'companies') . "-{$date}.{$format}";
+        $this->audit(
+            'core',
+            $entityType,
+            'bulk',
+            'exported',
+            metadata: ['format' => $format, 'recordCount' => $total],
+        );
         $this->wire()->log->save('kontor', "Exported {$total} {$entityType} records as {$format}.");
         wireSendFile($path, [
             'forceDownload' => true,
@@ -526,6 +664,7 @@ class ProcessKontor extends Process
         $action === 'restore'
             ? $this->contactRepository()->restore($id)
             : $this->contactRepository()->archive($id);
+        $this->audit('contacts', 'contact', $id, $action === 'restore' ? 'restored' : 'archived');
         $this->message($action === 'restore' ? $this->_('Contact restored.') : $this->_('Contact archived.'));
         $this->wire()->session->redirect('../contacts/' . ($action === 'restore' ? '?archived=1' : ''));
     }
@@ -546,6 +685,7 @@ class ProcessKontor extends Process
         $action === 'restore'
             ? $this->companyRepository()->restore($id)
             : $this->companyRepository()->archive($id);
+        $this->audit('contacts', 'company', $id, $action === 'restore' ? 'restored' : 'archived');
         $this->message($action === 'restore' ? $this->_('Company restored.') : $this->_('Company archived.'));
         $this->wire()->session->redirect('../companies/' . ($action === 'restore' ? '?archived=1' : ''));
     }
@@ -568,6 +708,13 @@ class ProcessKontor extends Process
 
         if ($action === 'end') {
             $this->membershipRepository()->end($contactId, $companyId, new \DateTimeImmutable('today'));
+            $this->audit(
+                'contacts',
+                'membership',
+                $contactId,
+                'ended',
+                metadata: ['companyUid' => $companyId],
+            );
             $this->message($this->_('Company relationship ended.'));
         } else {
             $role = $this->wire()->sanitizer->text((string) $this->wire()->input->post('role'));
@@ -582,6 +729,14 @@ class ProcessKontor extends Process
                 startedAt: new \DateTimeImmutable('today'),
                 endedAt: null,
             ));
+            $this->audit(
+                'contacts',
+                'membership',
+                $contactId,
+                'created',
+                current: ['role' => $role !== '' ? $role : $this->_('Member'), 'department' => $department ?: null],
+                metadata: ['companyUid' => $companyId],
+            );
             $this->message($this->_('Company relationship added.'));
         }
 
@@ -989,6 +1144,148 @@ class ProcessKontor extends Process
         $statement->execute(['batch_id' => $batchId]);
     }
 
+    /**
+     * @param array<string, mixed>|null $previous
+     * @param array<string, mixed>|null $current
+     * @param array<string, mixed> $metadata
+     */
+    private function audit(
+        string $component,
+        string $entityType,
+        string $entityUid,
+        string $action,
+        ?array $previous = null,
+        ?array $current = null,
+        array $metadata = [],
+    ): void {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+        $kontor->container()->get(AuditLogger::class)->record(
+            organizationId: $this->organizationInternalId(),
+            component: $component,
+            entityType: $entityType,
+            entityUid: $entityUid,
+            action: $action,
+            actorType: 'user',
+            actorUid: (string) $this->wire()->user->id,
+            previous: $previous,
+            current: $current,
+            metadata: $metadata,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function contactAuditSnapshot(Contact $contact): array
+    {
+        return [
+            'displayName' => $contact->displayName,
+            'email' => $contact->email,
+            'phone' => $contact->phone,
+            'status' => $contact->status,
+            'jobTitle' => $contact->jobTitle,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function companyAuditSnapshot(Company $company): array
+    {
+        return [
+            'legalName' => $company->legalName,
+            'email' => $company->email,
+            'phone' => $company->phone,
+            'status' => $company->status,
+            'registrationNumber' => $company->registrationNumber,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function addressAuditSnapshot(Address $address): array
+    {
+        return [
+            'type' => $address->addressType,
+            'line1' => $address->line1,
+            'city' => $address->city,
+            'region' => $address->region,
+            'postalCode' => $address->postalCode,
+            'countryCode' => $address->countryCode,
+            'isPrimary' => $address->isPrimary,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function backupSummaries(): array
+    {
+        $summaries = [];
+
+        foreach (array_reverse($this->backupManager()->list()) as $path) {
+            $metadataPath = $path . DIRECTORY_SEPARATOR . 'metadata.json';
+
+            try {
+                $metadata = is_file($metadataPath)
+                    ? json_decode((string) file_get_contents($metadataPath), true, flags: JSON_THROW_ON_ERROR)
+                    : [];
+                $component = (string) ($metadata['component'] ?? '');
+
+                if (!in_array($component, ['core', 'contacts'], true)) {
+                    continue;
+                }
+
+                $kind = (string) ($metadata['kind'] ?? 'snapshot');
+                $verified = $this->backupManager()->verify(
+                    $path,
+                    $component,
+                    $this->organizationUid(),
+                    $kind
+                );
+                $summaries[] = [
+                    'id' => basename($path),
+                    'component' => $component,
+                    'kind' => $kind,
+                    'createdAt' => (string) ($metadata['exportedAt'] ?? date(DATE_ATOM, filemtime($path) ?: time())),
+                    'itemCount' => array_sum(array_map('intval', $metadata['rowCounts'] ?? [])),
+                    'sizeBytes' => $this->directorySize($path),
+                    'verified' => $verified,
+                ];
+            } catch (\Throwable) {
+                $summaries[] = [
+                    'id' => basename($path),
+                    'component' => 'unknown',
+                    'kind' => 'unknown',
+                    'createdAt' => date(DATE_ATOM, filemtime($path) ?: time()),
+                    'itemCount' => 0,
+                    'sizeBytes' => $this->directorySize($path),
+                    'verified' => false,
+                ];
+            }
+        }
+
+        return $summaries;
+    }
+
+    private function directorySize(string $path): int
+    {
+        $bytes = 0;
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $bytes += $file->getSize();
+            }
+        }
+
+        return $bytes;
+    }
+
     private function renderTemplate(string $name, array $variables): string
     {
         $variables['adminUrl'] = $this->wire()->config->urls->admin . 'kontor/';
@@ -1180,6 +1477,14 @@ class ProcessKontor extends Process
         $kontor = $this->wire()->modules->get('Kontor');
 
         return $kontor->container()->get(ComponentRegistry::class);
+    }
+
+    private function auditEventRepository(): AuditEventRepository
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(AuditEventRepository::class);
     }
 
     private function exportManager(): ExportManager

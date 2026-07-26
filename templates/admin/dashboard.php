@@ -5,6 +5,8 @@
 /** @var int $contactCount */
 /** @var int $companyCount */
 /** @var array $recentContacts */
+/** @var bool $canViewActivity */
+/** @var bool $canViewBackups */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -106,6 +108,16 @@ $enabledComponents = count(array_filter(
         <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>components/">
           <i class="fa fa-cubes"></i><span>Component status</span>
         </a>
+        <?php if ($canViewActivity): ?>
+          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>activity/">
+            <i class="fa fa-history"></i><span>Recent activity</span>
+          </a>
+        <?php endif; ?>
+        <?php if ($canViewBackups): ?>
+          <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>backups/">
+            <i class="fa fa-database"></i><span>Backup snapshots</span>
+          </a>
+        <?php endif; ?>
       </div>
     </aside>
   </section>

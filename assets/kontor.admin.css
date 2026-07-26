@@ -993,6 +993,121 @@
   padding: 1rem 1.1rem;
 }
 
+.kontor-activity,
+.kontor-backuplist {
+  overflow: hidden;
+}
+
+.kontor-activity__event,
+.kontor-backup {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+}
+
+.kontor-activity__event {
+  border-bottom: 1px solid var(--kontor-line);
+}
+
+.kontor-activity__event:last-child {
+  border-bottom: 0;
+}
+
+.kontor-activity__icon,
+.kontor-backup__icon {
+  align-items: center;
+  background: #eef0ff;
+  border-radius: 10px;
+  color: var(--kontor-brand);
+  display: flex;
+  flex: 0 0 auto;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.kontor-activity__body,
+.kontor-backup__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.kontor-activity__title,
+.kontor-backup__body > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.kontor-activity__body p,
+.kontor-backup__body p {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+  margin: 0.35rem 0 0;
+}
+
+.kontor-activity__body code,
+.kontor-backup__body code {
+  color: var(--kontor-muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.kontor-activity__event > time,
+.kontor-backup > time {
+  color: var(--kontor-muted);
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.kontor-activity__event > time span,
+.kontor-backup > time span {
+  display: block;
+}
+
+.kontor-activity__details {
+  margin-top: 0.6rem;
+}
+
+.kontor-activity__details summary {
+  color: var(--kontor-brand);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.kontor-activity__details pre {
+  background: #f7f8fb;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  margin: 0.55rem 0 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.kontor-backupactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.kontor-backupactions form {
+  margin: 0;
+}
+
+.kontor-backuplist {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.kontor-backup {
+  border: 1px solid var(--kontor-line);
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components {
@@ -1042,5 +1157,16 @@
 
   .kontor-searchhero form > i {
     display: none;
+  }
+
+  .kontor-activity__event,
+  .kontor-backup {
+    flex-wrap: wrap;
+  }
+
+  .kontor-activity__event > time,
+  .kontor-backup > time {
+    margin-left: 56px;
+    text-align: left;
   }
 }

@@ -11,6 +11,7 @@ use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\ExtensionRepository;
+use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Persistence\RelationRepository;
 use Kontor\Core\Infrastructure\Persistence\SequenceService;
@@ -47,7 +48,7 @@ class Kontor extends WireData implements Module
         return [
             'title' => 'Kontor',
             'summary' => 'Open-source modular ERP, CRM and business operations platform.',
-            'version' => '008',
+            'version' => '009',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'cubes',
@@ -110,6 +111,7 @@ class Kontor extends WireData implements Module
         $container->bind(ComponentRegistry::class, static fn (): ComponentRegistry => new ComponentRegistry($pdo));
         $container->bind(OrganizationRepository::class, static fn (): OrganizationRepository => new OrganizationRepository($pdo));
         $container->bind(ExtensionRepository::class, static fn (): ExtensionRepository => new ExtensionRepository($pdo));
+        $container->bind(AuditEventRepository::class, static fn (): AuditEventRepository => new AuditEventRepository($pdo));
         $container->bind(SequenceService::class, static fn (Container $c): SequenceService => new SequenceService($pdo, $c->get(OrganizationRepository::class)));
         $container->bind(RelationRepository::class, static fn (Container $c): RelationRepository => new RelationRepository($pdo, $c->get(OrganizationRepository::class)));
         $container->bind(AuditLogger::class, static fn (): AuditLogger => new AuditLogger($pdo));

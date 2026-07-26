@@ -22,6 +22,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   Contacts snapshot, with automatic restore on import failure.
 - Tag management in contact/company cards and a federated global directory
   search page.
+- A searchable Activity screen backed by structured audit events for admin
+  mutations, exports, imports, and backup creation.
+- A Backups screen for creating, listing, and verifying Core and Contacts
+  snapshots without exposing destructive restore controls.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
