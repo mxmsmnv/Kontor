@@ -89,7 +89,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '120',
+            'version' => '121',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2471,9 +2471,135 @@ class ProcessKontor extends Process
             'filters' => $filters,
             'groupBy' => $groupBy,
             'result' => $result,
+            'schedules' => $module->scheduledReportRepository()->forOrganization(
+                $this->organizationUid()
+            ),
+            'canManageSchedules' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-reports-schedule-manage'),
             'canExport' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-reports-report-export'),
         ]);
+    }
+
+    public function ___executeReportsSchedule(): void
+    {
+        $this->requirePost();
+        $this->requireReports();
+        $this->requirePermission('kontor-reports-schedule-manage');
+        $module = $this->reportsModule();
+        $providerKey = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('provider')
+        );
+        if (!$module->providerRegistry()->has($providerKey)) {
+            throw new WireException($this->_('Unknown report provider.'));
+        }
+
+        $name = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        if ($name === '') {
+            throw new WireException($this->_('A schedule name is required.'));
+        }
+        $recurrence = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('recurrence'),
+            ['daily', 'weekly', 'monthly', 'yearly'],
+        );
+        $format = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('format'),
+            ['csv', 'json', 'xlsx', 'pdf'],
+        );
+        if ($recurrence === null || $format === null) {
+            throw new WireException($this->_('Invalid schedule settings.'));
+        }
+
+        try {
+            $filters = json_decode(
+                (string) $this->wire()->input->post('filters_json'),
+                true,
+                flags: JSON_THROW_ON_ERROR,
+            );
+            $groupBy = json_decode(
+                (string) $this->wire()->input->post('group_by_json'),
+                true,
+                flags: JSON_THROW_ON_ERROR,
+            );
+        } catch (\JsonException) {
+            throw new WireException($this->_('Invalid report parameters.'));
+        }
+        if (!is_array($filters) || !is_array($groupBy)) {
+            throw new WireException($this->_('Invalid report parameters.'));
+        }
+
+        $firstRunInput = trim((string) $this->wire()->input->post('first_run_at'));
+        try {
+            $firstRunAt = $firstRunInput !== ''
+                ? new \DateTimeImmutable($firstRunInput)
+                : new \DateTimeImmutable();
+        } catch (\Exception) {
+            throw new WireException($this->_('Invalid first run time.'));
+        }
+
+        $schedule = $module->scheduledReports()->schedule(
+            organizationUid: $this->organizationUid(),
+            providerKey: $providerKey,
+            name: $name,
+            recurrenceRule: $recurrence,
+            filters: $filters,
+            groupBy: array_values(array_map('strval', $groupBy)),
+            format: $format,
+            firstRunAt: $firstRunAt,
+            createdBy: (int) $this->wire()->user->id,
+        );
+        $this->audit(
+            'reports',
+            'scheduled_report',
+            $schedule->uid->toString(),
+            'created',
+            current: [
+                'provider' => $providerKey,
+                'recurrence' => $recurrence,
+                'format' => $format,
+                'nextRunAt' => $firstRunAt->format(DATE_ATOM),
+            ],
+        );
+        $this->message($this->_('Scheduled report created.'));
+        $this->wire()->session->redirect('../reports/?provider='.rawurlencode($providerKey));
+    }
+
+    public function ___executeReportsDispatchDue(): void
+    {
+        $this->requirePost();
+        $this->requireReports();
+        $this->requirePermission('kontor-reports-schedule-manage');
+        $jobs = $this->reportsModule()->scheduledReportDispatcher()->dispatchDue(
+            $this->organizationUid()
+        );
+        $this->audit(
+            'reports',
+            'scheduled_report',
+            $this->organizationUid(),
+            'dispatched',
+            metadata: ['jobCount' => count($jobs), 'jobUids' => array_values($jobs)],
+        );
+        $this->message(sprintf($this->_('%d due report job(s) queued.'), count($jobs)));
+        $this->wire()->session->redirect('../reports/');
+    }
+
+    public function ___executeReportsScheduleAction(): void
+    {
+        $this->requirePost();
+        $this->requireReports();
+        $this->requirePermission('kontor-reports-schedule-manage');
+        $uid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('uid'));
+        $schedule = $this->reportsModule()->scheduledReportRepository()->require($uid);
+        if (!hash_equals($schedule->organizationId, $this->organizationUid())) {
+            throw new WirePermissionException($this->_('Scheduled report does not belong to this organization.'));
+        }
+
+        $this->reportsModule()->scheduledReportRepository()->archive($uid);
+        $this->audit('reports', 'scheduled_report', $uid, 'archived');
+        $this->message($this->_('Scheduled report archived.'));
+        $this->wire()->session->redirect('../reports/');
     }
 
     public function ___executeReportsExport(): void

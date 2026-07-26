@@ -101,6 +101,37 @@ final class ScheduledReportRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return ScheduledReport[]
+     */
+    public function dueAcrossOrganizations(\DateTimeImmutable $asOf): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_scheduled_reports
+             WHERE next_run_at <= :as_of AND archived_at IS NULL
+             ORDER BY next_run_at ASC'
+        );
+        $statement->execute(['as_of' => $asOf->format('Y-m-d H:i:s.u')]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @return ScheduledReport[]
+     */
+    public function forOrganization(string $organizationUid): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_scheduled_reports
+             WHERE organization_id = :organization_id AND archived_at IS NULL
+             ORDER BY next_run_at ASC, name ASC'
+        );
+        $statement->execute(['organization_id' => $organizationId]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): ScheduledReport
     {
         return new ScheduledReport(

@@ -27,6 +27,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Scheduled Reports now dispatch idempotent Queue jobs from LazyCron and
+  deliver confidential versioned exports to Files, with schedule management
+  and manual due dispatch in the Reports workspace.
 - Contacts now flows through the shared API registry into GraphQL: the admin
   schema explorer discovers the `Contact` type and live scoped queries read
   real organization-owned contact records.

@@ -10,14 +10,9 @@ use Kontor\Reports\Infrastructure\Persistence\ScheduledReportRepository;
 use Kontor\SDK\DTO\ReportQuery;
 
 /**
- * The "scheduled reports" milestone. run() actually executes and exports
- * the report and advances the schedule — but nothing dispatches it
- * automatically. There's no scheduler component yet (Stage 7), so
- * dueSchedules() is the query, and run() the method, a future cron/queue-
- * backed dispatcher would call — same deferred-integration pattern
- * kontor/tasks' reminders and kontor/invoices' sweepOverdue() already
- * established. Actually delivering the exported file (email, upload) is
- * further out of scope still — run() just produces it on disk.
+ * The "scheduled reports" milestone. run() executes and exports the report
+ * and advances the schedule. ScheduledReportDispatcher sends due schedules
+ * through Queue; ScheduledReportJob stores the finished export in Files.
  */
 final class ScheduledReportService
 {
@@ -65,11 +60,31 @@ final class ScheduledReportService
     }
 
     /**
+     * @return ScheduledReport[]
+     */
+    public function dueSchedulesAcrossOrganizations(?\DateTimeImmutable $asOf = null): array
+    {
+        return $this->schedules->dueAcrossOrganizations($asOf ?? new \DateTimeImmutable());
+    }
+
+    /**
      * Runs a schedule now, exports it to $exportDirectory, advances
      * next_run_at by one recurrence interval, and returns the exported
      * file's path.
      */
     public function run(string $scheduleUid, string $exportDirectory): string
+    {
+        $path = $this->export($scheduleUid, $exportDirectory);
+        $this->completeRun($scheduleUid);
+
+        return $path;
+    }
+
+    /**
+     * Exports without advancing the schedule. Queue delivery uses this so a
+     * failed Files upload remains retryable for the same recurrence slot.
+     */
+    public function export(string $scheduleUid, string $exportDirectory): string
     {
         $schedule = $this->schedules->require($scheduleUid);
 
@@ -79,10 +94,18 @@ final class ScheduledReportService
         $path = rtrim($exportDirectory, '/') . '/' . $schedule->uid->toString() . '.' . strtolower($schedule->format);
         $this->exporter->export($result, $fields, $schedule->format, $path);
 
-        $schedule->lastRunAt = new \DateTimeImmutable();
+        return $path;
+    }
+
+    public function completeRun(
+        string $scheduleUid,
+        ?\DateTimeImmutable $completedAt = null,
+    ): ScheduledReport {
+        $schedule = $this->schedules->require($scheduleUid);
+        $schedule->lastRunAt = $completedAt ?? new \DateTimeImmutable();
         $schedule->advance();
         $this->schedules->save($schedule);
 
-        return $path;
+        return $schedule;
     }
 }

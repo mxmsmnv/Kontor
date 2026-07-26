@@ -6,6 +6,8 @@
 /** @var array<string, string> $filters */
 /** @var string[] $groupBy */
 /** @var \Kontor\SDK\DTO\ReportResult|null $result */
+/** @var \Kontor\Reports\Domain\ScheduledReport[] $schedules */
+/** @var bool $canManageSchedules */
 /** @var bool $canExport */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -150,5 +152,94 @@ $formatValue = static function (mixed $value, ?string $type): string {
         <?php endif; ?>
       </section>
     <?php endif; ?>
+
+    <?php if ($canManageSchedules && $provider !== null): ?>
+      <section class="kontor-card">
+        <header class="kontor-sectionhead">
+          <div>
+            <p class="kontor-eyebrow">Automation</p>
+            <h3>Schedule this report</h3>
+            <p>The current filters and grouping will run through Queue; each completed export is stored privately in Files.</p>
+          </div>
+        </header>
+        <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>reports-schedule/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <input type="hidden" name="provider" value="<?= $e($providerKey) ?>">
+          <input type="hidden" name="filters_json" value="<?= $e(json_encode($filters, JSON_THROW_ON_ERROR)) ?>">
+          <input type="hidden" name="group_by_json" value="<?= $e(json_encode($groupBy, JSON_THROW_ON_ERROR)) ?>">
+          <label class="kontor-nativefield">
+            <span>Name</span>
+            <input name="name" required value="<?= $e(($provider?->title() ?? 'Report') . ' schedule') ?>">
+          </label>
+          <label class="kontor-nativefield">
+            <span>Recurrence</span>
+            <select name="recurrence" aria-label="Recurrence">
+              <?php foreach (['daily', 'weekly', 'monthly', 'yearly'] as $recurrence): ?>
+                <option value="<?= $e($recurrence) ?>"><?= $e(ucfirst($recurrence)) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+          <label class="kontor-nativefield">
+            <span>Format</span>
+            <select name="format" aria-label="Format">
+              <?php foreach (['csv', 'json', 'xlsx', 'pdf'] as $format): ?>
+                <option value="<?= $e($format) ?>"><?= $e(strtoupper($format)) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+          <label class="kontor-nativefield">
+            <span>First run</span>
+            <input type="datetime-local" name="first_run_at" required value="<?= $e((new DateTimeImmutable('+5 minutes'))->format('Y-m-d\\TH:i')) ?>">
+          </label>
+          <div class="kontor-nativeform__actions">
+            <button class="kontor-button" type="submit"><i class="fa fa-clock-o"></i> Create schedule</button>
+          </div>
+        </form>
+      </section>
+    <?php endif; ?>
+
+    <section class="kontor-card kontor-tablewrap">
+      <header class="kontor-sectionhead">
+        <div>
+          <p class="kontor-eyebrow">Scheduled delivery</p>
+          <h3>Scheduled reports</h3>
+          <p>Due schedules are dispatched every minute and delivered to Files by the reports queue.</p>
+        </div>
+        <?php if ($canManageSchedules): ?>
+          <form method="post" action="<?= $e($adminUrl) ?>reports-dispatch-due/">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <button class="kontor-button kontor-button--ghost" type="submit"><i class="fa fa-play"></i> Queue due now</button>
+          </form>
+        <?php endif; ?>
+      </header>
+      <?php if ($schedules !== []): ?>
+        <table class="kontor-table">
+          <thead><tr><th>Name</th><th>Provider</th><th>Recurrence</th><th>Format</th><th>Next run</th><th>Last run</th><?php if ($canManageSchedules): ?><th></th><?php endif; ?></tr></thead>
+          <tbody>
+            <?php foreach ($schedules as $schedule): ?>
+              <tr>
+                <td><strong><?= $e($schedule->name) ?></strong><br><code><?= $e($schedule->uid->toString()) ?></code></td>
+                <td><?= $e($schedule->providerKey) ?></td>
+                <td><?= $e(ucfirst($schedule->recurrenceRule)) ?></td>
+                <td><?= $e(strtoupper($schedule->format)) ?></td>
+                <td><?= $e($schedule->nextRunAt->format('M j, Y H:i')) ?></td>
+                <td><?= $e($schedule->lastRunAt?->format('M j, Y H:i') ?? '—') ?></td>
+                <?php if ($canManageSchedules): ?>
+                  <td>
+                    <form method="post" action="<?= $e($adminUrl) ?>reports-schedule-action/">
+                      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                      <input type="hidden" name="uid" value="<?= $e($schedule->uid->toString()) ?>">
+                      <button class="kontor-button kontor-button--ghost" type="submit">Archive</button>
+                    </form>
+                  </td>
+                <?php endif; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      <?php else: ?>
+        <div class="kontor-empty"><i class="fa fa-clock-o"></i><h3>No schedules yet</h3><p>Create one from the selected report above.</p></div>
+      <?php endif; ?>
+    </section>
   <?php endif; ?>
 </div>

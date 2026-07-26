@@ -7,6 +7,8 @@ namespace Kontor\Reports\Tests\Integration;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
+use Kontor\Files\Migrations\Migration0001CreateFilesTable;
+use Kontor\Queue\Migrations\Migration0001CreateJobsTable;
 use Kontor\Reports\Migrations\Migration0001CreateScheduledReportsTable;
 use PHPUnit\Framework\TestCase;
 
@@ -39,6 +41,8 @@ abstract class DatabaseTestCase extends TestCase
         $runner->ensureLedgerExists();
         $runner->run([
             new Migration0001CreateOrganizationsTable(),
+            new Migration0001CreateJobsTable(),
+            new Migration0001CreateFilesTable(),
             new Migration0001CreateScheduledReportsTable(),
         ]);
 
@@ -60,6 +64,8 @@ abstract class DatabaseTestCase extends TestCase
         foreach (
             [
                 'kontor_scheduled_reports',
+                'kontor_files',
+                'kontor_jobs',
                 'kontor_organizations',
                 'kontor_migrations',
             ] as $table

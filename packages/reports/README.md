@@ -1,8 +1,9 @@
 # Kontor Reports
 
 `kontor/reports` — report builder, charts, exports, and scheduled reports.
-Fourth and final component of Stage 5. Depends on `kontor/core` and
-`kontor/documents` (for PDF export).
+Fourth and final component of Stage 5. Depends on `kontor/core`,
+`kontor/documents` (for PDF export), Queue (asynchronous execution), and
+Files (private delivery and version history).
 
 ## The "provider registry" milestone already existed
 
@@ -51,17 +52,25 @@ does not add a second registry.
   `advance()` moves `next_run_at` forward relative to *itself*, not to
   "now" — a schedule that's fallen behind catches up one interval at a
   time rather than snapping to whenever `run()` happened to execute.
-- `src/Application/ScheduledReportService.php` — `run()` actually
-  executes the report (via `ReportBuilderService`), exports it (via
-  `ReportExportService`) and advances the schedule — but nothing
-  dispatches it automatically; see "Not in scope".
+- `src/Application/ScheduledReportService.php` executes a report, exports it,
+  and advances the schedule. `ScheduledReportDispatcher` finds due schedules
+  across organizations and enqueues one idempotent `reports.scheduled` job per
+  recurrence slot. ProcessWire LazyCron performs that scan every minute.
+- `src/Infrastructure/Queue/ScheduledReportJob.php` runs the export in a
+  private temporary directory and uploads the result to Files as a
+  confidential `scheduled_report` attachment. Repeated runs become normal
+  Files versions; temporary export bytes are removed after delivery. The
+  recurrence advances only after Files accepts the export, so Queue retries
+  cannot silently skip a reporting period.
 
 ## Admin vertical
 
 The main Kontor Process module exposes a Reports workspace. It discovers
 registered providers, builds filter and grouping controls from each provider's
 declared schema, runs the report for the current organization, renders rows and
-totals, and exports the same validated query as CSV.
+totals, and exports the same validated query as CSV. Users with schedule
+permission can also create, inspect, archive, and manually dispatch schedules;
+Queue and Files remain visible as the execution and delivery layers.
 
 ## Testing
 
@@ -81,10 +90,6 @@ other packages.
 
 ## Not in scope for this substage
 
-No scheduler/cron wiring for due schedules — `ScheduledReportService::dueSchedules()`
-is the query, and `run()` the method, a future cron/queue-backed dispatcher
-(Stage 7) would call, same deferred-integration choice `kontor/tasks`'
-reminders and `kontor/invoices`' `sweepOverdue()` already made. No delivery
-of a scheduled report (email attachment, upload) — `run()` only produces
-the file on disk. No API endpoints or actual charting library — see
-`ChartDataMapper` above.
+No email-recipient model or attachment transport: scheduled output is delivered
+to private Files, where later notification workflows can link to it. No API
+endpoints or actual charting library — see `ChartDataMapper` above.

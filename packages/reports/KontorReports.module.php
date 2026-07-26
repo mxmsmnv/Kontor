@@ -12,9 +12,11 @@ use Kontor\Documents\Infrastructure\Rendering\PdfRenderer;
 use Kontor\Reports\Application\ChartDataMapper;
 use Kontor\Reports\Application\ReportBuilderService;
 use Kontor\Reports\Application\ReportExportService;
+use Kontor\Reports\Application\ScheduledReportDispatcher;
 use Kontor\Reports\Application\ScheduledReportService;
 use Kontor\Reports\Health\ReportsHealthCheck;
 use Kontor\Reports\Infrastructure\Persistence\ScheduledReportRepository;
+use Kontor\Reports\Infrastructure\Queue\ScheduledReportJob;
 use Kontor\Reports\Migrations\Migration0001CreateScheduledReportsTable;
 
 /**
@@ -31,13 +33,13 @@ class KontorReports extends WireData implements Module
         return [
             'title' => 'Kontor Reports',
             'summary' => 'Report builder, charts, exports, scheduled reports.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorReports',
             'icon' => 'bar-chart',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor', 'KontorDocuments'],
+            'requires' => ['Kontor', 'KontorDocuments', 'KontorQueue', 'KontorFiles'],
             'permissions' => [
                 'kontor-reports-report-view' => 'View and run reports',
                 'kontor-reports-report-export' => 'Export reports',
@@ -54,6 +56,20 @@ class KontorReports extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
+
+        /** @var KontorQueue $queue */
+        $queue = $this->wire()->modules->get('KontorQueue');
+        /** @var KontorFiles $files */
+        $files = $this->wire()->modules->get('KontorFiles');
+        $queue->jobRegistry()->register(
+            'reports.scheduled',
+            fn (array $payload): ScheduledReportJob => new ScheduledReportJob(
+                $payload,
+                $this->scheduledReports(),
+                $files->fileManager(),
+            ),
+        );
+        $this->addHook('LazyCron::everyMinute', $this, 'hookDispatchDueReports');
     }
 
     private function registerTranslations(TranslationRegistry $translations): void
@@ -93,6 +109,19 @@ class KontorReports extends WireData implements Module
     public function scheduledReports(): ScheduledReportService
     {
         return new ScheduledReportService($this->scheduledReportRepository(), $this->providerRegistry(), $this->reportBuilder(), $this->reportExporter());
+    }
+
+    public function scheduledReportDispatcher(): ScheduledReportDispatcher
+    {
+        /** @var KontorQueue $queue */
+        $queue = $this->wire()->modules->get('KontorQueue');
+
+        return new ScheduledReportDispatcher($this->scheduledReports(), $queue->queue());
+    }
+
+    public function hookDispatchDueReports(HookEvent $event): void
+    {
+        $this->scheduledReportDispatcher()->dispatchDue();
     }
 
     public function healthCheck(): ReportsHealthCheck

@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Scheduled Reports now run end to end through ProcessWire LazyCron, the shared
+  Queue worker, and private Files delivery. Dispatch is idempotent per
+  recurrence slot, completed exports retain Files version history, and the
+  admin workspace can create, list, archive, and manually queue schedules.
+  A recurrence advances only after Files delivery succeeds, keeping retries
+  on the same slot.
 - First admin vertical: registered-provider discovery, schema-driven filters
   and grouping, organization-scoped report execution, result/totals rendering,
   and CSV export.
