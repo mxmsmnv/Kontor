@@ -24,6 +24,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Documents now persists generated PDFs and immutable render snapshots through
+  Files, producing private entity-bound versions linked from the render flow.
 - Search now consumes Cache end to end: organization-scoped query keys,
   30-second result reuse, and tag invalidation after indexing.
 - First Cache admin vertical: live ProcessWire adapter health,

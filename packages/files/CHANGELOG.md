@@ -19,6 +19,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Documents is the first generated-output consumer: each PDF render creates
+  an entity-bound private file version with its immutable document snapshot.
 - First Files admin vertical: private uploads, metadata and checksum
   inspection, entity-bound version history, 15-minute signed downloads,
   and reversible archive/restore lifecycle.

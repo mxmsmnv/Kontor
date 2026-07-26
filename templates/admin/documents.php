@@ -105,6 +105,10 @@ $editing = $selected !== null;
   <?php if ($preview !== null): ?>
     <section class="kontor-card">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Rendered output</p><h3>Preview</h3></div><div><strong><?= $e(number_format((int) $preview['pdfBytes'])) ?> PDF bytes</strong></div></header>
+      <?php if (!empty($preview['fileUid'])): ?>
+        <p><a class="kontor-button" href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $preview['fileUid'])) ?>">Open stored PDF · version <?= $e((string) $preview['fileVersion']) ?></a></p>
+        <p class="kontor-secondary">The PDF and its immutable issue snapshot are stored privately by Kontor Files.</p>
+      <?php endif; ?>
       <iframe sandbox title="Document preview" srcdoc="<?= $e((string) $preview['html']) ?>" style="width:100%;min-height:360px;border:1px solid #d8deea;border-radius:8px;background:#fff"></iframe>
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Immutable issue payload</p><h3>Snapshot</h3></div></header>
       <pre><code><?= $e(json_encode($preview['snapshot'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?></code></pre>

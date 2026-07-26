@@ -16,6 +16,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Rendered PDFs now flow into Kontor Files as private, entity-bound versions;
+  file metadata retains the immutable template-and-data snapshot and the
+  admin preview links directly to the stored output.
 - First ProcessKontor admin vertical: template publishing and version ledger,
   designer-v1 markup, HTML/PDF preview rendering, immutable snapshot output,
   and archive/restore controls.

@@ -30,13 +30,13 @@ class KontorDocuments extends WireData implements Module
         return [
             'title' => 'Kontor Documents',
             'summary' => 'Document templates, HTML/PDF rendering, multilingual output, immutable issued-document snapshots.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorDocuments',
             'icon' => 'file-pdf-o',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor'],
+            'requires' => ['Kontor', 'KontorFiles'],
             'permissions' => [
                 'kontor-documents-template-view' => 'View document templates',
                 'kontor-documents-template-create' => 'Create document templates',

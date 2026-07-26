@@ -87,7 +87,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '113',
+            'version' => '114',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4805,6 +4805,7 @@ class ProcessKontor extends Process
     {
         $this->requirePost();
         $this->requireDocuments();
+        $this->requireFiles();
         $this->requirePermission('kontor-documents-render');
         $uid = $this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('template_uid')
@@ -4826,18 +4827,44 @@ class ProcessKontor extends Process
         $renderer = $this->documentsModule()->renderService();
         $snapshot = $this->documentsModule()->snapshotBuilder()->build($template, $data);
         $pdf = $renderer->renderPdf($template, $data);
+        $filenameStem = preg_replace('/[^A-Za-z0-9._-]/', '-', $template->templateKey) ?: 'document';
+        $stored = $this->filesModule()->fileManager()->upload(
+            organizationUid: $this->organizationUid(),
+            originalName: $filenameStem . '-v' . $template->versionNumber . '.pdf',
+            contents: $pdf,
+            visibility: 'private',
+            classification: 'confidential',
+            entityType: 'document_template',
+            entityUid: $template->uid->toString(),
+            metadata: [
+                'source' => 'documents',
+                'documentType' => $template->documentType,
+                'templateKey' => $template->templateKey,
+                'documentSnapshot' => $snapshot,
+            ],
+            actorId: (int) $this->wire()->user->id,
+        );
         $this->wire()->session->set('kontorDocumentsPreview', [
             'templateUid' => $uid,
             'html' => $renderer->renderPreviewHtml($template, $data),
             'snapshot' => $snapshot,
             'pdfBytes' => strlen($pdf),
+            'fileUid' => $stored['uid'],
+            'fileVersion' => $stored['versionNumber'],
             'dataJson' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
         ]);
         $this->audit('documents', 'template', $uid, 'rendered', metadata: [
             'pdfBytes' => strlen($pdf),
             'snapshotVersion' => $snapshot['templateVersion'],
+            'fileUid' => $stored['uid'],
+            'fileVersion' => $stored['versionNumber'],
         ]);
-        $this->message($this->_('HTML, PDF, and immutable snapshot rendered.'));
+        $this->audit('files', 'file', $stored['uid'], 'generated', metadata: [
+            'sourceComponent' => 'documents',
+            'templateUid' => $uid,
+            'version' => $stored['versionNumber'],
+        ]);
+        $this->message($this->_('HTML, PDF, and immutable snapshot rendered; the PDF was stored privately.'));
         $this->wire()->session->redirect('../documents/?id=' . rawurlencode($uid));
     }
 

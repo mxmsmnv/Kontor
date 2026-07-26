@@ -2,9 +2,9 @@
 
 `kontor/documents` — document templates, HTML/PDF rendering, multilingual
 output, and immutable issued-document snapshots. Fifth business component
-(Substage 4.2). Depends only on `kontor/sdk` + `kontor/core`, same leanest
-dependency shape as `kontor/sales` — nothing here needs Contacts, Catalog,
-or Sales to exist.
+(Substage 4.2). Depends on `kontor/sdk` + `kontor/core` and `kontor/files`:
+rendered PDFs are persisted as private, versioned files together with their
+immutable snapshots. Nothing here needs Contacts, Catalog, or Sales to exist.
 
 ## A schema gap, filled inside this package
 
@@ -58,6 +58,11 @@ this table, so it lives entirely in this package.
   exact template identity and the data it was rendered from, so the
   snapshot stays reproducible even if the template is edited or archived
   afterward.
+- The ProcessKontor render workflow stores every generated PDF through
+  `KontorFiles`, binding its version family to the exact document-template
+  UID and retaining the immutable snapshot in file metadata. Rendering the
+  same template version again creates another file version instead of
+  overwriting issued output.
 
 ## Multilingual output
 
@@ -90,8 +95,7 @@ multilingual output; snapshots; document designer v1`) — deferred, same as
 every earlier component skipping its non-milestone spec features. No admin
 UI/visual designer front-end — "document designer v1" here means the
 template engine's capability set (placeholders, loops, conditionals), not
-a WYSIWYG editor. `DocumentSnapshotBuilder` is not wired into
-`kontor/sales`' issue workflows here — that means `snapshot_json` stays
-unpopulated until Sales (or Invoices, Substage 4.3) is updated to call it;
-doing so is left to those components so that shipping Documents doesn't
-require re-touching an already-released package in the same change.
+a WYSIWYG editor. `DocumentSnapshotBuilder` is wired into generated Files
+output, but not yet into `kontor/sales`' issue workflows — quotation and
+invoice `snapshot_json` columns stay unpopulated until those issue workflows
+call it.
