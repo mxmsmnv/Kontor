@@ -32,6 +32,8 @@ use Kontor\Core\Migrations\Migration0005CreateExtensionsTable;
 use Kontor\Core\Migrations\Migration0006CreateRelationsTable;
 use Kontor\Core\Support\Container;
 
+require_once __DIR__ . '/vendor/autoload.php';
+
 /**
  * Kontor Core bootstrap module (kontor.md Substage 1.1). Boots the service
  * container and the core registries; business components depend on this
@@ -45,7 +47,7 @@ class Kontor extends WireData implements Module
         return [
             'title' => 'Kontor',
             'summary' => 'Open-source modular ERP, CRM and business operations platform.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'cubes',

@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Load Composer's autoloader from the ProcessWire bootstrap module so
+  installation and autoload initialization can resolve Kontor classes.
+- Avoid committing a transaction that MySQL already ended implicitly while
+  running DDL migrations.
+
 ### Added
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing

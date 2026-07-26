@@ -70,7 +70,9 @@ final class MigrationRunner
 
         try {
             $migration->up($this->pdo);
-            $this->pdo->commit();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
         } catch (\Throwable $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -99,8 +101,10 @@ final class MigrationRunner
             "SELECT 1 FROM kontor_migrations WHERE component = :component AND migration = :migration AND status = 'ok'"
         );
         $statement->execute(['component' => $migration->component(), 'migration' => $migration->name()]);
+        $executed = (bool) $statement->fetchColumn();
+        $statement->closeCursor();
 
-        return (bool) $statement->fetchColumn();
+        return $executed;
     }
 
     private function checksumOf(MigrationInterface $migration): string
