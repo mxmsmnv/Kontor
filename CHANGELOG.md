@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Invoices admin vertical: completed Sales order conversion, invoice
+  list/detail, issue/send lifecycle, due tracking, and credit-note action.
 - First Sales admin vertical: one-line quotation drafting, issue and
   acceptance workflow, quotation-to-order conversion, and order
   confirmation/completion.

@@ -28,7 +28,7 @@ class KontorInvoices extends WireData implements Module
         return [
             'title' => 'Kontor Invoices',
             'summary' => 'Invoices, issue workflow, numbering, overdue state, credit notes.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorInvoices',
             'icon' => 'file-text',

@@ -3,6 +3,8 @@
 /** @var \Kontor\Sales\Domain\Order $order */
 /** @var \Kontor\Sales\Domain\DocumentLine[] $lines */
 /** @var string $customerLabel */
+/** @var \Kontor\Invoices\Domain\Invoice|null $existingInvoice */
+/** @var bool $invoicesReady */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -47,6 +49,22 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
         <?php if ($order->isConfirmed()): ?><button class="kontor-button" name="action" value="complete" type="submit">Complete order</button><?php endif; ?>
         <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
       </form>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($invoicesReady && in_array($order->orderStatus, ['confirmed', 'completed'], true)): ?>
+    <div class="kontor-documentactions">
+      <?php if ($existingInvoice !== null): ?>
+        <a class="kontor-button" href="<?= $e($adminUrl) ?>invoice/?id=<?= $e(rawurlencode($existingInvoice->uid->toString())) ?>">
+          Open <?= $e($existingInvoice->number ?? 'invoice draft') ?>
+        </a>
+      <?php else: ?>
+        <form method="post" action="<?= $e($adminUrl) ?>invoice-from-order/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <input type="hidden" name="order_uid" value="<?= $e($order->uid->toString()) ?>">
+          <button class="kontor-button" type="submit"><i class="fa fa-file-text"></i> Create invoice</button>
+        </form>
+      <?php endif; ?>
     </div>
   <?php endif; ?>
 </div>

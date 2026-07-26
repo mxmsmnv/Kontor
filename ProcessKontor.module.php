@@ -67,7 +67,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '088',
+            'version' => '089',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -139,6 +139,12 @@ class ProcessKontor extends Process
                     'label' => 'Sales',
                     'icon' => 'file-text-o',
                     'permission' => 'kontor-sales-quotation-view',
+                ],
+                [
+                    'url' => 'invoices/',
+                    'label' => 'Invoices',
+                    'icon' => 'file-text',
+                    'permission' => 'kontor-invoices-invoice-view',
                 ],
                 [
                     'url' => 'components/',
@@ -1188,6 +1194,10 @@ class ProcessKontor extends Process
             'customerLabel' => $this->salesCustomerLabels()[
                 $order->customerType . ':' . $order->customerUid
             ] ?? $order->customerUid,
+            'existingInvoice' => $this->invoicesReady()
+                ? $this->invoiceModule()->invoiceRepository()->findByOrder($id)
+                : null,
+            'invoicesReady' => $this->invoicesReady(),
         ]);
     }
 
@@ -1229,6 +1239,128 @@ class ProcessKontor extends Process
         $this->audit('sales', 'order', $id, $action);
         $this->message($this->_('Sales order updated.'));
         $this->wire()->session->redirect('../sales-order/?id=' . rawurlencode($id));
+    }
+
+    public function ___executeInvoices(): string
+    {
+        $this->requireInvoices();
+        $this->requirePermission('kontor-invoices-invoice-view');
+        $this->setPageTitle($this->_('Kontor · Invoices'));
+        $invoices = $this->invoiceModule()->invoiceRepository()->findMatching(
+            $this->organizationUid(),
+            limit: 50,
+        );
+
+        return $this->renderTemplate('invoices', [
+            'invoices' => $invoices,
+            'customerLabels' => $this->salesCustomerLabels(),
+        ]);
+    }
+
+    public function ___executeInvoice(): string
+    {
+        $this->requireInvoices();
+        $this->requirePermission('kontor-invoices-invoice-view');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $module = $this->invoiceModule();
+        $invoice = $module->invoiceRepository()->require($id);
+        $this->requireSameOrganization($invoice->organizationId);
+        $this->setPageTitle(sprintf(
+            $this->_('Kontor · %s'),
+            $invoice->number ?? $this->_('Draft invoice')
+        ));
+
+        return $this->renderTemplate('invoice', [
+            'invoice' => $invoice,
+            'lines' => $module->documentLineRepository()->forDocument(
+                $invoice->kind === 'credit_note' ? 'credit_note' : 'invoice',
+                $id,
+            ),
+            'customerLabel' => $this->salesCustomerLabels()[
+                $invoice->customerType . ':' . $invoice->customerUid
+            ] ?? $invoice->customerUid,
+        ]);
+    }
+
+    public function ___executeInvoiceFromOrder(): void
+    {
+        $this->requirePost();
+        $this->requireInvoices();
+        $this->requirePermission('kontor-invoices-invoice-create');
+        $orderId = $this->wire()->sanitizer->text((string) $this->wire()->input->post('order_uid'));
+        /** @var KontorSales $sales */
+        $sales = $this->wire()->modules->get('KontorSales');
+        $order = $sales->orderRepository()->require($orderId);
+        $this->requireSameOrganization($order->organizationId);
+        $invoice = $this->invoiceModule()->orderConversionService()->convert($orderId);
+        $this->audit(
+            'invoices',
+            'invoice',
+            $invoice->uid->toString(),
+            'created',
+            current: [
+                'orderUid' => $orderId,
+                'totalMinor' => $invoice->total->amountMinor(),
+                'dueDate' => $invoice->dueDate?->format('Y-m-d'),
+            ],
+        );
+        $this->message($this->_('Invoice draft created from sales order.'));
+        $this->wire()->session->redirect(
+            '../invoice/?id=' . rawurlencode($invoice->uid->toString())
+        );
+    }
+
+    public function ___executeInvoiceAction(): void
+    {
+        $this->requirePost();
+        $this->requireInvoices();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['issue', 'send', 'cancel', 'credit', 'archive', 'restore']
+        );
+        $this->requireAction($action, ['issue', 'send', 'cancel', 'credit', 'archive', 'restore']);
+        $permissions = [
+            'issue' => 'kontor-invoices-invoice-issue',
+            'send' => 'kontor-invoices-invoice-send',
+            'cancel' => 'kontor-invoices-invoice-cancel',
+            'credit' => 'kontor-invoices-credit-note-create',
+            'archive' => 'kontor-invoices-invoice-edit-draft',
+            'restore' => 'kontor-invoices-invoice-edit-draft',
+        ];
+        $this->requirePermission($permissions[$action]);
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $module = $this->invoiceModule();
+        $invoice = $module->invoiceRepository()->require($id);
+        $this->requireSameOrganization($invoice->organizationId);
+
+        if ($action === 'issue') {
+            $module->workflow()->issue($id);
+        } elseif ($action === 'send') {
+            $module->workflow()->send($id);
+        } elseif ($action === 'cancel') {
+            $module->workflow()->cancel($id);
+        } elseif ($action === 'credit') {
+            $creditNote = $module->workflow()->issueCreditNote($id);
+            $this->audit(
+                'invoices',
+                'invoice',
+                $creditNote->uid->toString(),
+                'credit_note_issued',
+                current: ['creditedInvoiceUid' => $id, 'number' => $creditNote->number],
+            );
+            $this->message($this->_('Credit note issued.'));
+            $this->wire()->session->redirect(
+                '../invoice/?id=' . rawurlencode($creditNote->uid->toString())
+            );
+        } elseif ($action === 'restore') {
+            $module->invoiceRepository()->restore($id);
+        } else {
+            $module->invoiceRepository()->archive($id);
+        }
+
+        $this->audit('invoices', 'invoice', $id, $action);
+        $this->message($this->_('Invoice updated.'));
+        $this->wire()->session->redirect('../invoice/?id=' . rawurlencode($id));
     }
 
     public function ___executeCompany(): string
@@ -4662,6 +4794,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorSales');
     }
 
+    private function invoicesReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorInvoices');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -4680,6 +4817,13 @@ class ProcessKontor extends Process
     {
         if (!$this->salesReady()) {
             throw new WireException($this->_('The Kontor Sales component is not installed.'));
+        }
+    }
+
+    private function requireInvoices(): void
+    {
+        if (!$this->invoicesReady()) {
+            throw new WireException($this->_('The Kontor Invoices component is not installed.'));
         }
     }
 
@@ -4708,6 +4852,14 @@ class ProcessKontor extends Process
         }
 
         return $labels;
+    }
+
+    private function invoiceModule(): KontorInvoices
+    {
+        /** @var KontorInvoices $module */
+        $module = $this->wire()->modules->get('KontorInvoices');
+
+        return $module;
     }
 
     private function requireDataExchangeEntity(string $entityType): void

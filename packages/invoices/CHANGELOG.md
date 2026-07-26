@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Shared admin integration for order-backed invoice creation, issue/send
+  lifecycle, due tracking, and credit-note entry points.
 - Organization-scoped invoice search, status, archive, count, and pagination
   queries for the shared admin workflow.
 - Confirmed/completed Sales order to Invoice draft conversion with immutable
