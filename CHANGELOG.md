@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Composable Catalog row facets for item type, category, inventory, pricing,
+  unit, and status.
 - Exact matching and shown-result feedback beside Activity filters.
 - Direct dependency drill-down from Components requirement badges.
 - Composable Activity result facets that retain search and existing filters.

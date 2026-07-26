@@ -1779,6 +1779,18 @@
   text-decoration: underline;
 }
 
+.kontor-catalogfacet,
+.kontor-catalogtable .kontor-pill {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-catalogfacet:hover,
+.kontor-catalogtable .kontor-pill:hover {
+  color: var(--kontor-brand);
+  text-decoration: underline;
+}
+
 .kontor-queuetable time,
 .kontor-queuetable small {
   color: var(--kontor-muted);

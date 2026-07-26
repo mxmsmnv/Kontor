@@ -51,6 +51,21 @@ $hasFilters = $query !== ''
     || $selectedTax !== null
     || $selectedCurrency !== null
     || $selectedPricing !== null;
+$filterParameters = array_filter([
+    'q' => $query,
+    'type' => $selectedType,
+    'category' => $selectedCategory,
+    'status' => $selectedStatus,
+    'inventory' => $selectedInventory,
+    'unit' => $selectedUnit,
+    'tax' => $selectedTax,
+    'currency' => $selectedCurrency,
+    'pricing' => $selectedPricing,
+    'archived' => $showArchived ? 1 : '',
+], static fn (string|int|null $value): bool => $value !== null && $value !== '');
+$filterUrl = static function (string $facet, string $value) use ($filterParameters): string {
+    return './?' . http_build_query([...$filterParameters, $facet => $value]);
+};
 $clearFiltersUrl = $showArchived ? './?archived=1' : './';
 $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     if ($value === null) {
@@ -206,7 +221,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       </button>
     </form>
     <section class="kontor-card kontor-tablewrap">
-      <table class="kontor-table">
+      <table class="kontor-table kontor-catalogtable">
         <thead>
           <tr>
             <th class="kontor-selectcell">
@@ -245,14 +260,34 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
                     <?= $e($item->titleIn('en') ?? reset($item->title) ?: 'Untitled item') ?>
                   </a>
                 </strong>
-                <?php if ($item->trackInventory): ?><small>Inventory tracked</small><?php endif; ?>
+                <?php if ($item->trackInventory): ?>
+                  <small><a class="kontor-catalogfacet" href="<?= $e($filterUrl('inventory', 'tracked')) ?>">Inventory tracked</a></small>
+                <?php endif; ?>
               </td>
               <td><code><?= $e($item->sku ?: '—') ?></code></td>
-              <td><?= $e(ucfirst($item->itemType)) ?></td>
-              <td><?= $e($item->categoryUid !== null ? ($categoryNames[$item->categoryUid] ?? 'Unknown category') : '—') ?></td>
-              <td><?= $e($money($item->salesPrice)) ?></td>
-              <td><?= $e($unitLabels[$item->unitCode] ?? $item->unitCode) ?> <small><code><?= $e($item->unitCode) ?></code></small></td>
-              <td><span class="kontor-pill<?= $item->status === 'active' ? '' : ' kontor-pill--inactive' ?>"><?= $e($item->status) ?></span></td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('type', $item->itemType)) ?>"><?= $e(ucfirst($item->itemType)) ?></a>
+              </td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('category', $item->categoryUid ?? 'uncategorized')) ?>">
+                  <?= $e($item->categoryUid !== null ? ($categoryNames[$item->categoryUid] ?? 'Unknown category') : '—') ?>
+                </a>
+              </td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('pricing', $item->salesPrice !== null ? 'priced' : 'unpriced')) ?>">
+                  <?= $e($money($item->salesPrice)) ?>
+                </a>
+              </td>
+              <td>
+                <a class="kontor-catalogfacet" href="<?= $e($filterUrl('unit', $item->unitCode)) ?>">
+                  <?= $e($unitLabels[$item->unitCode] ?? $item->unitCode) ?> <small><code><?= $e($item->unitCode) ?></code></small>
+                </a>
+              </td>
+              <td>
+                <a class="kontor-pill<?= $item->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $item->status)) ?>">
+                  <?= $e($item->status) ?>
+                </a>
+              </td>
               <td class="kontor-queueactions">
                 <form method="post" action="<?= $e($adminUrl) ?>catalog-item-action/">
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
