@@ -149,6 +149,20 @@ final class JobRepositoryTest extends DatabaseTestCase
         $this->assertSame(1, $jobs->stuckReservedCount(0));
     }
 
+    public function test_recent_filters_counts_and_lists_queues_for_admin_monitoring(): void
+    {
+        $jobs = new JobRepository($this->pdo);
+        $default = $jobs->enqueue('default', 'job.default', [], 0, 3, new \DateTimeImmutable(), null);
+        $reports = $jobs->enqueue('reports', 'job.report', [], 0, 3, new \DateTimeImmutable(), null);
+        $jobs->markCompleted($reports);
+
+        $this->assertSame(['default', 'reports'], $jobs->queues());
+        $this->assertSame(1, $jobs->summaryCounts()['pending']);
+        $this->assertSame(1, $jobs->summaryCounts()['completed']);
+        $this->assertSame($default, $jobs->findRecent('default', 'pending', 10)[0]['uid']);
+        $this->assertSame($reports, $jobs->findRecent('reports', 'completed', 10)[0]['uid']);
+    }
+
     private function secondConnection(): \PDO
     {
         return new \PDO(

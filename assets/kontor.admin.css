@@ -1304,6 +1304,92 @@
   max-width: none;
 }
 
+.kontor-queuestats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.kontor-stat__icon--warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.kontor-stat__icon--success {
+  background: #ecfdf3;
+  color: var(--kontor-success);
+}
+
+.kontor-stat__icon--danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.kontor-queuefilters > div {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.kontor-queuefilters select {
+  background: #fff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 9px;
+  min-height: 40px;
+  min-width: 155px;
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+}
+
+.kontor-queuetable td:first-child strong,
+.kontor-queuetable td:first-child code {
+  display: block;
+}
+
+.kontor-queuetable td:first-child code {
+  color: var(--kontor-muted);
+  font-size: 0.7rem;
+  margin-top: 0.2rem;
+}
+
+.kontor-queuetable time,
+.kontor-queuetable small {
+  color: var(--kontor-muted);
+  font-size: 0.72rem;
+}
+
+.kontor-progress {
+  background: #edf0f5;
+  border-radius: 999px;
+  height: 6px;
+  min-width: 90px;
+  overflow: hidden;
+}
+
+.kontor-progress span {
+  background: var(--kontor-primary);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.kontor-queueerror {
+  margin-top: 0.4rem;
+}
+
+.kontor-queueerror summary {
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.kontor-queueerror p {
+  color: #991b1b;
+  font-size: 0.72rem;
+  margin: 0.35rem 0 0;
+  max-width: 420px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components {
@@ -1338,6 +1424,16 @@
 
   .kontor-healthgrid {
     grid-template-columns: 1fr;
+  }
+
+  .kontor-queuestats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kontor-queuefilters,
+  .kontor-queuefilters > div {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .kontor-healthsummary {

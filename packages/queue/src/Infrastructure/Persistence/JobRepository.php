@@ -243,6 +243,77 @@ final class JobRepository implements JobRepositoryInterface
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function findRecent(?string $queue = null, ?string $status = null, int $limit = 100): array
+    {
+        $conditions = [];
+        $params = [];
+        $limit = max(1, min($limit, 250));
+
+        if ($queue !== null) {
+            $conditions[] = 'queue = :queue';
+            $params['queue'] = $queue;
+        }
+
+        if ($status !== null) {
+            $conditions[] = 'status = :status';
+            $params['status'] = $status;
+        }
+
+        $sql = 'SELECT * FROM kontor_jobs';
+
+        if ($conditions !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+
+        $sql .= ' ORDER BY id DESC LIMIT :limit';
+        $statement = $this->pdo->prepare($sql);
+
+        foreach ($params as $name => $value) {
+            $statement->bindValue(':' . $name, $value);
+        }
+
+        $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function summaryCounts(): array
+    {
+        $counts = [
+            'pending' => 0,
+            'reserved' => 0,
+            'completed' => 0,
+            'dead' => 0,
+            'cancelled' => 0,
+        ];
+        $statement = $this->pdo->query(
+            'SELECT status, COUNT(*) AS job_count FROM kontor_jobs GROUP BY status'
+        );
+
+        foreach ($statement->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $counts[(string) $row['status']] = (int) $row['job_count'];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function queues(): array
+    {
+        $statement = $this->pdo->query('SELECT DISTINCT queue FROM kontor_jobs ORDER BY queue');
+
+        return array_map('strval', $statement->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    /**
      * @return int count of jobs in the 'dead' state, for the health check
      */
     public function deadLetterCount(): int

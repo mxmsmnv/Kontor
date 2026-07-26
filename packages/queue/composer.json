@@ -3,7 +3,7 @@
     "description": "Kontor Queue: asynchronous and delayed jobs, retries, dead-letter queue, priorities, progress, and a CLI worker.",
     "type": "library",
     "license": "MIT",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "authors": [
         {
             "name": "Maxim Semenov",

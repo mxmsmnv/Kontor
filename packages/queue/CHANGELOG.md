@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Bounded recent-job queries, status summaries, and queue discovery for the
+  ProcessKontor queue monitor.
 - Initial alpha (Substage 2.1): `kontor_jobs` migration; `JobRepository`
   (locked reservation via `FOR UPDATE SKIP LOCKED`, idempotency keys,
   retry/dead-letter/progress transitions); `Queue` (`QueueInterface`);

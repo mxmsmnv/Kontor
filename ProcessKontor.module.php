@@ -24,6 +24,7 @@ use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Queue\Infrastructure\Persistence\JobRepository;
 use Kontor\Search\Application\GlobalSearchService;
 use Kontor\SDK\DTO\BackupVerification;
 use Kontor\SDK\DTO\ExportContext;
@@ -42,7 +43,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '011',
+            'version' => '012',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -72,6 +73,12 @@ class ProcessKontor extends Process
                     'label' => 'Health',
                     'icon' => 'heartbeat',
                     'permission' => 'kontor-health-view',
+                ],
+                [
+                    'url' => 'queue/',
+                    'label' => 'Queue',
+                    'icon' => 'tasks',
+                    'permission' => 'kontor-queue-view',
                 ],
                 [
                     'url' => 'organization/',
@@ -134,6 +141,9 @@ class ProcessKontor extends Process
                 || $this->wire()->user->hasPermission('kontor-health-view'),
             'canManageOrganization' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-admin'),
+            'queueReady' => $this->queueReady(),
+            'canViewQueue' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-queue-view'),
         ]);
     }
 
@@ -448,6 +458,28 @@ class ProcessKontor extends Process
         return $this->renderTemplate('organization', [
             'organization' => $organization,
             'form' => $form,
+        ]);
+    }
+
+    public function ___executeQueue(): string
+    {
+        $this->requirePermission('kontor-queue-view');
+        $this->requireQueue();
+        $this->setPageTitle($this->_('Kontor · Queue'));
+        $queues = $this->jobRepository()->queues();
+        $queue = $this->wire()->sanitizer->text((string) $this->wire()->input->get('queue'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['pending', 'reserved', 'completed', 'dead', 'cancelled']
+        );
+        $queue = $queue !== '' && in_array($queue, $queues, true) ? $queue : null;
+
+        return $this->renderTemplate('queue', [
+            'jobs' => $this->jobRepository()->findRecent($queue, $status, 100),
+            'counts' => $this->jobRepository()->summaryCounts(),
+            'queues' => $queues,
+            'selectedQueue' => $queue,
+            'selectedStatus' => $status,
         ]);
     }
 
@@ -1587,6 +1619,26 @@ class ProcessKontor extends Process
         if (!$this->contactsReady()) {
             throw new WireException($this->_('The Kontor Contacts component is not installed.'));
         }
+    }
+
+    private function queueReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorQueue');
+    }
+
+    private function requireQueue(): void
+    {
+        if (!$this->queueReady()) {
+            throw new WireException($this->_('The Kontor Queue component is not installed.'));
+        }
+    }
+
+    private function jobRepository(): JobRepository
+    {
+        /** @var KontorQueue $module */
+        $module = $this->wire()->modules->get('KontorQueue');
+
+        return $module->jobRepository();
     }
 
     private function contactRepository(): ContactRepository
