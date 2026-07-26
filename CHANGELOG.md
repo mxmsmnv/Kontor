@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Inventory-tracked Sales orders now reserve stock on confirmation, ship the
+  reservation on completion, and release it on cancellation.
 - Payment allocation and reversal now propagate invoice settlement state back
   to the originating Sales order.
 - Won CRM deals now open prefilled Sales quotation drafts, persist their source

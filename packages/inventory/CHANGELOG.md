@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Reserved stock can now be shipped atomically, reducing on-hand and reserved
+  quantities together with an idempotent `ship` movement.
+- Organization-scoped movement lookup by business reference supports Sales
+  order fulfillment history.
+
 - First admin vertical: warehouse creation and activation, organization-scoped
   balances and recent movements, and permission-gated receive, transfer,
   adjustment, reserve, and release operations. The live module now injects the

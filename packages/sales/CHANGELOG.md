@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Inventory-tracked order lines now reserve stock during confirmation, ship
+  it on completion, and release reservations when a confirmed order is
+  cancelled.
 - Payment allocations against an order-backed invoice now drive the Sales
   order's payment status, including partial payments and reversals.
 - Won CRM deals can now prefill quotation drafts; saved quotations retain the

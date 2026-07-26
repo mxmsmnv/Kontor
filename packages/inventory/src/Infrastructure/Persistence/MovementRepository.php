@@ -124,6 +124,31 @@ final class MovementRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return InventoryMovement[] oldest first
+     */
+    public function forReference(
+        string $organizationUid,
+        string $referenceType,
+        string $referenceUid,
+    ): array {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_inventory_movements
+             WHERE organization_id = :organization_id
+               AND reference_type = :reference_type
+               AND reference_uid = :reference_uid
+             ORDER BY occurred_at ASC, id ASC'
+        );
+        $statement->execute([
+            'organization_id' => $organizationId,
+            'reference_type' => $referenceType,
+            'reference_uid' => $referenceUid,
+        ]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): InventoryMovement
     {
         return new InventoryMovement(

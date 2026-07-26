@@ -36,6 +36,9 @@ foreign keys"), not a hard dependency on `kontor/contacts`.
 - Payments follows an order-backed invoice to keep the source order's
   `payment_status` synchronized as unpaid, partially paid, or paid, including
   reversal recomputation.
+- Inventory-tracked order lines reserve stock in a selected warehouse on
+  confirmation. Completing the order ships those exact reservations, while
+  cancellation releases them.
 - Quotation issuance resolves the active `quotation.standard` Documents
   template with language fallback, writes its exact UID and immutable render
   snapshot into Sales, and stores the resulting confidential PDF through
@@ -66,9 +69,9 @@ packages.
 
 ## Not in scope for this substage
 
-`fulfillment_status` on orders is still a simple descriptive field whose real
-lifecycle belongs to Inventory (Substage 6.1); `payment_status` is now driven
-by Payments through the order's invoice. No admin UI/API endpoints beyond the
-shared ProcessKontor workflow. Order `snapshot_json` remains reserved for a
-later order-issuance workflow; quotation snapshots are populated at issue
-time.
+`payment_status` is driven by Payments through the order's invoice, and
+`fulfillment_status` reaches fulfilled only after Inventory ships tracked
+lines (orders without tracked items keep the direct completion path). No
+admin UI/API endpoints beyond the shared ProcessKontor workflow. Order
+`snapshot_json` remains reserved for a later order-issuance workflow;
+quotation snapshots are populated at issue time.

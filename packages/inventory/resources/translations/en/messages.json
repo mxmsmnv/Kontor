@@ -11,5 +11,6 @@
     "movement.transfer": "Transfer",
     "movement.adjust": "Adjustment",
     "movement.reserve": "Reservation",
-    "movement.release": "Release"
+    "movement.release": "Release",
+    "movement.ship": "Ship"
 }

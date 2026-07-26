@@ -31,7 +31,7 @@ class KontorSales extends WireData implements Module
         return [
             'title' => 'Kontor Sales',
             'summary' => 'Quotations, orders, document lines, quotation-to-order conversion and status workflows.',
-            'version' => '006',
+            'version' => '007',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorSales',
             'icon' => 'file-text-o',

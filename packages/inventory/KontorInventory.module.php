@@ -31,7 +31,7 @@ class KontorInventory extends WireData implements Module
         return [
             'title' => 'Kontor Inventory',
             'summary' => 'Warehouses, balances, movements, reservations, transfers, barcode support.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorInventory',
             'icon' => 'cubes',

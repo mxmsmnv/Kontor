@@ -33,7 +33,8 @@ not a hard dependency on `kontor/catalog`.
   - `receive()` / `transfer()` / `adjustIncrease()` / `adjustDecrease()` —
     move `quantity_on_hand` (and, for transfers, both warehouses' at once).
   - `reserve()` / `release()` — move `quantity_reserved` without touching
-    `quantity_on_hand`; `quantity_available` is always kept in sync as
+    `quantity_on_hand`; `shipReserved()` consumes on-hand and reserved stock
+    together. `quantity_available` is always kept in sync as
     `on_hand - reserved`.
   - `adjustDecrease()`'s `$allowNegative` parameter is what
     `kontor-inventory-negative-stock-override` (kontor.md#19.8) gates —
@@ -63,6 +64,8 @@ catalog-backed tracked-item selection, every movement operation supported by
 `InventoryMovementService`, current balances, and the append-only movement
 ledger. Live module wiring also supplies Core's event dispatcher, so completed
 admin movements publish `inventory.movement.completed`.
+Inventory-tracked Sales orders use the same service to reserve on
+confirmation, ship on completion, and release on cancellation.
 
 ## Not in scope for this substage
 

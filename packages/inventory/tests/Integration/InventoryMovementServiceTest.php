@@ -18,6 +18,7 @@ final class InventoryMovementServiceTest extends DatabaseTestCase
     private InventoryMovementService $movements;
     private BalanceRepository $balances;
     private WarehouseRepository $warehouses;
+    private MovementRepository $movementRepository;
     private string $warehouseA;
     private string $warehouseB;
     private const ITEM = 'itm_00000000000000001';
@@ -29,9 +30,15 @@ final class InventoryMovementServiceTest extends DatabaseTestCase
         $organizations = new OrganizationRepository($this->pdo);
         $this->warehouses = new WarehouseRepository($this->pdo, $organizations);
         $this->balances = new BalanceRepository($this->pdo, $organizations);
-        $movementRepository = new MovementRepository($this->pdo, $organizations);
+        $this->movementRepository = new MovementRepository($this->pdo, $organizations);
 
-        $this->movements = new InventoryMovementService($this->pdo, $organizations, $this->warehouses, $this->balances, $movementRepository);
+        $this->movements = new InventoryMovementService(
+            $this->pdo,
+            $organizations,
+            $this->warehouses,
+            $this->balances,
+            $this->movementRepository,
+        );
 
         $a = Warehouse::create($this->organizationUid, 'WH-A', 'Warehouse A');
         $this->warehouses->save($a);
@@ -166,6 +173,70 @@ final class InventoryMovementServiceTest extends DatabaseTestCase
         $balance = $this->balances->find($this->organizationUid, $this->warehouseA, self::ITEM);
         $this->assertSame(0.0, $balance->quantityReserved);
         $this->assertSame(10.0, $balance->quantityAvailable);
+    }
+
+    public function test_ship_reserved_reduces_on_hand_and_reserved_together(): void
+    {
+        $this->movements->receive($this->organizationUid, $this->warehouseA, self::ITEM, 10.0);
+        $this->movements->reserve(
+            $this->organizationUid,
+            $this->warehouseA,
+            self::ITEM,
+            4.0,
+            referenceType: 'sales_order',
+            referenceUid: 'so_01',
+        );
+
+        $movement = $this->movements->shipReserved(
+            $this->organizationUid,
+            $this->warehouseA,
+            self::ITEM,
+            4.0,
+            referenceType: 'sales_order',
+            referenceUid: 'so_01',
+            idempotencyKey: 'so_01:ship',
+        );
+        $same = $this->movements->shipReserved(
+            $this->organizationUid,
+            $this->warehouseA,
+            self::ITEM,
+            4.0,
+            referenceType: 'sales_order',
+            referenceUid: 'so_01',
+            idempotencyKey: 'so_01:ship',
+        );
+
+        $balance = $this->balances->find($this->organizationUid, $this->warehouseA, self::ITEM);
+        $this->assertSame('ship', $movement->movementType);
+        $this->assertSame($movement->uid->toString(), $same->uid->toString());
+        $this->assertSame(6.0, $balance->quantityOnHand);
+        $this->assertSame(0.0, $balance->quantityReserved);
+        $this->assertSame(6.0, $balance->quantityAvailable);
+        $this->assertSame(
+            ['reserve', 'ship'],
+            array_map(
+                static fn (\Kontor\Inventory\Domain\InventoryMovement $record): string =>
+                    $record->movementType,
+                $this->movementRepository->forReference(
+                    $this->organizationUid,
+                    'sales_order',
+                    'so_01',
+                ),
+            ),
+        );
+    }
+
+    public function test_ship_reserved_rejects_unreserved_quantity(): void
+    {
+        $this->movements->receive($this->organizationUid, $this->warehouseA, self::ITEM, 10.0);
+
+        $this->expectException(\RuntimeException::class);
+        $this->movements->shipReserved(
+            $this->organizationUid,
+            $this->warehouseA,
+            self::ITEM,
+            1.0,
+        );
     }
 
     public function test_release_rejects_releasing_more_than_reserved(): void

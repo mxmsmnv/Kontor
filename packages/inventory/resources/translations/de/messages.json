@@ -11,5 +11,6 @@
     "movement.transfer": "Umlagerung",
     "movement.adjust": "Bestandskorrektur",
     "movement.reserve": "Reservierung",
-    "movement.release": "Freigabe"
+    "movement.release": "Freigabe",
+    "movement.ship": "Versand"
 }

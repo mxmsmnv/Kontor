@@ -91,7 +91,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '130',
+            'version' => '131',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1663,11 +1663,16 @@ class ProcessKontor extends Process
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
         $order = $sales->orderRepository()->require($id);
         $this->requireSameOrganization($order->organizationId);
+        $lines = $sales->documentLineRepository()->forDocument('order', $id);
+        $trackedLines = $order->isPending() ? $this->salesOrderTrackedLines($lines) : [];
+        $reservationMovements = $order->isConfirmed()
+            ? $this->salesOrderReservationMovements($id)
+            : [];
         $this->setPageTitle(sprintf($this->_('Kontor · %s'), $order->number ?? $this->_('Sales order')));
 
         return $this->renderTemplate('sales-order', [
             'order' => $order,
-            'lines' => $sales->documentLineRepository()->forDocument('order', $id),
+            'lines' => $lines,
             'customerLabel' => $this->salesCustomerLabels()[
                 $order->customerType . ':' . $order->customerUid
             ] ?? $order->customerUid,
@@ -1675,6 +1680,22 @@ class ProcessKontor extends Process
                 ? $this->invoiceModule()->invoiceRepository()->findByOrder($id)
                 : null,
             'invoicesReady' => $this->invoicesReady(),
+            'inventoryWarehouses' => $trackedLines !== [] && $this->inventoryReady()
+                ? array_values(array_filter(
+                    $this->inventoryModule()->warehouseRepository()->forOrganization(
+                        $this->organizationUid()
+                    ),
+                    static fn (Warehouse $warehouse): bool => $warehouse->isActive(),
+                ))
+                : [],
+            'trackedLineCount' => count($trackedLines),
+            'reservationWarehouseUid' => $this->reservationWarehouseUid($reservationMovements),
+            'canReserveInventory' => $this->inventoryReady()
+                && $this->can('kontor-inventory-reserve'),
+            'canShipInventory' => $this->inventoryReady()
+                && $this->can('kontor-inventory-adjust'),
+            'canReleaseInventory' => $this->inventoryReady()
+                && $this->can('kontor-inventory-release'),
         ]);
     }
 
@@ -1700,13 +1721,125 @@ class ProcessKontor extends Process
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
         $order = $sales->orderRepository()->require($id);
         $this->requireSameOrganization($order->organizationId);
+        $lines = $sales->documentLineRepository()->forDocument('order', $id);
+        $trackedLines = $this->salesOrderTrackedLines($lines);
+        $reservations = $this->salesOrderReservationMovements($id);
 
         if ($action === 'confirm') {
-            $sales->orderWorkflow()->confirm($id);
+            if ($trackedLines === []) {
+                $sales->orderWorkflow()->confirm($id);
+            } else {
+                $this->requireInventory();
+                $this->requirePermission('kontor-inventory-reserve');
+                $warehouseUid = $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('warehouse_uid')
+                );
+                $warehouse = $this->inventoryModule()->warehouseRepository()->require($warehouseUid);
+                $this->requireSameOrganization($warehouse->organizationId);
+                if (!$warehouse->isActive()) {
+                    throw new WireException($this->_('Select an active fulfillment warehouse.'));
+                }
+
+                $pdo = $this->wire()->database->pdo();
+                $pdo->beginTransaction();
+                try {
+                    foreach ($trackedLines as $line) {
+                        $this->inventoryModule()->movements()->reserve(
+                            $order->organizationId,
+                            $warehouseUid,
+                            (string) $line->itemUid,
+                            $line->quantity,
+                            referenceType: 'sales_order',
+                            referenceUid: $id,
+                            unitCode: $line->unitCode,
+                            idempotencyKey: 'sales-order:' . $id . ':reserve:' . $line->uid->toString(),
+                            createdBy: (int) $this->wire()->user->id,
+                        );
+                    }
+                    $sales->orderWorkflow()->confirm($id);
+                    $pdo->commit();
+                } catch (\Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+                $this->message($this->_('Inventory reserved for the sales order.'));
+            }
         } elseif ($action === 'complete') {
-            $sales->orderWorkflow()->complete($id);
+            if ($reservations === []) {
+                $sales->orderWorkflow()->complete($id);
+            } else {
+                $this->requireInventory();
+                $this->requirePermission('kontor-inventory-adjust');
+                $warehouseUid = $this->reservationWarehouseUid($reservations);
+                if ($warehouseUid === null) {
+                    throw new WireException($this->_('The order has no consistent reservation warehouse.'));
+                }
+
+                $pdo = $this->wire()->database->pdo();
+                $pdo->beginTransaction();
+                try {
+                    foreach ($reservations as $reservation) {
+                        $this->inventoryModule()->movements()->shipReserved(
+                            $order->organizationId,
+                            $warehouseUid,
+                            $reservation->itemUid,
+                            $reservation->quantity,
+                            referenceType: 'sales_order',
+                            referenceUid: $id,
+                            unitCode: $reservation->unitCode,
+                            idempotencyKey: 'sales-order:' . $id . ':ship:' . $reservation->uid->toString(),
+                            createdBy: (int) $this->wire()->user->id,
+                        );
+                    }
+                    $sales->orderWorkflow()->complete($id);
+                    $pdo->commit();
+                } catch (\Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+                $this->message($this->_('Reserved inventory shipped and order completed.'));
+            }
         } elseif ($action === 'cancel') {
-            $sales->orderWorkflow()->cancel($id);
+            if ($reservations === []) {
+                $sales->orderWorkflow()->cancel($id);
+            } else {
+                $this->requireInventory();
+                $this->requirePermission('kontor-inventory-release');
+                $warehouseUid = $this->reservationWarehouseUid($reservations);
+                if ($warehouseUid === null) {
+                    throw new WireException($this->_('The order has no consistent reservation warehouse.'));
+                }
+
+                $pdo = $this->wire()->database->pdo();
+                $pdo->beginTransaction();
+                try {
+                    foreach ($reservations as $reservation) {
+                        $this->inventoryModule()->movements()->release(
+                            $order->organizationId,
+                            $warehouseUid,
+                            $reservation->itemUid,
+                            $reservation->quantity,
+                            referenceType: 'sales_order',
+                            referenceUid: $id,
+                            unitCode: $reservation->unitCode,
+                            idempotencyKey: 'sales-order:' . $id . ':release:' . $reservation->uid->toString(),
+                            createdBy: (int) $this->wire()->user->id,
+                        );
+                    }
+                    $sales->orderWorkflow()->cancel($id);
+                    $pdo->commit();
+                } catch (\Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+                $this->message($this->_('Inventory reservation released.'));
+            }
         } elseif ($action === 'restore') {
             $sales->orderRepository()->restore($id);
         } else {
@@ -11178,6 +11311,59 @@ class ProcessKontor extends Process
             static fn (array $item): string => $item['label'],
             $this->inventoryItemOptions(),
         );
+    }
+
+    /**
+     * @param DocumentLine[] $lines
+     * @return DocumentLine[]
+     */
+    private function salesOrderTrackedLines(array $lines): array
+    {
+        if (!$this->inventoryReady()) {
+            return [];
+        }
+
+        $trackedItems = $this->inventoryItemOptions();
+
+        return array_values(array_filter(
+            $lines,
+            static fn (DocumentLine $line): bool =>
+                $line->itemUid !== null && isset($trackedItems[$line->itemUid]),
+        ));
+    }
+
+    /**
+     * @return \Kontor\Inventory\Domain\InventoryMovement[]
+     */
+    private function salesOrderReservationMovements(string $orderUid): array
+    {
+        if (!$this->inventoryReady()) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->inventoryModule()->movementRepository()->forReference(
+                $this->organizationUid(),
+                'sales_order',
+                $orderUid,
+            ),
+            static fn (\Kontor\Inventory\Domain\InventoryMovement $movement): bool =>
+                $movement->movementType === 'reserve',
+        ));
+    }
+
+    /**
+     * @param \Kontor\Inventory\Domain\InventoryMovement[] $reservations
+     */
+    private function reservationWarehouseUid(array $reservations): ?string
+    {
+        $warehouses = array_values(array_unique(array_filter(array_map(
+            static fn (\Kontor\Inventory\Domain\InventoryMovement $movement): ?string =>
+                $movement->destinationWarehouseUid,
+            $reservations,
+        ))));
+
+        return count($warehouses) === 1 ? $warehouses[0] : null;
     }
 
     private function canPerformAnyInventoryMovement(): bool

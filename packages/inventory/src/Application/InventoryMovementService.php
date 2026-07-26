@@ -330,6 +330,76 @@ final class InventoryMovementService
         return $movement;
     }
 
+    public function shipReserved(
+        string $organizationUid,
+        string $warehouseUid,
+        string $itemUid,
+        float $quantity,
+        ?string $referenceType = null,
+        ?string $referenceUid = null,
+        string $unitCode = 'pcs',
+        ?string $idempotencyKey = null,
+        ?int $createdBy = null,
+    ): InventoryMovement {
+        $this->assertPositive($quantity);
+
+        if (($existing = $this->existingForKey($organizationUid, $idempotencyKey)) !== null) {
+            return $existing;
+        }
+
+        $this->requireActiveWarehouse($warehouseUid);
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $movement = InventoryMovement::create(
+            $organizationUid,
+            'ship',
+            $itemUid,
+            $warehouseUid,
+            null,
+            $quantity,
+            $unitCode,
+            $referenceType,
+            $referenceUid,
+            null,
+            $idempotencyKey,
+            $createdBy,
+        );
+
+        $this->transact(function () use (
+            $organizationId,
+            $warehouseUid,
+            $itemUid,
+            $quantity,
+            $movement,
+        ): void {
+            $row = $this->balances->lockAndGetOrCreate(
+                $organizationId,
+                $warehouseUid,
+                $itemUid,
+            );
+            $onHand = (float) $row['quantity_on_hand'];
+            $reserved = (float) $row['quantity_reserved'];
+            if ($reserved < $quantity || $onHand < $quantity) {
+                throw new RuntimeException(
+                    "Cannot ship {$quantity} of item \"{$itemUid}\" from warehouse \"{$warehouseUid}\" — on hand {$onHand}, reserved {$reserved}."
+                );
+            }
+
+            $newOnHand = $onHand - $quantity;
+            $newReserved = $reserved - $quantity;
+            $this->balances->updateQuantities(
+                (int) $row['id'],
+                $newOnHand,
+                $newReserved,
+                $newOnHand - $newReserved,
+            );
+            $this->movements->insert($movement);
+        });
+
+        $this->emit($movement);
+
+        return $movement;
+    }
+
     private function assertPositive(float $quantity): void
     {
         if ($quantity <= 0) {

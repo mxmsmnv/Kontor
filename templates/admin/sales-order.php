@@ -5,6 +5,12 @@
 /** @var string $customerLabel */
 /** @var \Kontor\Invoices\Domain\Invoice|null $existingInvoice */
 /** @var bool $invoicesReady */
+/** @var \Kontor\Inventory\Domain\Warehouse[] $inventoryWarehouses */
+/** @var int $trackedLineCount */
+/** @var string|null $reservationWarehouseUid */
+/** @var bool $canReserveInventory */
+/** @var bool $canShipInventory */
+/** @var bool $canReleaseInventory */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -45,9 +51,30 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     <div class="kontor-documentactions">
       <form method="post" action="<?= $e($adminUrl) ?>sales-order-action/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($order->uid->toString()) ?>">
-        <?php if ($order->isPending()): ?><button class="kontor-button" name="action" value="confirm" type="submit">Confirm order</button><?php endif; ?>
-        <?php if ($order->isConfirmed()): ?><button class="kontor-button" name="action" value="complete" type="submit">Complete order</button><?php endif; ?>
-        <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
+        <?php if ($order->isPending() && $trackedLineCount > 0): ?>
+          <label class="kontor-nativefield">
+            <span>Fulfillment warehouse</span>
+            <select name="warehouse_uid" required>
+              <option value="">Select warehouse</option>
+              <?php foreach ($inventoryWarehouses as $warehouse): ?>
+                <option value="<?= $e($warehouse->uid->toString()) ?>"><?= $e($warehouse->code . ' · ' . $warehouse->name) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+          <?php if ($canReserveInventory && $inventoryWarehouses !== []): ?>
+            <button class="kontor-button" name="action" value="confirm" type="submit">Reserve stock + confirm</button>
+          <?php endif; ?>
+        <?php elseif ($order->isPending()): ?>
+          <button class="kontor-button" name="action" value="confirm" type="submit">Confirm order</button>
+        <?php endif; ?>
+        <?php if ($order->isConfirmed() && $reservationWarehouseUid !== null && $canShipInventory): ?>
+          <button class="kontor-button" name="action" value="complete" type="submit">Ship stock + complete</button>
+        <?php elseif ($order->isConfirmed() && $reservationWarehouseUid === null): ?>
+          <button class="kontor-button" name="action" value="complete" type="submit">Complete order</button>
+        <?php endif; ?>
+        <?php if ($reservationWarehouseUid === null || $canReleaseInventory): ?>
+          <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
+        <?php endif; ?>
       </form>
     </div>
   <?php endif; ?>
