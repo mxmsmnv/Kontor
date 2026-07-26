@@ -33,8 +33,8 @@ $pageQuery = array_filter([
 $pageUrl = static function (int $targetPage) use ($pageQuery): string {
     return './?' . http_build_query([...$pageQuery, 'page' => $targetPage]);
 };
-$filterUrl = static function (string $facet, string $value): string {
-    return './?' . http_build_query([$facet => $value]);
+$filterUrl = static function (string $facet, string $value) use ($pageQuery): string {
+    return './?' . http_build_query([...$pageQuery, $facet => $value]);
 };
 ?>
 <div class="kontor-shell">
