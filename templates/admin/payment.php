@@ -3,6 +3,8 @@
 /** @var \Kontor\Payments\Domain\Payment $payment */
 /** @var \Kontor\Payments\Domain\PaymentAllocation[] $allocations */
 /** @var array<string, string> $invoiceLabels */
+/** @var bool $ledgerReady */
+/** @var array<string, array{posting: \Kontor\Ledger\Domain\LedgerEntry|null, reversal: \Kontor\Ledger\Domain\LedgerEntry|null}> $ledgerEntries */
 /** @var string $payerLabel */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -31,14 +33,23 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
 
   <section class="kontor-card kontor-tablewrap">
     <table class="kontor-table">
-      <thead><tr><th>Document</th><th>Amount</th><th>Allocated</th><th>Status</th></tr></thead>
+      <thead><tr><th>Document</th><th>Amount</th><th>Allocated</th><th>Status</th><?php if ($ledgerReady): ?><th>Ledger</th><?php endif; ?></tr></thead>
       <tbody>
         <?php foreach ($allocations as $allocation): ?>
+          <?php $allocationEntries = $ledgerEntries[$allocation->uid->toString()] ?? ['posting' => null, 'reversal' => null]; ?>
           <tr>
             <td><a href="<?= $e($adminUrl) ?>invoice/?id=<?= $e(rawurlencode($allocation->documentUid)) ?>"><?= $e($invoiceLabels[$allocation->documentUid] ?? $allocation->documentUid) ?></a></td>
             <td><?= $e($money($allocation->amount)) ?></td>
             <td><?= $e($allocation->allocatedAt->format('Y-m-d H:i')) ?></td>
             <td><span class="kontor-pill<?= $allocation->isReversed() ? ' kontor-pill--inactive' : '' ?>"><?= $e($allocation->isReversed() ? 'reversed' : 'active') ?></span></td>
+            <?php if ($ledgerReady): ?><td>
+              <?php if ($allocationEntries['posting']): ?>
+                <a href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($allocationEntries['posting']->uid->toString())) ?>">Posting</a>
+                <?php if ($allocationEntries['reversal']): ?>
+                  · <a href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($allocationEntries['reversal']->uid->toString())) ?>">Reversal</a>
+                <?php endif; ?>
+              <?php else: ?>Not posted<?php endif; ?>
+            </td><?php endif; ?>
           </tr>
         <?php endforeach; ?>
       </tbody>

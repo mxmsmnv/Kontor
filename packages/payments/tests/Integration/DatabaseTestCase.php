@@ -12,6 +12,9 @@ use Kontor\Core\Migrations\Migration0004CreateSequencesTable;
 use Kontor\Invoices\Domain\Invoice;
 use Kontor\Invoices\Infrastructure\Persistence\InvoiceRepository;
 use Kontor\Invoices\Migrations\Migration0001CreateInvoicesTable;
+use Kontor\Ledger\Migrations\Migration0001CreateAccountsTable;
+use Kontor\Ledger\Migrations\Migration0002CreateEntriesTable;
+use Kontor\Ledger\Migrations\Migration0003CreateLinesTable;
 use Kontor\Payments\Migrations\Migration0001CreatePaymentsTable;
 use Kontor\Payments\Migrations\Migration0002CreatePaymentAllocationsTable;
 use Kontor\SDK\ValueObjects\Money;
@@ -52,6 +55,9 @@ abstract class DatabaseTestCase extends TestCase
             new Migration0004CreateSequencesTable(),
             new Migration0003CreateDocumentLinesTable(),
             new Migration0001CreateInvoicesTable(),
+            new Migration0001CreateAccountsTable(),
+            new Migration0002CreateEntriesTable(),
+            new Migration0003CreateLinesTable(),
             new Migration0001CreatePaymentsTable(),
             new Migration0002CreatePaymentAllocationsTable(),
         ]);
@@ -102,6 +108,9 @@ abstract class DatabaseTestCase extends TestCase
             [
                 'kontor_payment_allocations',
                 'kontor_payments',
+                'kontor_ledger_lines',
+                'kontor_ledger_entries',
+                'kontor_ledger_accounts',
                 'kontor_invoices',
                 'kontor_document_lines',
                 'kontor_sequences',

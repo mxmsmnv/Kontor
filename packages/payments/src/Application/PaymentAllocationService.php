@@ -37,10 +37,17 @@ final class PaymentAllocationService
         private readonly PaymentRepository $payments,
         private readonly PaymentAllocationRepository $allocations,
         private readonly InvoiceRepository $invoices,
+        private readonly ?AllocationPostingInterface $posting = null,
     ) {
     }
 
-    public function allocate(string $paymentUid, string $documentType, string $documentUid, Money $amount): PaymentAllocation
+    public function allocate(
+        string $paymentUid,
+        string $documentType,
+        string $documentUid,
+        Money $amount,
+        ?int $createdBy = null,
+    ): PaymentAllocation
     {
         if ($documentType !== self::SUPPORTED_DOCUMENT_TYPE) {
             throw new InvalidArgumentException("Allocating against document type \"{$documentType}\" is not supported yet.");
@@ -82,15 +89,17 @@ final class PaymentAllocationService
             throw new RuntimeException("Allocation of {$amount} exceeds invoice \"{$documentUid}\"'s remaining due amount of {$invoice->due}.");
         }
 
+        $this->posting?->assertCanPost($payment);
         $allocation = PaymentAllocation::create($payment->organizationId, $paymentUid, $documentType, $documentUid, $amount);
         $this->allocations->save($allocation);
 
         $this->syncInvoiceFromAllocations($invoice);
+        $this->posting?->postAllocation($payment, $invoice, $allocation, $createdBy);
 
         return $allocation;
     }
 
-    public function reverseAllocation(string $allocationUid): PaymentAllocation
+    public function reverseAllocation(string $allocationUid, ?int $createdBy = null): PaymentAllocation
     {
         $allocation = $this->allocations->require($allocationUid);
 
@@ -98,11 +107,20 @@ final class PaymentAllocationService
             throw new RuntimeException("Payment allocation \"{$allocationUid}\" is already reversed.");
         }
 
+        $payment = $this->payments->require($allocation->paymentUid);
+        $this->posting?->assertCanPost($payment);
         $allocation->reversedAt = new \DateTimeImmutable();
         $this->allocations->save($allocation);
 
         if ($allocation->documentType === self::SUPPORTED_DOCUMENT_TYPE) {
-            $this->syncInvoiceFromAllocations($this->invoices->require($allocation->documentUid));
+            $invoice = $this->invoices->require($allocation->documentUid);
+            $this->syncInvoiceFromAllocations($invoice);
+            $this->posting?->reverseAllocation(
+                $payment,
+                $invoice,
+                $allocation,
+                $createdBy,
+            );
         }
 
         return $allocation;

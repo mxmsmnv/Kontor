@@ -39,6 +39,23 @@ final class LedgerEntryRepository
         return $this->find($uid) ?? throw new RuntimeException("Ledger entry \"{$uid}\" was not found.");
     }
 
+    public function findByReference(string $referenceType, string $referenceUid): ?LedgerEntry
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_ledger_entries
+             WHERE reference_type = :reference_type AND reference_uid = :reference_uid
+             ORDER BY id ASC LIMIT 1'
+        );
+        $statement->execute([
+            'reference_type' => $referenceType,
+            'reference_uid' => $referenceUid,
+        ]);
+
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function insert(LedgerEntry $entry): void
     {
         $organizationId = $this->organizations->internalIdOf($entry->organizationId);

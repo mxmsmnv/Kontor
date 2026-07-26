@@ -23,7 +23,9 @@
         "kontor/core": "^0.1",
         "kontor/invoices": "^0.1"
     },
-    "suggests": {},
+    "suggests": {
+        "kontor/ledger": "^0.1"
+    },
     "conflicts": {},
     "capabilities": [],
     "permissions": [

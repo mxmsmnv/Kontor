@@ -46,6 +46,9 @@ unit tests, not just DB-gated integration tests.
   `AccountBalanceCalculator.php` — an account's running balance,
   normal-side aware (debit-normal for asset/expense, credit-normal for
   liability/equity/revenue).
+- `LedgerEntryRepository::findByReference()` — resolves an immutable
+  posting by its business reference, allowing integrations to remain
+  idempotent without editing accounting history.
 - `src/Health/LedgerHealthCheck.php` — see above.
 
 ## Testing

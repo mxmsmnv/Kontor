@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Optional Ledger bridge: invoice-payment allocations now post debit Bank /
+  credit Trade receivables entries, reversals append the inverse entry, and
+  the admin payment detail links to both immutable journal records.
 - First admin integration: organization-scoped payment listing, invoice-backed
   payment capture and allocation, payment detail, and reversal.
 - Initial alpha (Substage 4.4): `kontor_payments` and

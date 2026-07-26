@@ -29,6 +29,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Payments now closes the finance loop into Ledger: invoice allocations create
+  balanced receivable-clearing entries, reversals append inverse entries, and
+  payment detail links to the accounting trail.
 - API-exposed Custom Entities now register real dynamic REST resources and
   automatically become queryable through the shared GraphQL schema.
 - Tasks now registers the first component-owned Dashboard widget: each user can

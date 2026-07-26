@@ -10,6 +10,7 @@ use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
 use Kontor\Invoices\Infrastructure\Persistence\InvoiceRepository;
 use Kontor\Payments\Application\PaymentAllocationService;
 use Kontor\Payments\Application\PaymentWorkflowService;
+use Kontor\Payments\Application\LedgerAllocationPostingService;
 use Kontor\Payments\Health\PaymentsHealthCheck;
 use Kontor\Payments\Infrastructure\Persistence\PaymentAllocationRepository;
 use Kontor\Payments\Infrastructure\Persistence\PaymentRepository;
@@ -29,7 +30,7 @@ class KontorPayments extends WireData implements Module
         return [
             'title' => 'Kontor Payments',
             'summary' => 'Payments, allocations, partial payments, reversals.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPayments',
             'icon' => 'money',
@@ -90,7 +91,23 @@ class KontorPayments extends WireData implements Module
 
     public function allocationService(): PaymentAllocationService
     {
-        return new PaymentAllocationService($this->paymentRepository(), $this->allocationRepository(), $this->invoiceRepository());
+        $posting = null;
+        if ($this->wire()->modules->isInstalled('KontorLedger')) {
+            /** @var KontorLedger $ledger */
+            $ledger = $this->wire()->modules->get('KontorLedger');
+            $posting = new LedgerAllocationPostingService(
+                $ledger->accountRepository(),
+                $ledger->entryRepository(),
+                $ledger->entries(),
+            );
+        }
+
+        return new PaymentAllocationService(
+            $this->paymentRepository(),
+            $this->allocationRepository(),
+            $this->invoiceRepository(),
+            $posting,
+        );
     }
 
     public function workflow(): PaymentWorkflowService

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `LedgerEntryRepository::findByReference()` for idempotent,
+  component-owned posting bridges such as Payments.
 - `ChartOfAccountsService::findByCode()` for conflict-safe localization
   seeders that need to preflight a complete chart before writing.
 - Admin chart-of-accounts and journal workbench with live balances,

@@ -45,6 +45,13 @@ mutates another's records rather than just referencing them by uid.
   table's `document_type`/`document_uid` pair is polymorphic like
   `kontor_document_lines`', but invoices are the only document type this
   monorepo can allocate a payment against today.
+- When the optional Ledger component is installed,
+  `LedgerAllocationPostingService` turns every allocation into an immutable,
+  balanced journal entry (debit account `1200` Bank, credit account `1400`
+  Trade receivables). Reversing the allocation appends the inverse entry
+  rather than changing history. Reference type + allocation UID make both
+  operations idempotent. Country packages may map different account codes
+  through the service constructor.
 
 ## Invoice status recomputation rule
 
@@ -77,9 +84,10 @@ Everything under `tests/Integration/` needs real MySQL (see
 
 The root `ProcessKontor` module provides a deliberately narrow first admin
 workflow: record a full or partial payment from an issued/sent invoice,
-automatically confirm and allocate it, inspect the payment and allocations,
-and reverse the receipt when necessary. Broader payment-entry and allocation
-editing remain later UI work.
+automatically confirm, allocate, and (when Ledger is present) post it, inspect
+the payment, allocations, and linked journal entries, and reverse the receipt
+with an append-only correction when necessary. Broader payment-entry and
+allocation editing remain later UI work.
 
 ## Not in scope for this substage
 

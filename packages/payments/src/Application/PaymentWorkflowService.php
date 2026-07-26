@@ -49,7 +49,7 @@ final class PaymentWorkflowService
      * touched gets its paid/due/status recomputed), then marks the
      * payment itself reversed.
      */
-    public function reversePayment(string $paymentUid): Payment
+    public function reversePayment(string $paymentUid, ?int $createdBy = null): Payment
     {
         $payment = $this->payments->require($paymentUid);
 
@@ -59,7 +59,7 @@ final class PaymentWorkflowService
 
         foreach ($this->allocations->forPayment($paymentUid) as $allocation) {
             if (!$allocation->isReversed()) {
-                $this->allocationService->reverseAllocation($allocation->uid->toString());
+                $this->allocationService->reverseAllocation($allocation->uid->toString(), $createdBy);
             }
         }
 

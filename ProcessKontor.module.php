@@ -56,6 +56,7 @@ use Kontor\Germany\DTO\LocalizedLineItemInput;
 use Kontor\Germany\DTO\LocalizedPartyInput;
 use Kontor\Ledger\Domain\Account;
 use Kontor\Ledger\DTO\LedgerLineInput;
+use Kontor\Payments\Application\LedgerAllocationPostingService;
 use Kontor\Payments\Domain\Payment;
 use Kontor\Projects\Domain\BillableItem;
 use Kontor\Projects\Domain\Project;
@@ -89,7 +90,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '125',
+            'version' => '126',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1811,6 +1812,7 @@ class ProcessKontor extends Process
         $this->requireSameOrganization($payment->organizationId);
         $allocations = $module->allocationRepository()->forPayment($id);
         $invoiceLabels = [];
+        $ledgerEntries = [];
 
         foreach ($allocations as $allocation) {
             if ($allocation->documentType !== 'invoice') {
@@ -1819,6 +1821,19 @@ class ProcessKontor extends Process
             $invoice = $this->invoiceModule()->invoiceRepository()->find($allocation->documentUid);
             if ($invoice !== null && hash_equals($invoice->organizationId, $this->organizationUid())) {
                 $invoiceLabels[$allocation->documentUid] = $invoice->number ?? $this->_('Draft invoice');
+            }
+            if ($this->ledgerReady()) {
+                $referenceUid = $allocation->uid->toString();
+                $ledgerEntries[$referenceUid] = [
+                    'posting' => $this->ledgerModule()->entryRepository()->findByReference(
+                        LedgerAllocationPostingService::POSTING_REFERENCE,
+                        $referenceUid,
+                    ),
+                    'reversal' => $this->ledgerModule()->entryRepository()->findByReference(
+                        LedgerAllocationPostingService::REVERSAL_REFERENCE,
+                        $referenceUid,
+                    ),
+                ];
             }
         }
 
@@ -1831,6 +1846,8 @@ class ProcessKontor extends Process
             'payment' => $payment,
             'allocations' => $allocations,
             'invoiceLabels' => $invoiceLabels,
+            'ledgerReady' => $this->ledgerReady(),
+            'ledgerEntries' => $ledgerEntries,
             'payerLabel' => $this->salesCustomerLabels()[
                 $payment->payerType . ':' . $payment->payerUid
             ] ?? $payment->payerUid,
@@ -1887,6 +1904,7 @@ class ProcessKontor extends Process
                 'invoice',
                 $invoiceId,
                 $amount,
+                (int) $this->wire()->user->id,
             );
             $pdo->commit();
         } catch (\Throwable $exception) {
@@ -1908,7 +1926,9 @@ class ProcessKontor extends Process
                 'allocationUid' => $allocation->uid->toString(),
             ],
         );
-        $this->message($this->_('Payment recorded and allocated to the invoice.'));
+        $this->message($this->ledgerReady()
+            ? $this->_('Payment recorded, allocated, and posted to the ledger.')
+            : $this->_('Payment recorded and allocated to the invoice.'));
         $this->wire()->session->redirect(
             '../payment/?id=' . rawurlencode($payment->uid->toString())
         );
@@ -1927,9 +1947,24 @@ class ProcessKontor extends Process
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
         $payment = $this->paymentModule()->paymentRepository()->require($id);
         $this->requireSameOrganization($payment->organizationId);
-        $this->paymentModule()->workflow()->reversePayment($id);
+        $pdo = $this->wire()->database->pdo();
+        $pdo->beginTransaction();
+        try {
+            $this->paymentModule()->workflow()->reversePayment(
+                $id,
+                (int) $this->wire()->user->id,
+            );
+            $pdo->commit();
+        } catch (\Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $exception;
+        }
         $this->audit('payments', 'payment', $id, 'reversed');
-        $this->message($this->_('Payment and its allocations were reversed.'));
+        $this->message($this->ledgerReady()
+            ? $this->_('Payment, allocations, and ledger posting were reversed.')
+            : $this->_('Payment and its allocations were reversed.'));
         $this->wire()->session->redirect('../payment/?id=' . rawurlencode($id));
     }
 
