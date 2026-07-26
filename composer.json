@@ -36,7 +36,9 @@
             "Kontor\\Dashboard\\": "packages/dashboard/src/",
             "Kontor\\Dashboard\\Migrations\\": "packages/dashboard/migrations/",
             "Kontor\\Contacts\\": "packages/contacts/src/",
-            "Kontor\\Contacts\\Migrations\\": "packages/contacts/migrations/"
+            "Kontor\\Contacts\\Migrations\\": "packages/contacts/migrations/",
+            "Kontor\\Catalog\\": "packages/catalog/src/",
+            "Kontor\\Catalog\\Migrations\\": "packages/catalog/migrations/"
         }
     },
     "autoload-dev": {

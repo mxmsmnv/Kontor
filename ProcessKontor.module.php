@@ -2,6 +2,10 @@
 
 namespace ProcessWire;
 
+use Kontor\Catalog\Domain\CatalogItem;
+use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
+use Kontor\Catalog\Support\TaxCode;
+use Kontor\Catalog\Support\UnitOfMeasure;
 use Kontor\Contacts\Application\ContactDuplicateDetector;
 use Kontor\Contacts\Application\TagService;
 use Kontor\Contacts\Domain\Address;
@@ -36,6 +40,7 @@ use Kontor\SDK\DTO\BackupVerification;
 use Kontor\SDK\DTO\ExportContext;
 use Kontor\SDK\DTO\ImportContext;
 use Kontor\SDK\DTO\SearchQuery;
+use Kontor\SDK\ValueObjects\Money;
 use Kontor\SDK\ValueObjects\Uid;
 
 /**
@@ -49,7 +54,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '027',
+            'version' => '028',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -91,6 +96,12 @@ class ProcessKontor extends Process
                     'label' => 'Organization',
                     'icon' => 'briefcase',
                     'permission' => 'kontor-admin',
+                ],
+                [
+                    'url' => 'catalog/',
+                    'label' => 'Catalog',
+                    'icon' => 'cubes',
+                    'permission' => 'kontor-catalog-item-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -422,6 +433,124 @@ class ProcessKontor extends Process
         ]);
     }
 
+    public function ___executeCatalog(): string
+    {
+        $this->requirePermission('kontor-catalog-item-view');
+        $this->requireCatalog();
+        $this->setPageTitle($this->_('Kontor · Catalog'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $itemType = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('type'),
+            ['product', 'service']
+        );
+        $showArchived = (string) $this->wire()->input->get('archived') === '1';
+        $organizationUid = $this->organizationUid();
+        $pageSize = 25;
+        $totalItems = $this->catalogItemRepository()->countMatching(
+            $organizationUid,
+            $query,
+            $itemType,
+            $showArchived,
+        );
+        $totalPages = max(1, (int) ceil($totalItems / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
+
+        return $this->renderTemplate('catalog', [
+            'items' => $this->catalogItemRepository()->findAll(
+                $organizationUid,
+                $query,
+                $itemType,
+                $showArchived,
+                $pageSize,
+                ($page - 1) * $pageSize,
+            ),
+            'query' => $query,
+            'selectedType' => $itemType,
+            'showArchived' => $showArchived,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalItems' => $totalItems,
+        ]);
+    }
+
+    public function ___executeCatalogItem(): string
+    {
+        $this->requireCatalog();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $item = $id !== '' ? $this->catalogItemRepository()->require($id) : null;
+
+        if ($item !== null) {
+            $this->requireSameOrganization($item->organizationId);
+        }
+
+        $this->requirePermission($item === null
+            ? 'kontor-catalog-item-create'
+            : 'kontor-catalog-item-edit');
+        $this->setPageTitle($item === null
+            ? $this->_('Kontor · New catalog item')
+            : sprintf($this->_('Kontor · %s'), $this->catalogItemTitle($item)));
+        $form = $this->buildCatalogItemForm($item);
+        $isNew = $item === null;
+        $previous = $item === null ? null : $this->catalogItemAuditSnapshot($item);
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $form->processInput($this->wire()->input->post);
+            $this->validateCatalogItemForm($form, $item);
+
+            if (!$form->getErrors()) {
+                $item = $this->saveCatalogItemFromForm($form, $item);
+                $this->audit(
+                    'catalog',
+                    'catalog_item',
+                    $item->uid->toString(),
+                    $isNew ? 'created' : 'updated',
+                    previous: $previous,
+                    current: $this->catalogItemAuditSnapshot($item),
+                );
+                $this->message($this->_('Catalog item saved.'));
+                $this->wire()->session->redirect(
+                    '../catalog-item/?id=' . rawurlencode($item->uid->toString())
+                );
+            }
+        }
+
+        return $this->renderTemplate('catalog-form', [
+            'form' => $form,
+            'item' => $item,
+            'title' => $item === null ? $this->_('Create catalog item') : $this->catalogItemTitle($item),
+        ]);
+    }
+
+    public function ___executeCatalogItemAction(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-item-archive');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $item = $this->catalogItemRepository()->require($id);
+        $this->requireSameOrganization($item->organizationId);
+
+        $action === 'restore'
+            ? $this->catalogItemRepository()->restore($id)
+            : $this->catalogItemRepository()->archive($id);
+        $this->audit(
+            'catalog',
+            'catalog_item',
+            $id,
+            $action === 'restore' ? 'restored' : 'archived',
+        );
+        $this->message($action === 'restore'
+            ? $this->_('Catalog item restored.')
+            : $this->_('Catalog item archived.'));
+        $this->wire()->session->redirect('../catalog/' . ($action === 'restore' ? '?archived=1' : ''));
+    }
+
     public function ___executeActivity(): string
     {
         $this->requirePermission('kontor-audit-view');
@@ -562,7 +691,7 @@ class ProcessKontor extends Process
             ['ok', 'warning', 'critical']
         ) ?? '';
 
-        foreach (['KontorContacts', 'KontorDashboard', 'KontorQueue', 'KontorSearch'] as $moduleName) {
+        foreach (['KontorCatalog', 'KontorContacts', 'KontorDashboard', 'KontorQueue', 'KontorSearch'] as $moduleName) {
             if (!$this->wire()->modules->isInstalled($moduleName)) {
                 continue;
             }
@@ -1336,6 +1465,110 @@ class ProcessKontor extends Process
         return $form;
     }
 
+    private function buildCatalogItemForm(?CatalogItem $item): InputfieldForm
+    {
+        /** @var InputfieldForm $form */
+        $form = $this->wire()->modules->get('InputfieldForm');
+        $form->action = './' . ($item ? '?id=' . rawurlencode($item->uid->toString()) : '');
+        $form->addClass('InputfieldFormFocusFirst kontor-entity-form');
+        $language = $this->organization()->defaultLanguage;
+        $currency = $this->organization()->defaultCurrency;
+
+        $this->addSelectField(
+            $form,
+            'item_type',
+            $this->_('Item type'),
+            ['product' => $this->_('Product'), 'service' => $this->_('Service')],
+            $item?->itemType ?? 'product',
+            25,
+        );
+        $this->addSelectField(
+            $form,
+            'status',
+            $this->_('Status'),
+            [
+                'active' => $this->_('Active'),
+                'inactive' => $this->_('Inactive'),
+                'discontinued' => $this->_('Discontinued'),
+            ],
+            $item?->status ?? 'active',
+            25,
+        );
+        $this->addTextField(
+            $form,
+            'title',
+            sprintf($this->_('Title (%s)'), strtoupper($language)),
+            $item?->titleIn($language),
+            true,
+            50,
+        );
+        $this->addTextField($form, 'sku', $this->_('SKU'), $item?->sku, false, 50);
+        $this->addTextField($form, 'barcode', $this->_('Barcode'), $item?->barcode, false, 50);
+        $this->addSelectField(
+            $form,
+            'unit_code',
+            $this->_('Unit'),
+            (new UnitOfMeasure())->all(),
+            $item?->unitCode ?? 'pcs',
+            25,
+        );
+
+        /** @var InputfieldSelect $tax */
+        $tax = $this->wire()->modules->get('InputfieldSelect');
+        $tax->name = 'tax_code';
+        $tax->label = $this->_('Tax code');
+        $tax->addOption('', $this->_('Not specified'));
+        $tax->addOptions((new TaxCode())->all());
+        $tax->value = $item?->taxCode ?? '';
+        $tax->columnWidth = 25;
+        $form->add($tax);
+
+        $currencies = array_fill_keys(
+            array_values(array_unique([$currency, 'EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD'])),
+            '',
+        );
+        $currencies = array_combine(array_keys($currencies), array_keys($currencies)) ?: [];
+
+        foreach ([
+            'sales' => [$this->_('Sales price'), $item?->salesPrice],
+            'purchase' => [$this->_('Purchase price'), $item?->purchasePrice],
+            'cost' => [$this->_('Cost price'), $item?->costPrice],
+        ] as $prefix => [$label, $money]) {
+            $this->addTextField(
+                $form,
+                $prefix . '_price',
+                $label,
+                $this->moneyFormValue($money),
+                false,
+                25,
+            );
+            $this->addSelectField(
+                $form,
+                $prefix . '_currency',
+                $this->_('Currency'),
+                $currencies,
+                $money?->currencyCode() ?? $currency,
+                25,
+            );
+        }
+
+        /** @var InputfieldCheckbox $inventory */
+        $inventory = $this->wire()->modules->get('InputfieldCheckbox');
+        $inventory->name = 'track_inventory';
+        $inventory->label = $this->_('Track inventory for this item');
+        $inventory->checked = $item?->trackInventory ?? false;
+        $form->add($inventory);
+        $this->addTextareaField(
+            $form,
+            'description',
+            sprintf($this->_('Description (%s)'), strtoupper($language)),
+            $item?->description[$language] ?? null,
+        );
+        $this->addSubmit($form, $this->_('Save catalog item'));
+
+        return $form;
+    }
+
     private function buildOrganizationForm(Organization $organization): InputfieldForm
     {
         /** @var InputfieldForm $form */
@@ -1458,6 +1691,98 @@ class ProcessKontor extends Process
         $this->companyRepository()->save($company);
 
         return $company;
+    }
+
+    private function validateCatalogItemForm(InputfieldForm $form, ?CatalogItem $item): void
+    {
+        foreach (['sales', 'purchase', 'cost'] as $prefix) {
+            $value = $this->formValue($form, $prefix . '_price');
+
+            if ($value !== null && preg_match('/^-?\d+(?:\.\d{1,2})?$/', $value) !== 1) {
+                $form->getChildByName($prefix . '_price')?->error(
+                    $this->_('Use a number with no more than two decimal places.')
+                );
+            }
+        }
+
+        $sku = $this->formValue($form, 'sku');
+
+        if ($sku !== null) {
+            $existing = $this->catalogItemRepository()->findBySku($this->organizationUid(), $sku);
+
+            if ($existing !== null && $existing->uid->toString() !== $item?->uid->toString()) {
+                $form->getChildByName('sku')?->error(
+                    $this->_('This SKU is already used by another catalog item.')
+                );
+            }
+        }
+    }
+
+    private function saveCatalogItemFromForm(InputfieldForm $form, ?CatalogItem $item): CatalogItem
+    {
+        $language = $this->organization()->defaultLanguage;
+
+        if ($item === null) {
+            $item = CatalogItem::create(
+                organizationId: $this->organizationUid(),
+                title: [$language => $this->requiredFormValue($form, 'title')],
+            );
+        }
+
+        $item->title[$language] = $this->requiredFormValue($form, 'title');
+        $description = $this->formValue($form, 'description');
+
+        if ($description === null) {
+            unset($item->description[$language]);
+        } else {
+            $item->description[$language] = $description;
+        }
+
+        $item->itemType = $this->requiredFormValue($form, 'item_type');
+        $item->status = $this->requiredFormValue($form, 'status');
+        $item->sku = $this->formValue($form, 'sku');
+        $item->barcode = $this->formValue($form, 'barcode');
+        $item->unitCode = $this->requiredFormValue($form, 'unit_code');
+        $item->taxCode = $this->formValue($form, 'tax_code');
+        $item->salesPrice = $this->moneyFromForm($form, 'sales');
+        $item->purchasePrice = $this->moneyFromForm($form, 'purchase');
+        $item->costPrice = $this->moneyFromForm($form, 'cost');
+        $item->trackInventory = (bool) $form->getChildByName('track_inventory')?->value;
+        $this->catalogItemRepository()->save($item);
+
+        return $item;
+    }
+
+    private function moneyFromForm(InputfieldForm $form, string $prefix): ?Money
+    {
+        $amount = $this->formValue($form, $prefix . '_price');
+
+        if ($amount === null) {
+            return null;
+        }
+
+        $negative = str_starts_with($amount, '-');
+        $unsigned = ltrim($amount, '-');
+        [$whole, $fraction] = array_pad(explode('.', $unsigned, 2), 2, '');
+        $minor = ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
+
+        return Money::ofMinor(
+            $negative ? -$minor : $minor,
+            $this->requiredFormValue($form, $prefix . '_currency'),
+        );
+    }
+
+    private function moneyFormValue(?Money $money): ?string
+    {
+        if ($money === null) {
+            return null;
+        }
+
+        $minor = $money->amountMinor();
+        $negative = $minor < 0 ? '-' : '';
+        $minor = abs($minor);
+
+        return sprintf('%s%d.%02d', $negative, intdiv($minor, 100), $minor % 100);
     }
 
     private function addTextField(
@@ -1851,6 +2176,36 @@ class ProcessKontor extends Process
     /**
      * @return array<string, mixed>
      */
+    private function catalogItemAuditSnapshot(CatalogItem $item): array
+    {
+        return [
+            'title' => $item->title,
+            'itemType' => $item->itemType,
+            'sku' => $item->sku,
+            'barcode' => $item->barcode,
+            'unitCode' => $item->unitCode,
+            'taxCode' => $item->taxCode,
+            'salesPrice' => $item->salesPrice?->toString(),
+            'purchasePrice' => $item->purchasePrice?->toString(),
+            'costPrice' => $item->costPrice?->toString(),
+            'trackInventory' => $item->trackInventory,
+            'status' => $item->status,
+        ];
+    }
+
+    private function catalogItemTitle(CatalogItem $item): string
+    {
+        $language = $this->organization()->defaultLanguage;
+        $fallback = reset($item->title);
+
+        return $item->titleIn($language)
+            ?? $item->titleIn('en')
+            ?? (is_string($fallback) && $fallback !== '' ? $fallback : $this->_('Untitled item'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function addressAuditSnapshot(Address $address): array
     {
         return [
@@ -2039,6 +2394,18 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorContacts');
     }
 
+    private function catalogReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorCatalog');
+    }
+
+    private function requireCatalog(): void
+    {
+        if (!$this->catalogReady()) {
+            throw new WireException($this->_('The Kontor Catalog component is not installed.'));
+        }
+    }
+
     private function requireContacts(): void
     {
         if (!$this->contactsReady()) {
@@ -2064,6 +2431,14 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorQueue');
 
         return $module->jobRepository();
+    }
+
+    private function catalogItemRepository(): CatalogItemRepository
+    {
+        /** @var KontorCatalog $module */
+        $module = $this->wire()->modules->get('KontorCatalog');
+
+        return $module->itemRepository();
     }
 
     private function contactRepository(): ContactRepository

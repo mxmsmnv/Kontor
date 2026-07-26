@@ -97,4 +97,29 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
 
         $this->assertTrue($repository->find($item->uid->toString())->isService());
     }
+
+    public function test_list_search_type_archive_counts_and_pagination(): void
+    {
+        $repository = $this->repository();
+        $widget = CatalogItem::create($this->organizationUid, ['en' => 'Nebula Widget'], sku: 'NEB-001');
+        $service = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Nebula Consulting'],
+            itemType: 'service',
+            sku: 'NEB-002',
+        );
+        $repository->save($widget);
+        $repository->save($service);
+
+        $this->assertSame(2, $repository->countMatching($this->organizationUid, 'Nebula'));
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Nebula', 'service'));
+        $first = $repository->findAll($this->organizationUid, 'Nebula', limit: 1);
+        $second = $repository->findAll($this->organizationUid, 'Nebula', limit: 1, offset: 1);
+        $this->assertNotSame($first[0]->uid->toString(), $second[0]->uid->toString());
+
+        $repository->archive($widget->uid->toString());
+
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Nebula'));
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Nebula', archived: true));
+    }
 }

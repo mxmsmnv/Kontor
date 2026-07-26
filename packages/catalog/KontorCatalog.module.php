@@ -34,7 +34,7 @@ class KontorCatalog extends WireData implements Module
         return [
             'title' => 'Kontor Catalog',
             'summary' => 'Items (products and services), categories, price lists, units and tax code references.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCatalog',
             'icon' => 'cubes',
@@ -68,9 +68,11 @@ class KontorCatalog extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
 
         $kontor->container()->get(ImportProviderRegistry::class)->register(
+            'catalog_item',
             new ItemImportProvider($this->itemRepository())
         );
         $kontor->container()->get(ExportProviderRegistry::class)->register(
+            'catalog_item',
             new ItemExportProvider($this->pdo(), $kontor->container()->get(OrganizationRepository::class))
         );
         $kontor->container()->get(RepositoryRegistry::class)->register('catalog_item', $this->itemRepository());

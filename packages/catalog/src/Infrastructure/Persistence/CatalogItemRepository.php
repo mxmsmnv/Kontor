@@ -118,6 +118,82 @@ final class CatalogItemRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
+    /**
+     * @return CatalogItem[]
+     */
+    public function findAll(
+        string $organizationUid,
+        string $query = '',
+        ?string $itemType = null,
+        bool $archived = false,
+        int $limit = 100,
+        int $offset = 0,
+    ): array {
+        [$sql, $params] = $this->listQuery($organizationUid, $query, $itemType, $archived);
+        $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
+        $statement = $this->pdo->prepare($sql);
+
+        foreach ($params as $name => $value) {
+            $statement->bindValue(':' . $name, $value);
+        }
+
+        $statement->bindValue(':limit', max(1, min($limit, 250)), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn (array $row): CatalogItem => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC),
+        );
+    }
+
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        ?string $itemType = null,
+        bool $archived = false,
+    ): int {
+        [$sql, $params] = $this->listQuery($organizationUid, $query, $itemType, $archived, true);
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, int|string>}
+     */
+    private function listQuery(
+        string $organizationUid,
+        string $query,
+        ?string $itemType,
+        bool $archived,
+        bool $count = false,
+    ): array {
+        $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
+        $sql = 'SELECT ' . ($count ? 'COUNT(*)' : '*') . ' FROM kontor_catalog_items
+            WHERE organization_id = :organization_id
+              AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
+        $query = trim($query);
+
+        if ($itemType !== null) {
+            $sql .= ' AND item_type = :item_type';
+            $params['item_type'] = $itemType;
+        }
+
+        if ($query !== '') {
+            $sql .= ' AND (
+                sku LIKE :query
+                OR barcode LIKE :query
+                OR title_json LIKE :query
+                OR description_json LIKE :query
+            )';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        return [$sql, $params];
+    }
+
     private function hydrate(array $row): CatalogItem
     {
         return new CatalogItem(
@@ -140,7 +216,7 @@ final class CatalogItemRepository implements RepositoryInterface
         );
     }
 
-    private function moneyFrom(?string $amountMinor, ?string $currencyCode): ?Money
+    private function moneyFrom(int|string|null $amountMinor, ?string $currencyCode): ?Money
     {
         if ($amountMinor === null || $currencyCode === null) {
             return null;

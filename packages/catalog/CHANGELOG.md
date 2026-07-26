@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped catalog listing, search, type filters, archived views,
+  exact counts, and offset pagination for the admin workspace.
 - Initial alpha (Substage 3.2): `kontor_catalog_items` (products/services
   via `item_type`), `kontor_catalog_categories` (schema gap-fill, like
   Contacts' tags), `kontor_catalog_price_lists`, `kontor_catalog_prices`
@@ -18,3 +20,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   resolution); `Support\UnitOfMeasure`/`Support\TaxCode` known-code
   registries; real `ItemImportProvider`/`ItemExportProvider`;
   `CatalogHealthCheck`; permissions; translations (en/fr/de/es).
+
+### Fixed
+
+- Provider registration now supplies the required `catalog_item` key, and
+  money hydration accepts native integer values returned by modern PDO.

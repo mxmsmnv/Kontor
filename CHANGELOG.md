@@ -62,6 +62,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   and status selection across pages.
 - Searchable, filterable Backup history with verification-state facets,
   exact result totals, and pagination.
+- Catalog admin workspace for searchable and paginated products and services,
+  including create, edit, pricing, inventory behavior, and archive workflows.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
