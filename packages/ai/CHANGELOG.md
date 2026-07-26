@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Admin workbench integration for summaries, drafting, and schema extraction;
+  a deterministic local-only preview provider for safe end-to-end QA; and
+  organization-scoped approval queue review with generated draft output
+  withheld until a human approves or rejects the action.
 - Initial alpha (Substage 9.3): `kontor_ai_pending_actions` migration
   (kontor.md, full gap-fill); `AIProviderRegistry` (the "provider
   contract" milestone's registry over `kontor/sdk`'s existing

@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First AI admin vertical: production-provider visibility, deterministic
+  network-free capability previews, summaries and extraction, plus a human
+  approval queue that withholds critical draft output until a decision.
 - First Documents admin vertical: versioned multilingual template publishing,
   designer-v1 markup, HTML/PDF rendering, immutable issue snapshots, and
   reversible version lifecycle.

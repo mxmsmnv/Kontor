@@ -60,6 +60,7 @@ use Kontor\Sales\Domain\DocumentLine;
 use Kontor\Sales\Domain\Quotation;
 use Kontor\Search\Application\GlobalSearchService;
 use Kontor\SDK\DTO\BackupVerification;
+use Kontor\SDK\DTO\AIRequest;
 use Kontor\SDK\DTO\ExportContext;
 use Kontor\SDK\DTO\ImportContext;
 use Kontor\SDK\DTO\ReportQuery;
@@ -81,7 +82,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '107',
+            'version' => '108',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -207,6 +208,12 @@ class ProcessKontor extends Process
                     'label' => 'Documents',
                     'icon' => 'file-pdf-o',
                     'permission' => 'kontor-documents-template-view',
+                ],
+                [
+                    'url' => 'ai/',
+                    'label' => 'AI',
+                    'icon' => 'magic',
+                    'permission' => 'kontor-ai-action-approve',
                 ],
                 [
                     'url' => 'contacts/',
@@ -4503,6 +4510,163 @@ class ProcessKontor extends Process
         $this->wire()->session->redirect('../documents/?id=' . rawurlencode($uid));
     }
 
+    public function ___executeAI(): string
+    {
+        $this->requireAI();
+        $this->requirePermission('kontor-ai-action-approve');
+        $module = $this->aiModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $selected = $id !== '' ? $module->pendingActionRepository()->require($id) : null;
+        if ($selected !== null) {
+            $this->requireSameOrganization($selected->organizationId);
+        }
+        $result = $this->wire()->session->get('kontorAIWorkbenchResult');
+        $this->wire()->session->set('kontorAIWorkbenchResult', null);
+        $this->setPageTitle($this->_('Kontor · AI'));
+
+        return $this->renderTemplate('ai', [
+            'providers' => $module->providerRegistry()->all(),
+            'actions' => $module->pendingActionRepository()->forOrganization($this->organizationUid()),
+            'selected' => $selected,
+            'result' => is_array($result) ? $result : null,
+        ]);
+    }
+
+    public function ___executeAIExecute(): void
+    {
+        $this->requirePost();
+        $this->requireAI();
+        $this->requirePermission('kontor-ai-action-approve');
+        $capability = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('capability')
+        );
+        $this->requireAction($capability, ['summarize', 'draft', 'extract']);
+        $text = trim((string) $this->wire()->input->post('text'));
+        $instructions = trim((string) $this->wire()->input->post('instructions'));
+        if ($text === '' || strlen($text) > 262144) {
+            throw new WireException($this->_('Input text is required and must be at most 256 KB.'));
+        }
+        $simulate = (bool) $this->wire()->input->post('simulate');
+        $module = $this->aiModule();
+        $gateway = $simulate ? $module->previewGateway() : $module->gateway();
+        $result = null;
+        $pendingUid = '';
+
+        if ($capability === 'summarize') {
+            $response = (new \Kontor\AI\Application\SummaryService($gateway))->summarize(
+                $this->organizationUid(),
+                $text,
+                (string) $this->wire()->user->id,
+            );
+            $result = [
+                'capability' => $capability,
+                'success' => $response->success,
+                'output' => $response->output,
+                'error' => $response->errorMessage,
+                'pending' => false,
+                'simulated' => $simulate,
+            ];
+        } elseif ($capability === 'extract') {
+            $schema = $this->aiJsonObjectFromPost('schema_json');
+            $normalizedSchema = [];
+            foreach ($schema as $field => $type) {
+                if (!is_scalar($type)) {
+                    throw new WireException($this->_('Extraction schema values must be scalar type names.'));
+                }
+                $normalizedSchema[(string) $field] = (string) $type;
+            }
+            $response = (new \Kontor\AI\Application\ExtractionService($gateway))->extract(
+                $this->organizationUid(),
+                $text,
+                $normalizedSchema,
+                (string) $this->wire()->user->id,
+            );
+            $result = [
+                'capability' => $capability,
+                'success' => $response->success,
+                'output' => $response->output,
+                'error' => $response->errorMessage,
+                'pending' => false,
+                'simulated' => $simulate,
+            ];
+        } else {
+            if ($instructions === '') {
+                throw new WireException($this->_('Draft instructions are required.'));
+            }
+            $context = $this->aiJsonObjectFromPost('context_json');
+            $approvalService = $simulate ? $module->previewApprovals() : $module->approvals();
+            $approvalResult = $approvalService->requestAndMaybeApprove(new AIRequest(
+                capability: 'draft',
+                organizationId: $this->organizationUid(),
+                input: ['context' => array_merge($context, ['sourceText' => $text]), 'instructions' => $instructions],
+                requiresConfirmation: true,
+                actorId: (string) $this->wire()->user->id,
+            ), requestedBy: (int) $this->wire()->user->id);
+            if ($approvalResult->isPending && $approvalResult->pendingAction !== null) {
+                $pendingUid = $approvalResult->pendingAction->uid->toString();
+                $result = [
+                    'capability' => $capability,
+                    'success' => true,
+                    'output' => [],
+                    'error' => null,
+                    'pending' => true,
+                    'pendingUid' => $pendingUid,
+                    'simulated' => $simulate,
+                ];
+                $this->audit('ai', 'pending_action', $pendingUid, 'requested', metadata: [
+                    'simulated' => $simulate,
+                ]);
+            } else {
+                $response = $approvalResult->response;
+                $result = [
+                    'capability' => $capability,
+                    'success' => $response?->success ?? false,
+                    'output' => $response?->output ?? [],
+                    'error' => $response?->errorMessage,
+                    'pending' => false,
+                    'simulated' => $simulate,
+                ];
+            }
+        }
+
+        $this->wire()->session->set('kontorAIWorkbenchResult', $result);
+        $this->message($result['pending']
+            ? $this->_('AI draft withheld for human approval.')
+            : $this->_('AI workbench request completed.'));
+        $redirect = '../ai/';
+        if ($pendingUid !== '') {
+            $redirect .= '?id=' . rawurlencode($pendingUid);
+        }
+        $this->wire()->session->redirect($redirect);
+    }
+
+    public function ___executeAIDecide(): void
+    {
+        $this->requirePost();
+        $this->requireAI();
+        $this->requirePermission('kontor-ai-action-approve');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('action_uid')
+        );
+        $decision = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('decision')
+        );
+        $this->requireAction($decision, ['approve', 'reject']);
+        $pending = $this->aiModule()->pendingActionRepository()->require($uid);
+        $this->requireSameOrganization($pending->organizationId);
+        if (!$pending->isPending()) {
+            throw new WireException($this->_('This AI action has already been decided.'));
+        }
+        $decided = $decision === 'approve'
+            ? $this->aiModule()->approvals()->approve($uid, (int) $this->wire()->user->id)
+            : $this->aiModule()->approvals()->reject($uid, (int) $this->wire()->user->id);
+        $this->audit('ai', 'pending_action', $uid, $decided->status);
+        $this->message($decision === 'approve'
+            ? $this->_('AI action approved.')
+            : $this->_('AI action rejected.'));
+        $this->wire()->session->redirect('../ai/?id=' . rawurlencode($uid));
+    }
+
     public function ___executeMarketplace(): string
     {
         $this->requireMarketplace();
@@ -8638,6 +8802,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorDocuments');
     }
 
+    private function aiReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorAI');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8789,6 +8958,13 @@ class ProcessKontor extends Process
     {
         if (!$this->documentsReady()) {
             throw new WireException($this->_('The Kontor Documents component is not installed.'));
+        }
+    }
+
+    private function requireAI(): void
+    {
+        if (!$this->aiReady()) {
+            throw new WireException($this->_('The Kontor AI component is not installed.'));
         }
     }
 
@@ -8967,6 +9143,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorDocuments $module */
         $module = $this->wire()->modules->get('KontorDocuments');
+
+        return $module;
+    }
+
+    private function aiModule(): KontorAI
+    {
+        /** @var KontorAI $module */
+        $module = $this->wire()->modules->get('KontorAI');
 
         return $module;
     }
@@ -9158,6 +9342,30 @@ class ProcessKontor extends Process
         }
 
         return $addresses;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function aiJsonObjectFromPost(string $field): array
+    {
+        $raw = trim((string) $this->wire()->input->post($field));
+        if ($raw === '') {
+            return [];
+        }
+        if (strlen($raw) > 65536) {
+            throw new WireException($this->_('AI JSON input must be at most 64 KB.'));
+        }
+        try {
+            $value = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new WireException($this->_('AI JSON input must contain valid JSON.'));
+        }
+        if (!is_array($value) || ($value !== [] && array_is_list($value))) {
+            throw new WireException($this->_('AI JSON input must be an object.'));
+        }
+
+        return $value;
     }
 
     /**

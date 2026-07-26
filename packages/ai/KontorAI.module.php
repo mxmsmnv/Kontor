@@ -10,6 +10,7 @@ use Kontor\AI\Application\SummaryService;
 use Kontor\AI\Health\AIHealthCheck;
 use Kontor\AI\Infrastructure\Persistence\PendingAIActionRepository;
 use Kontor\AI\Infrastructure\Providers\NullSquadClient;
+use Kontor\AI\Infrastructure\Providers\PreviewAIProvider;
 use Kontor\AI\Infrastructure\Providers\SquadAdapter;
 use Kontor\AI\Infrastructure\Registry\AIProviderRegistry;
 use Kontor\AI\Migrations\Migration0001CreatePendingActionsTable;
@@ -34,7 +35,7 @@ class KontorAI extends WireData implements Module
         return [
             'title' => 'Kontor AI',
             'summary' => 'Provider contract, Squad adapter, summaries, drafting, extraction, approval workflow.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorAI',
             'icon' => 'magic',
@@ -89,6 +90,19 @@ class KontorAI extends WireData implements Module
         return $this->gateway ??= new AIGateway($this->providerRegistry());
     }
 
+    public function previewGateway(): AIGateway
+    {
+        $providers = new AIProviderRegistry();
+        $providers->register(new PreviewAIProvider());
+
+        return new AIGateway($providers);
+    }
+
+    public function previewApprovals(): AIActionApprovalService
+    {
+        return new AIActionApprovalService($this->previewGateway(), $this->pendingActionRepository());
+    }
+
     public function summaries(): SummaryService
     {
         return new SummaryService($this->gateway());
@@ -138,6 +152,13 @@ class KontorAI extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('ai', self::getModuleInfo()['version'], 'ai');
+        $components->enable('ai');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('ai', self::getModuleInfo()['version'], 'ai');
         $components->enable('ai');
     }
