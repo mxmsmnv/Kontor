@@ -13,9 +13,9 @@ $scopeLabel = $selectedEntityType === ''
     ? (isset($availableEntityTypes['catalog_item']) ? 'Kontor' : 'contacts and companies')
     : strtolower($availableEntityTypes[$selectedEntityType]);
 $resultPresentation = static fn (string $entityType): array => match ($entityType) {
-    'company' => ['company', 'building'],
-    'catalog_item' => ['catalog-item', 'cube'],
-    default => ['contact', 'user'],
+    'company' => ['company', 'building', 'Company'],
+    'catalog_item' => ['catalog-item', 'cube', 'Catalog item'],
+    default => ['contact', 'user', 'Contact'],
 };
 $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): string {
     return './?' . http_build_query(array_filter([
@@ -28,6 +28,7 @@ $scopeUrl = static fn (string $entityType): string => './?' . http_build_query([
     'q' => $query,
     'type' => $entityType,
 ]);
+$allTypesUrl = './?' . http_build_query(['q' => $query]);
 $hasSearch = $query !== '' || $selectedEntityType !== '';
 ?>
 <div class="kontor-shell">
@@ -66,12 +67,17 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
             </p>
           <?php endif; ?>
         </div>
+        <?php if ($selectedEntityType !== ''): ?>
+          <a class="kontor-button kontor-button--ghost" href="<?= $e($allTypesUrl) ?>">
+            <i class="fa fa-list"></i> All result types
+          </a>
+        <?php endif; ?>
       </div>
 
       <?php if ($result->hits): ?>
         <div class="kontor-card kontor-resultlist">
           <?php foreach ($result->hits as $hit): ?>
-            <?php [$resultRoute, $resultIcon] = $resultPresentation($hit->entityType); ?>
+            <?php [$resultRoute, $resultIcon, $resultLabel] = $resultPresentation($hit->entityType); ?>
             <article class="kontor-result">
               <a class="kontor-result__main" href="<?= $e($adminUrl) ?><?= $e($hit->url ?: $resultRoute . '/?id=' . rawurlencode($hit->entityUid)) ?>">
                 <span class="kontor-result__icon"><i class="fa fa-<?= $e($resultIcon) ?>"></i></span>
@@ -86,7 +92,7 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
                 href="<?= $e($scopeUrl($hit->entityType)) ?>"
                 aria-label="Show only <?= $e($availableEntityTypes[$hit->entityType] ?? $hit->entityType) ?>"
                 <?= $selectedEntityType === $hit->entityType ? 'aria-current="page"' : '' ?>
-              ><?= $e($hit->entityType) ?></a>
+              ><?= $e($resultLabel) ?></a>
             </article>
           <?php endforeach; ?>
         </div>
