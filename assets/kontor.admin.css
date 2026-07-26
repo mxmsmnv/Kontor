@@ -444,6 +444,10 @@
   font-size: 0.8rem;
 }
 
+.kontor-filtercount {
+  margin-left: auto;
+}
+
 .kontor-pill {
   background: #ecfdf3;
   border-radius: 999px;
@@ -2067,6 +2071,10 @@
 
   .kontor-healthfilters {
     align-items: stretch;
+  }
+
+  .kontor-filtercount {
+    margin-left: 0;
   }
 
   .kontor-activityfilters .kontor-searchfield {

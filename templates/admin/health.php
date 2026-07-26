@@ -74,6 +74,7 @@ $displayValue = static function (mixed $value): string {
     </select>
     <button class="kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
+    <span class="kontor-secondary kontor-filtercount"><?= $e(count($checks)) ?> matching check<?= count($checks) === 1 ? '' : 's' ?></span>
   </form>
 
   <?php if ($checks): ?>

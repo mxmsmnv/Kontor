@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Exact matching-result feedback for Components and Health filters.
 - Selected-state styling and accessible current-page semantics for Health
   summary filters.
 - Selected-state styling and accessible current-page semantics for Components
