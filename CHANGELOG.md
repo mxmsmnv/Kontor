@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog items in global search, including localized text, SKU/barcode lookup,
+  direct item links, and an entity filter in the admin search workspace.
 - Catalog item CSV/JSON/JSON Lines/XLSX export and preview-first import,
   protected by verified Catalog snapshots and automatic restore on failure.
 - Catalog snapshots in the Backups workspace.

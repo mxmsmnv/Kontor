@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '032',
+            'version' => '033',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -399,9 +399,18 @@ class ProcessKontor extends Process
         $this->requireContacts();
         $this->setPageTitle($this->_('Kontor · Search'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $availableEntityTypes = [
+            'contact' => $this->_('Contacts'),
+            'company' => $this->_('Companies'),
+        ];
+
+        if ($this->catalogReady()) {
+            $availableEntityTypes['catalog_item'] = $this->_('Catalog items');
+        }
+
         $entityType = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('type'),
-            ['contact', 'company']
+            array_keys($availableEntityTypes)
         ) ?? '';
         $pageSize = 20;
         $page = max(1, (int) $this->wire()->input->get('page'));
@@ -412,7 +421,7 @@ class ProcessKontor extends Process
             $result = $this->searchService()->search(new SearchQuery(
                 organizationId: $this->organizationUid(),
                 term: $query,
-                entityTypes: $entityType !== '' ? [$entityType] : ['contact', 'company'],
+                entityTypes: $entityType !== '' ? [$entityType] : array_keys($availableEntityTypes),
                 limit: $pageSize,
                 offset: ($page - 1) * $pageSize,
             ));
@@ -423,7 +432,7 @@ class ProcessKontor extends Process
                 $result = $this->searchService()->search(new SearchQuery(
                     organizationId: $this->organizationUid(),
                     term: $query,
-                    entityTypes: $entityType !== '' ? [$entityType] : ['contact', 'company'],
+                    entityTypes: $entityType !== '' ? [$entityType] : array_keys($availableEntityTypes),
                     limit: $pageSize,
                     offset: ($page - 1) * $pageSize,
                 ));
@@ -434,6 +443,7 @@ class ProcessKontor extends Process
             'query' => $query,
             'result' => $result,
             'selectedEntityType' => $entityType,
+            'availableEntityTypes' => $availableEntityTypes,
             'page' => $page,
             'totalPages' => $totalPages,
         ]);

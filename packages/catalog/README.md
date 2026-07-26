@@ -48,6 +48,9 @@ no corresponding table:
 - `src/Infrastructure/Import/ItemImportProvider.php` — CSV/XLSX rows are
   flat, so multi-language title/description come in as `title_en`,
   `title_fr`, etc. (one column per locale) rather than a nested JSON cell.
+- `src/Infrastructure/Search/CatalogItemSearchProvider.php` — organization-
+  scoped global search across localized titles/descriptions, SKU, and barcode,
+  with exact identifiers ranked first.
 
 ## Testing
 
@@ -60,13 +63,10 @@ Integration tests need real MySQL (see `../../docker-compose.test.yml`) and
 are skipped otherwise — same `KONTOR_TEST_DB_DSN` convention as the other
 packages.
 
-## Not in scope for this substage
+## Admin workspace
 
-No admin UI/routes, no REST API endpoints. Category import/export wasn't
-built — items are the milestone's primary "import/export" deliverable, and
-the pattern is already demonstrated there. Search integration (unlike
-Contacts) was deliberately skipped: `title_json`/`description_json` being
-multi-language JSON complicates a straightforward MySQL FULLTEXT index — a
-real implementation would need per-language generated `STORED` columns,
-which is a bigger design decision than this substage's milestones call
-for.
+The host `ProcessKontor` module provides item, category, price-list, price-tier,
+reference, import/export, backup, and global-search routes for Catalog. The
+package itself remains UI-framework agnostic.
+
+Category import/export and REST API endpoints remain outside this substage.

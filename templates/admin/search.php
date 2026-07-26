@@ -3,16 +3,20 @@
 /** @var string $query */
 /** @var \Kontor\SDK\DTO\SearchResult|null $result */
 /** @var string $selectedEntityType */
+/** @var array<string, string> $availableEntityTypes */
 /** @var int $page */
 /** @var int $totalPages */
 /** @var string $adminUrl */
 /** @var callable $e */
 
-$scopeLabel = [
-    '' => 'contacts and companies',
-    'contact' => 'contacts',
-    'company' => 'companies',
-][$selectedEntityType];
+$scopeLabel = $selectedEntityType === ''
+    ? (isset($availableEntityTypes['catalog_item']) ? 'Kontor' : 'contacts and companies')
+    : strtolower($availableEntityTypes[$selectedEntityType]);
+$resultPresentation = static fn (string $entityType): array => match ($entityType) {
+    'company' => ['company', 'building'],
+    'catalog_item' => ['catalog-item', 'cube'],
+    default => ['contact', 'user'],
+};
 $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): string {
     return './?' . http_build_query(array_filter([
         'q' => $query,
@@ -25,14 +29,15 @@ $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): 
   <header class="kontor-searchhero">
     <p class="kontor-eyebrow">Global directory</p>
     <h2>Find anything in Kontor</h2>
-    <p>Search contacts and companies from one place.</p>
+    <p>Search people, companies, products, and services from one place.</p>
     <form method="get" action="./">
       <i class="fa fa-search"></i>
-      <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Name, company or email" autofocus>
+      <input name="q" type="search" value="<?= $e($query) ?>" placeholder="Name, email, SKU or barcode" autofocus>
       <select name="type" aria-label="Entity type">
-        <option value="">Contacts and companies</option>
-        <option value="contact"<?= $selectedEntityType === 'contact' ? ' selected' : '' ?>>Contacts only</option>
-        <option value="company"<?= $selectedEntityType === 'company' ? ' selected' : '' ?>>Companies only</option>
+        <option value="">All available records</option>
+        <?php foreach ($availableEntityTypes as $type => $label): ?>
+          <option value="<?= $e($type) ?>"<?= $selectedEntityType === $type ? ' selected' : '' ?>><?= $e($label) ?> only</option>
+        <?php endforeach; ?>
       </select>
       <button class="kontor-button" type="submit">Search</button>
     </form>
@@ -56,8 +61,9 @@ $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): 
       <?php if ($result->hits): ?>
         <div class="kontor-card kontor-resultlist">
           <?php foreach ($result->hits as $hit): ?>
-            <a class="kontor-result" href="<?= $e($adminUrl) ?><?= $hit->entityType === 'company' ? 'company' : 'contact' ?>/?id=<?= $e(rawurlencode($hit->entityUid)) ?>">
-              <span class="kontor-result__icon"><i class="fa fa-<?= $hit->entityType === 'company' ? 'building' : 'user' ?>"></i></span>
+            <?php [$resultRoute, $resultIcon] = $resultPresentation($hit->entityType); ?>
+            <a class="kontor-result" href="<?= $e($adminUrl) ?><?= $e($hit->url ?: $resultRoute . '/?id=' . rawurlencode($hit->entityUid)) ?>">
+              <span class="kontor-result__icon"><i class="fa fa-<?= $e($resultIcon) ?>"></i></span>
               <span class="kontor-result__body">
                 <strong><?= $e($hit->title) ?></strong>
                 <span><?= $e($hit->subtitle ?: ucfirst($hit->entityType)) ?></span>
@@ -88,7 +94,7 @@ $pageUrl = static function (int $targetPage) use ($query, $selectedEntityType): 
         <div class="kontor-card kontor-empty">
           <i class="fa fa-search"></i>
           <h3>No results found</h3>
-          <p>Try another name, company or email term within <?= $e($scopeLabel) ?>.</p>
+          <p>Try another name, email, SKU, or barcode within <?= $e($scopeLabel) ?>.</p>
         </div>
       <?php endif; ?>
     </section>

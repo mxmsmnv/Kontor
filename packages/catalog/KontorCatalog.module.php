@@ -10,6 +10,7 @@ use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
 use Kontor\Catalog\Infrastructure\Persistence\CategoryRepository;
 use Kontor\Catalog\Infrastructure\Persistence\PriceListRepository;
 use Kontor\Catalog\Infrastructure\Persistence\PriceRepository;
+use Kontor\Catalog\Infrastructure\Search\CatalogItemSearchProvider;
 use Kontor\Catalog\Migrations\Migration0001CreateCatalogItemsTable;
 use Kontor\Catalog\Migrations\Migration0002CreateCategoriesTable;
 use Kontor\Catalog\Migrations\Migration0003CreatePriceListsTable;
@@ -36,13 +37,13 @@ class KontorCatalog extends WireData implements Module
         return [
             'title' => 'Kontor Catalog',
             'summary' => 'Items (products and services), categories, price lists, units and tax code references.',
-            'version' => '006',
+            'version' => '007',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCatalog',
             'icon' => 'cubes',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor'],
+            'requires' => ['Kontor', 'KontorSearch'],
             'permissions' => [
                 'kontor-catalog-item-view' => 'View catalog items',
                 'kontor-catalog-item-create' => 'Create catalog items',
@@ -68,6 +69,8 @@ class KontorCatalog extends WireData implements Module
     {
         /** @var Kontor $kontor */
         $kontor = $this->wire()->modules->get('Kontor');
+        /** @var KontorSearch $searchModule */
+        $searchModule = $this->wire()->modules->get('KontorSearch');
 
         $kontor->container()->get(ImportProviderRegistry::class)->register(
             'catalog_item',
@@ -78,6 +81,10 @@ class KontorCatalog extends WireData implements Module
             new ItemExportProvider($this->pdo(), $kontor->container()->get(OrganizationRepository::class))
         );
         $kontor->container()->get(RepositoryRegistry::class)->register('catalog_item', $this->itemRepository());
+        $searchModule->providerRegistry()->register(new CatalogItemSearchProvider(
+            $this->pdo(),
+            $kontor->container()->get(OrganizationRepository::class)
+        ));
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
         $kontor->container()->get(BackupProviderRegistry::class)->register(

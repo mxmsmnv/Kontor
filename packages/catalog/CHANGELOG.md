@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Catalog items in global search, covering localized titles/descriptions,
+  SKU, and barcode with direct admin links and exact-identifier ranking.
 - Organization-scoped Catalog backup/restore across items, categories, price
   lists, and price tiers, registered for protected imports.
 - Organization-scoped active-item usage counts for unit and tax references.
