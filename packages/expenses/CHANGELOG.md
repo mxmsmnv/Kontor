@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First admin vertical: category creation, organization-scoped status views,
+  expense capture, and permission-gated submit, approve/reject, cancel, and
+  reimburse actions.
 - Initial alpha (Substage 6.3): `kontor_expense_categories` and
   `kontor_expenses` migrations (full schema gap-fill, no dedicated spec
   section); `ExpenseCategory`/`Expense` domain objects;

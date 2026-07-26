@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Expenses admin vertical: category creation, expense drafts, optional
+  supplier and receipt references, submission, approval/rejection, cancellation,
+  and reimbursement.
 - First Purchasing admin vertical: supplier creation, one-line purchase-order
   drafting and issue, goods receipts, cumulative receipt status, and atomic
   Inventory stock updates.

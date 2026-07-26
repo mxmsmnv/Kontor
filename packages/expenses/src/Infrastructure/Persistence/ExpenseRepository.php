@@ -113,6 +113,30 @@ final class ExpenseRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /**
+     * @return Expense[]
+     */
+    public function forOrganization(string $organizationUid, ?string $status = null, int $limit = 100): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $limit = max(1, min(500, $limit));
+        $statusClause = $status !== null ? ' AND status = :status' : '';
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_expenses
+             WHERE organization_id = :organization_id
+               AND archived_at IS NULL{$statusClause}
+             ORDER BY expense_date DESC, created_at DESC
+             LIMIT {$limit}"
+        );
+        $params = ['organization_id' => $organizationId];
+        if ($status !== null) {
+            $params['status'] = $status;
+        }
+        $statement->execute($params);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): Expense
     {
         return new Expense(

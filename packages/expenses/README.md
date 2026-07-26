@@ -43,9 +43,16 @@ Everything under `tests/Integration/` needs real MySQL (see
 `../../docker-compose.test.yml`) and is skipped otherwise, same
 `KONTOR_TEST_DB_DSN` convention as the other packages.
 
+## Admin vertical
+
+The main Kontor Process module now exposes category management, expense
+capture, status views, and the full single-approver lifecycle from draft
+through reimbursement. Supplier and receipt references remain optional and
+loose, matching the package boundary.
+
 ## Not in scope for this substage
 
 No multi-step/multi-approver approval chains. No spending limits or
-per-category budgets. No admin UI/API endpoints — receipt upload would go
-through `kontor/files` directly (storing the resulting uid here), not
+per-category budgets. No API endpoints — receipt upload goes through
+`kontor/files` directly (storing the resulting uid here), not
 through this package.

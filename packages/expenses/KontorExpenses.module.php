@@ -26,7 +26,7 @@ class KontorExpenses extends WireData implements Module
         return [
             'title' => 'Kontor Expenses',
             'summary' => 'Expenses, categories, receipts, approvals.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorExpenses',
             'icon' => 'money',
@@ -116,6 +116,13 @@ class KontorExpenses extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('expenses', self::getModuleInfo()['version'], 'expenses');
+        $components->enable('expenses');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('expenses', self::getModuleInfo()['version'], 'expenses');
         $components->enable('expenses');
     }

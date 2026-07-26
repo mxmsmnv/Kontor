@@ -46,6 +46,8 @@ use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Expenses\Domain\Expense;
+use Kontor\Expenses\Domain\ExpenseCategory;
 use Kontor\Inventory\Domain\Warehouse;
 use Kontor\Payments\Domain\Payment;
 use Kontor\Purchasing\Domain\PurchaseOrder;
@@ -74,7 +76,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '096',
+            'version' => '097',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -134,6 +136,12 @@ class ProcessKontor extends Process
                     'label' => 'Purchasing',
                     'icon' => 'truck',
                     'permission' => 'kontor-purchasing-po-view',
+                ],
+                [
+                    'url' => 'expenses/',
+                    'label' => 'Expenses',
+                    'icon' => 'credit-card',
+                    'permission' => 'kontor-expenses-expense-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -2887,6 +2895,273 @@ class ProcessKontor extends Process
             'outstanding' => $quantities,
             'error' => $error,
         ]);
+    }
+
+    public function ___executeExpenses(): string
+    {
+        $this->requireExpenses();
+        $this->requirePermission('kontor-expenses-expense-view');
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['draft', 'submitted', 'approved', 'rejected', 'reimbursed', 'cancelled']
+        );
+        $module = $this->expensesModule();
+        $categories = $module->categoryRepository()->forOrganization($this->organizationUid());
+        $this->setPageTitle($this->_('Kontor · Expenses'));
+
+        return $this->renderTemplate('expenses', [
+            'expenses' => $module->expenseRepository()->forOrganization(
+                $this->organizationUid(),
+                $status,
+            ),
+            'categories' => $categories,
+            'categoryLabels' => array_column(array_map(
+                static fn (ExpenseCategory $category): array => [
+                    $category->uid->toString(),
+                    $category->code . ' · ' . $category->name,
+                ],
+                $categories,
+            ), 1, 0),
+            'selectedStatus' => $status,
+            'canCreateExpense' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-expenses-expense-create'),
+            'canManageCategories' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-expenses-category-manage'),
+        ]);
+    }
+
+    public function ___executeExpenseCategory(): string
+    {
+        $this->requireExpenses();
+        $this->requirePermission('kontor-expenses-category-manage');
+        $this->setPageTitle($this->_('Kontor · New expense category'));
+        $values = ['code' => '', 'name' => ''];
+        $error = '';
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'code' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('code')
+                )),
+                'name' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('name')
+                )),
+            ];
+            if ($values['code'] === '' || preg_match('/^[A-Z0-9_-]{1,50}$/', $values['code']) !== 1) {
+                $error = $this->_('Category code must use letters, numbers, hyphens, or underscores.');
+            } elseif ($values['name'] === '') {
+                $error = $this->_('Category name is required.');
+            }
+            if ($error === '') {
+                $category = ExpenseCategory::create(
+                    $this->organizationUid(),
+                    $values['code'],
+                    mb_substr($values['name'], 0, 191),
+                    (int) $this->wire()->user->id,
+                );
+                try {
+                    $this->expensesModule()->categoryRepository()->save($category);
+                } catch (\PDOException $exception) {
+                    $error = $exception->getCode() === '23000'
+                        ? $this->_('That expense category code is already in use.')
+                        : $this->_('Expense category could not be saved.');
+                }
+                if ($error === '') {
+                    $this->audit(
+                        'expenses',
+                        'expense_category',
+                        $category->uid->toString(),
+                        'created',
+                        current: ['code' => $category->code, 'name' => $category->name],
+                    );
+                    $this->message($this->_('Expense category created.'));
+                    $this->wire()->session->redirect('../expenses/');
+                }
+            }
+        }
+
+        return $this->renderTemplate('expense-category', [
+            'values' => $values,
+            'error' => $error,
+        ]);
+    }
+
+    public function ___executeExpense(): string
+    {
+        $this->requireExpenses();
+        $module = $this->expensesModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $expense = $id !== '' ? $module->expenseRepository()->require($id) : null;
+        if ($expense !== null) {
+            $this->requireSameOrganization($expense->organizationId);
+            $this->requirePermission('kontor-expenses-expense-view');
+        } else {
+            $this->requirePermission('kontor-expenses-expense-create');
+        }
+        $categories = array_values(array_filter(
+            $module->categoryRepository()->forOrganization($this->organizationUid()),
+            static fn (ExpenseCategory $category): bool => $category->isActive(),
+        ));
+        $suppliers = $this->purchasingReady()
+            ? array_values(array_filter(
+                $this->purchasingModule()->supplierRepository()->forOrganization($this->organizationUid()),
+                static fn (Supplier $supplier): bool => $supplier->isActive(),
+            ))
+            : [];
+        $values = [
+            'categoryUid' => '',
+            'supplierUid' => '',
+            'description' => '',
+            'amount' => '',
+            'currencyCode' => $this->organization()->defaultCurrency,
+            'expenseDate' => (new \DateTimeImmutable())->format('Y-m-d'),
+            'receiptFileUid' => '',
+        ];
+        $error = '';
+
+        if ($expense === null && $this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $values = [
+                'categoryUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('category_uid')
+                ),
+                'supplierUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('supplier_uid')
+                ),
+                'description' => trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('description')
+                )),
+                'amount' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('amount')
+                ),
+                'currencyCode' => strtoupper($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('currency_code')
+                )),
+                'expenseDate' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('expense_date')
+                ),
+                'receiptFileUid' => $this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('receipt_file_uid')
+                ),
+            ];
+            $categoryMap = [];
+            foreach ($categories as $category) {
+                $categoryMap[$category->uid->toString()] = $category;
+            }
+            $supplierMap = [];
+            foreach ($suppliers as $supplier) {
+                $supplierMap[$supplier->uid->toString()] = $supplier;
+            }
+            $amount = str_replace(',', '.', $values['amount']);
+            if (!isset($categoryMap[$values['categoryUid']])) {
+                $error = $this->_('Select an active expense category.');
+            } elseif ($values['supplierUid'] !== '' && !isset($supplierMap[$values['supplierUid']])) {
+                $error = $this->_('Selected supplier is invalid.');
+            } elseif ($values['description'] === '') {
+                $error = $this->_('Expense description is required.');
+            } elseif ($amount === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                $error = $this->_('Amount must be greater than zero.');
+            } elseif (preg_match('/^[A-Z]{3}$/', $values['currencyCode']) !== 1) {
+                $error = $this->_('Currency must be a three-letter code.');
+            }
+            try {
+                $expenseDate = new \DateTimeImmutable($values['expenseDate']);
+            } catch (\Throwable) {
+                $expenseDate = new \DateTimeImmutable();
+                $error = $this->_('Expense date is invalid.');
+            }
+            if ($error === '') {
+                $expense = Expense::create(
+                    $this->organizationUid(),
+                    $values['categoryUid'],
+                    mb_substr($values['description'], 0, 500),
+                    Money::ofMinor((int) round((float) $amount * 100), $values['currencyCode']),
+                    $expenseDate,
+                    $values['supplierUid'] ?: null,
+                    $values['receiptFileUid'] ?: null,
+                    (int) $this->wire()->user->id,
+                );
+                $module->expenseRepository()->save($expense);
+                $this->audit(
+                    'expenses',
+                    'expense',
+                    $expense->uid->toString(),
+                    'created',
+                    current: ['description' => $expense->description, 'amountMinor' => $expense->amount->amountMinor()],
+                );
+                $this->message($this->_('Expense created.'));
+                $this->wire()->session->redirect(
+                    '../expense/?id=' . rawurlencode($expense->uid->toString())
+                );
+            }
+        }
+        $this->setPageTitle($expense === null
+            ? $this->_('Kontor · New expense')
+            : sprintf($this->_('Kontor · %s'), $expense->description));
+
+        return $this->renderTemplate('expense', [
+            'expense' => $expense,
+            'values' => $values,
+            'error' => $error,
+            'categories' => $categories,
+            'suppliers' => $suppliers,
+            'canSubmit' => $expense !== null && $expense->isDraft()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-expenses-expense-submit')),
+            'canApprove' => $expense !== null && $expense->isSubmitted()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-expenses-expense-approve')),
+            'canReimburse' => $expense !== null && $expense->isApproved()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-expenses-expense-reimburse')),
+            'canCancel' => $expense !== null && $expense->isCancellable()
+                && ($this->wire()->user->isSuperuser()
+                    || $this->wire()->user->hasPermission('kontor-expenses-expense-edit-draft')),
+        ]);
+    }
+
+    public function ___executeExpenseAction(): void
+    {
+        $this->requirePost();
+        $this->requireExpenses();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['submit', 'approve', 'reject', 'reimburse', 'cancel']
+        );
+        $this->requireAction($action, ['submit', 'approve', 'reject', 'reimburse', 'cancel']);
+        $this->requirePermission(match ($action) {
+            'submit' => 'kontor-expenses-expense-submit',
+            'approve', 'reject' => 'kontor-expenses-expense-approve',
+            'reimburse' => 'kontor-expenses-expense-reimburse',
+            'cancel' => 'kontor-expenses-expense-edit-draft',
+        });
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $expense = $this->expensesModule()->expenseRepository()->require($id);
+        $this->requireSameOrganization($expense->organizationId);
+        $workflow = $this->expensesModule()->workflow();
+        $expense = match ($action) {
+            'submit' => $workflow->submit($id, (int) $this->wire()->user->id),
+            'approve' => $workflow->approve($id, (int) $this->wire()->user->id),
+            'reject' => $workflow->reject(
+                $id,
+                (int) $this->wire()->user->id,
+                trim($this->wire()->sanitizer->text(
+                    (string) $this->wire()->input->post('reason')
+                )),
+            ),
+            'reimburse' => $workflow->reimburse($id),
+            'cancel' => $workflow->cancel($id),
+        };
+        $this->audit(
+            'expenses',
+            'expense',
+            $id,
+            $action,
+            current: ['status' => $expense->status, 'rejectionReason' => $expense->rejectionReason],
+        );
+        $this->message($this->_('Expense workflow updated.'));
+        $this->wire()->session->redirect('../expense/?id=' . rawurlencode($id));
     }
 
     public function ___executeCompany(): string
@@ -6360,6 +6635,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorPurchasing');
     }
 
+    private function expensesReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorExpenses');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -6434,6 +6714,13 @@ class ProcessKontor extends Process
     {
         if (!$this->purchasingReady()) {
             throw new WireException($this->_('The Kontor Purchasing component is not installed.'));
+        }
+    }
+
+    private function requireExpenses(): void
+    {
+        if (!$this->expensesReady()) {
+            throw new WireException($this->_('The Kontor Expenses component is not installed.'));
         }
     }
 
@@ -6524,6 +6811,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorPurchasing $module */
         $module = $this->wire()->modules->get('KontorPurchasing');
+
+        return $module;
+    }
+
+    private function expensesModule(): KontorExpenses
+    {
+        /** @var KontorExpenses $module */
+        $module = $this->wire()->modules->get('KontorExpenses');
 
         return $module;
     }
