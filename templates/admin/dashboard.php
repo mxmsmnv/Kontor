@@ -81,16 +81,37 @@ $enabledComponents = count(array_filter(
           <p>No personal or role dashboard is configured for you yet.</p>
         <?php endif; ?>
       <?php else: ?>
-        <div class="kontor-grid">
+        <div class="kontor-dashboardwidgets">
           <?php foreach ($renderedPersonalDashboard['widgets'] ?? [] as $renderedWidget): ?>
-            <?php $layout = $renderedWidget['layout']; ?>
-            <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel" style="grid-column: span <?= $e(max(2, min(12, $layout->width))) ?>;">
-              <header class="kontor-panel__head"><h3><?= $e($renderedWidget['title']) ?></h3><span class="uk-label kontor-pill<?= $renderedWidget['cacheHit'] ? '' : ' kontor-pill--inactive' ?>"><?= $renderedWidget['cacheHit'] ? 'cached' : 'fresh' ?></span></header>
+            <?php
+            $layout = $renderedWidget['layout'];
+            $widgetSpan = max(2, min(12, $layout->width));
+            $widgetColumn = max(1, min(13 - $widgetSpan, $layout->positionX + 1));
+            ?>
+            <article
+              class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel kontor-dashboardwidget"
+              style="--kontor-widget-column: <?= $e($widgetColumn) ?>; --kontor-widget-span: <?= $e($widgetSpan) ?>;"
+            >
+              <header class="kontor-panel__head">
+                <h3><?= $e($renderedWidget['title']) ?></h3>
+                <span class="kontor-dashboardwidget__status" title="<?= $renderedWidget['cacheHit'] ? 'Served from widget cache' : 'Freshly generated' ?>">
+                  <i class="fa fa-<?= $renderedWidget['cacheHit'] ? 'bolt' : 'clock-o' ?>"></i>
+                  <?= $renderedWidget['cacheHit'] ? 'Cached' : 'Fresh' ?>
+                </span>
+              </header>
               <?php if ($layout->widgetKey === 'welcome'): ?>
-                <p>Welcome to your saved Kontor workspace.</p>
-                <small>Generated <?= $e($renderedWidget['data']['generatedAt'] ?? '') ?></small>
+                <div class="kontor-dashboardwidget__welcome">
+                  <span class="kontor-dashboardwidget__heroicon"><i class="fa fa-hand-spock-o"></i></span>
+                  <div>
+                    <strong>Welcome to your Kontor workspace.</strong>
+                    <p>Your personal layout is active and ready for more widgets.</p>
+                  </div>
+                </div>
               <?php elseif ($layout->widgetKey === 'tasks.my_open'): ?>
-                <p><strong><?= $e((string) ($renderedWidget['data']['count'] ?? 0)) ?></strong> open · <?= $e((string) ($renderedWidget['data']['overdueCount'] ?? 0)) ?> overdue</p>
+                <div class="kontor-dashboardwidget__metrics">
+                  <span><strong><?= $e((string) ($renderedWidget['data']['count'] ?? 0)) ?></strong> open</span>
+                  <span><strong><?= $e((string) ($renderedWidget['data']['overdueCount'] ?? 0)) ?></strong> overdue</span>
+                </div>
                 <?php if (($renderedWidget['data']['tasks'] ?? []) !== []): ?>
                   <ul class="kontor-list">
                     <?php foreach ($renderedWidget['data']['tasks'] as $task): ?>
@@ -101,38 +122,46 @@ $enabledComponents = count(array_filter(
                     <?php endforeach; ?>
                   </ul>
                 <?php else: ?>
-                  <p>No open tasks assigned to you.</p>
+                  <p class="kontor-dashboardwidget__empty">No open tasks assigned to you.</p>
                 <?php endif; ?>
-                <a href="<?= $e($adminUrl) ?>tasks/">Open tasks</a>
+                <a class="kontor-dashboardwidget__link" href="<?= $e($adminUrl) ?>tasks/">Open tasks <i class="fa fa-arrow-right"></i></a>
               <?php else: ?>
                 <pre><?= $e(json_encode($renderedWidget['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
               <?php endif; ?>
               <?php if ($canEditPersonalDashboard): ?>
-                <form method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
+                <form class="kontor-dashboardwidget__controls" method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
                   <input type="hidden" name="dashboard_uid" value="<?= $e($personalDashboard->uid->toString()) ?>">
                   <input type="hidden" name="widget_uid" value="<?= $e($layout->uid->toString()) ?>">
-                  <button name="action" value="move_left" type="submit">←</button>
-                  <button name="action" value="move_right" type="submit">→</button>
-                  <button name="action" value="narrower" type="submit">Narrower</button>
-                  <button name="action" value="wider" type="submit">Wider</button>
-                  <button name="action" value="remove" type="submit">Remove</button>
+                  <span>Layout</span>
+                  <button class="uk-button uk-button-default uk-button-small" name="action" value="move_left" type="submit" title="Move left" aria-label="Move widget left"><i class="fa fa-arrow-left"></i></button>
+                  <button class="uk-button uk-button-default uk-button-small" name="action" value="move_right" type="submit" title="Move right" aria-label="Move widget right"><i class="fa fa-arrow-right"></i></button>
+                  <button class="uk-button uk-button-default uk-button-small" name="action" value="narrower" type="submit" title="Make narrower" aria-label="Make widget narrower"><i class="fa fa-compress"></i></button>
+                  <button class="uk-button uk-button-default uk-button-small" name="action" value="wider" type="submit" title="Make wider" aria-label="Make widget wider"><i class="fa fa-expand"></i></button>
+                  <button class="uk-button uk-button-default uk-button-small kontor-dashboardwidget__remove" name="action" value="remove" type="submit" title="Remove widget" aria-label="Remove widget"><i class="fa fa-trash"></i></button>
                 </form>
               <?php endif; ?>
             </article>
           <?php endforeach; ?>
         </div>
-        <?php if (($renderedPersonalDashboard['widgets'] ?? []) === []): ?><p>No widgets yet.</p><?php endif; ?>
+        <?php if (($renderedPersonalDashboard['widgets'] ?? []) === []): ?>
+          <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
+            <i class="fa fa-th-large"></i>
+            <h3>No widgets yet</h3>
+            <p>Add a widget to build your personal workspace.</p>
+          </div>
+        <?php endif; ?>
         <?php if ($canEditPersonalDashboard && $availableDashboardWidgets !== []): ?>
-          <form method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
+          <form class="kontor-dashboardwidgetadd" method="post" action="<?= $e($adminUrl) ?>dashboard-widget-action/">
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
             <input type="hidden" name="dashboard_uid" value="<?= $e($personalDashboard->uid->toString()) ?>">
-            <label>Widget
+            <label>
+              <span>Add widget</span>
               <select name="widget_key">
                 <?php foreach ($availableDashboardWidgets as $key => $provider): ?><option value="<?= $e($key) ?>"><?= $e($provider->title()) ?></option><?php endforeach; ?>
               </select>
             </label>
-            <button class="uk-button uk-button-primary kontor-button" name="action" value="add" type="submit">Add widget</button>
+            <button class="uk-button uk-button-primary kontor-button" name="action" value="add" type="submit"><i class="fa fa-plus"></i> Add widget</button>
           </form>
         <?php endif; ?>
       <?php endif; ?>

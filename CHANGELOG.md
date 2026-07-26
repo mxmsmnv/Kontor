@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Personal Dashboard widgets now use their persisted 12-column width and
+  horizontal position, with responsive cards and design-system controls.
 - Dashboard directory groups now stack vertically with compact responsive
   launch tiles, preserving complete section names without equal-height gaps.
 - ProcessWire navigation caches are now invalidated per user whenever the

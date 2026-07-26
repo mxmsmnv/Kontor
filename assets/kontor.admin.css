@@ -150,6 +150,151 @@
   grid-template-columns: minmax(0, 1.65fr) minmax(250px, 0.85fr);
 }
 
+.kontor-dashboardwidgets {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.kontor-dashboardwidget {
+  box-shadow: none;
+  grid-column: var(--kontor-widget-column) / span var(--kontor-widget-span);
+  min-width: 0;
+}
+
+.kontor-dashboardwidget .kontor-panel__head {
+  border-bottom: 1px solid var(--pw-border-color);
+  padding-bottom: 0.75rem;
+}
+
+.kontor-dashboardwidget__status {
+  align-items: center;
+  color: var(--pw-muted-color);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  gap: 0.35rem;
+}
+
+.kontor-dashboardwidget__welcome {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.kontor-dashboardwidget__welcome p {
+  color: var(--pw-muted-color);
+  margin: 0.25rem 0 0;
+}
+
+.kontor-dashboardwidget__heroicon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: inline-flex;
+  flex: 0 0 2.5rem;
+  height: 2.5rem;
+  justify-content: center;
+}
+
+.kontor-dashboardwidget__metrics {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0.75rem;
+}
+
+.kontor-dashboardwidget__metrics span {
+  background: var(--pw-main-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-muted-color);
+  padding: 0.7rem;
+}
+
+.kontor-dashboardwidget__metrics strong {
+  color: var(--pw-text-color);
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.kontor-dashboardwidget__empty {
+  color: var(--pw-muted-color);
+  margin: 0.75rem 0;
+}
+
+.kontor-dashboardwidget__link {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 0.4rem;
+}
+
+.kontor-dashboardwidget pre {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.kontor-dashboardwidget__controls {
+  align-items: center;
+  border-top: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.kontor-dashboardwidget__controls > span {
+  color: var(--pw-muted-color);
+  font-size: 0.7rem;
+  margin-right: auto;
+}
+
+.kontor-dashboardwidget__controls .uk-button {
+  align-items: center;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0 0.55rem;
+}
+
+.kontor-dashboardwidget__remove {
+  color: var(--pw-error-inline-text-color) !important;
+}
+
+.kontor-dashboardwidgetadd {
+  align-items: end;
+  background: var(--pw-main-background);
+  border: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+}
+
+.kontor-dashboardwidgetadd label {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kontor-dashboardwidgetadd label > span {
+  color: var(--pw-muted-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.kontor-dashboardwidgetadd select {
+  min-height: 2.5rem;
+  width: 100%;
+}
+
 .kontor-panel {
   padding: 1.25rem;
 }
@@ -2340,6 +2485,19 @@
 
   .kontor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .kontor-dashboardwidgets {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-dashboardwidget {
+    grid-column: 1 !important;
+  }
+
+  .kontor-dashboardwidgetadd {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .kontor-hero,

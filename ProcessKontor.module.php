@@ -102,7 +102,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '140',
+            'version' => '141',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -780,13 +780,17 @@ class ProcessKontor extends Process
             } elseif ($action === 'move_left' || $action === 'move_right') {
                 $module->dashboardService()->moveWidget(
                     $widgetUid,
-                    max(0, min(8, $widget->positionX + ($action === 'move_left' ? -1 : 1))),
+                    max(
+                        0,
+                        min(12 - max(2, min(12, $widget->width)), $widget->positionX + ($action === 'move_left' ? -1 : 1)),
+                    ),
                     $widget->positionY,
                 );
             } else {
+                $maximumWidth = max(2, 12 - max(0, min(10, $widget->positionX)));
                 $module->dashboardService()->resizeWidget(
                     $widgetUid,
-                    max(2, min(12, $widget->width + ($action === 'narrower' ? -1 : 1))),
+                    max(2, min($maximumWidth, $widget->width + ($action === 'narrower' ? -1 : 1))),
                     $widget->height,
                 );
             }
