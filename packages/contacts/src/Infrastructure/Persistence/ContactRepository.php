@@ -127,6 +127,61 @@ final class ContactRepository implements RepositoryInterface
         return $this->findByColumn($organizationUid, 'phone', $phone);
     }
 
+    /**
+     * @return Contact[]
+     */
+    public function findAll(string $organizationUid, string $query = '', int $limit = 100): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $query = trim($query);
+        $limit = max(1, min($limit, 250));
+        $sql = 'SELECT * FROM kontor_contacts
+            WHERE organization_id = :organization_id
+              AND deleted_at IS NULL
+              AND archived_at IS NULL';
+
+        if ($query !== '') {
+            $sql .= ' AND (
+                display_name LIKE :query
+                OR email LIKE :query
+                OR phone LIKE :query
+                OR mobile LIKE :query
+                OR job_title LIKE :query
+            )';
+        }
+
+        $sql .= ' ORDER BY updated_at DESC, display_name ASC LIMIT :limit';
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
+
+        if ($query !== '') {
+            $statement->bindValue(':query', '%' . $query . '%');
+        }
+
+        $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn (array $row): Contact => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
+    public function countActive(string $organizationUid): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM kontor_contacts
+             WHERE organization_id = :organization_id
+               AND deleted_at IS NULL
+               AND archived_at IS NULL'
+        );
+        $statement->execute([
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ]);
+
+        return (int) $statement->fetchColumn();
+    }
+
     private function findByColumn(string $organizationUid, string $column, string $value): ?Contact
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);

@@ -5,14 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
-### Fixed
-
-- Load Composer's autoloader from the ProcessWire bootstrap module so
-  installation and autoload initialization can resolve Kontor classes.
-- Avoid committing a transaction that MySQL already ended implicitly while
-  running DDL migrations.
-
 ### Added
+
+- A ProcessWire-native Kontor admin application with dashboard metrics,
+  component navigation, searchable contact/company lists, and create/edit
+  forms for both entity types.
+- Contact and company repository list/count queries for the admin workspace.
+- Component registry version synchronization during Core module upgrades.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every
@@ -86,3 +85,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 - Bumped the `kontor/sdk` requirement to `^0.2` (`JobInterface::handle()`
   gained a `JobProgressReporterInterface` parameter for the new
   `kontor/queue` component; see `packages/sdk/CHANGELOG.md`).
+
+### Fixed
+
+- Load Composer's autoloader from the ProcessWire bootstrap module so
+  installation and autoload initialization can resolve Kontor classes.
+- Avoid committing a transaction that MySQL already ended implicitly while
+  running DDL migrations.

@@ -88,6 +88,36 @@ final class ContactRepositoryTest extends DatabaseTestCase
         $this->assertNull($repository->findByEmail($this->organizationUid, 'nobody@example.test'));
     }
 
+    public function test_find_all_searches_active_contacts_and_count_excludes_archived(): void
+    {
+        $repository = $this->repository();
+        $ada = Contact::create(
+            $this->organizationUid,
+            'Ada',
+            null,
+            'Lovelace',
+            email: 'ada@example.test',
+            jobTitle: 'Mathematician'
+        );
+        $grace = Contact::create(
+            $this->organizationUid,
+            'Grace',
+            null,
+            'Hopper',
+            email: 'grace@example.test'
+        );
+        $repository->save($ada);
+        $repository->save($grace);
+
+        $matches = $repository->findAll($this->organizationUid, 'Mathematician');
+        $this->assertCount(1, $matches);
+        $this->assertSame('Ada Lovelace', $matches[0]->displayName);
+        $this->assertSame(2, $repository->countActive($this->organizationUid));
+
+        $repository->archive($grace->uid->toString());
+        $this->assertSame(1, $repository->countActive($this->organizationUid));
+    }
+
     public function test_save_rejects_a_non_contact_entity(): void
     {
         $this->expectException(\InvalidArgumentException::class);

@@ -52,6 +52,32 @@ final class CompanyRepositoryTest extends DatabaseTestCase
         $this->assertNull($row['archived_at']);
     }
 
+    public function test_find_all_searches_active_companies_and_count_excludes_archived(): void
+    {
+        $repository = $this->repository();
+        $acme = Company::create(
+            $this->organizationUid,
+            'Acme GmbH',
+            registrationNumber: 'HRB-123',
+            email: 'hello@acme.test'
+        );
+        $globex = Company::create(
+            $this->organizationUid,
+            'Globex LLC',
+            email: 'hello@globex.test'
+        );
+        $repository->save($acme);
+        $repository->save($globex);
+
+        $matches = $repository->findAll($this->organizationUid, 'HRB-123');
+        $this->assertCount(1, $matches);
+        $this->assertSame('Acme GmbH', $matches[0]->legalName);
+        $this->assertSame(2, $repository->countActive($this->organizationUid));
+
+        $repository->archive($globex->uid->toString());
+        $this->assertSame(1, $repository->countActive($this->organizationUid));
+    }
+
     public function test_require_throws_for_unknown_uid(): void
     {
         $this->expectException(\RuntimeException::class);

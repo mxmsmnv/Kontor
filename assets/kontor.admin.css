@@ -1,0 +1,497 @@
+.kontor-shell {
+  --kontor-ink: #172033;
+  --kontor-muted: #6b7280;
+  --kontor-line: #e7eaf0;
+  --kontor-surface: #ffffff;
+  --kontor-canvas: #f5f7fb;
+  --kontor-primary: #4f46e5;
+  --kontor-primary-soft: #eef2ff;
+  --kontor-success: #15803d;
+  color: var(--kontor-ink);
+  margin: -0.25rem 0 2rem;
+}
+
+.kontor-shell *,
+.kontor-shell *::before,
+.kontor-shell *::after {
+  box-sizing: border-box;
+}
+
+.kontor-hero {
+  align-items: flex-end;
+  background:
+    radial-gradient(circle at 92% 15%, rgba(255, 255, 255, 0.15), transparent 27%),
+    linear-gradient(135deg, #172033 0%, #27366b 55%, #4f46e5 100%);
+  border-radius: 18px;
+  color: #fff;
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  min-height: 185px;
+  overflow: hidden;
+  padding: 2rem;
+  position: relative;
+}
+
+.kontor-hero::after {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  content: "";
+  height: 260px;
+  position: absolute;
+  right: -65px;
+  top: -120px;
+  width: 260px;
+}
+
+.kontor-hero__content,
+.kontor-hero__actions {
+  position: relative;
+  z-index: 1;
+}
+
+.kontor-eyebrow {
+  color: #7c83a0;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+}
+
+.kontor-hero .kontor-eyebrow {
+  color: #c7d2fe;
+}
+
+.kontor-hero h2,
+.kontor-pagehead h2 {
+  color: inherit;
+  font-size: clamp(1.65rem, 3vw, 2.4rem);
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0 0 0.65rem;
+}
+
+.kontor-hero p {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
+  margin: 0;
+  max-width: 590px;
+}
+
+.kontor-hero__actions,
+.kontor-pagehead__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.kontor-button {
+  align-items: center;
+  background: var(--kontor-primary);
+  border: 1px solid var(--kontor-primary);
+  border-radius: 9px;
+  color: #fff !important;
+  display: inline-flex;
+  font-size: 0.86rem;
+  font-weight: 700;
+  gap: 0.45rem;
+  justify-content: center;
+  line-height: 1;
+  min-height: 40px;
+  padding: 0.7rem 1rem;
+  text-decoration: none !important;
+}
+
+.kontor-button:hover {
+  background: #4338ca;
+  color: #fff !important;
+}
+
+.kontor-button--light {
+  background: #fff;
+  border-color: #fff;
+  color: #27366b !important;
+}
+
+.kontor-button--light:hover {
+  background: #eef2ff;
+  color: #27366b !important;
+}
+
+.kontor-button--ghost {
+  background: transparent;
+  border-color: var(--kontor-line);
+  color: var(--kontor-ink) !important;
+}
+
+.kontor-button--ghost:hover {
+  background: var(--kontor-canvas);
+  color: var(--kontor-ink) !important;
+}
+
+.kontor-statgrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
+}
+
+.kontor-card {
+  background: var(--kontor-surface);
+  border: 1px solid var(--kontor-line);
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(23, 32, 51, 0.04);
+}
+
+.kontor-stat {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  padding: 1.2rem;
+}
+
+.kontor-stat__icon {
+  align-items: center;
+  background: var(--kontor-primary-soft);
+  border-radius: 12px;
+  color: var(--kontor-primary);
+  display: flex;
+  flex: 0 0 46px;
+  font-size: 1.1rem;
+  height: 46px;
+  justify-content: center;
+}
+
+.kontor-stat__value {
+  display: block;
+  font-size: 1.65rem;
+  font-weight: 760;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.kontor-stat__label {
+  color: var(--kontor-muted);
+  font-size: 0.82rem;
+}
+
+.kontor-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.65fr) minmax(250px, 0.85fr);
+}
+
+.kontor-panel {
+  padding: 1.25rem;
+}
+
+.kontor-panel__head {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.kontor-panel__head h3 {
+  color: var(--kontor-ink);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.kontor-panel__head a {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.kontor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.kontor-list li {
+  align-items: center;
+  border-top: 1px solid var(--kontor-line);
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.85rem 0;
+}
+
+.kontor-list li:first-child {
+  border-top: 0;
+}
+
+.kontor-avatar {
+  align-items: center;
+  background: linear-gradient(145deg, #eef2ff, #e0e7ff);
+  border-radius: 10px;
+  color: #4338ca;
+  display: inline-flex;
+  flex: 0 0 38px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  height: 38px;
+  justify-content: center;
+  text-transform: uppercase;
+}
+
+.kontor-list__body {
+  min-width: 0;
+}
+
+.kontor-list__body strong,
+.kontor-list__body a {
+  color: var(--kontor-ink);
+  display: block;
+  font-weight: 720;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kontor-list__body small {
+  color: var(--kontor-muted);
+}
+
+.kontor-quicklinks {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kontor-quicklink {
+  align-items: center;
+  border: 1px solid var(--kontor-line);
+  border-radius: 10px;
+  color: var(--kontor-ink) !important;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.8rem;
+  text-decoration: none !important;
+}
+
+.kontor-quicklink:hover {
+  background: var(--kontor-canvas);
+}
+
+.kontor-quicklink i {
+  color: var(--kontor-primary);
+  width: 1.25rem;
+}
+
+.kontor-pagehead {
+  align-items: flex-end;
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.kontor-pagehead p {
+  color: var(--kontor-muted);
+  margin: 0;
+}
+
+.kontor-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.kontor-search {
+  display: flex;
+  flex: 1;
+  gap: 0.55rem;
+  max-width: 510px;
+}
+
+.kontor-search input {
+  background: #fff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 9px;
+  color: var(--kontor-ink);
+  min-height: 40px;
+  padding: 0.65rem 0.85rem;
+  width: 100%;
+}
+
+.kontor-tablewrap {
+  overflow-x: auto;
+}
+
+.kontor-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.kontor-table th {
+  color: #7c8496;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.kontor-table td {
+  border-top: 1px solid var(--kontor-line);
+  padding: 0.9rem 1rem;
+  vertical-align: middle;
+}
+
+.kontor-table tbody tr:hover {
+  background: #fafbff;
+}
+
+.kontor-identity {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 220px;
+}
+
+.kontor-identity a {
+  color: var(--kontor-ink);
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.kontor-secondary {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+}
+
+.kontor-pill {
+  background: #ecfdf3;
+  border-radius: 999px;
+  color: var(--kontor-success);
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 750;
+  padding: 0.28rem 0.55rem;
+  text-transform: capitalize;
+}
+
+.kontor-pill--inactive {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.kontor-empty {
+  color: var(--kontor-muted);
+  padding: 3.25rem 1.5rem;
+  text-align: center;
+}
+
+.kontor-empty i {
+  color: #c7ccda;
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 0.8rem;
+}
+
+.kontor-empty h3 {
+  color: var(--kontor-ink);
+  margin: 0 0 0.4rem;
+}
+
+.kontor-formhead {
+  background: linear-gradient(135deg, #f7f8ff, #eef2ff);
+  border: 1px solid #e1e6ff;
+  border-radius: 14px;
+  margin-bottom: 1rem;
+  padding: 1.35rem;
+}
+
+.kontor-formhead__back {
+  color: #5b6290;
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-decoration: none;
+}
+
+.kontor-formhead h2 {
+  color: var(--kontor-ink);
+  margin: 0 0 0.35rem;
+}
+
+.kontor-formhead p:last-child {
+  color: var(--kontor-muted);
+  margin: 0;
+}
+
+.kontor-entity-form {
+  background: #fff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 14px;
+  padding: 0.35rem;
+}
+
+.kontor-components {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kontor-component {
+  padding: 1.15rem;
+}
+
+.kontor-component__top {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.kontor-component h3 {
+  color: var(--kontor-ink);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.kontor-component p {
+  color: var(--kontor-muted);
+  font-size: 0.8rem;
+  margin: 0.7rem 0 0;
+}
+
+.kontor-setup {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  color: #854d0e;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+@media (max-width: 850px) {
+  .kontor-statgrid,
+  .kontor-components {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-hero,
+  .kontor-pagehead,
+  .kontor-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kontor-hero {
+    min-height: 0;
+  }
+}

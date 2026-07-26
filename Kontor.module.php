@@ -47,7 +47,7 @@ class Kontor extends WireData implements Module
         return [
             'title' => 'Kontor',
             'summary' => 'Open-source modular ERP, CRM and business operations platform.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'cubes',
@@ -185,6 +185,13 @@ class Kontor extends WireData implements Module
         (new OrganizationRepository($pdo))->defaultOrganization('US', 'en', 'EUR');
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('core', self::getModuleInfo()['version'], 'core');
+        $components->enable('core');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('core', self::getModuleInfo()['version'], 'core');
         $components->enable('core');
     }

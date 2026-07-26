@@ -42,7 +42,7 @@ class KontorContacts extends WireData implements Module
         return [
             'title' => 'Kontor Contacts',
             'summary' => 'Contacts, companies, addresses, memberships, tags and duplicate detection.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorContacts',
             'icon' => 'address-book',
@@ -81,16 +81,20 @@ class KontorContacts extends WireData implements Module
         $searchModule = $this->wire()->modules->get('KontorSearch');
 
         $kontor->container()->get(ImportProviderRegistry::class)->register(
+            'contact',
             new ContactImportProvider($this->contactRepository(), $this->duplicateDetector())
         );
         $kontor->container()->get(ImportProviderRegistry::class)->register(
+            'company',
             new CompanyImportProvider($this->companyRepository())
         );
 
         $kontor->container()->get(ExportProviderRegistry::class)->register(
+            'contact',
             new ContactExportProvider($this->pdo(), $kontor->container()->get(OrganizationRepository::class))
         );
         $kontor->container()->get(ExportProviderRegistry::class)->register(
+            'company',
             new CompanyExportProvider($this->pdo(), $kontor->container()->get(OrganizationRepository::class))
         );
 
@@ -207,6 +211,13 @@ class KontorContacts extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('contacts', self::getModuleInfo()['version'], 'contacts');
+        $components->enable('contacts');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('contacts', self::getModuleInfo()['version'], 'contacts');
         $components->enable('contacts');
     }

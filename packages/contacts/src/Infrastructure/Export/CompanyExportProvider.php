@@ -62,7 +62,7 @@ final class CompanyExportProvider implements ExportProviderInterface
         $statement = $this->pdo->prepare("SELECT {$columns} FROM kontor_companies WHERE {$where} ORDER BY id ASC");
         $statement->execute($params);
 
-        foreach ($statement as $row) {
+        while (($row = $statement->fetch(\PDO::FETCH_ASSOC)) !== false) {
             yield $row;
         }
     }

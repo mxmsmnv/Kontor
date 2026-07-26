@@ -29,7 +29,14 @@
     "autoload": {
         "psr-4": {
             "Kontor\\Core\\": "src/",
-            "Kontor\\Core\\Migrations\\": "migrations/"
+            "Kontor\\Core\\Migrations\\": "migrations/",
+            "Kontor\\Queue\\": "packages/queue/src/",
+            "Kontor\\Queue\\Migrations\\": "packages/queue/migrations/",
+            "Kontor\\Search\\": "packages/search/src/",
+            "Kontor\\Dashboard\\": "packages/dashboard/src/",
+            "Kontor\\Dashboard\\Migrations\\": "packages/dashboard/migrations/",
+            "Kontor\\Contacts\\": "packages/contacts/src/",
+            "Kontor\\Contacts\\Migrations\\": "packages/contacts/migrations/"
         }
     },
     "autoload-dev": {
