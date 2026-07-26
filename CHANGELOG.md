@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Selected-state styling and accessible current-page semantics for Components
+  summary-card filters.
 - Direct Components summary-card drill-down for registered, enabled, and
   attention states.
 - Direct health-summary drill-down for healthy, warning, and critical checks.

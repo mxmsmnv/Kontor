@@ -11,6 +11,9 @@
 /** @var callable $e */
 
 $hasFilters = $query !== '' || $selectedStatus !== '';
+$registeredSelected = $query === '' && $selectedStatus === '';
+$enabledSelected = $query === '' && $selectedStatus === 'enabled';
+$attentionSelected = $query === '' && $selectedStatus === 'attention';
 ?>
 <div class="kontor-shell">
   <header class="kontor-pagehead">
@@ -22,13 +25,13 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
   </header>
 
   <section class="kontor-componentstats">
-    <a class="kontor-card" href="./">
+    <a class="kontor-card<?= $registeredSelected ? ' kontor-card--selected' : '' ?>" href="./"<?= $registeredSelected ? ' aria-current="page"' : '' ?>>
       <strong><?= $e($counts['total']) ?></strong><span>Registered</span>
     </a>
-    <a class="kontor-card" href="./?status=enabled">
+    <a class="kontor-card<?= $enabledSelected ? ' kontor-card--selected' : '' ?>" href="./?status=enabled"<?= $enabledSelected ? ' aria-current="page"' : '' ?>>
       <strong><?= $e($counts['enabled']) ?></strong><span>Enabled</span>
     </a>
-    <a class="kontor-card<?= $counts['attention'] > 0 ? ' kontor-componentstats--warning' : '' ?>" href="./?status=attention">
+    <a class="kontor-card<?= $counts['attention'] > 0 ? ' kontor-componentstats--warning' : '' ?><?= $attentionSelected ? ' kontor-card--selected' : '' ?>" href="./?status=attention"<?= $attentionSelected ? ' aria-current="page"' : '' ?>>
       <strong><?= $e($counts['attention']) ?></strong><span>Need attention</span>
     </a>
   </section>
