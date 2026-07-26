@@ -44,7 +44,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '014',
+            'version' => '015',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -127,6 +127,10 @@ class ProcessKontor extends Process
         $contacts = $contactsReady ? $this->contactRepository()->countActive($organizationUid) : 0;
         $companies = $contactsReady ? $this->companyRepository()->countActive($organizationUid) : 0;
         $recentContacts = $contactsReady ? $this->contactRepository()->findAll($organizationUid, '', 6) : [];
+        $user = $this->wire()->user;
+        $canViewActivity = $user->isSuperuser() || $user->hasPermission('kontor-audit-view');
+        $canViewQueue = $user->isSuperuser() || $user->hasPermission('kontor-queue-view');
+        $queueReady = $this->queueReady();
 
         return $this->renderTemplate('dashboard', [
             'components' => $components,
@@ -134,17 +138,18 @@ class ProcessKontor extends Process
             'contactCount' => $contacts,
             'companyCount' => $companies,
             'recentContacts' => $recentContacts,
-            'canViewActivity' => $this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-audit-view'),
-            'canViewBackups' => $this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-backups-view'),
-            'canViewHealth' => $this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-health-view'),
-            'canManageOrganization' => $this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-admin'),
-            'queueReady' => $this->queueReady(),
-            'canViewQueue' => $this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-queue-view'),
+            'canViewActivity' => $canViewActivity,
+            'canViewBackups' => $user->isSuperuser() || $user->hasPermission('kontor-backups-view'),
+            'canViewHealth' => $user->isSuperuser() || $user->hasPermission('kontor-health-view'),
+            'canManageOrganization' => $user->isSuperuser() || $user->hasPermission('kontor-admin'),
+            'queueReady' => $queueReady,
+            'canViewQueue' => $canViewQueue,
+            'recentActivity' => $canViewActivity
+                ? $this->auditEventRepository()->findRecent($this->organizationInternalId(), '', 6)
+                : [],
+            'queueCounts' => $queueReady && $canViewQueue
+                ? $this->jobRepository()->summaryCounts()
+                : [],
         ]);
     }
 

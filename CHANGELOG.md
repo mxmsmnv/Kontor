@@ -36,6 +36,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   dead-letter jobs as fresh attempts, with state guards and audit events.
 - Permission-gated backup archive downloads with exact ID resolution,
   path containment, CSRF protection, and download audit events.
+- Dashboard operational context with recent audited activity and live Queue
+  active/dead-letter status, respecting the viewer's permissions.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

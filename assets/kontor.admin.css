@@ -138,6 +138,10 @@
   margin-bottom: 1.25rem;
 }
 
+.kontor-statgrid--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .kontor-card {
   background: var(--kontor-surface);
   border: 1px solid var(--kontor-line);
@@ -1438,6 +1442,84 @@
   color: #b91c1c;
 }
 
+.kontor-dashboardactivity {
+  margin-top: 1rem;
+  padding: 1.2rem;
+}
+
+.kontor-dashboardactivity .kontor-panel__head {
+  margin-bottom: 0.5rem;
+}
+
+.kontor-dashboardactivity__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kontor-dashboardactivity__list article {
+  align-items: center;
+  border-top: 1px solid var(--kontor-line);
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.8rem 0;
+}
+
+.kontor-dashboardactivity__list article:nth-child(odd) {
+  padding-right: 1rem;
+}
+
+.kontor-dashboardactivity__list article:nth-child(even) {
+  border-left: 1px solid var(--kontor-line);
+  padding-left: 1rem;
+}
+
+.kontor-dashboardactivity__icon {
+  align-items: center;
+  background: var(--kontor-primary-soft);
+  border-radius: 8px;
+  color: var(--kontor-primary);
+  display: flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.kontor-dashboardactivity__list article > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.kontor-dashboardactivity__list strong {
+  color: var(--kontor-ink);
+  display: block;
+  font-size: 0.82rem;
+}
+
+.kontor-dashboardactivity__list p,
+.kontor-dashboardactivity__list time {
+  color: var(--kontor-muted);
+  font-size: 0.7rem;
+}
+
+.kontor-dashboardactivity__list p {
+  margin: 0.15rem 0 0;
+}
+
+.kontor-dashboardactivity__list time {
+  flex: 0 0 auto;
+}
+
+.kontor-dashboardactivity__empty {
+  align-items: center;
+  border-top: 1px solid var(--kontor-line);
+  color: var(--kontor-muted);
+  display: flex;
+  gap: 0.6rem;
+  padding: 1rem 0 0.2rem;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components {
@@ -1482,6 +1564,17 @@
   .kontor-queuefilters > div {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .kontor-dashboardactivity__list {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-dashboardactivity__list article:nth-child(odd),
+  .kontor-dashboardactivity__list article:nth-child(even) {
+    border-left: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .kontor-healthsummary {

@@ -11,6 +11,8 @@
 /** @var bool $canManageOrganization */
 /** @var bool $queueReady */
 /** @var bool $canViewQueue */
+/** @var \Kontor\Core\Domain\AuditEvent[] $recentActivity */
+/** @var array<string, int> $queueCounts */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -45,7 +47,7 @@ $enabledComponents = count(array_filter(
     </div>
   <?php endif; ?>
 
-  <section class="kontor-statgrid">
+  <section class="kontor-statgrid<?= $queueReady && $canViewQueue ? ' kontor-statgrid--four' : '' ?>">
     <article class="kontor-card kontor-stat">
       <span class="kontor-stat__icon"><i class="fa fa-address-book"></i></span>
       <span>
@@ -67,6 +69,20 @@ $enabledComponents = count(array_filter(
         <span class="kontor-stat__label">Enabled components</span>
       </span>
     </article>
+    <?php if ($queueReady && $canViewQueue): ?>
+      <?php $activeJobs = ($queueCounts['pending'] ?? 0) + ($queueCounts['reserved'] ?? 0); ?>
+      <article class="kontor-card kontor-stat">
+        <span class="kontor-stat__icon<?= ($queueCounts['dead'] ?? 0) > 0 ? ' kontor-stat__icon--danger' : '' ?>">
+          <i class="fa fa-tasks"></i>
+        </span>
+        <span>
+          <strong class="kontor-stat__value"><?= $e($activeJobs) ?></strong>
+          <span class="kontor-stat__label">
+            Active jobs<?= ($queueCounts['dead'] ?? 0) > 0 ? ' · ' . $e($queueCounts['dead']) . ' dead' : '' ?>
+          </span>
+        </span>
+      </article>
+    <?php endif; ?>
   </section>
 
   <section class="kontor-grid">
@@ -140,4 +156,36 @@ $enabledComponents = count(array_filter(
       </div>
     </aside>
   </section>
+
+  <?php if ($canViewActivity): ?>
+    <section class="kontor-card kontor-dashboardactivity">
+      <header class="kontor-panel__head">
+        <h3>Recent activity</h3>
+        <a href="<?= $e($adminUrl) ?>activity/">Open audit trail</a>
+      </header>
+      <?php if ($recentActivity): ?>
+        <div class="kontor-dashboardactivity__list">
+          <?php foreach ($recentActivity as $event): ?>
+            <article>
+              <span class="kontor-dashboardactivity__icon">
+                <i class="fa fa-<?= $event->entityType === 'backup' ? 'database' : ($event->entityType === 'job' ? 'tasks' : 'history') ?>"></i>
+              </span>
+              <div>
+                <strong><?= $e(ucwords(str_replace(['.', '_'], ' ', $event->action))) ?></strong>
+                <p><?= $e(ucfirst($event->entityType)) ?> · <?= $e($event->component) ?></p>
+              </div>
+              <time datetime="<?= $e($event->occurredAt->format(DATE_ATOM)) ?>">
+                <?= $e($event->occurredAt->format('M j, H:i')) ?>
+              </time>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <div class="kontor-dashboardactivity__empty">
+          <i class="fa fa-history"></i>
+          <span>Operational changes will appear here.</span>
+        </div>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
 </div>
