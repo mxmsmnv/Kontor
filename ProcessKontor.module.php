@@ -16,6 +16,7 @@ use Kontor\Core\Application\AuditChangePresenter;
 use Kontor\Core\Application\AuditCsvExporter;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
+use Kontor\Core\Application\ComponentOverviewBuilder;
 use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\HealthCheckRunner;
 use Kontor\Core\Application\ImportManager;
@@ -46,7 +47,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '020',
+            'version' => '021',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1098,9 +1099,27 @@ class ProcessKontor extends Process
     {
         $this->requirePermission('kontor-components-view');
         $this->setPageTitle($this->_('Kontor · Components'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['enabled', 'disabled', 'installed', 'uninstalled', 'attention']
+        ) ?? '';
+        $rows = $this->componentRegistry()->all();
+        $builder = new ComponentOverviewBuilder();
+        $runtimeInfo = [];
+
+        foreach ($rows as $row) {
+            $moduleName = $builder->moduleName((string) ($row['name'] ?? ''));
+            $info = $this->wire()->modules->getModuleInfoVerbose($moduleName);
+            $runtimeInfo[$moduleName] = is_array($info) ? $info : [];
+        }
+        $overview = $builder->build($rows, $runtimeInfo, $query, $status);
 
         return $this->renderTemplate('components', [
-            'components' => $this->componentRegistry()->all(),
+            'components' => $overview['components'],
+            'counts' => $overview['counts'],
+            'query' => $query,
+            'selectedStatus' => $status,
         ]);
     }
 

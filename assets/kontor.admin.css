@@ -976,7 +976,49 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.kontor-componentstats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.kontor-componentstats .kontor-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 1rem;
+}
+
+.kontor-componentstats strong {
+  color: var(--kontor-brand);
+  font-size: 1.45rem;
+}
+
+.kontor-componentstats span {
+  color: var(--kontor-muted);
+  font-size: 0.76rem;
+}
+
+.kontor-componentstats .kontor-componentstats--warning strong {
+  color: #b45309;
+}
+
+.kontor-componentfilters {
+  justify-content: flex-start;
+}
+
+.kontor-componentfilters select {
+  background: #fff;
+  border: 1px solid var(--kontor-line);
+  border-radius: 9px;
+  min-height: 40px;
+  min-width: 180px;
+  padding: 0.55rem 2rem 0.55rem 0.7rem;
+}
+
 .kontor-component {
+  display: flex;
+  flex-direction: column;
   padding: 1.15rem;
 }
 
@@ -984,7 +1026,23 @@
   align-items: center;
   display: flex;
   gap: 0.75rem;
-  justify-content: space-between;
+}
+
+.kontor-component__top > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.kontor-component__icon {
+  align-items: center;
+  background: #eef0ff;
+  border-radius: 10px;
+  color: var(--kontor-brand);
+  display: flex;
+  flex: 0 0 auto;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
 }
 
 .kontor-component h3 {
@@ -993,10 +1051,70 @@
   margin: 0;
 }
 
+.kontor-component__top code {
+  color: var(--kontor-muted);
+  font-size: 0.7rem;
+}
+
 .kontor-component p {
   color: var(--kontor-muted);
   font-size: 0.8rem;
   margin: 0.7rem 0 0;
+}
+
+.kontor-component__facts {
+  border-bottom: 1px solid var(--kontor-line);
+  border-top: 1px solid var(--kontor-line);
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0.9rem 0 0;
+  padding: 0.75rem 0;
+}
+
+.kontor-component__facts dt,
+.kontor-component__requires > span {
+  color: var(--kontor-muted);
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.kontor-component__facts dd {
+  font-size: 0.76rem;
+  margin: 0.15rem 0 0;
+}
+
+.kontor-component__warning {
+  color: #b45309;
+  display: block;
+  font-size: 0.65rem;
+  margin-top: 0.15rem;
+}
+
+.kontor-component__requires {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.kontor-component__requires code {
+  background: #f4f5f8;
+  border-radius: 6px;
+  color: var(--kontor-muted);
+  font-size: 0.68rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.kontor-component__source {
+  color: var(--kontor-brand);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: auto;
+  padding-top: 0.8rem;
+  text-decoration: none;
 }
 
 .kontor-setup {
@@ -1628,7 +1746,8 @@
 
 @media (max-width: 850px) {
   .kontor-statgrid,
-  .kontor-components {
+  .kontor-components,
+  .kontor-componentstats {
     grid-template-columns: 1fr;
   }
 
@@ -1717,6 +1836,10 @@
   }
 
   .kontor-activityfilters {
+    align-items: stretch;
+  }
+
+  .kontor-componentfilters {
     align-items: stretch;
   }
 
