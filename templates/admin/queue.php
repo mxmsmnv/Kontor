@@ -5,6 +5,11 @@
 /** @var string[] $queues */
 /** @var string|null $selectedQueue */
 /** @var string|null $selectedStatus */
+/** @var bool $canCancelJobs */
+/** @var bool $canRetryJobs */
+/** @var string $adminUrl */
+/** @var string $csrfName */
+/** @var string $csrfValue */
 /** @var callable $e */
 
 $total = array_sum($counts);
@@ -77,6 +82,7 @@ $statusClass = static fn (string $status): string => match ($status) {
             <th>Progress</th>
             <th>Attempts</th>
             <th>Created</th>
+            <?php if ($canCancelJobs || $canRetryJobs): ?><th><span class="kontor-visually-hidden">Actions</span></th><?php endif; ?>
           </tr>
         </thead>
         <tbody>
@@ -107,6 +113,29 @@ $statusClass = static fn (string $status): string => match ($status) {
                   <?= $e((new DateTimeImmutable((string) $job['created_at']))->format('M j, H:i')) ?>
                 </time>
               </td>
+              <?php if ($canCancelJobs || $canRetryJobs): ?>
+                <td class="kontor-queueactions">
+                  <?php if ($status === 'pending' && $canCancelJobs): ?>
+                    <form method="post" action="<?= $e($adminUrl) ?>queue-action/">
+                      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                      <input type="hidden" name="action" value="cancel">
+                      <input type="hidden" name="uid" value="<?= $e((string) $job['uid']) ?>">
+                      <button type="submit" title="Cancel pending job" aria-label="Cancel pending job">
+                        <i class="fa fa-ban"></i>
+                      </button>
+                    </form>
+                  <?php elseif ($status === 'dead' && $canRetryJobs): ?>
+                    <form method="post" action="<?= $e($adminUrl) ?>queue-action/">
+                      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                      <input type="hidden" name="action" value="retry">
+                      <input type="hidden" name="uid" value="<?= $e((string) $job['uid']) ?>">
+                      <button type="submit" title="Retry dead-letter job" aria-label="Retry dead-letter job">
+                        <i class="fa fa-repeat"></i>
+                      </button>
+                    </form>
+                  <?php endif; ?>
+                </td>
+              <?php endif; ?>
             </tr>
           <?php endforeach; ?>
         </tbody>

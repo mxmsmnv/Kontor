@@ -4,7 +4,7 @@
     "name": "KontorQueue",
     "title": "Kontor Queue",
     "description": "Asynchronous and delayed jobs, retries, dead-letter queue, priorities and progress.",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "platform",
     "category": "queue",
     "license": "MIT",

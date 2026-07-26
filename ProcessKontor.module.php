@@ -43,7 +43,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '012',
+            'version' => '013',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -480,7 +480,56 @@ class ProcessKontor extends Process
             'queues' => $queues,
             'selectedQueue' => $queue,
             'selectedStatus' => $status,
+            'canCancelJobs' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-queue-cancel'),
+            'canRetryJobs' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-queue-retry'),
         ]);
+    }
+
+    public function ___executeQueueAction(): void
+    {
+        $this->requirePost();
+        $this->requireQueue();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['cancel', 'retry']
+        );
+        $this->requireAction($action, ['cancel', 'retry']);
+        $uid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('uid'));
+        $job = $this->jobRepository()->find($uid);
+
+        if ($job === null) {
+            throw new WireException($this->_('Queue job was not found.'));
+        }
+
+        if ($action === 'cancel') {
+            $this->requirePermission('kontor-queue-cancel');
+            $changed = $this->jobRepository()->cancel($uid);
+            $auditAction = 'cancelled';
+            $message = $this->_('Pending job cancelled.');
+        } else {
+            $this->requirePermission('kontor-queue-retry');
+            $changed = $this->jobRepository()->retryDead($uid);
+            $auditAction = 'retried';
+            $message = $this->_('Dead-letter job returned to the queue.');
+        }
+
+        if (!$changed) {
+            throw new WireException($this->_('The job state changed before this action could be applied.'));
+        }
+
+        $this->audit(
+            'queue',
+            'job',
+            $uid,
+            $auditAction,
+            previous: ['status' => (string) $job['status'], 'attempts' => (int) $job['attempts']],
+            current: ['status' => $action === 'cancel' ? 'cancelled' : 'pending', 'attempts' => $action === 'cancel' ? (int) $job['attempts'] : 0],
+            metadata: ['jobType' => (string) $job['job_type'], 'queue' => (string) $job['queue']],
+        );
+        $this->message($message);
+        $this->wire()->session->redirect('../queue/?queue=' . rawurlencode((string) $job['queue']));
     }
 
     public function ___executeBackupCreate(): void

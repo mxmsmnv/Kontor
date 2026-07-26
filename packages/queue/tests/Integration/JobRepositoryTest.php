@@ -139,6 +139,22 @@ final class JobRepositoryTest extends DatabaseTestCase
         $this->assertFalse($jobs->cancel($uid));
     }
 
+    public function test_retry_dead_reopens_only_dead_letter_jobs_as_fresh_attempts(): void
+    {
+        $jobs = new JobRepository($this->pdo);
+        $uid = $jobs->enqueue('default', 'job.x', [], 0, 1, new \DateTimeImmutable(), null);
+        $jobs->reserveNext('default');
+        $jobs->markDead($uid, 'boom');
+
+        $this->assertTrue($jobs->retryDead($uid));
+        $row = $jobs->find($uid);
+        $this->assertSame('pending', $row['status']);
+        $this->assertSame(0, (int) $row['attempts']);
+        $this->assertNull($row['failed_at']);
+        $this->assertNull($row['error_message']);
+        $this->assertFalse($jobs->retryDead($uid));
+    }
+
     public function test_stuck_reserved_count_finds_long_running_reservations(): void
     {
         $jobs = new JobRepository($this->pdo);

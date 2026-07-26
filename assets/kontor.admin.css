@@ -1390,6 +1390,33 @@
   white-space: pre-wrap;
 }
 
+.kontor-queueactions {
+  text-align: right;
+  width: 48px;
+}
+
+.kontor-queueactions form {
+  margin: 0;
+}
+
+.kontor-queueactions button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #8b93a7;
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.kontor-queueactions button:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components {

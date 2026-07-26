@@ -185,6 +185,31 @@ final class JobRepository implements JobRepositoryInterface
     }
 
     /**
+     * Reopens a dead-letter job as a fresh pending attempt.
+     */
+    public function retryDead(string $uid): bool
+    {
+        $statement = $this->pdo->prepare(
+            "UPDATE kontor_jobs
+             SET status = 'pending',
+                 attempts = 0,
+                 available_at = :now,
+                 started_at = NULL,
+                 finished_at = NULL,
+                 failed_at = NULL,
+                 progress = 0,
+                 error_message = NULL
+             WHERE uid = :uid AND status = 'dead'"
+        );
+        $statement->execute([
+            'now' => $this->format(new \DateTimeImmutable()),
+            'uid' => $uid,
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function find(string $uid): ?array
