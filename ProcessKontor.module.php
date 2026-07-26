@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '083',
+            'version' => '084',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -765,6 +765,7 @@ class ProcessKontor extends Process
         $this->requirePost();
         $this->requireCatalog();
         $this->requirePermission('kontor-catalog-item-archive');
+        $redirect = $this->catalogListRedirect();
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
         $action = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->post('action'),
@@ -786,7 +787,7 @@ class ProcessKontor extends Process
         $this->message($action === 'restore'
             ? $this->_('Catalog item restored.')
             : $this->_('Catalog item archived.'));
-        $this->wire()->session->redirect('../catalog/' . ($action === 'restore' ? '?archived=1' : ''));
+        $this->wire()->session->redirect($redirect);
     }
 
     public function ___executeCatalogItemDuplicate(): void

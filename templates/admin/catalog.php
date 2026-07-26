@@ -293,6 +293,17 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
                   <input type="hidden" name="id" value="<?= $e($item->uid->toString()) ?>">
                   <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">
+                  <input type="hidden" name="return_q" value="<?= $e($query) ?>">
+                  <input type="hidden" name="return_type" value="<?= $e($selectedType ?? '') ?>">
+                  <input type="hidden" name="return_category" value="<?= $e($selectedCategory ?? '') ?>">
+                  <input type="hidden" name="return_status" value="<?= $e($selectedStatus ?? '') ?>">
+                  <input type="hidden" name="return_inventory" value="<?= $e($selectedInventory ?? '') ?>">
+                  <input type="hidden" name="return_unit" value="<?= $e($selectedUnit ?? '') ?>">
+                  <input type="hidden" name="return_tax" value="<?= $e($selectedTax ?? '') ?>">
+                  <input type="hidden" name="return_currency" value="<?= $e($selectedCurrency ?? '') ?>">
+                  <input type="hidden" name="return_pricing" value="<?= $e($selectedPricing ?? '') ?>">
+                  <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
+                  <input type="hidden" name="return_page" value="<?= $e($page) ?>">
                   <button type="submit" title="<?= $showArchived ? 'Restore item' : 'Archive item' ?>" aria-label="<?= $showArchived ? 'Restore item' : 'Archive item' ?>">
                     <i class="fa fa-<?= $showArchived ? 'undo' : 'archive' ?>"></i>
                   </button>

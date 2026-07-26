@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Query-, facet-, archive-, and page-preserving returns after individual
+  Catalog item archive and restore actions.
 - Direct currency and status drill-downs from Catalog item pricing coverage to
   filtered Price lists.
 - Composable active/inactive filters and clickable status badges for Contacts
