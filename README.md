@@ -349,6 +349,22 @@ two existing packages rather than a new one (spec section 5.6 rules out
   README flagged as deferred (customer-facing, so it lives here, not
   there). Fifth real consumer of `Kontor\Core\Testing\DatabaseTestCase`
   outside `kontor/core` — see its own README.
+- [`packages/ai/`](packages/ai/) — `kontor/ai` (Substage 9.3, third
+  component of Stage 9): provider contract, Squad adapter, summaries,
+  drafting, extraction, approval workflow. Depends only on `kontor/core`
+  — `KontorAIProviderInterface`/`AIRequest`/`AIResponse` already live in
+  `kontor/sdk`. "Kontor AI is optional" (kontor.md#32): no configured
+  provider is a graceful `AIResponse` failure, never an exception.
+  `SquadAdapter` talks to Squad only through its own
+  `SquadClientInterface` — never Squad's implementation details directly
+  — with `NullSquadClient` as the one built-in stub proving the pipeline
+  when nothing real is wired up. `DraftingService` defaults to requiring
+  confirmation (a draft mimics ready-to-send content);
+  `SummaryService`/`ExtractionService` don't. `AIActionApprovalService`
+  is the real approval-workflow gate: a response requiring confirmation
+  is withheld and stashed as a `PendingAIAction` instead of returned
+  directly. Sixth real consumer of `Kontor\Core\Testing\DatabaseTestCase`
+  outside `kontor/core` — see its own README.
 
 ## Status
 
@@ -365,7 +381,7 @@ productivity), all of Stage 6 (Substage 6.1 Inventory, 6.2 Purchasing,
 7.1 Workflow, 7.2 Automation, 7.3 Custom Entities, 7.4 SDK and
 scaffolding — extensibility), all of Stage 8 (Substage 8.1 REST API,
 8.2 GraphQL, 8.3 Marketplace — API and external ecosystem), and
-Substage 9.1–9.2 (Mail, Portal — Stage 9, Advanced capabilities) per spec
+Substage 9.1–9.3 (Mail, Portal, AI — Stage 9, Advanced capabilities) per spec
 section 36. Not yet installed against a live ProcessWire instance — see
 the spec's Definition of Done
 (section 38) for what "complete" means for each subsequent milestone.
