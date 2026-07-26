@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Core\Tests\Unit\Application;
 
 use Kontor\Core\Application\BackupManager;
+use Kontor\Core\Infrastructure\Backup\BackupArchiveBuilder;
 use Kontor\Core\Infrastructure\Registry\BackupProviderRegistry;
 use Kontor\SDK\Contracts\BackupProviderInterface;
 use Kontor\SDK\DTO\BackupContext;
@@ -87,6 +88,36 @@ final class BackupManagerTest extends TestCase
         $manager = new BackupManager(new BackupProviderRegistry(), $this->storageDir);
 
         $this->assertSame([], $manager->list());
+    }
+
+    public function test_find_by_id_resolves_only_exact_backup_directory_names(): void
+    {
+        $registry = new BackupProviderRegistry();
+        $registry->register('demo', new RowCountingBackupProvider(expectedItems: 2));
+        $manager = new BackupManager($registry, $this->storageDir);
+        $record = $manager->create('demo', 'component', 'org_01');
+
+        $this->assertSame($record->path, $manager->findById(basename($record->path)));
+        $this->assertNull($manager->findById('../' . basename($record->path)));
+        $this->assertNull($manager->findById('missing-backup'));
+    }
+
+    public function test_archive_builder_packages_backup_with_relative_paths_only(): void
+    {
+        $registry = new BackupProviderRegistry();
+        $registry->register('demo', new RowCountingBackupProvider(expectedItems: 2));
+        $record = (new BackupManager($registry, $this->storageDir))
+            ->create('demo', 'component', 'org_01');
+        $archivePath = $this->storageDir . '/snapshot.zip';
+
+        (new BackupArchiveBuilder())->create($record->path, $archivePath);
+
+        $archive = new \ZipArchive();
+        $this->assertTrue($archive->open($archivePath));
+        $this->assertNotFalse($archive->locateName('metadata.json'));
+        $this->assertNotFalse($archive->locateName('tables/items.jsonl'));
+        $this->assertFalse($archive->locateName($record->path . '/metadata.json'));
+        $archive->close();
     }
 
     private function removeDirectory(string $directory): void

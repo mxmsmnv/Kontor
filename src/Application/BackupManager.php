@@ -102,6 +102,25 @@ final class BackupManager
         return $entries;
     }
 
+    public function findById(string $id): ?string
+    {
+        if (
+            $id === ''
+            || basename($id) !== $id
+            || preg_match('/^[A-Za-z0-9_-]+$/', $id) !== 1
+        ) {
+            return null;
+        }
+
+        foreach ($this->list() as $path) {
+            if (hash_equals(basename($path), $id)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
     private function pathFor(string $component, string $kind, string $id): string
     {
         return rtrim($this->storageRootDir, '/\\') . DIRECTORY_SEPARATOR . "{$component}-{$kind}-{$id}";

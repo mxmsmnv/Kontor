@@ -1119,6 +1119,27 @@
   border: 1px solid var(--kontor-line);
 }
 
+.kontor-backup__download {
+  margin: 0;
+}
+
+.kontor-backup__download button {
+  align-items: center;
+  background: var(--kontor-primary-soft);
+  border: 0;
+  border-radius: 9px;
+  color: var(--kontor-primary);
+  cursor: pointer;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.kontor-backup__download button:hover {
+  background: #e0e7ff;
+}
+
 .kontor-healthsummary {
   align-items: center;
   background: #ecfdf3;

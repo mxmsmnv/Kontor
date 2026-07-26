@@ -34,6 +34,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   progress, errors, and live status summaries.
 - Permission-gated Queue actions for cancelling pending work and returning
   dead-letter jobs as fresh attempts, with state guards and audit events.
+- Permission-gated backup archive downloads with exact ID resolution,
+  path containment, CSRF protection, and download audit events.
 
 - `Kontor\Core\Testing\DatabaseTestCase` (Substage 7.4's "testing
   helpers" milestone) — the shared abstract base class for every

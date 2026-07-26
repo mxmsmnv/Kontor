@@ -20,6 +20,7 @@ use Kontor\Core\Application\ImportManager;
 use Kontor\Core\Domain\ImportBatchResult;
 use Kontor\Core\Domain\Organization;
 use Kontor\Core\Health\CoreHealthCheck;
+use Kontor\Core\Infrastructure\Backup\BackupArchiveBuilder;
 use Kontor\Core\Infrastructure\ImportExport\FormatResolver;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
@@ -43,7 +44,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '013',
+            'version' => '014',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -367,6 +368,8 @@ class ProcessKontor extends Process
 
         return $this->renderTemplate('backups', [
             'backups' => $this->backupSummaries(),
+            'canDownloadBackups' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-backups-download'),
         ]);
     }
 
@@ -570,6 +573,77 @@ class ProcessKontor extends Process
         }
 
         $this->wire()->session->redirect('../backups/');
+    }
+
+    public function ___executeBackupDownload(): void
+    {
+        $this->requirePost();
+        $this->requirePermission('kontor-backups-download');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $path = $this->backupManager()->findById($id);
+
+        if ($path === null) {
+            throw new WireException($this->_('Backup was not found.'));
+        }
+
+        try {
+            $metadata = json_decode(
+                (string) file_get_contents($path . DIRECTORY_SEPARATOR . 'metadata.json'),
+                true,
+                flags: JSON_THROW_ON_ERROR
+            );
+        } catch (\Throwable) {
+            throw new WireException($this->_('Backup metadata is missing or invalid.'));
+        }
+
+        $component = (string) ($metadata['component'] ?? '');
+        $kind = (string) ($metadata['kind'] ?? 'snapshot');
+
+        if (
+            !in_array($component, ['core', 'contacts'], true)
+            || !$this->backupManager()->verify($path, $component, $this->organizationUid(), $kind)
+        ) {
+            throw new WireException($this->_('Backup verification failed; download was blocked.'));
+        }
+
+        $backupUid = substr($id, -26);
+
+        try {
+            Uid::fromString($backupUid);
+        } catch (\InvalidArgumentException) {
+            throw new WireException($this->_('Backup identifier is invalid.'));
+        }
+
+        $temporary = tempnam($this->wire()->config->paths->cache, 'kontor_backup_');
+
+        if ($temporary === false) {
+            throw new WireException($this->_('Could not create a temporary archive.'));
+        }
+
+        $archivePath = $temporary . '.zip';
+        @unlink($temporary);
+        register_shutdown_function(static function () use ($archivePath): void {
+            if (is_file($archivePath)) {
+                unlink($archivePath);
+            }
+        });
+        $this->backupArchiveBuilder()->create($path, $archivePath);
+        $this->audit(
+            'core',
+            'backup',
+            $backupUid,
+            'downloaded',
+            metadata: [
+                'backupId' => $id,
+                'backupComponent' => $component,
+                'sizeBytes' => filesize($archivePath) ?: 0,
+            ],
+        );
+        wireSendFile($archivePath, [
+            'forceDownload' => true,
+            'downloadFilename' => $id . '.zip',
+            'exit' => true,
+        ]);
     }
 
     public function ___executeAddress(): void
@@ -1869,6 +1943,14 @@ class ProcessKontor extends Process
         $kontor = $this->wire()->modules->get('Kontor');
 
         return $kontor->container()->get(BackupManager::class);
+    }
+
+    private function backupArchiveBuilder(): BackupArchiveBuilder
+    {
+        /** @var Kontor $kontor */
+        $kontor = $this->wire()->modules->get('Kontor');
+
+        return $kontor->container()->get(BackupArchiveBuilder::class);
     }
 
     private function searchService(): GlobalSearchService

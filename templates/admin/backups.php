@@ -4,6 +4,7 @@
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
+/** @var bool $canDownloadBackups */
 /** @var callable $e */
 
 $formatBytes = static function (int $bytes): string {
@@ -65,6 +66,15 @@ $formatBytes = static function (int $bytes): string {
             <?= $e((new DateTimeImmutable((string) $backup['createdAt']))->format('M j, Y')) ?>
             <span><?= $e((new DateTimeImmutable((string) $backup['createdAt']))->format('H:i:s')) ?></span>
           </time>
+          <?php if ($backup['verified'] && $canDownloadBackups): ?>
+            <form class="kontor-backup__download" method="post" action="<?= $e($adminUrl) ?>backup-download/">
+              <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+              <input type="hidden" name="id" value="<?= $e((string) $backup['id']) ?>">
+              <button type="submit" title="Download verified snapshot" aria-label="Download verified snapshot">
+                <i class="fa fa-download"></i>
+              </button>
+            </form>
+          <?php endif; ?>
         </article>
       <?php endforeach; ?>
     </section>
