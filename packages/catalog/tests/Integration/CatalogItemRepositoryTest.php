@@ -9,6 +9,7 @@ use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
 use Kontor\Core\Domain\Organization;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\ValueObjects\Money;
+use Kontor\SDK\ValueObjects\Uid;
 
 final class CatalogItemRepositoryTest extends DatabaseTestCase
 {
@@ -185,6 +186,50 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
             'units' => ['pcs' => 1],
             'taxes' => ['standard' => 1],
         ], $repository->referenceUsage($this->organizationUid));
+    }
+
+    public function test_category_filter_and_usage_counts_only_active_items(): void
+    {
+        $repository = $this->repository();
+        $hardwareUid = Uid::generate()->toString();
+        $servicesUid = Uid::generate()->toString();
+        $laptop = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Laptop'],
+            categoryUid: $hardwareUid,
+        );
+        $monitor = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Monitor'],
+            categoryUid: $hardwareUid,
+        );
+        $consulting = CatalogItem::create(
+            $this->organizationUid,
+            ['en' => 'Consulting'],
+            itemType: 'service',
+            categoryUid: $servicesUid,
+        );
+
+        foreach ([$laptop, $monitor, $consulting] as $item) {
+            $repository->save($item);
+        }
+        $repository->archive($monitor->uid->toString());
+
+        $this->assertSame(1, $repository->countMatching(
+            $this->organizationUid,
+            categoryUid: $hardwareUid,
+        ));
+        $this->assertSame(
+            $consulting->uid->toString(),
+            $repository->findAll(
+                $this->organizationUid,
+                categoryUid: $servicesUid,
+            )[0]->uid->toString(),
+        );
+        $this->assertSame([
+            $hardwareUid => 1,
+            $servicesUid => 1,
+        ], $repository->categoryUsage($this->organizationUid));
     }
 
     public function test_summary_counts_catalog_shapes_for_one_organization(): void

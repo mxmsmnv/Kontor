@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Organization-scoped Catalog item filtering and active-item usage counts by
+  category.
 - Transactional, tenant-scoped bulk activation and deactivation for up to
   100 price lists.
 - Transactional, tenant-scoped bulk archive and restore operations for up to

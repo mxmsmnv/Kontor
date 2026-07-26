@@ -74,6 +74,8 @@ copies always start inactive so existing commercial pricing is unaffected.
 Item and category lists both support tenant-scoped bulk archive and restore.
 Price-list status can be activated or deactivated in tenant-scoped bulk
 operations without opening each list.
+Catalog items can be filtered by category, while the category workspace links
+back to organization-scoped active-item counts.
 The package itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

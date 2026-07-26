@@ -2,6 +2,7 @@
 
 /** @var \Kontor\Catalog\Domain\Category[] $categories */
 /** @var array<string, string> $categoryNames */
+/** @var array<string, int> $itemCounts */
 /** @var string $displayLanguage */
 /** @var string $query */
 /** @var bool $showArchived */
@@ -91,7 +92,7 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
                 aria-label="Select all shown catalog categories"
               >
             </th>
-            <th>Category</th><th>Parent</th><th>Order</th><th>Status</th><th><span class="kontor-visually-hidden">Actions</span></th>
+            <th>Category</th><th>Parent</th><th>Items</th><th>Order</th><th>Status</th><th><span class="kontor-visually-hidden">Actions</span></th>
           </tr>
         </thead>
         <tbody>
@@ -116,6 +117,11 @@ $url = static function (int $targetPage, bool $archived) use ($query): string {
                 </strong>
               </td>
               <td><?= $e($category->parentUid !== null ? ($categoryNames[$category->parentUid] ?? 'Archived parent') : '—') ?></td>
+              <td>
+                <a href="<?= $e($adminUrl) ?>catalog/?category=<?= $e(rawurlencode($category->uid->toString())) ?>">
+                  <?= $e($itemCounts[$category->uid->toString()] ?? 0) ?>
+                </a>
+              </td>
               <td><?= $e($category->sortOrder) ?></td>
               <td><span class="kontor-pill<?= $category->status === 'active' ? '' : ' kontor-pill--inactive' ?>"><?= $e($category->status) ?></span></td>
               <td class="kontor-queueactions">

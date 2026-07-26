@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '041',
+            'version' => '042',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -486,29 +486,58 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('type'),
             ['product', 'service']
         );
+        $categoryUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('category')
+        );
+        $categoryUid = $categoryUid !== '' ? $categoryUid : null;
         $showArchived = (string) $this->wire()->input->get('archived') === '1';
         $organizationUid = $this->organizationUid();
         $pageSize = 25;
         $totalItems = $this->catalogItemRepository()->countMatching(
-            $organizationUid,
-            $query,
-            $itemType,
-            $showArchived,
+            organizationUid: $organizationUid,
+            query: $query,
+            itemType: $itemType,
+            archived: $showArchived,
+            categoryUid: $categoryUid,
         );
         $totalPages = max(1, (int) ceil($totalItems / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
+        $items = $this->catalogItemRepository()->findAll(
+            organizationUid: $organizationUid,
+            query: $query,
+            itemType: $itemType,
+            archived: $showArchived,
+            categoryUid: $categoryUid,
+            limit: $pageSize,
+            offset: ($page - 1) * $pageSize,
+        );
+        $categoryOptions = [];
+        $categoryNames = [];
+
+        foreach ($this->categoryRepository()->findAll($organizationUid, limit: 250) as $category) {
+            $uid = $category->uid->toString();
+            $categoryOptions[$uid] = $categoryNames[$uid] = $this->categoryName($category);
+        }
+
+        foreach ($this->categoryRepository()->findAll($organizationUid, archived: true, limit: 250) as $category) {
+            $categoryNames[$category->uid->toString()] = $this->categoryName($category) . ' · archived';
+        }
+
+        if ($categoryUid !== null && !isset($categoryOptions[$categoryUid])) {
+            $selectedCategory = $this->categoryRepository()->find($categoryUid);
+
+            if ($selectedCategory !== null && hash_equals($selectedCategory->organizationId, $organizationUid)) {
+                $categoryOptions[$categoryUid] = $categoryNames[$categoryUid] ?? $this->categoryName($selectedCategory);
+            }
+        }
 
         return $this->renderTemplate('catalog', [
-            'items' => $this->catalogItemRepository()->findAll(
-                $organizationUid,
-                $query,
-                $itemType,
-                $showArchived,
-                $pageSize,
-                ($page - 1) * $pageSize,
-            ),
+            'items' => $items,
             'query' => $query,
             'selectedType' => $itemType,
+            'selectedCategory' => $categoryUid,
+            'categoryOptions' => $categoryOptions,
+            'categoryNames' => $categoryNames,
             'showArchived' => $showArchived,
             'page' => $page,
             'totalPages' => $totalPages,
@@ -747,6 +776,7 @@ class ProcessKontor extends Process
         return $this->renderTemplate('catalog-categories', [
             'categories' => $categories,
             'categoryNames' => $categoryNames,
+            'itemCounts' => $this->catalogItemRepository()->categoryUsage($organizationUid),
             'displayLanguage' => $this->organization()->defaultLanguage,
             'query' => $query,
             'showArchived' => $showArchived,
@@ -3629,11 +3659,15 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('return_type'),
             ['product', 'service']
         );
+        $categoryUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('return_category')
+        );
         $archived = (string) $this->wire()->input->post('return_archived') === '1';
         $page = max(1, (int) $this->wire()->input->post('return_page'));
         $parameters = array_filter([
             'q' => $query,
             'type' => $type,
+            'category' => $categoryUid,
             'archived' => $archived ? 1 : null,
             'page' => $page > 1 ? $page : null,
         ], static fn (string|int|null $value): bool => $value !== null && $value !== '');

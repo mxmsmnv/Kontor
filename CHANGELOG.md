@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Category filtering for Catalog items, category labels in item rows, and
+  linked active-item counts in the category workspace.
 - Bulk Activate/Deactivate controls for Catalog price lists, preserving list
   filters and recording tenant-scoped audit events.
 - Bulk archive/restore controls for Catalog categories, with tenant-scoped

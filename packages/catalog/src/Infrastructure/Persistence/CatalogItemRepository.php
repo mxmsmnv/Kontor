@@ -148,10 +148,17 @@ final class CatalogItemRepository implements RepositoryInterface
         string $query = '',
         ?string $itemType = null,
         bool $archived = false,
+        ?string $categoryUid = null,
         int $limit = 100,
         int $offset = 0,
     ): array {
-        [$sql, $params] = $this->listQuery($organizationUid, $query, $itemType, $archived);
+        [$sql, $params] = $this->listQuery(
+            $organizationUid,
+            $query,
+            $itemType,
+            $archived,
+            $categoryUid,
+        );
         $sql .= ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
 
@@ -174,8 +181,16 @@ final class CatalogItemRepository implements RepositoryInterface
         string $query = '',
         ?string $itemType = null,
         bool $archived = false,
+        ?string $categoryUid = null,
     ): int {
-        [$sql, $params] = $this->listQuery($organizationUid, $query, $itemType, $archived, true);
+        [$sql, $params] = $this->listQuery(
+            $organizationUid,
+            $query,
+            $itemType,
+            $archived,
+            $categoryUid,
+            true,
+        );
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params);
 
@@ -205,6 +220,31 @@ final class CatalogItemRepository implements RepositoryInterface
             foreach ($statement->fetchAll(\PDO::FETCH_ASSOC) as $row) {
                 $usage[$group][$row['reference_code']] = (int) $row['item_count'];
             }
+        }
+
+        return $usage;
+    }
+
+    /**
+     * @return array<string, int> active item counts keyed by category uid
+     */
+    public function categoryUsage(string $organizationUid): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT category_uid, COUNT(*) AS item_count
+             FROM kontor_catalog_items
+             WHERE organization_id = :organization_id
+               AND archived_at IS NULL
+               AND category_uid IS NOT NULL
+             GROUP BY category_uid'
+        );
+        $statement->execute([
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ]);
+        $usage = [];
+
+        foreach ($statement->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $usage[$row['category_uid']] = (int) $row['item_count'];
         }
 
         return $usage;
@@ -245,6 +285,7 @@ final class CatalogItemRepository implements RepositoryInterface
         string $query,
         ?string $itemType,
         bool $archived,
+        ?string $categoryUid,
         bool $count = false,
     ): array {
         $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
@@ -256,6 +297,11 @@ final class CatalogItemRepository implements RepositoryInterface
         if ($itemType !== null) {
             $sql .= ' AND item_type = :item_type';
             $params['item_type'] = $itemType;
+        }
+
+        if ($categoryUid !== null) {
+            $sql .= ' AND category_uid = :category_uid';
+            $params['category_uid'] = $categoryUid;
         }
 
         if ($query !== '') {
