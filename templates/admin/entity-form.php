@@ -17,6 +17,8 @@
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
+$aiReady = $aiReady ?? false;
+$aiSummary = $aiSummary ?? null;
 ?>
 <div class="kontor-shell">
   <header class="kontor-formhead">
@@ -45,6 +47,30 @@
   <?= $form->render() ?>
 
   <?php if ($entity !== null): ?>
+    <?php if ($entityType === 'contact' && $aiReady): ?>
+      <section class="kontor-card">
+        <div class="kontor-sectionhead">
+          <div>
+            <p class="kontor-eyebrow">AI · Customer context</p>
+            <h3>Contact brief</h3>
+          </div>
+          <?php if ($aiSummary !== null): ?><span class="kontor-pill"><?= $e($aiSummary['simulated'] ? 'local preview' : 'provider') ?></span><?php endif; ?>
+        </div>
+        <?php if ($aiSummary !== null): ?>
+          <p><?= $e($aiSummary['summary']) ?></p>
+          <p class="kontor-secondary"><?= $e((string) $aiSummary['characters']) ?> source characters · generated on demand</p>
+        <?php else: ?>
+          <p class="kontor-secondary">Build a concise brief from this contact’s identity, notes, tags, and company relationships.</p>
+        <?php endif; ?>
+        <form method="post" action="<?= $e($adminUrl) ?>contact-ai-summary/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <input type="hidden" name="contact_uid" value="<?= $e($entity->uid->toString()) ?>">
+          <label class="kontor-check"><input type="checkbox" name="simulate" value="1" checked> <span>Use local preview</span></label>
+          <button class="kontor-button kontor-button--ghost" type="submit"><i class="fa fa-magic"></i> Generate contact brief</button>
+        </form>
+      </section>
+    <?php endif; ?>
+
     <section class="kontor-card kontor-tags">
       <div class="kontor-sectionhead">
         <div>

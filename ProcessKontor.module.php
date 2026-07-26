@@ -91,7 +91,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '128',
+            'version' => '129',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -623,6 +623,12 @@ class ProcessKontor extends Process
         }
 
         $relationships = $contact === null ? [] : $this->contactRelationships($contact);
+        $aiSummary = $contact === null
+            ? null
+            : $this->wire()->session->get('kontorContactAISummary:' . $contact->uid->toString());
+        if ($contact !== null) {
+            $this->wire()->session->set('kontorContactAISummary:' . $contact->uid->toString(), null);
+        }
 
         return $this->renderTemplate('entity-form', [
             'form' => $form,
@@ -650,7 +656,69 @@ class ProcessKontor extends Process
                     'contact',
                     $contact->uid->toString()
                 ),
+            'aiReady' => $this->aiReady(),
+            'aiSummary' => is_array($aiSummary) ? $aiSummary : null,
         ]);
+    }
+
+    public function ___executeContactAISummary(): void
+    {
+        $this->requirePost();
+        $this->requireContacts();
+        $this->requireAI();
+        $this->requirePermission('kontor-contacts-contact-edit');
+        $this->requirePermission('kontor-ai-action-approve');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('contact_uid')
+        );
+        $contact = $this->contactRepository()->require($uid);
+        $this->requireSameOrganization($contact->organizationId);
+        $relationships = $this->contactRelationships($contact);
+        $tags = $this->tagService()->tagsFor(
+            $contact->organizationId,
+            'contact',
+            $contact->uid->toString(),
+        );
+        $text = implode("\n", array_filter([
+            'Contact: ' . $contact->displayName,
+            $contact->email !== null ? 'Email: ' . $contact->email : null,
+            $contact->phone !== null ? 'Phone: ' . $contact->phone : null,
+            $contact->jobTitle !== null ? 'Job title: ' . $contact->jobTitle : null,
+            $contact->notes !== null ? 'Notes: ' . $contact->notes : null,
+            $tags !== [] ? 'Tags: ' . implode(', ', $tags) : null,
+            $relationships !== [] ? 'Companies: ' . implode(', ', array_map(
+                static fn (array $relationship): string => $relationship['entity']->legalName,
+                $relationships,
+            )) : null,
+        ]));
+        $simulate = (bool) $this->wire()->input->post('simulate');
+        $gateway = $simulate
+            ? $this->aiModule()->previewGateway()
+            : $this->aiModule()->gateway();
+        $response = (new \Kontor\AI\Application\SummaryService($gateway))->summarize(
+            $contact->organizationId,
+            $text,
+            (string) $this->wire()->user->id,
+        );
+        if (!$response->success) {
+            throw new WireException(sprintf(
+                $this->_('Contact summary failed: %s'),
+                $response->errorMessage ?? $this->_('no AI provider is available'),
+            ));
+        }
+        $this->wire()->session->set('kontorContactAISummary:' . $uid, [
+            'summary' => (string) ($response->output['summary'] ?? ''),
+            'characters' => (int) ($response->output['characters'] ?? mb_strlen($text)),
+            'simulated' => $simulate,
+        ]);
+        $this->audit('ai', 'contact', $uid, 'summarized', metadata: [
+            'simulated' => $simulate,
+            'characters' => (int) ($response->output['characters'] ?? mb_strlen($text)),
+        ]);
+        $this->message($simulate
+            ? $this->_('Local AI contact brief generated.')
+            : $this->_('AI contact brief generated.'));
+        $this->wire()->session->redirect('../contact/?id=' . rawurlencode($uid));
     }
 
     public function ___executeCompanies(): string

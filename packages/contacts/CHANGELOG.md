@@ -15,6 +15,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Optional AI integration adds an on-demand contact brief without changing
+  the source contact record.
 - Contacts registers the first business API resource: organization-scoped
   REST CRUD, pagination, search/status filters, sparse fields, soft delete,
   and the shared bearer-token/idempotency request lifecycle; the same

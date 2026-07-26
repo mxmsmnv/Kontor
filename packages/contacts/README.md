@@ -1,5 +1,9 @@
 # Kontor Contacts
 
+When `kontor/ai` is installed, the contact workspace can generate a read-only
+customer brief from identity, notes, tags, and company relationships. Local
+preview is the safe default; production providers remain optional.
+
 `kontor/contacts` — the first business component: contacts, companies,
 addresses, contact-company memberships, tags, duplicate detection, and
 import/export. Everything before this stage was platform infrastructure

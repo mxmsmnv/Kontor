@@ -24,6 +24,7 @@
         "kontor/search": "^0.1"
     },
     "suggests": {
+        "kontor/ai": "^0.1",
         "kontor/crm": "^0.1"
     },
     "conflicts": {},

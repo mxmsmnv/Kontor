@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Contacts now adopts AI summaries with an on-demand customer brief built
+  from identity, notes, tags, and company relationships.
 - Sending an issued invoice now runs through Mail, records outbound history,
   links the message back to the invoice, and only advances after delivery.
 - Reimbursed Expenses now post idempotent debit Expense / credit Bank entries
