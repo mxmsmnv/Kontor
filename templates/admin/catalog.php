@@ -89,10 +89,37 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
   </form>
 
   <?php if ($items): ?>
+    <form
+      class="kontor-bulkactions"
+      id="catalog-bulk-form"
+      method="post"
+      action="<?= $e($adminUrl) ?>catalog-bulk-action/"
+      data-kontor-bulk-form
+      data-action-label="<?= $showArchived ? 'Restore' : 'Archive' ?>"
+    >
+      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+      <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">
+      <input type="hidden" name="return_q" value="<?= $e($query) ?>">
+      <input type="hidden" name="return_type" value="<?= $e($selectedType) ?>">
+      <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
+      <input type="hidden" name="return_page" value="<?= $e($page) ?>">
+      <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
+      <button class="kontor-button kontor-button--ghost" type="submit">
+        <i class="fa fa-<?= $showArchived ? 'undo' : 'archive' ?>"></i>
+        <?= $showArchived ? 'Restore selected' : 'Archive selected' ?>
+      </button>
+    </form>
     <section class="kontor-card kontor-tablewrap">
       <table class="kontor-table">
         <thead>
           <tr>
+            <th class="kontor-selectcell">
+              <input
+                type="checkbox"
+                data-kontor-select-all="catalog-bulk-form"
+                aria-label="Select all shown catalog items"
+              >
+            </th>
             <th>Item</th>
             <th>SKU</th>
             <th>Type</th>
@@ -105,6 +132,16 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         <tbody>
           <?php foreach ($items as $item): ?>
             <tr>
+              <td class="kontor-selectcell">
+                <input
+                  type="checkbox"
+                  name="ids[]"
+                  value="<?= $e($item->uid->toString()) ?>"
+                  form="catalog-bulk-form"
+                  data-kontor-select-item="catalog-bulk-form"
+                  aria-label="Select <?= $e($item->titleIn('en') ?? reset($item->title) ?: 'catalog item') ?>"
+                >
+              </td>
               <td>
                 <strong>
                   <a href="<?= $e($adminUrl) ?>catalog-item/?id=<?= $e(rawurlencode($item->uid->toString())) ?>">

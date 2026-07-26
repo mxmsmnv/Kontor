@@ -119,6 +119,28 @@ final class CatalogItemRepository implements RepositoryInterface
     }
 
     /**
+     * Archive up to 100 items belonging to the requested organization.
+     *
+     * @param string[] $ids
+     * @return string[] Uids whose state changed
+     */
+    public function archiveMany(string $organizationUid, array $ids): array
+    {
+        return $this->setArchivedMany($organizationUid, $ids, true);
+    }
+
+    /**
+     * Restore up to 100 items belonging to the requested organization.
+     *
+     * @param string[] $ids
+     * @return string[] Uids whose state changed
+     */
+    public function restoreMany(string $organizationUid, array $ids): array
+    {
+        return $this->setArchivedMany($organizationUid, $ids, false);
+    }
+
+    /**
      * @return CatalogItem[]
      */
     public function findAll(
@@ -220,6 +242,74 @@ final class CatalogItemRepository implements RepositoryInterface
         }
 
         return [$sql, $params];
+    }
+
+    /**
+     * @param string[] $ids
+     * @return string[]
+     */
+    private function setArchivedMany(string $organizationUid, array $ids, bool $archived): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            $ids,
+            static fn (mixed $id): bool => is_string($id)
+                && preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/', $id) === 1
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        if (count($ids) > 100) {
+            throw new InvalidArgumentException('At most 100 catalog items can be changed at once.');
+        }
+
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $select = $this->pdo->prepare(
+                "SELECT uid
+                 FROM kontor_catalog_items
+                 WHERE organization_id = ?
+                   AND uid IN ({$placeholders})
+                   AND archived_at IS " . ($archived ? 'NULL' : 'NOT NULL') . '
+                 FOR UPDATE'
+            );
+            $select->execute([$organizationId, ...$ids]);
+            $changedIds = array_map('strval', $select->fetchAll(\PDO::FETCH_COLUMN));
+
+            if ($changedIds !== []) {
+                $changedPlaceholders = implode(', ', array_fill(0, count($changedIds), '?'));
+                $update = $this->pdo->prepare(
+                    'UPDATE kontor_catalog_items
+                     SET archived_at = ' . ($archived ? '?' : 'NULL') . "
+                     WHERE organization_id = ?
+                       AND uid IN ({$changedPlaceholders})"
+                );
+                $parameters = $archived
+                    ? [$this->now(), $organizationId, ...$changedIds]
+                    : [$organizationId, ...$changedIds];
+                $update->execute($parameters);
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $changedIds;
+        } catch (\Throwable $exception) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     private function hydrate(array $row): CatalogItem

@@ -37,7 +37,7 @@ class KontorCatalog extends WireData implements Module
         return [
             'title' => 'Kontor Catalog',
             'summary' => 'Items (products and services), categories, price lists, units and tax code references.',
-            'version' => '007',
+            'version' => '008',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCatalog',
             'icon' => 'cubes',

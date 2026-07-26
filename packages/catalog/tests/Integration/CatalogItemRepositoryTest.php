@@ -6,6 +6,7 @@ namespace Kontor\Catalog\Tests\Integration;
 
 use Kontor\Catalog\Domain\CatalogItem;
 use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
+use Kontor\Core\Domain\Organization;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\ValueObjects\Money;
 
@@ -73,6 +74,50 @@ final class CatalogItemRepositoryTest extends DatabaseTestCase
         $repository->restore($item->uid->toString());
         $row = $this->pdo->query('SELECT archived_at FROM kontor_catalog_items')->fetch(\PDO::FETCH_ASSOC);
         $this->assertNull($row['archived_at']);
+    }
+
+    public function test_bulk_archive_and_restore_are_tenant_scoped_and_idempotent(): void
+    {
+        $organizations = new OrganizationRepository($this->pdo);
+        $repository = new CatalogItemRepository($this->pdo, $organizations);
+        $first = CatalogItem::create($this->organizationUid, ['en' => 'First']);
+        $second = CatalogItem::create($this->organizationUid, ['en' => 'Second']);
+        $otherOrganization = Organization::createDefault('DE', 'de', 'EUR');
+        $otherOrganization->name = 'Other organization';
+        $organizations->save($otherOrganization);
+        $other = CatalogItem::create(
+            $otherOrganization->uid->toString(),
+            ['en' => 'Other tenant item']
+        );
+
+        foreach ([$first, $second, $other] as $item) {
+            $repository->save($item);
+        }
+
+        $archived = $repository->archiveMany($this->organizationUid, [
+            $first->uid->toString(),
+            $second->uid->toString(),
+            $other->uid->toString(),
+            $first->uid->toString(),
+            'invalid',
+        ]);
+
+        $this->assertEqualsCanonicalizing(
+            [$first->uid->toString(), $second->uid->toString()],
+            $archived
+        );
+        $this->assertSame([], $repository->archiveMany($this->organizationUid, $archived));
+        $this->assertSame(2, $repository->countMatching($this->organizationUid, archived: true));
+        $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString()));
+
+        $restored = $repository->restoreMany($this->organizationUid, [
+            $first->uid->toString(),
+            $other->uid->toString(),
+        ]);
+
+        $this->assertSame([$first->uid->toString()], $restored);
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, archived: true));
+        $this->assertSame(1, $repository->countMatching($otherOrganization->uid->toString()));
     }
 
     public function test_require_throws_for_unknown_uid(): void

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Transactional, tenant-scoped bulk archive and restore operations for up to
+  100 Catalog items.
 - Catalog items in global search, covering localized titles/descriptions,
   SKU, and barcode with direct admin links and exact-identifier ranking.
 - Organization-scoped Catalog backup/restore across items, categories, price

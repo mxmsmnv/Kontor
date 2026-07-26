@@ -367,6 +367,26 @@
   background: #fafbff;
 }
 
+.kontor-bulkactions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin: -0.25rem 0 0.75rem;
+}
+
+.kontor-selectcell {
+  text-align: center !important;
+  width: 28px;
+}
+
+.kontor-selectcell input {
+  cursor: pointer;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
 .kontor-rowaction {
   text-align: right;
   width: 44px;

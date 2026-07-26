@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Bulk archive/restore controls for Catalog items, with select-all behavior,
+  tenant-scoped persistence, per-item audit events, and preserved list filters.
 - Catalog items in global search, including localized text, SKU/barcode lookup,
   direct item links, and an entity filter in the admin search workspace.
 - Catalog item CSV/JSON/JSON Lines/XLSX export and preview-first import,

@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '033',
+            'version' => '034',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -136,8 +136,13 @@ class ProcessKontor extends Process
         parent::init();
 
         $moduleUrl = $this->wire()->config->urls->get('ProcessKontor');
-        $version = (string) (@filemtime(__DIR__ . '/assets/kontor.admin.css') ?: self::getModuleInfo()['version']);
+        $version = (string) max(
+            @filemtime(__DIR__ . '/assets/kontor.admin.css') ?: 0,
+            @filemtime(__DIR__ . '/assets/kontor.admin.js') ?: 0,
+            (int) self::getModuleInfo()['version'],
+        );
         $this->wire()->config->styles->add($moduleUrl . 'assets/kontor.admin.css?v=' . $version);
+        $this->wire()->config->scripts->add($moduleUrl . 'assets/kontor.admin.js?v=' . $version);
     }
 
     public function ___execute(): string
@@ -618,6 +623,50 @@ class ProcessKontor extends Process
             ? $this->_('Catalog item restored.')
             : $this->_('Catalog item archived.'));
         $this->wire()->session->redirect('../catalog/' . ($action === 'restore' ? '?archived=1' : ''));
+    }
+
+    public function ___executeCatalogBulkAction(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-item-archive');
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $ids = $this->wire()->sanitizer->arrayVal(
+            $this->wire()->input->post('ids'),
+            ['maxItems' => 100, 'sanitizer' => 'text']
+        );
+        $redirect = $this->catalogListRedirect();
+
+        if ($ids === []) {
+            $this->warning($this->_('Select at least one catalog item.'));
+            $this->wire()->session->redirect($redirect);
+        }
+
+        $changedIds = $action === 'restore'
+            ? $this->catalogItemRepository()->restoreMany($this->organizationUid(), $ids)
+            : $this->catalogItemRepository()->archiveMany($this->organizationUid(), $ids);
+
+        foreach ($changedIds as $id) {
+            $this->audit(
+                'catalog',
+                'catalog_item',
+                $id,
+                $action === 'restore' ? 'restored' : 'archived',
+                metadata: ['bulk' => true],
+            );
+        }
+
+        $this->message(sprintf(
+            $action === 'restore'
+                ? $this->_('%d catalog item(s) restored.')
+                : $this->_('%d catalog item(s) archived.'),
+            count($changedIds)
+        ));
+        $this->wire()->session->redirect($redirect);
     }
 
     public function ___executeCatalogCategories(): string
@@ -3325,6 +3374,27 @@ class ProcessKontor extends Process
         $entityType === 'catalog_item'
             ? $this->requireCatalog()
             : $this->requireContacts();
+    }
+
+    private function catalogListRedirect(): string
+    {
+        $query = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('return_q')
+        );
+        $type = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_type'),
+            ['product', 'service']
+        );
+        $archived = (string) $this->wire()->input->post('return_archived') === '1';
+        $page = max(1, (int) $this->wire()->input->post('return_page'));
+        $parameters = array_filter([
+            'q' => $query,
+            'type' => $type,
+            'archived' => $archived ? 1 : null,
+            'page' => $page > 1 ? $page : null,
+        ], static fn (string|int|null $value): bool => $value !== null && $value !== '');
+
+        return '../catalog/' . ($parameters === [] ? '' : '?' . http_build_query($parameters));
     }
 
     /**
