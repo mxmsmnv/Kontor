@@ -11,38 +11,39 @@
 $navigationCount = array_sum(array_map('count', $navigationGroups));
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell kontor-directory" data-kontor-directory data-limit="<?= $e($quickNavigationLimit) ?>">
-  <header class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-margin-medium-bottom">
-    <div>
+  <header class="uk-grid-small uk-flex-middle uk-margin-medium-bottom" uk-grid>
+    <div class="uk-width-expand">
       <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Workspace directory</p>
       <h2 class="uk-margin-small-top uk-margin-small-bottom">All Kontor sections</h2>
       <p class="uk-text-muted uk-margin-remove">Open any workspace or pin up to <?= $e($quickNavigationLimit) ?> frequently used sections to the Kontor menu.</p>
     </div>
-    <span class="uk-label"><?= $e($navigationCount) ?> sections</span>
+    <div class="uk-width-auto">
+      <span class="uk-label"><?= $e($navigationCount) ?> sections</span>
+    </div>
   </header>
 
   <form method="post" action="<?= $e($adminUrl) ?>quick-navigation-save/">
     <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
 
     <div class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
-      <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap">
-        <div class="uk-search uk-search-default uk-width-1-1 uk-width-1-2@m">
-          <span uk-search-icon></span>
-          <input class="uk-search-input" type="search" aria-label="Find a section" placeholder="Find a section…" autocomplete="off" data-kontor-directory-search>
+      <div class="uk-grid-small uk-flex-middle" uk-grid>
+        <div class="uk-width-1-1 uk-width-expand@m">
+          <div class="uk-search uk-search-default uk-width-1-1">
+            <span uk-search-icon></span>
+            <input class="uk-search-input" type="search" aria-label="Find a section" placeholder="Find a section…" autocomplete="off" data-kontor-directory-search>
+          </div>
         </div>
-        <div class="uk-flex uk-flex-middle uk-flex-wrap uk-grid-small uk-text-meta" aria-live="polite" uk-grid>
+        <div class="uk-width-1-1 uk-width-auto@m uk-flex uk-flex-middle uk-grid-small uk-text-meta" aria-live="polite" uk-grid>
           <span><strong data-kontor-directory-visible-count><?= $e($navigationCount) ?></strong> shown</span>
           <span><strong data-kontor-quick-count><?= $e(count($quickNavigationKeys)) ?></strong>/<?= $e($quickNavigationLimit) ?> pinned</span>
-          <button class="uk-button uk-button-primary uk-button-small" type="submit">
-            <i class="fa fa-check"></i> Save
-          </button>
         </div>
       </div>
     </div>
 
     <?php foreach ($navigationGroups as $group => $items): ?>
-      <section class="kontor-directory__group uk-margin-medium-top">
+      <section class="kontor-directory__group uk-margin-large-top">
         <h3 class="uk-heading-line uk-text-small uk-text-uppercase"><span><?= $e($group) ?></span></h3>
-        <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-3@m uk-child-width-1-4@l uk-grid-match" uk-grid>
+        <div class="uk-grid-medium uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-3@m uk-child-width-1-4@l uk-grid-match" uk-grid>
           <?php foreach ($items as $item): ?>
             <div data-kontor-directory-item data-search="<?= $e(strtolower($group . ' ' . $item['label'])) ?>">
               <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-directory__item uk-flex uk-flex-middle uk-flex-between">
@@ -71,13 +72,10 @@ $navigationCount = array_sum(array_map('count', $navigationGroups));
       <p class="uk-text-muted uk-margin-remove">Try another name or a broader search.</p>
     </div>
 
-    <div class="uk-flex uk-flex-middle uk-flex-wrap uk-grid-small uk-margin-medium-top" uk-grid>
+    <div class="uk-flex uk-flex-right uk-margin-large-top">
       <button class="uk-button uk-button-primary" type="submit">
         <i class="fa fa-check"></i> Save quick access
       </button>
-      <a class="uk-button uk-button-default" href="<?= $e($adminUrl) ?>">
-        <i class="fa fa-arrow-left"></i> Back to Dashboard
-      </a>
     </div>
   </form>
 </div>

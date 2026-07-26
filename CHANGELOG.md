@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Sections now shares one explicit UIkit grid for its header, toolbar and
+  cards, with uniform spacing and only essential navigation links/actions.
 - Sections now relies on native UIkit cards, grid, search, checkbox, label and
   button components without custom hover movement or compound borders.
 - ProcessKontor removes AdminThemeUikit's redundant `#pw-content-body`
