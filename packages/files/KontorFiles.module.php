@@ -28,7 +28,7 @@ class KontorFiles extends WireData implements Module
         return [
             'title' => 'Kontor Files',
             'summary' => 'Local private storage, file metadata, signed URLs and versions.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorFiles',
             'icon' => 'folder-open',

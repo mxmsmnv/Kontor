@@ -19,7 +19,11 @@ columns beyond the spec's list: `kind` (`'invoice'` | `'credit_note'`) and
 pointing back at the invoice it credits — it reuses the exact same
 numbering, `kontor_document_lines` and (once wired) `kontor/documents`
 rendering machinery as an ordinary invoice, rather than a parallel
-`kontor_credit_notes` table duplicating all of that.
+  `kontor_credit_notes` table duplicating all of that.
+- Issuing an invoice resolves `invoice.standard`; issuing a credit note
+  resolves `credit_note.standard`. Both persist the exact Documents template
+  UID and immutable snapshot in `kontor_invoices`, then store a confidential,
+  entity-bound PDF through Files in the same database transaction.
 
 ## Contents
 
@@ -82,7 +86,6 @@ Partial credit notes aren't built — only full credits, since partial
 credit notes aren't a listed milestone either. No scheduler/cron wiring for
 `sweepOverdue()` — that arrives with Stage 7's automation component; until
 then it's a method a manual CLI invocation or an external cron entry can
-call. No admin UI/API endpoints. `template_uid`/`snapshot_json` exist on
-the schema but aren't populated — rendering/snapshotting an invoice through
-`kontor/documents` is left to a future change, the same deferred-wiring
-choice Documents' own README already made for Sales.
+call. No admin UI/API endpoints beyond the shared ProcessKontor workflow.
+`template_uid` and `snapshot_json` are populated when invoices and credit
+notes are issued.

@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Invoice and credit-note issuance now resolve their standard Documents
+  templates, persist immutable snapshots, and store confidential PDFs through
+  Files in the same database transaction.
 - Shared admin integration for order-backed invoice creation, issue/send
   lifecycle, due tracking, and credit-note entry points.
 - Organization-scoped invoice search, status, archive, count, and pagination

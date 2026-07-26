@@ -54,4 +54,25 @@ final class InvoiceTest extends TestCase
         $creditNote->status = 'sent';
         $this->assertFalse($creditNote->isCreditable(), 'a credit note itself cannot be credited');
     }
+
+    public function test_issued_document_snapshot_is_attached_once(): void
+    {
+        $invoice = Invoice::create('org_01', 'contact', 'ct_01', 'EUR');
+        $invoice->status = 'issued';
+        $invoice->attachIssuedDocument('01ARZ3NDEKTSV4RRFFQ69G5FAV', ['html' => '<p>Issued</p>']);
+
+        $this->assertSame('01ARZ3NDEKTSV4RRFFQ69G5FAV', $invoice->templateUid);
+        $this->assertSame(['html' => '<p>Issued</p>'], $invoice->snapshot);
+
+        $this->expectException(\RuntimeException::class);
+        $invoice->attachIssuedDocument('01ARZ3NDEKTSV4RRFFQ69G5FAV', ['html' => '<p>Changed</p>']);
+    }
+
+    public function test_draft_cannot_receive_an_issued_document_snapshot(): void
+    {
+        $invoice = Invoice::create('org_01', 'contact', 'ct_01', 'EUR');
+
+        $this->expectException(\RuntimeException::class);
+        $invoice->attachIssuedDocument('01ARZ3NDEKTSV4RRFFQ69G5FAV', ['html' => '<p>Draft</p>']);
+    }
 }

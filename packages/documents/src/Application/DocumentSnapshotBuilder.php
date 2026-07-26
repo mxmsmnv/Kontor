@@ -19,7 +19,8 @@ use Kontor\Documents\Domain\DocumentTemplate;
  *
  * Kontor\Documents does not own another component's repository. Consumers
  * call this service at their issue boundary; the shared admin now does so
- * for Sales quotations while invoice and order integrations remain separate.
+ * for Sales quotations, invoices, and credit notes while order integration
+ * remains separate.
  */
 final class DocumentSnapshotBuilder
 {

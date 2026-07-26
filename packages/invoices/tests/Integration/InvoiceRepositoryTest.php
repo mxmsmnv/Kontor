@@ -56,6 +56,26 @@ final class InvoiceRepositoryTest extends DatabaseTestCase
         $this->assertSame($sentPastDue->uid->toString(), $candidates[0]->uid->toString());
     }
 
+    public function test_issued_template_and_snapshot_round_trip(): void
+    {
+        $repository = $this->repository();
+        $invoice = Invoice::create($this->organizationUid, 'contact', 'ct_01', 'EUR');
+        $invoice->status = 'issued';
+        $invoice->attachIssuedDocument(
+            '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+            ['templateVersion' => 2, 'html' => '<main>Immutable invoice</main>'],
+        );
+        $repository->save($invoice);
+
+        $found = $repository->require($invoice->uid->toString());
+
+        $this->assertSame('01ARZ3NDEKTSV4RRFFQ69G5FAV', $found->templateUid);
+        $this->assertEquals(
+            ['templateVersion' => 2, 'html' => '<main>Immutable invoice</main>'],
+            $found->snapshot,
+        );
+    }
+
     public function test_archive_then_restore(): void
     {
         $repository = $this->repository();

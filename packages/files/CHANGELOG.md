@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Invoice and credit-note issuance now store confidential, entity-bound PDFs.
 - Sales quotation issuance now stores confidential, quotation-bound PDFs.
 - Documents is the first generated-output consumer: each PDF render creates
   an entity-bound private file version with its immutable document snapshot.

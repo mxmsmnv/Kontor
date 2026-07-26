@@ -96,5 +96,5 @@ every earlier component skipping its non-milestone spec features. No admin
 UI/visual designer front-end — "document designer v1" here means the
 template engine's capability set (placeholders, loops, conditionals), not
 a WYSIWYG editor. `DocumentSnapshotBuilder` is wired into generated Files
-output and Sales quotation issuance. Order and invoice `snapshot_json`
-columns remain for their own issue integrations.
+output, Sales quotation issuance, and invoice/credit-note issuance. Order
+`snapshot_json` remains for its own issue integration.

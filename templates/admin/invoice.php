@@ -8,6 +8,9 @@
 /** @var string $csrfValue */
 /** @var bool $paymentsReady */
 /** @var \Kontor\Payments\Domain\PaymentAllocation[] $allocations */
+/** @var \Kontor\Documents\Domain\DocumentTemplate|null $invoiceTemplate */
+/** @var \Kontor\Documents\Domain\DocumentTemplate|null $creditNoteTemplate */
+/** @var array<string, mixed>|null $issuedFile */
 /** @var callable $e */
 
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
@@ -32,6 +35,25 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       <strong>Due <?= $e($money($invoice->due)) ?></strong>
     </div>
   </section>
+
+  <?php if ($invoice->isDraft() && $invoiceTemplate === null): ?>
+    <section class="kontor-card kontor-warning">
+      <div>
+        <strong>Issuance needs a document template</strong>
+        <p>Publish an active <code><?= $e($invoice->kind === 'credit_note' ? 'credit_note.standard' : 'invoice.standard') ?></code> template first.</p>
+      </div>
+      <a class="kontor-button" href="<?= $e($adminUrl) ?>documents/">Open Documents</a>
+    </section>
+  <?php elseif ($invoiceTemplate !== null): ?>
+    <section class="kontor-card">
+      <p class="kontor-eyebrow"><?= $invoice->isDraft() ? 'Issuance template' : 'Immutable issued output' ?></p>
+      <h3><?= $e($invoiceTemplate->name) ?> · v<?= $e((string) $invoiceTemplate->versionNumber) ?></h3>
+      <p><code><?= $e($invoiceTemplate->templateKey) ?></code> · <?= $e(strtoupper($invoiceTemplate->language)) ?></p>
+      <?php if ($issuedFile !== null): ?>
+        <a class="kontor-button" href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $issuedFile['uid'])) ?>">Open private PDF</a>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
 
   <section class="kontor-card kontor-tablewrap">
     <table class="kontor-table">
@@ -60,7 +82,9 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     <?php if ($invoice->status === 'draft'): ?>
       <form method="post" action="<?= $e($adminUrl) ?>invoice-action/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($invoice->uid->toString()) ?>">
-        <button class="kontor-button" name="action" value="issue" type="submit">Issue invoice</button>
+        <?php if ($invoiceTemplate !== null): ?>
+          <button class="kontor-button" name="action" value="issue" type="submit">Issue invoice + PDF</button>
+        <?php endif; ?>
         <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
       </form>
     <?php elseif ($invoice->status === 'issued'): ?>
@@ -68,12 +92,16 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($invoice->uid->toString()) ?>">
         <button class="kontor-button" name="action" value="send" type="submit">Mark sent</button>
         <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
-        <?php if ($invoice->kind === 'invoice'): ?><button class="kontor-button kontor-button--ghost" name="action" value="credit" type="submit">Issue credit note</button><?php endif; ?>
+        <?php if ($invoice->kind === 'invoice' && $creditNoteTemplate !== null): ?><button class="kontor-button kontor-button--ghost" name="action" value="credit" type="submit">Issue credit note + PDF</button><?php endif; ?>
       </form>
     <?php elseif ($invoice->isCreditable()): ?>
       <form method="post" action="<?= $e($adminUrl) ?>invoice-action/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($invoice->uid->toString()) ?>">
-        <button class="kontor-button kontor-button--ghost" name="action" value="credit" type="submit">Issue credit note</button>
+        <?php if ($creditNoteTemplate !== null): ?>
+          <button class="kontor-button kontor-button--ghost" name="action" value="credit" type="submit">Issue credit note + PDF</button>
+        <?php else: ?>
+          <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>documents/">Publish credit_note.standard first</a>
+        <?php endif; ?>
       </form>
     <?php endif; ?>
   </div>

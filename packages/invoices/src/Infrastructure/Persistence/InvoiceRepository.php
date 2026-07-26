@@ -51,13 +51,13 @@ final class InvoiceRepository implements RepositoryInterface
             'INSERT INTO kontor_invoices
                 (uid, organization_id, number, kind, credited_invoice_uid, customer_type, customer_uid, contact_uid,
                  order_uid, issue_date, due_date, document_language, currency_code, subtotal_minor, discount_minor,
-                 tax_minor, total_minor, paid_minor, due_minor, status, issued_at, sent_at, paid_at, cancelled_at,
-                 created_at, updated_at, version)
+                 tax_minor, total_minor, paid_minor, due_minor, status, template_uid, snapshot_json, issued_at,
+                 sent_at, paid_at, cancelled_at, created_at, updated_at, version)
              VALUES
                 (:uid, :organization_id, :number, :kind, :credited_invoice_uid, :customer_type, :customer_uid, :contact_uid,
                  :order_uid, :issue_date, :due_date, :document_language, :currency_code, :subtotal_minor, :discount_minor,
-                 :tax_minor, :total_minor, :paid_minor, :due_minor, :status, :issued_at, :sent_at, :paid_at, :cancelled_at,
-                 :created_at, :updated_at, 1)
+                 :tax_minor, :total_minor, :paid_minor, :due_minor, :status, :template_uid, :snapshot_json, :issued_at,
+                 :sent_at, :paid_at, :cancelled_at, :created_at, :updated_at, 1)
              ON DUPLICATE KEY UPDATE
                 number = VALUES(number), customer_type = VALUES(customer_type), customer_uid = VALUES(customer_uid),
                 contact_uid = VALUES(contact_uid), order_uid = VALUES(order_uid), issue_date = VALUES(issue_date),
@@ -65,6 +65,7 @@ final class InvoiceRepository implements RepositoryInterface
                 currency_code = VALUES(currency_code), subtotal_minor = VALUES(subtotal_minor),
                 discount_minor = VALUES(discount_minor), tax_minor = VALUES(tax_minor), total_minor = VALUES(total_minor),
                 paid_minor = VALUES(paid_minor), due_minor = VALUES(due_minor), status = VALUES(status),
+                template_uid = VALUES(template_uid), snapshot_json = VALUES(snapshot_json),
                 issued_at = VALUES(issued_at), sent_at = VALUES(sent_at), paid_at = VALUES(paid_at),
                 cancelled_at = VALUES(cancelled_at), updated_at = VALUES(updated_at), version = version + 1'
         );
@@ -90,6 +91,10 @@ final class InvoiceRepository implements RepositoryInterface
             'paid_minor' => $entity->paid->amountMinor(),
             'due_minor' => $entity->due->amountMinor(),
             'status' => $entity->status,
+            'template_uid' => $entity->templateUid,
+            'snapshot_json' => $entity->snapshot !== []
+                ? json_encode($entity->snapshot, JSON_THROW_ON_ERROR)
+                : null,
             'issued_at' => $entity->issuedAt?->format('Y-m-d H:i:s.u'),
             'sent_at' => $entity->sentAt?->format('Y-m-d H:i:s.u'),
             'paid_at' => $entity->paidAt?->format('Y-m-d H:i:s.u'),
@@ -253,6 +258,10 @@ final class InvoiceRepository implements RepositoryInterface
             sentAt: $row['sent_at'] !== null ? new \DateTimeImmutable($row['sent_at']) : null,
             paidAt: $row['paid_at'] !== null ? new \DateTimeImmutable($row['paid_at']) : null,
             cancelledAt: $row['cancelled_at'] !== null ? new \DateTimeImmutable($row['cancelled_at']) : null,
+            templateUid: $row['template_uid'],
+            snapshot: $row['snapshot_json'] !== null
+                ? json_decode($row['snapshot_json'], associative: true, flags: JSON_THROW_ON_ERROR)
+                : [],
         );
     }
 

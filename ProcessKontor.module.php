@@ -49,6 +49,7 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Expenses\Domain\Expense;
 use Kontor\Expenses\Domain\ExpenseCategory;
 use Kontor\Inventory\Domain\Warehouse;
+use Kontor\Invoices\Domain\Invoice;
 use Kontor\Germany\DTO\LocalizedInvoiceInput;
 use Kontor\Germany\DTO\LocalizedLineItemInput;
 use Kontor\Germany\DTO\LocalizedPartyInput;
@@ -87,7 +88,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '115',
+            'version' => '116',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1622,13 +1623,42 @@ class ProcessKontor extends Process
             $this->_('Kontor · %s'),
             $invoice->number ?? $this->_('Draft invoice')
         ));
+        $documentType = $invoice->kind === 'credit_note' ? 'credit_note' : 'invoice';
+        $invoiceTemplate = null;
+        $creditNoteTemplate = null;
+        if ($this->documentsReady()) {
+            $invoiceTemplate = $invoice->templateUid !== null
+                ? $this->documentsModule()->templateRepository()->find($invoice->templateUid)
+                : $this->documentsModule()->templateRepository()->findCurrentVersion(
+                    $invoice->organizationId,
+                    $documentType . '.standard',
+                    $invoice->documentLanguage,
+                );
+            if ($invoice->kind === 'invoice' && $invoice->isCreditable()) {
+                $creditNoteTemplate = $this->documentsModule()->templateRepository()->findCurrentVersion(
+                    $invoice->organizationId,
+                    'credit_note.standard',
+                    $invoice->documentLanguage,
+                );
+            }
+        }
+        $issuedFiles = $this->filesReady()
+            ? $this->filesModule()->fileManager()->forEntity(
+                $documentType,
+                $invoice->uid->toString(),
+                $invoice->organizationId,
+            )
+            : [];
 
         return $this->renderTemplate('invoice', [
             'invoice' => $invoice,
             'lines' => $module->documentLineRepository()->forDocument(
-                $invoice->kind === 'credit_note' ? 'credit_note' : 'invoice',
+                $documentType,
                 $id,
             ),
+            'invoiceTemplate' => $invoiceTemplate,
+            'creditNoteTemplate' => $creditNoteTemplate,
+            'issuedFile' => $issuedFiles[0] ?? null,
             'customerLabel' => $this->salesCustomerLabels()[
                 $invoice->customerType . ':' . $invoice->customerUid
             ] ?? $invoice->customerUid,
@@ -1690,25 +1720,60 @@ class ProcessKontor extends Process
         $invoice = $module->invoiceRepository()->require($id);
         $this->requireSameOrganization($invoice->organizationId);
 
-        if ($action === 'issue') {
-            $module->workflow()->issue($id);
+        if ($action === 'issue' || $action === 'credit') {
+            $this->requireDocuments();
+            $this->requireFiles();
+            $templateKey = $action === 'credit' ? 'credit_note.standard' : 'invoice.standard';
+            $template = $this->documentsModule()->templateRepository()->findCurrentVersion(
+                $invoice->organizationId,
+                $templateKey,
+                $invoice->documentLanguage,
+            );
+            if ($template === null) {
+                throw new WireException(sprintf(
+                    $this->_('Publish an active %s document template before issuing this document.'),
+                    $templateKey,
+                ));
+            }
+
+            $pdo = $this->wire()->database->pdo();
+            $pdo->beginTransaction();
+            try {
+                $issued = $action === 'credit'
+                    ? $module->workflow()->issueCreditNote($id)
+                    : $module->workflow()->issue($id);
+                $stored = $this->storeIssuedInvoiceDocument($module, $issued, $template);
+                $pdo->commit();
+            } catch (\Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $exception;
+            }
+            $this->audit('files', 'file', $stored['uid'], 'generated', metadata: [
+                'sourceComponent' => 'invoices',
+                'invoiceUid' => $issued->uid->toString(),
+                'version' => $stored['versionNumber'],
+            ]);
+
+            if ($action === 'credit') {
+                $this->audit(
+                    'invoices',
+                    'invoice',
+                    $issued->uid->toString(),
+                    'credit_note_issued',
+                    current: ['creditedInvoiceUid' => $id, 'number' => $issued->number],
+                );
+                $this->message($this->_('Credit note issued with an immutable snapshot and private PDF.'));
+                $this->wire()->session->redirect(
+                    '../invoice/?id=' . rawurlencode($issued->uid->toString())
+                );
+            }
+            $this->message($this->_('Invoice issued with an immutable snapshot and private PDF.'));
         } elseif ($action === 'send') {
             $module->workflow()->send($id);
         } elseif ($action === 'cancel') {
             $module->workflow()->cancel($id);
-        } elseif ($action === 'credit') {
-            $creditNote = $module->workflow()->issueCreditNote($id);
-            $this->audit(
-                'invoices',
-                'invoice',
-                $creditNote->uid->toString(),
-                'credit_note_issued',
-                current: ['creditedInvoiceUid' => $id, 'number' => $creditNote->number],
-            );
-            $this->message($this->_('Credit note issued.'));
-            $this->wire()->session->redirect(
-                '../invoice/?id=' . rawurlencode($creditNote->uid->toString())
-            );
         } elseif ($action === 'restore') {
             $module->invoiceRepository()->restore($id);
         } else {
@@ -9937,6 +10002,81 @@ class ProcessKontor extends Process
             'subtotal' => number_format($quotation->subtotal->amountMinor() / 100, 2, '.', ''),
             'tax' => number_format($quotation->tax->amountMinor() / 100, 2, '.', ''),
             'total' => number_format($quotation->total->amountMinor() / 100, 2, '.', ''),
+        ];
+    }
+
+    /**
+     * @return array{uid: string, versionNumber: int}
+     */
+    private function storeIssuedInvoiceDocument(
+        KontorInvoices $module,
+        Invoice $invoice,
+        \Kontor\Documents\Domain\DocumentTemplate $template,
+    ): array {
+        $documentType = $invoice->kind === 'credit_note' ? 'credit_note' : 'invoice';
+        $lines = $module->documentLineRepository()->forDocument(
+            $documentType,
+            $invoice->uid->toString(),
+        );
+        $data = $this->invoiceDocumentData($invoice, $lines);
+        $snapshot = $this->documentsModule()->snapshotBuilder()->build($template, $data);
+        $pdf = $this->documentsModule()->renderService()->renderPdf($template, $data);
+        $invoice->attachIssuedDocument($template->uid->toString(), $snapshot);
+        $module->invoiceRepository()->save($invoice);
+
+        return $this->filesModule()->fileManager()->upload(
+            organizationUid: $invoice->organizationId,
+            originalName: ($invoice->number ?? $documentType . '-' . $invoice->uid->toString()) . '.pdf',
+            contents: $pdf,
+            visibility: 'private',
+            classification: 'confidential',
+            entityType: $documentType,
+            entityUid: $invoice->uid->toString(),
+            metadata: [
+                'source' => 'invoices',
+                'documentType' => $documentType,
+                'number' => $invoice->number,
+                'documentSnapshot' => $snapshot,
+            ],
+            actorId: (int) $this->wire()->user->id,
+        );
+    }
+
+    /**
+     * @param DocumentLine[] $lines
+     * @return array<string, mixed>
+     */
+    private function invoiceDocumentData(Invoice $invoice, array $lines): array
+    {
+        $customerKey = $invoice->customerType . ':' . $invoice->customerUid;
+
+        return [
+            'title' => $invoice->kind === 'credit_note' ? $this->_('Credit note') : $this->_('Invoice'),
+            'kind' => $invoice->kind,
+            'number' => $invoice->number,
+            'issueDate' => $invoice->issueDate?->format('Y-m-d'),
+            'dueDate' => $invoice->dueDate?->format('Y-m-d'),
+            'creditedInvoiceUid' => $invoice->creditedInvoiceUid,
+            'customer' => [
+                'type' => $invoice->customerType,
+                'uid' => $invoice->customerUid,
+                'name' => $this->salesCustomerLabels()[$customerKey] ?? $invoice->customerUid,
+            ],
+            'currency' => $invoice->currencyCode,
+            'lines' => array_map(static fn (DocumentLine $line): array => [
+                'title' => $line->title,
+                'description' => $line->description,
+                'quantity' => $line->quantity,
+                'unit' => $line->unitCode,
+                'unitPrice' => number_format($line->unitPrice->amountMinor() / 100, 2, '.', ''),
+                'taxRate' => $line->taxRate,
+                'total' => number_format($line->total()->amountMinor() / 100, 2, '.', ''),
+            ], $lines),
+            'subtotal' => number_format($invoice->subtotal->amountMinor() / 100, 2, '.', ''),
+            'tax' => number_format($invoice->tax->amountMinor() / 100, 2, '.', ''),
+            'total' => number_format($invoice->total->amountMinor() / 100, 2, '.', ''),
+            'paid' => number_format($invoice->paid->amountMinor() / 100, 2, '.', ''),
+            'due' => number_format($invoice->due->amountMinor() / 100, 2, '.', ''),
         ];
     }
 

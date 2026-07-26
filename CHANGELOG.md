@@ -25,6 +25,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Invoice and credit-note issuance now persists exact template snapshots and
+  confidential PDFs through Documents and Files.
 - Issuing a Sales quotation now resolves `quotation.standard`, persists the
   immutable template snapshot in Sales, and stores a confidential PDF in Files.
 - Documents now persists generated PDFs and immutable render snapshots through

@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Invoice and credit-note issuance now consume `DocumentSnapshotBuilder`
+  through `invoice.standard` and `credit_note.standard`.
 - Sales quotation issuance is the first business-document consumer of
   `DocumentSnapshotBuilder`, resolving the active language-specific
   `quotation.standard` template.
