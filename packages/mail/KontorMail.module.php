@@ -13,6 +13,7 @@ use Kontor\Mail\Application\InboundMailService;
 use Kontor\Mail\Application\MailboxService;
 use Kontor\Mail\Application\MailEventEmitter;
 use Kontor\Mail\Application\OutboundMailService;
+use Kontor\Mail\Contracts\MailSenderInterface;
 use Kontor\Mail\Health\MailHealthCheck;
 use Kontor\Mail\Infrastructure\Adapters\RawEmailForwardAdapter;
 use Kontor\Mail\Infrastructure\Mail\NativeMailSender;
@@ -38,7 +39,7 @@ class KontorMail extends WireData implements Module
         return [
             'title' => 'Kontor Mail',
             'summary' => 'Outbound history, inbound adapters, entity linking, shared mailboxes.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorMail',
             'icon' => 'envelope',
@@ -105,6 +106,15 @@ class KontorMail extends WireData implements Module
         return new OutboundMailService(new NativeMailSender(), $this->messageRepository(), new MailEventEmitter($this->eventDispatcher()));
     }
 
+    public function outboundWithSender(MailSenderInterface $sender): OutboundMailService
+    {
+        return new OutboundMailService(
+            $sender,
+            $this->messageRepository(),
+            new MailEventEmitter($this->eventDispatcher()),
+        );
+    }
+
     public function inbound(): InboundMailService
     {
         return new InboundMailService($this->messageRepository(), new MailEventEmitter($this->eventDispatcher()));
@@ -156,6 +166,13 @@ class KontorMail extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('mail', self::getModuleInfo()['version'], 'mail');
+        $components->enable('mail');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('mail', self::getModuleInfo()['version'], 'mail');
         $components->enable('mail');
     }

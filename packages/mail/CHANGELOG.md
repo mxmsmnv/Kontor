@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: shared-mailbox creation, safe outbound
+  simulation and history, raw inbound ingestion, message detail, and entity
+  linking.
 - Initial alpha (Substage 9.1): `kontor_mail_mailboxes`,
   `kontor_mail_messages` migrations (kontor.md, full gap-fill — no
   dedicated schema section for this component); `Mailbox`/`MailMessage`

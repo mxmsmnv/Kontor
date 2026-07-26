@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '104',
+            'version' => '105',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -189,6 +189,12 @@ class ProcessKontor extends Process
                     'label' => 'Marketplace',
                     'icon' => 'shopping-cart',
                     'permission' => 'kontor-marketplace-advisory-view',
+                ],
+                [
+                    'url' => 'mail/',
+                    'label' => 'Mail',
+                    'icon' => 'envelope',
+                    'permission' => 'kontor-mail-message-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3977,6 +3983,175 @@ class ProcessKontor extends Process
             count($matched),
         ));
         $this->redirectToAutomation($rule->uid->toString());
+    }
+
+    public function ___executeMail(): string
+    {
+        $this->requireMail();
+        $this->requirePermission('kontor-mail-message-view');
+        $module = $this->mailModule();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $selected = $id !== '' ? $module->messageRepository()->require($id) : null;
+        if ($selected !== null) {
+            $this->requireSameOrganization($selected->organizationId);
+        }
+        $this->setPageTitle($this->_('Kontor · Mail'));
+
+        return $this->renderTemplate('mail', [
+            'mailboxes' => $module->mailboxRepository()->forOrganization($this->organizationUid()),
+            'messages' => $module->messageRepository()->forOrganization($this->organizationUid()),
+            'selected' => $selected,
+            'relations' => $selected !== null
+                ? $module->entityLinking()->linkedEntities(
+                    $this->organizationUid(),
+                    $selected->uid->toString(),
+                )
+                : [],
+            'adapters' => $module->inboundAdapterRegistry()->all(),
+            'canManageMailboxes' => $this->can('kontor-mail-mailbox-manage'),
+            'canSend' => $this->can('kontor-mail-message-send'),
+        ]);
+    }
+
+    public function ___executeMailMailbox(): void
+    {
+        $this->requirePost();
+        $this->requireMail();
+        $this->requirePermission('kontor-mail-mailbox-manage');
+        $name = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        $email = strtolower(trim((string) $this->wire()->input->post('email_address')));
+        if ($name === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            throw new WireException($this->_('Mailbox name and valid email address are required.'));
+        }
+        $mailbox = $this->mailModule()->mailboxes()->open(
+            $this->organizationUid(),
+            mb_substr($name, 0, 255),
+            mb_substr($email, 0, 320),
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('mail', 'mailbox', $mailbox->uid->toString(), 'created');
+        $this->message($this->_('Shared mailbox created.'));
+        $this->wire()->session->redirect('../mail/');
+    }
+
+    public function ___executeMailOutbound(): void
+    {
+        $this->requirePost();
+        $this->requireMail();
+        $this->requirePermission('kontor-mail-message-send');
+        $mailbox = $this->mailboxFromPost();
+        $from = strtolower(trim((string) $this->wire()->input->post('from_address')));
+        $to = $this->mailAddressesFromPost('to_addresses');
+        $cc = $this->mailAddressesFromPost('cc_addresses', required: false);
+        $subject = trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('subject')
+        ));
+        $body = trim((string) $this->wire()->input->post('body_text'));
+        if (filter_var($from, FILTER_VALIDATE_EMAIL) === false || $subject === '' || $body === '') {
+            throw new WireException($this->_('Valid sender, subject, and body are required.'));
+        }
+        $dryRun = (bool) $this->wire()->input->post('dry_run');
+        $service = $dryRun
+            ? $this->mailModule()->outboundWithSender(
+                new class implements \Kontor\Mail\Contracts\MailSenderInterface {
+                    public function send(
+                        string $fromAddress,
+                        array $toAddresses,
+                        array $ccAddresses,
+                        string $subject,
+                        string $bodyText,
+                    ): void {
+                    }
+                }
+            )
+            : $this->mailModule()->outbound();
+        $message = $service->send(
+            $this->organizationUid(),
+            $mailbox?->uid->toString(),
+            $from,
+            $to,
+            $cc,
+            mb_substr($subject, 0, 255),
+            $body,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('mail', 'message', $message->uid->toString(), 'sent', metadata: [
+            'dryRun' => $dryRun,
+            'status' => $message->status,
+        ]);
+        $this->message($dryRun
+            ? $this->_('Outbound message simulated and recorded.')
+            : $this->_('Outbound message processed.'));
+        $this->wire()->session->redirect(
+            '../mail/?id=' . rawurlencode($message->uid->toString())
+        );
+    }
+
+    public function ___executeMailInbound(): void
+    {
+        $this->requirePost();
+        $this->requireMail();
+        $this->requirePermission('kontor-mail-mailbox-manage');
+        $mailbox = $this->mailboxFromPost();
+        $adapterKey = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('adapter')
+        );
+        $raw = trim((string) $this->wire()->input->post('raw_email'));
+        $adapter = $this->mailModule()->inboundAdapterRegistry()->get($adapterKey);
+        if (!$adapter instanceof \Kontor\Mail\Infrastructure\Adapters\RawEmailForwardAdapter) {
+            throw new WireException($this->_('The selected adapter does not accept raw email input.'));
+        }
+        if ($raw === '' || strlen($raw) > 1048576) {
+            throw new WireException($this->_('Raw email is required and must be at most 1 MB.'));
+        }
+        $adapter->pushRaw($raw);
+        $messages = $this->mailModule()->inbound()->poll(
+            $adapter,
+            $this->organizationUid(),
+            $mailbox?->uid->toString(),
+        );
+        if ($messages === []) {
+            throw new WireException($this->_('No valid inbound message was parsed.'));
+        }
+        $message = $messages[0];
+        $this->audit('mail', 'message', $message->uid->toString(), 'received');
+        $this->message($this->_('Inbound message received.'));
+        $this->wire()->session->redirect(
+            '../mail/?id=' . rawurlencode($message->uid->toString())
+        );
+    }
+
+    public function ___executeMailLink(): void
+    {
+        $this->requirePost();
+        $this->requireMail();
+        $this->requirePermission('kontor-mail-message-view');
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('message_uid')
+        );
+        $message = $this->mailModule()->messageRepository()->require($uid);
+        $this->requireSameOrganization($message->organizationId);
+        $entityType = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('entity_type')
+        );
+        $entityUid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('entity_uid')
+        );
+        if ($entityType === '' || $entityUid === '') {
+            throw new WireException($this->_('Entity type and UID are required.'));
+        }
+        $relationUid = $this->mailModule()->entityLinking()->link(
+            $this->organizationUid(),
+            $uid,
+            $entityType,
+            $entityUid,
+            (int) $this->wire()->user->id,
+        );
+        $this->audit('mail', 'relation', $relationUid, 'created');
+        $this->message($this->_('Message linked to entity.'));
+        $this->wire()->session->redirect('../mail/?id=' . rawurlencode($uid));
     }
 
     public function ___executeMarketplace(): string
@@ -8099,6 +8274,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorMarketplace');
     }
 
+    private function mailReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorMail');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8229,6 +8409,13 @@ class ProcessKontor extends Process
     {
         if (!$this->marketplaceReady()) {
             throw new WireException($this->_('The Kontor Marketplace component is not installed.'));
+        }
+    }
+
+    private function requireMail(): void
+    {
+        if (!$this->mailReady()) {
+            throw new WireException($this->_('The Kontor Mail component is not installed.'));
         }
     }
 
@@ -8387,6 +8574,14 @@ class ProcessKontor extends Process
         return $module;
     }
 
+    private function mailModule(): KontorMail
+    {
+        /** @var KontorMail $module */
+        $module = $this->wire()->modules->get('KontorMail');
+
+        return $module;
+    }
+
     private function can(string $permission): bool
     {
         return $this->wire()->user->isSuperuser()
@@ -8539,6 +8734,41 @@ class ProcessKontor extends Process
         }
 
         return $data;
+    }
+
+    private function mailboxFromPost(): ?\Kontor\Mail\Domain\Mailbox
+    {
+        $uid = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('mailbox_uid')
+        );
+        if ($uid === '') {
+            return null;
+        }
+        $mailbox = $this->mailModule()->mailboxRepository()->require($uid);
+        $this->requireSameOrganization($mailbox->organizationId);
+
+        return $mailbox;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function mailAddressesFromPost(string $field, bool $required = true): array
+    {
+        $raw = (string) $this->wire()->input->post($field);
+        $addresses = array_values(array_unique(array_filter(array_map(
+            static fn (string $address): string => strtolower(trim($address)),
+            preg_split('/[,;\\s]+/', $raw) ?: [],
+        ))));
+        if (($required && $addresses === [])
+            || array_filter(
+                $addresses,
+                static fn (string $address): bool => filter_var($address, FILTER_VALIDATE_EMAIL) === false,
+            ) !== []) {
+            throw new WireException($this->_('Recipient addresses are invalid.'));
+        }
+
+        return $addresses;
     }
 
     /**
