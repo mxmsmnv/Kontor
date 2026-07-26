@@ -14,6 +14,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- ProcessWire navigation caches are now invalidated per user whenever the
+  Kontor navigation definition changes, preventing the top menu from being
+  stuck on an old four-item component list.
+- The complete Kontor top menu uses a responsive multi-column layout so all
+  permitted component workspaces remain visible within the viewport.
 - REST tokens now enforce resource-specific read/write scopes on every CRUD
   route.
 - Dashboard hashes scoped widget cache identities so WireCache never truncates

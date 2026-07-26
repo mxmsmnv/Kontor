@@ -2220,6 +2220,22 @@
   display: none;
 }
 
+/*
+ * Kontor exposes many real workspaces. Keep the ProcessWire primary-nav
+ * dropdown usable without hiding later components below the viewport.
+ */
+.pw-primary-nav a[href$="/kontor/"].pw-dropdown-toggle + .pw-dropdown-menu {
+  column-count: 3;
+  column-gap: 0;
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
+  width: min(48rem, calc(100vw - 2rem));
+}
+
+.pw-primary-nav a[href$="/kontor/"].pw-dropdown-toggle + .pw-dropdown-menu > li {
+  break-inside: avoid;
+}
+
 @media (max-width: 850px) {
   .kontor-statgrid,
   .kontor-components,
@@ -2248,6 +2264,11 @@
 
   .kontor-demo-flow {
     grid-template-columns: 1fr;
+  }
+
+  .pw-primary-nav a[href$="/kontor/"].pw-dropdown-toggle + .pw-dropdown-menu {
+    column-count: 1;
+    width: min(18rem, calc(100vw - 2rem));
   }
 
   .kontor-addressgrid,

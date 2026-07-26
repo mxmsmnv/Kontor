@@ -92,7 +92,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '136',
+            'version' => '137',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -323,6 +323,7 @@ class ProcessKontor extends Process
     {
         parent::init();
 
+        $this->refreshNavigationCache();
         $moduleUrl = $this->wire()->config->urls->get('ProcessKontor');
         $version = (string) max(
             @filemtime(__DIR__ . '/assets/kontor.admin.css') ?: 0,
@@ -331,6 +332,27 @@ class ProcessKontor extends Process
         );
         $this->wire()->config->styles->add($moduleUrl . 'assets/kontor.admin.css?v=' . $version);
         $this->wire()->config->scripts->add($moduleUrl . 'assets/kontor.admin.js?v=' . $version);
+    }
+
+    private function refreshNavigationCache(): void
+    {
+        $moduleInfo = self::getModuleInfo();
+        $signature = hash('sha256', json_encode(
+            $moduleInfo['nav'] ?? [],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
+        ));
+        $session = $this->wire()->session;
+
+        if ($session->getFor($this, 'navigationSignature') === $signature) {
+            return;
+        }
+
+        $adminTheme = $this->wire()->adminTheme;
+        if (is_object($adminTheme)) {
+            $session->removeFor($adminTheme, 'prnav');
+            $session->removeFor($adminTheme, 'sidenav');
+        }
+        $session->setFor($this, 'navigationSignature', $signature);
     }
 
     public function ___execute(): string
