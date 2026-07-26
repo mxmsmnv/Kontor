@@ -66,7 +66,9 @@ packages.
 ## Admin workspace
 
 The host `ProcessKontor` module provides item, category, price-list, price-tier,
-reference, import/export, backup, and global-search routes for Catalog. The
-package itself remains UI-framework agnostic.
+reference, import/export, backup, and global-search routes for Catalog. Item
+forms expose localized titles and descriptions for English, French, German,
+and Spanish, with the organization's default language required. The package
+itself remains UI-framework agnostic.
 
 Category import/export and REST API endpoints remain outside this substage.

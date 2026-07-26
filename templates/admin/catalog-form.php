@@ -13,7 +13,7 @@
     </a>
     <p class="kontor-eyebrow">Products and services</p>
     <h2><?= $e($title) ?></h2>
-    <p>Commercial identity, pricing, taxation, unit, and inventory behavior.</p>
+    <p>Localized identity and description, pricing, taxation, unit, and inventory behavior.</p>
   </header>
 
   <?= $form->render() ?>

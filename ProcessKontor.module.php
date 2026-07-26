@@ -60,7 +60,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '034',
+            'version' => '035',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1892,6 +1892,7 @@ class ProcessKontor extends Process
         $form->action = './' . ($item ? '?id=' . rawurlencode($item->uid->toString()) : '');
         $form->addClass('InputfieldFormFocusFirst kontor-entity-form');
         $language = $this->organization()->defaultLanguage;
+        $languages = $this->catalogFormLanguages();
         $currency = $this->organization()->defaultCurrency;
 
         $this->addSelectField(
@@ -1914,14 +1915,21 @@ class ProcessKontor extends Process
             $item?->status ?? 'active',
             25,
         );
-        $this->addTextField(
-            $form,
-            'title',
-            sprintf($this->_('Title (%s)'), strtoupper($language)),
-            $item?->titleIn($language),
-            true,
-            50,
-        );
+        foreach ($languages as $locale => $label) {
+            $this->addTextField(
+                $form,
+                'title_' . $locale,
+                sprintf(
+                    $locale === $language
+                        ? $this->_('Title (%s) · Default')
+                        : $this->_('Title (%s)'),
+                    strtoupper($locale)
+                ),
+                $item?->title[$locale] ?? null,
+                $locale === $language,
+                50,
+            );
+        }
         $this->addTextField($form, 'sku', $this->_('SKU'), $item?->sku, false, 50);
         $this->addTextField($form, 'barcode', $this->_('Barcode'), $item?->barcode, false, 50);
         $this->addSelectField(
@@ -2005,12 +2013,20 @@ class ProcessKontor extends Process
         $inventory->label = $this->_('Track inventory for this item');
         $inventory->checked = $item?->trackInventory ?? false;
         $form->add($inventory);
-        $this->addTextareaField(
-            $form,
-            'description',
-            sprintf($this->_('Description (%s)'), strtoupper($language)),
-            $item?->description[$language] ?? null,
-        );
+        foreach ($languages as $locale => $label) {
+            $this->addTextareaField(
+                $form,
+                'description_' . $locale,
+                sprintf(
+                    $locale === $language
+                        ? $this->_('Description (%s) · Default')
+                        : $this->_('Description (%s)'),
+                    strtoupper($locale)
+                ),
+                $item?->description[$locale] ?? null,
+                50,
+            );
+        }
         $this->addSubmit($form, $this->_('Save catalog item'));
 
         return $form;
@@ -2364,24 +2380,36 @@ class ProcessKontor extends Process
 
     private function saveCatalogItemFromForm(InputfieldForm $form, ?CatalogItem $item): CatalogItem
     {
-        $language = $this->organization()->defaultLanguage;
+        $titles = $item?->title ?? [];
+        $descriptions = $item?->description ?? [];
+
+        foreach ($this->catalogFormLanguages() as $locale => $label) {
+            $title = $this->formValue($form, 'title_' . $locale);
+            $description = $this->formValue($form, 'description_' . $locale);
+
+            if ($title === null) {
+                unset($titles[$locale]);
+            } else {
+                $titles[$locale] = $title;
+            }
+
+            if ($description === null) {
+                unset($descriptions[$locale]);
+            } else {
+                $descriptions[$locale] = $description;
+            }
+        }
 
         if ($item === null) {
             $item = CatalogItem::create(
                 organizationId: $this->organizationUid(),
-                title: [$language => $this->requiredFormValue($form, 'title')],
+                title: $titles,
+                description: $descriptions,
             );
         }
 
-        $item->title[$language] = $this->requiredFormValue($form, 'title');
-        $description = $this->formValue($form, 'description');
-
-        if ($description === null) {
-            unset($item->description[$language]);
-        } else {
-            $item->description[$language] = $description;
-        }
-
+        $item->title = $titles;
+        $item->description = $descriptions;
         $item->itemType = $this->requiredFormValue($form, 'item_type');
         $item->status = $this->requiredFormValue($form, 'status');
         $item->sku = $this->formValue($form, 'sku');
@@ -2722,7 +2750,8 @@ class ProcessKontor extends Process
         InputfieldForm $form,
         string $name,
         string $label,
-        ?string $value
+        ?string $value,
+        int $width = 100,
     ): void {
         /** @var InputfieldTextarea $field */
         $field = $this->wire()->modules->get('InputfieldTextarea');
@@ -2730,6 +2759,7 @@ class ProcessKontor extends Process
         $field->label = $label;
         $field->value = $value ?? '';
         $field->rows = 5;
+        $field->columnWidth = $width;
         $form->add($field);
     }
 
@@ -3042,6 +3072,7 @@ class ProcessKontor extends Process
     {
         return [
             'title' => $item->title,
+            'description' => $item->description,
             'itemType' => $item->itemType,
             'sku' => $item->sku,
             'barcode' => $item->barcode,
@@ -3064,6 +3095,33 @@ class ProcessKontor extends Process
         return $item->titleIn($language)
             ?? $item->titleIn('en')
             ?? (is_string($fallback) && $fallback !== '' ? $fallback : $this->_('Untitled item'));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function catalogFormLanguages(): array
+    {
+        $languages = [
+            'en' => $this->_('English'),
+            'fr' => $this->_('French'),
+            'de' => $this->_('German'),
+            'es' => $this->_('Spanish'),
+        ];
+        $default = $this->organization()->defaultLanguage;
+
+        if (!isset($languages[$default])) {
+            return [$default => strtoupper($default), ...$languages];
+        }
+
+        if (array_key_first($languages) === $default) {
+            return $languages;
+        }
+
+        return [
+            $default => $languages[$default],
+            ...array_diff_key($languages, [$default => true]),
+        ];
     }
 
     /**
