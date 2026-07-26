@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First GraphQL admin vertical: shared resource/type explorer, SDL visibility,
+  authenticated query bench, permission errors, and complexity-limit feedback.
 - First REST API admin vertical: one-time scoped token issuance and revocation,
   registered-resource/OpenAPI inspection, webhook subscription management,
   and delivery-log observability.

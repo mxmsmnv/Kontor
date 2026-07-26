@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '102',
+            'version' => '103',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -176,6 +176,12 @@ class ProcessKontor extends Process
                     'url' => 'api/',
                     'label' => 'API',
                     'icon' => 'plug',
+                    'permission' => 'kontor-api-token-manage',
+                ],
+                [
+                    'url' => 'graphql/',
+                    'label' => 'GraphQL',
+                    'icon' => 'share-alt',
                     'permission' => 'kontor-api-token-manage',
                 ],
                 [
@@ -3965,6 +3971,53 @@ class ProcessKontor extends Process
             count($matched),
         ));
         $this->redirectToAutomation($rule->uid->toString());
+    }
+
+    public function ___executeGraphql(): string
+    {
+        $this->requireGraphql();
+        $this->requirePermission('kontor-api-token-manage');
+        $result = $this->wire()->session->get('kontorGraphqlResult');
+        $this->wire()->session->set('kontorGraphqlResult', null);
+        $this->setPageTitle($this->_('Kontor · GraphQL'));
+
+        return $this->renderTemplate('graphql', [
+            'schema' => $this->graphqlModule()->schemaRegistry()->toSdl(),
+            'types' => $this->graphqlModule()->schemaRegistry()->objectTypes(),
+            'result' => is_array($result) ? $result : null,
+            'sampleQuery' => "{\n  organizations(pageSize: 10) {\n    uid\n    name\n    status\n  }\n}",
+        ]);
+    }
+
+    public function ___executeGraphqlRun(): void
+    {
+        $this->requirePost();
+        $this->requireGraphql();
+        $this->requirePermission('kontor-api-token-manage');
+        $token = trim((string) $this->wire()->input->post('token'));
+        $query = trim((string) $this->wire()->input->post('query'));
+        if ($token === '' || $query === '') {
+            throw new WireException($this->_('Bearer token and GraphQL query are required.'));
+        }
+        $request = new \Kontor\API\DTO\ApiHttpRequest(
+            method: 'POST',
+            path: 'graphql',
+            queryParams: [],
+            headers: ['authorization' => 'Bearer ' . $token],
+            body: json_encode(['query' => $query], JSON_THROW_ON_ERROR),
+        );
+        $response = $this->graphqlModule()->requestHandler()->handle($request);
+        $decoded = json_decode($response->body, true);
+        $this->wire()->session->set('kontorGraphqlResult', [
+            'status' => $response->status,
+            'body' => is_array($decoded) ? $decoded : ['raw' => $response->body],
+            'query' => $query,
+        ]);
+        $this->audit('graphql', 'query', Uid::generate()->toString(), 'executed', metadata: [
+            'status' => $response->status,
+            'hasErrors' => isset($decoded['errors']) && $decoded['errors'] !== [],
+        ]);
+        $this->wire()->session->redirect('../graphql/');
     }
 
     public function ___executeApi(): string
@@ -7921,6 +7974,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorAPI');
     }
 
+    private function graphqlReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorGraphQL');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8037,6 +8095,13 @@ class ProcessKontor extends Process
     {
         if (!$this->apiReady()) {
             throw new WireException($this->_('The Kontor API component is not installed.'));
+        }
+    }
+
+    private function requireGraphql(): void
+    {
+        if (!$this->graphqlReady()) {
+            throw new WireException($this->_('The Kontor GraphQL component is not installed.'));
         }
     }
 
@@ -8175,6 +8240,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorAPI $module */
         $module = $this->wire()->modules->get('KontorAPI');
+
+        return $module;
+    }
+
+    private function graphqlModule(): KontorGraphQL
+    {
+        /** @var KontorGraphQL $module */
+        $module = $this->wire()->modules->get('KontorGraphQL');
 
         return $module;
     }

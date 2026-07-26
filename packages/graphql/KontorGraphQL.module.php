@@ -34,7 +34,7 @@ class KontorGraphQL extends WireData implements Module
         return [
             'title' => 'Kontor GraphQL',
             'summary' => 'Schema registry, component types, permission enforcement, complexity limits.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorGraphQL',
             'icon' => 'share-alt',
@@ -148,6 +148,13 @@ class KontorGraphQL extends WireData implements Module
     }
 
     public function ___install(): void
+    {
+        $components = new ComponentRegistry($this->wire()->database->pdo());
+        $components->markInstalled('graphql', self::getModuleInfo()['version'], 'graphql');
+        $components->enable('graphql');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
     {
         $components = new ComponentRegistry($this->wire()->database->pdo());
         $components->markInstalled('graphql', self::getModuleInfo()['version'], 'graphql');
