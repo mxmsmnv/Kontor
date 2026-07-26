@@ -1,8 +1,8 @@
 # Kontor Dashboard
 
 `kontor/dashboard` — widget registry, layouts, personal dashboards, and
-role dashboards. Third component of Stage 5. Depends only on
-`kontor/core`.
+role dashboards. Third component of Stage 5. Depends on `kontor/core` and
+the shared `kontor/cache` capability for widget render caching.
 
 ## Its own schema gap
 
@@ -50,6 +50,9 @@ register their own widgets by depending on `kontor/dashboard` and calling
   actual point of having both a "personal" and a "role" scope;
   `render()` resolves a dashboard's full layout, pairing each
   `DashboardWidget` with the data its registered provider renders.
+  Widget payloads are cached per organization, user, layout UID, and config
+  for 30 seconds by default (`refreshSeconds` can choose 5–3600 seconds).
+  Layout add/move/resize/remove operations invalidate the dashboard tag.
 
 ## Testing
 
@@ -75,6 +78,6 @@ Organization-scoped dashboards (kontor.md#29's fuller feature list, not a
 Substage 5.3 milestone) — `kontor_dashboards.scope` only supports
 `'personal'`/`'role'`. No drag-and-drop; the first admin vertical exposes
 explicit layout controls backed by `moveWidget()`/`resizeWidget()`.
-No configurable refresh intervals or cache policies — `render()` always
-computes fresh; wiring a widget's render through `kontor/cache` is left to
-a future change. No widgets from other components — see above.
+The admin does not yet expose a refresh-interval editor; providers can use a
+widget's `refreshSeconds` config and the UI shows whether a payload was fresh
+or served from Cache. No widgets from other components — see above.

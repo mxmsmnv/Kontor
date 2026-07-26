@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Dashboard hashes scoped widget cache identities so WireCache never truncates
+  otherwise valid organization, layout, configuration, and tag dimensions.
 - Entity-bound Files lookups can now enforce the owning organization.
 - Search serializes cached result DTOs into WireCache-compatible snapshots
   and validates them while rebuilding the result.
@@ -25,6 +27,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard widget payloads now flow through Cache with scoped keys, TTLs,
+  visible hit/miss state, and layout-driven tag invalidation.
 - Invoice and credit-note issuance now persists exact template snapshots and
   confidential PDFs through Documents and Files.
 - Issuing a Sales quotation now resolves `quotation.standard`, persists the

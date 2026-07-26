@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Widget rendering now consumes Kontor Cache with organization/user/layout
+  scoped keys, configurable TTLs, cache hit visibility, and tag invalidation
+  after layout mutations.
+
 - First admin vertical: create a default personal dashboard, add/remove
   registered widgets, persist width and horizontal position, and render the
   saved layout on the existing Kontor home dashboard.
@@ -28,4 +32,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Widget cache scopes are hashed into WireCache-safe names so long
+  organization, layout, and tag identities cannot be truncated in storage.
 - Widget placement and rendering now reject cross-organization dashboards.

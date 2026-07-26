@@ -16,8 +16,8 @@ use Kontor\Dashboard\Migrations\Migration0002CreateDashboardWidgetsTable;
 use Kontor\Dashboard\Widgets\WelcomeWidgetProvider;
 
 /**
- * KontorDashboard bootstrap module (kontor.md Substage 5.3). Depends only
- * on kontor/core. widgetRegistry() is exposed so other components can
+ * KontorDashboard bootstrap module (kontor.md Substage 5.3). widgetRegistry()
+ * is exposed so other components can
  * fetch it and register their own WidgetProviderInterface implementations
  * during their own module init (mirroring how kontor/search's
  * SearchProviderRegistry is reached the same way) — none register in this
@@ -30,13 +30,13 @@ class KontorDashboard extends WireData implements Module
         return [
             'title' => 'Kontor Dashboard',
             'summary' => 'Widget registry, layouts, personal dashboards, role dashboards.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorDashboard',
             'icon' => 'th-large',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor'],
+            'requires' => ['Kontor', 'KontorCache'],
             'permissions' => [
                 'kontor-dashboard-view' => 'View dashboards',
                 'kontor-dashboard-create' => 'Create dashboards',
@@ -91,7 +91,15 @@ class KontorDashboard extends WireData implements Module
 
     public function dashboardService(): DashboardService
     {
-        return new DashboardService($this->dashboardRepository(), $this->widgetRepository(), $this->widgetRegistry());
+        /** @var KontorCache $cache */
+        $cache = $this->wire()->modules->get('KontorCache');
+
+        return new DashboardService(
+            $this->dashboardRepository(),
+            $this->widgetRepository(),
+            $this->widgetRegistry(),
+            $cache->manager()->forNamespace('dashboard'),
+        );
     }
 
     public function healthCheck(): DashboardHealthCheck

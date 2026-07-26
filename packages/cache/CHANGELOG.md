@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard consumes Cache for widget payloads and invalidates its dashboard
+  tag after layout changes.
 - Search is the first production consumer of the cache capability, using a
   dedicated namespace and generation invalidation after indexing.
 - First Cache admin vertical: live adapter health, organization-scoped

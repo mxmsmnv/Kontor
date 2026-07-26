@@ -24,7 +24,7 @@
 /** @var bool $canCreatePersonalDashboard */
 /** @var bool $canEditPersonalDashboard */
 /** @var \Kontor\Dashboard\Domain\Dashboard|null $personalDashboard */
-/** @var array{dashboard: \Kontor\Dashboard\Domain\Dashboard, widgets: array<int, array{layout: \Kontor\Dashboard\Domain\DashboardWidget, title: string, data: array<string, mixed>}>}|null $renderedPersonalDashboard */
+/** @var array{dashboard: \Kontor\Dashboard\Domain\Dashboard, widgets: array<int, array{layout: \Kontor\Dashboard\Domain\DashboardWidget, title: string, data: array<string, mixed>, cacheHit: bool}>}|null $renderedPersonalDashboard */
 /** @var array<string, \Kontor\Dashboard\Contracts\WidgetProviderInterface> $availableDashboardWidgets */
 /** @var string $adminUrl */
 /** @var callable $e */
@@ -83,7 +83,7 @@ $enabledComponents = count(array_filter(
           <?php foreach ($renderedPersonalDashboard['widgets'] ?? [] as $renderedWidget): ?>
             <?php $layout = $renderedWidget['layout']; ?>
             <article class="kontor-card kontor-panel" style="grid-column: span <?= $e(max(2, min(12, $layout->width))) ?>;">
-              <header class="kontor-panel__head"><h3><?= $e($renderedWidget['title']) ?></h3></header>
+              <header class="kontor-panel__head"><h3><?= $e($renderedWidget['title']) ?></h3><span class="kontor-pill<?= $renderedWidget['cacheHit'] ? '' : ' kontor-pill--inactive' ?>"><?= $renderedWidget['cacheHit'] ? 'cached' : 'fresh' ?></span></header>
               <?php if ($layout->widgetKey === 'welcome'): ?>
                 <p>Welcome to your saved Kontor workspace.</p>
                 <small>Generated <?= $e($renderedWidget['data']['generatedAt'] ?? '') ?></small>

@@ -9,6 +9,7 @@ use Kontor\Dashboard\Domain\DashboardWidget;
 use Kontor\Dashboard\Infrastructure\Persistence\DashboardRepository;
 use Kontor\Dashboard\Infrastructure\Persistence\DashboardWidgetRepository;
 use Kontor\Dashboard\Infrastructure\Registry\WidgetRegistry;
+use Kontor\SDK\Contracts\CacheInterface;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -25,6 +26,7 @@ final class DashboardService
         private readonly DashboardRepository $dashboards,
         private readonly DashboardWidgetRepository $widgets,
         private readonly WidgetRegistry $widgetRegistry,
+        private readonly ?CacheInterface $cache = null,
     ) {
     }
 
@@ -90,6 +92,7 @@ final class DashboardService
 
         $widget = DashboardWidget::create($organizationUid, $dashboardUid, $widgetKey, $positionX, $positionY, $width, $height, $config, $sortOrder);
         $this->widgets->save($widget);
+        $this->flushDashboard($dashboardUid);
 
         return $widget;
     }
@@ -100,6 +103,7 @@ final class DashboardService
         $widget->positionX = $positionX;
         $widget->positionY = $positionY;
         $this->widgets->save($widget);
+        $this->flushDashboard($widget->dashboardUid);
 
         return $widget;
     }
@@ -110,13 +114,16 @@ final class DashboardService
         $widget->width = $width;
         $widget->height = $height;
         $this->widgets->save($widget);
+        $this->flushDashboard($widget->dashboardUid);
 
         return $widget;
     }
 
     public function removeWidget(string $widgetUid): void
     {
+        $widget = $this->widgets->require($widgetUid);
         $this->widgets->remove($widgetUid);
+        $this->flushDashboard($widget->dashboardUid);
     }
 
     /**
@@ -133,7 +140,7 @@ final class DashboardService
      * Resolves the full dashboard: its layout, with each widget's key
      * paired with the data its provider renders.
      *
-     * @return array{dashboard: Dashboard, widgets: array<int, array{layout: DashboardWidget, title: string, data: array<string, mixed>}>}
+     * @return array{dashboard: Dashboard, widgets: array<int, array{layout: DashboardWidget, title: string, data: array<string, mixed>, cacheHit: bool}>}
      */
     public function render(string $dashboardUid, string $organizationUid, ?int $userId): array
     {
@@ -145,13 +152,33 @@ final class DashboardService
 
         foreach ($this->widgets->forDashboard($dashboardUid) as $layout) {
             $provider = $this->widgetRegistry->get($layout->widgetKey);
+            $cacheKey = 'widget:' . hash('sha256', json_encode([
+                $organizationUid,
+                $userId ?? 0,
+                $layout->uid->toString(),
+                $layout->config,
+            ], JSON_THROW_ON_ERROR));
+            $tags = ['dashboard:' . $dashboardUid, 'widget:' . $layout->widgetKey];
+            $data = $this->cache?->get($cacheKey, $tags);
+            $cacheHit = is_array($data);
+            if (!$cacheHit) {
+                $data = $provider->render($organizationUid, $userId);
+                $ttl = max(5, min(3600, (int) ($layout->config['refreshSeconds'] ?? 30)));
+                $this->cache?->set($cacheKey, $data, $ttl, $tags);
+            }
             $rendered[] = [
                 'layout' => $layout,
                 'title' => $provider->title(),
-                'data' => $provider->render($organizationUid, $userId),
+                'data' => $data,
+                'cacheHit' => $cacheHit,
             ];
         }
 
         return ['dashboard' => $dashboard, 'widgets' => $rendered];
+    }
+
+    private function flushDashboard(string $dashboardUid): void
+    {
+        $this->cache?->flushTag('dashboard:' . $dashboardUid);
     }
 }
