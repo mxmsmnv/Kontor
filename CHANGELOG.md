@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Price lists now matches the native UIkit catalog workflow with a focused
+  filter card, selection-only bulk actions, plain table facts, and an
+  actionable empty state.
 - Catalog now uses a focused native UIkit search and filter flow, reveals bulk
   actions only after selection, and presents item details with a concise
   business summary and collapsed optional translations.
