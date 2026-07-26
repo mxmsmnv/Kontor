@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Direct dependency drill-down from Components requirement badges.
 - Composable Activity result facets that retain search and existing filters.
 - Composable Backups result facets on component names and verification states.
 - Direct Dashboard summary-card drill-down for contacts, companies, enabled

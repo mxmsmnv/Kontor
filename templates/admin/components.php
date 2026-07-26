@@ -92,7 +92,9 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
             <div class="kontor-component__requires">
               <span>Requires</span>
               <?php foreach ($component['requires'] as $dependency): ?>
-                <code><?= $e($dependency) ?></code>
+                <a href="./?q=<?= $e(rawurlencode($dependency)) ?>">
+                  <code><?= $e($dependency) ?></code>
+                </a>
               <?php endforeach; ?>
             </div>
           <?php endif; ?>

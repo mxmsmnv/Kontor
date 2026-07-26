@@ -1189,6 +1189,15 @@
   padding: 0.2rem 0.35rem;
 }
 
+.kontor-component__requires a {
+  text-decoration: none;
+}
+
+.kontor-component__requires a:hover code {
+  background: #e0e7ff;
+  color: var(--kontor-brand);
+}
+
 .kontor-component__source {
   color: var(--kontor-brand);
   font-size: 0.75rem;
