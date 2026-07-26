@@ -81,7 +81,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '103',
+            'version' => '104',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -183,6 +183,12 @@ class ProcessKontor extends Process
                     'label' => 'GraphQL',
                     'icon' => 'share-alt',
                     'permission' => 'kontor-api-token-manage',
+                ],
+                [
+                    'url' => 'marketplace/',
+                    'label' => 'Marketplace',
+                    'icon' => 'shopping-cart',
+                    'permission' => 'kontor-marketplace-advisory-view',
                 ],
                 [
                     'url' => 'contacts/',
@@ -3971,6 +3977,115 @@ class ProcessKontor extends Process
             count($matched),
         ));
         $this->redirectToAutomation($rule->uid->toString());
+    }
+
+    public function ___executeMarketplace(): string
+    {
+        $this->requireMarketplace();
+        $this->requirePermission('kontor-marketplace-advisory-view');
+        $module = $this->marketplaceModule();
+        $syncResult = $this->wire()->session->get('kontorMarketplaceSyncResult');
+        $this->wire()->session->set('kontorMarketplaceSyncResult', null);
+        $installability = [];
+        foreach ($module->listingRepository()->all() as $listing) {
+            $installability[$listing->registryName . ':' . $listing->package] =
+                $module->installabilityChecker()->check(
+                    $listing,
+                    [],
+                    PHP_VERSION,
+                    '3.0.269',
+                );
+        }
+        $this->setPageTitle($this->_('Kontor · Marketplace'));
+
+        return $this->renderTemplate('marketplace', [
+            'registries' => $module->registryRepository()->all(),
+            'listings' => $module->listingRepository()->all(),
+            'publishers' => $module->publisherRepository()->all(),
+            'advisories' => $module->advisoryRepository()->all(),
+            'installability' => $installability,
+            'syncResult' => is_array($syncResult) ? $syncResult : null,
+            'canManage' => $this->can('kontor-marketplace-registry-manage'),
+        ]);
+    }
+
+    public function ___executeMarketplaceRegistry(): void
+    {
+        $this->requirePost();
+        $this->requireMarketplace();
+        $this->requirePermission('kontor-marketplace-registry-manage');
+        $name = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('name')
+        ));
+        $url = trim((string) $this->wire()->input->post('url'));
+        if (preg_match('/^[a-z][a-z0-9_-]{1,63}$/', $name) !== 1
+            || filter_var($url, FILTER_VALIDATE_URL) === false
+            || !in_array((string) parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new WireException($this->_('A valid registry name and HTTP URL are required.'));
+        }
+        $registry = $this->marketplaceModule()->registryManagement()->registerCustomRegistry(
+            $name,
+            mb_substr($url, 0, 2048),
+            (bool) $this->wire()->input->post('trusted'),
+        );
+        $this->audit('marketplace', 'registry', $registry->name, 'created');
+        $this->message($this->_('Custom registry added.'));
+        $this->wire()->session->redirect('../marketplace/');
+    }
+
+    public function ___executeMarketplaceRegistryToggle(): void
+    {
+        $this->requirePost();
+        $this->requireMarketplace();
+        $this->requirePermission('kontor-marketplace-registry-manage');
+        $name = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('registry_name')
+        );
+        $registry = $this->marketplaceModule()->registryRepository()->require($name);
+        if ($registry->status === 'active') {
+            $this->marketplaceModule()->registryManagement()->disable($name);
+            $action = 'disabled';
+        } else {
+            $this->marketplaceModule()->registryManagement()->enable($name);
+            $action = 'enabled';
+        }
+        $this->audit('marketplace', 'registry', $name, $action);
+        $this->message(sprintf($this->_('Registry %s.'), $action));
+        $this->wire()->session->redirect('../marketplace/');
+    }
+
+    public function ___executeMarketplaceImport(): void
+    {
+        $this->requirePost();
+        $this->requireMarketplace();
+        $this->requirePermission('kontor-marketplace-registry-manage');
+        $registryName = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('registry_name')
+        );
+        $payload = trim((string) $this->wire()->input->post('payload_json'));
+        if ($payload === '' || strlen($payload) > 1048576) {
+            throw new WireException($this->_('Registry JSON is required and must be at most 1 MB.'));
+        }
+        try {
+            $result = $this->marketplaceModule()->syncService()->syncPayload(
+                $registryName,
+                $payload,
+            );
+        } catch (\JsonException) {
+            throw new WireException($this->_('Registry payload is not valid JSON.'));
+        }
+        $this->audit('marketplace', 'registry', $registryName, 'synchronized', metadata: [
+            'listings' => $result->listingsSynced,
+            'advisories' => $result->advisoriesSynced,
+            'skipped' => count($result->skipped),
+        ]);
+        $this->wire()->session->set('kontorMarketplaceSyncResult', [
+            'listings' => $result->listingsSynced,
+            'advisories' => $result->advisoriesSynced,
+            'skipped' => $result->skipped,
+        ]);
+        $this->message($this->_('Registry payload synchronized.'));
+        $this->wire()->session->redirect('../marketplace/');
     }
 
     public function ___executeGraphql(): string
@@ -7979,6 +8094,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorGraphQL');
     }
 
+    private function marketplaceReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorMarketplace');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -8102,6 +8222,13 @@ class ProcessKontor extends Process
     {
         if (!$this->graphqlReady()) {
             throw new WireException($this->_('The Kontor GraphQL component is not installed.'));
+        }
+    }
+
+    private function requireMarketplace(): void
+    {
+        if (!$this->marketplaceReady()) {
+            throw new WireException($this->_('The Kontor Marketplace component is not installed.'));
         }
     }
 
@@ -8248,6 +8375,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorGraphQL $module */
         $module = $this->wire()->modules->get('KontorGraphQL');
+
+        return $module;
+    }
+
+    private function marketplaceModule(): KontorMarketplace
+    {
+        /** @var KontorMarketplace $module */
+        $module = $this->wire()->modules->get('KontorMarketplace');
 
         return $module;
     }

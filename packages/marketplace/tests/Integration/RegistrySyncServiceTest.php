@@ -130,6 +130,28 @@ final class RegistrySyncServiceTest extends DatabaseTestCase
         $this->assertNotNull($registries->require('official')->lastSyncedAt);
     }
 
+    public function test_sync_payload_ingests_without_fetching_the_registry_url(): void
+    {
+        $registries = new RegistryRepository($this->pdo);
+        $listings = new ListingRepository($this->pdo);
+        $publishers = new PublisherRepository($this->pdo);
+        $advisories = new AdvisoryRepository($this->pdo);
+        $registries->save(Registry::custom('manual', 'https://unreachable.example/registry.json', trusted: true));
+        $neverFetch = new class implements RegistryClientInterface {
+            public function fetch(string $url): string
+            {
+                throw new \RuntimeException('The client must not be called for a supplied payload.');
+            }
+        };
+        $service = new RegistrySyncService($neverFetch, $registries, $listings, $publishers, $advisories);
+
+        $result = $service->syncPayload('manual', $this->payload());
+
+        $this->assertSame(1, $result->listingsSynced);
+        $this->assertSame('Kontor Widgets', $listings->find('manual', 'kontor/widgets')->title);
+        $this->assertTrue($publishers->find('Acme Inc')->verified);
+    }
+
     public function test_syncing_an_untrusted_custom_registry_does_not_verify_the_publisher(): void
     {
         $registries = new RegistryRepository($this->pdo);

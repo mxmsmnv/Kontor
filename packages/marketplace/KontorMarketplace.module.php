@@ -47,7 +47,7 @@ class KontorMarketplace extends WireData implements Module
         return [
             'title' => 'Kontor Marketplace',
             'summary' => 'Official registry, custom registry, component metadata, advisories, publisher model.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorMarketplace',
             'icon' => 'shopping-cart',
@@ -160,6 +160,13 @@ class KontorMarketplace extends WireData implements Module
         (new RegistryRepository($pdo))->save(Registry::official(self::OFFICIAL_REGISTRY_URL));
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('marketplace', self::getModuleInfo()['version'], 'marketplace');
+        $components->enable('marketplace');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('marketplace', self::getModuleInfo()['version'], 'marketplace');
         $components->enable('marketplace');
     }

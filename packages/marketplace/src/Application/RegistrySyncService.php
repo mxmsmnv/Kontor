@@ -53,8 +53,13 @@ final class RegistrySyncService
     public function sync(string $registryName): RegistrySyncResult
     {
         $registry = $this->registries->require($registryName);
-        $payload = $this->client->fetch($registry->url);
 
+        return $this->syncPayload($registryName, $this->client->fetch($registry->url));
+    }
+
+    public function syncPayload(string $registryName, string $payload): RegistrySyncResult
+    {
+        $registry = $this->registries->require($registryName);
         $data = json_decode($payload, associative: true, flags: JSON_THROW_ON_ERROR);
 
         $listingsSynced = 0;

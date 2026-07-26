@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First ProcessKontor admin vertical: registry source management, deterministic
+  JSON synchronization, listing recommendations, publisher trust, and
+  advisory visibility.
 - Initial alpha (Substage 8.3): `kontor_marketplace_registries`,
   `kontor_marketplace_publishers`, `kontor_marketplace_listings`,
   `kontor_marketplace_advisories` migrations (kontor.md#22, full

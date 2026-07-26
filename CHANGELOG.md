@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- First Marketplace admin vertical: registry management, deterministic JSON
+  synchronization, component metadata, publisher trust, advisories, and
+  installability recommendations.
 - First GraphQL admin vertical: shared resource/type explorer, SDL visibility,
   authenticated query bench, permission errors, and complexity-limit feedback.
 - First REST API admin vertical: one-time scoped token issuance and revocation,
