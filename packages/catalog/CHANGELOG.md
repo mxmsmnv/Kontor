@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard summary count for active Catalog items without a sales price.
 - Catalog item filtering by sales-price presence.
 - Organization-scoped Catalog item filtering by sales currency.
 - Unit-of-measure and tax-code item filtering with reference usage drill-down.

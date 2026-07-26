@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Dashboard visibility for active Catalog items without a sales price, linking
+  directly to the corresponding filtered view.
 - Catalog item filtering for positions with or without a configured sales price.
 - Organization-scoped sales-currency filtering for Catalog items, preserved
   across pagination, archive views, and bulk actions.

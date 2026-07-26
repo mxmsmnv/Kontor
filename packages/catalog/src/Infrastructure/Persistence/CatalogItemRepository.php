@@ -322,7 +322,7 @@ final class CatalogItemRepository implements RepositoryInterface
     }
 
     /**
-     * @return array{products: int, services: int, archived: int, inventoryTracked: int}
+     * @return array{products: int, services: int, archived: int, inventoryTracked: int, unpriced: int}
      */
     public function summary(string $organizationUid): array
     {
@@ -331,7 +331,8 @@ final class CatalogItemRepository implements RepositoryInterface
                 COALESCE(SUM(archived_at IS NULL AND item_type = "product"), 0) AS products,
                 COALESCE(SUM(archived_at IS NULL AND item_type = "service"), 0) AS services,
                 COALESCE(SUM(archived_at IS NOT NULL), 0) AS archived,
-                COALESCE(SUM(archived_at IS NULL AND track_inventory = 1), 0) AS inventory_tracked
+                COALESCE(SUM(archived_at IS NULL AND track_inventory = 1), 0) AS inventory_tracked,
+                COALESCE(SUM(archived_at IS NULL AND sales_price_minor IS NULL), 0) AS unpriced
              FROM kontor_catalog_items
              WHERE organization_id = :organization_id'
         );
@@ -345,6 +346,7 @@ final class CatalogItemRepository implements RepositoryInterface
             'services' => (int) ($row['services'] ?? 0),
             'archived' => (int) ($row['archived'] ?? 0),
             'inventoryTracked' => (int) ($row['inventory_tracked'] ?? 0),
+            'unpriced' => (int) ($row['unpriced'] ?? 0),
         ];
     }
 
