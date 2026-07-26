@@ -7,7 +7,7 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>crm-deals/">
       <i class="fa fa-arrow-left"></i> Back to deals
@@ -18,10 +18,10 @@
   </header>
 
   <?php if ($error !== ''): ?>
-    <div class="kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
+    <div class="uk-alert uk-alert-warning kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
   <?php endif; ?>
 
-  <form class="kontor-card kontor-nativeform" method="post" action="./">
+  <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked kontor-nativeform" method="post" action="./">
     <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
     <label class="kontor-nativefield kontor-nativefield--wide">
       <span>Name *</span>
@@ -32,10 +32,10 @@
       <span>Use as the default pipeline for lead conversion</span>
     </label>
     <div class="kontor-nativeform__actions">
-      <button class="kontor-button" type="submit" name="submit_save" value="1">
+      <button class="uk-button uk-button-primary kontor-button" type="submit" name="submit_save" value="1">
         <i class="fa fa-building"></i> Create pipeline
       </button>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/">Cancel</a>
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/">Cancel</a>
     </div>
   </form>
 </div>

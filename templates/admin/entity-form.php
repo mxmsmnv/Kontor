@@ -20,7 +20,7 @@
 $aiReady = $aiReady ?? false;
 $aiSummary = $aiSummary ?? null;
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($backUrl) ?>">
       <i class="fa fa-arrow-left"></i> <?= $e($backLabel) ?>
@@ -30,7 +30,7 @@ $aiSummary = $aiSummary ?? null;
     <p><?= $e($description) ?></p>
   </header>
   <?php if ($duplicates): ?>
-    <aside class="kontor-warning" role="alert">
+    <aside class="uk-alert uk-alert-warning kontor-warning" role="alert">
       <i class="fa fa-exclamation-triangle"></i>
       <div>
         <strong>Possible duplicate contact</strong>
@@ -48,13 +48,13 @@ $aiSummary = $aiSummary ?? null;
 
   <?php if ($entity !== null): ?>
     <?php if ($entityType === 'contact' && $aiReady): ?>
-      <section class="kontor-card">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
         <div class="kontor-sectionhead">
           <div>
             <p class="kontor-eyebrow">AI · Customer context</p>
             <h3>Contact brief</h3>
           </div>
-          <?php if ($aiSummary !== null): ?><span class="kontor-pill"><?= $e($aiSummary['simulated'] ? 'local preview' : 'provider') ?></span><?php endif; ?>
+          <?php if ($aiSummary !== null): ?><span class="uk-label kontor-pill"><?= $e($aiSummary['simulated'] ? 'local preview' : 'provider') ?></span><?php endif; ?>
         </div>
         <?php if ($aiSummary !== null): ?>
           <p><?= $e($aiSummary['summary']) ?></p>
@@ -66,12 +66,12 @@ $aiSummary = $aiSummary ?? null;
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="contact_uid" value="<?= $e($entity->uid->toString()) ?>">
           <label class="kontor-check"><input type="checkbox" name="simulate" value="1" checked> <span>Use local preview</span></label>
-          <button class="kontor-button kontor-button--ghost" type="submit"><i class="fa fa-magic"></i> Generate contact brief</button>
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit"><i class="fa fa-magic"></i> Generate contact brief</button>
         </form>
       </section>
     <?php endif; ?>
 
-    <section class="kontor-card kontor-tags">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-tags">
       <div class="kontor-sectionhead">
         <div>
           <p class="kontor-eyebrow">Classification</p>
@@ -89,13 +89,13 @@ $aiSummary = $aiSummary ?? null;
         <input type="hidden" name="owner_type" value="<?= $e($entityType) ?>">
         <input type="hidden" name="owner_uid" value="<?= $e($entity->uid->toString()) ?>">
         <input type="text" name="tags" value="<?= $e(implode(', ', $tags)) ?>" placeholder="customer, partner, vip">
-        <button class="kontor-button kontor-button--ghost" type="submit">
+        <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
           <i class="fa fa-tags"></i> Update tags
         </button>
       </form>
     </section>
 
-    <section class="kontor-card kontor-relations">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-relations">
       <div class="kontor-sectionhead">
         <div>
           <p class="kontor-eyebrow"><?= $entityType === 'contact' ? 'Affiliations' : 'People' ?></p>
@@ -119,7 +119,7 @@ $aiSummary = $aiSummary ?? null;
                   <?= $membership->department ? ' · ' . $e($membership->department) : '' ?>
                 </span>
               </div>
-              <span class="kontor-pill<?= $membership->endedAt ? ' kontor-pill--inactive' : '' ?>">
+              <span class="uk-label kontor-pill<?= $membership->endedAt ? ' kontor-pill--inactive' : '' ?>">
                 <?= $membership->endedAt ? 'ended ' . $e($membership->endedAt->format('M Y')) : 'current' ?>
               </span>
               <?php if ($entityType === 'contact' && $membership->endedAt === null): ?>
@@ -162,7 +162,7 @@ $aiSummary = $aiSummary ?? null;
             <span>Department</span>
             <input type="text" name="department" placeholder="e.g. Operations">
           </label>
-          <button class="kontor-button kontor-button--ghost" type="submit">
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
             <i class="fa fa-link"></i> Link company
           </button>
         </form>
@@ -173,7 +173,7 @@ $aiSummary = $aiSummary ?? null;
       <?php endif; ?>
     </section>
 
-    <section class="kontor-card kontor-addresses">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-addresses">
       <div class="kontor-sectionhead">
         <div>
           <p class="kontor-eyebrow">Locations</p>
@@ -187,7 +187,7 @@ $aiSummary = $aiSummary ?? null;
           <?php foreach ($addresses as $address): ?>
             <article class="kontor-address">
               <div class="kontor-address__top">
-                <span class="kontor-pill<?= $address->isPrimary ? '' : ' kontor-pill--inactive' ?>">
+                <span class="uk-label kontor-pill<?= $address->isPrimary ? '' : ' kontor-pill--inactive' ?>">
                   <?= $e($address->isPrimary ? 'primary ' . $address->addressType : $address->addressType) ?>
                 </span>
                 <form class="kontor-inline-action" method="post" action="<?= $e($adminUrl) ?>address/">
@@ -256,7 +256,7 @@ $aiSummary = $aiSummary ?? null;
           <input type="checkbox" name="is_primary" value="1">
           <span>Primary address</span>
         </label>
-        <button class="kontor-button kontor-button--ghost" type="submit">
+        <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
           <i class="fa fa-map-marker"></i> Add address
         </button>
       </form>

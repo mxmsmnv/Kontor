@@ -20,7 +20,7 @@ $money = static function (\Kontor\SDK\ValueObjects\Money $value): string {
 };
 $quantity = static fn (float $value): string => rtrim(rtrim(number_format($value, 6, '.', ''), '0'), '.');
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>catalog-price-lists/">
       <i class="fa fa-arrow-left"></i> Back to price lists
@@ -32,7 +32,7 @@ $quantity = static fn (float $value): string => rtrim(rtrim(number_format($value
       <form method="post" action="<?= $e($adminUrl) ?>catalog-price-list-duplicate/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
         <input type="hidden" name="id" value="<?= $e($priceList->uid->toString()) ?>">
-        <button class="kontor-button kontor-button--ghost" type="submit">
+        <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
           <i class="fa fa-copy"></i> Duplicate with tiers
         </button>
       </form>
@@ -42,20 +42,20 @@ $quantity = static fn (float $value): string => rtrim(rtrim(number_format($value
   <?= $form->render() ?>
 
   <?php if ($priceList !== null): ?>
-    <header class="kontor-pagehead">
+    <header class="pw-module-head kontor-pagehead">
       <div>
         <p class="kontor-eyebrow">Tiered prices</p>
         <h2>Price tiers</h2>
         <p>Set prices per item and minimum order quantity.</p>
       </div>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-price-entry/?list=<?= $e(rawurlencode($priceList->uid->toString())) ?>">
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>catalog-price-entry/?list=<?= $e(rawurlencode($priceList->uid->toString())) ?>">
         <i class="fa fa-plus"></i> Add price tier
       </a>
     </header>
 
     <?php if ($entries): ?>
-      <section class="kontor-card kontor-tablewrap">
-        <table class="kontor-table">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+        <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
           <thead><tr><th>Item</th><th>Minimum quantity</th><th>Price</th><th>Validity</th><th><span class="kontor-visually-hidden">Actions</span></th></tr></thead>
           <tbody>
             <?php foreach ($entries as $entry): ?>
@@ -80,7 +80,7 @@ $quantity = static fn (float $value): string => rtrim(rtrim(number_format($value
         </table>
       </section>
     <?php else: ?>
-      <div class="kontor-card kontor-empty">
+      <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
         <i class="fa fa-tag"></i>
         <h3>No price tiers yet</h3>
         <p>Add a catalog item and its minimum-quantity price.</p>

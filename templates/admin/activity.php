@@ -37,14 +37,14 @@ $filterUrl = static function (string $facet, string $value) use ($pageQuery): st
     return './?' . http_build_query([...$pageQuery, $facet => $value]);
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Audit trail</p>
       <h2>Activity</h2>
       <p>Recent changes and operational events across Kontor.</p>
     </div>
-    <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>activity-export/?<?= $e(http_build_query($pageQuery)) ?>" download>
+    <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>activity-export/?<?= $e(http_build_query($pageQuery)) ?>" download>
       <i class="fa fa-download"></i> Export CSV
     </a>
   </header>
@@ -72,13 +72,13 @@ $filterUrl = static function (string $facet, string $value) use ($pageQuery): st
         <option value="<?= $e($action) ?>"<?= $selectedAction === $action ? ' selected' : '' ?>><?= $e($actionLabel($action)) ?></option>
       <?php endforeach; ?>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
-    <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
     <span class="kontor-secondary kontor-filtercount"><?= $e($totalEvents) ?> matching · <?= $e(count($events)) ?> shown</span>
   </form>
 
   <?php if ($events): ?>
-    <section class="kontor-card kontor-activity">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-activity">
       <?php foreach ($events as $event): ?>
         <?php
         $canLink = in_array($event->entityType, ['contact', 'company'], true)
@@ -97,7 +97,7 @@ $filterUrl = static function (string $facet, string $value) use ($pageQuery): st
                   <?= $e($actionLabel($event->action)) ?>
                 </a>
               </strong>
-              <a class="kontor-pill kontor-pill--inactive" href="<?= $e($filterUrl('component', $event->component)) ?>">
+              <a class="uk-label kontor-pill kontor-pill--inactive" href="<?= $e($filterUrl('component', $event->component)) ?>">
                 <?= $e($event->component) ?>
               </a>
             </div>
@@ -152,12 +152,12 @@ $filterUrl = static function (string $facet, string $value) use ($pageQuery): st
         <span><?= $e($totalEvents) ?> events · Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
         <div>
           <?php if ($page > 1): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
               <i class="fa fa-chevron-left"></i> Previous
             </a>
           <?php endif; ?>
           <?php if ($page < $totalPages): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
               Next <i class="fa fa-chevron-right"></i>
             </a>
           <?php endif; ?>
@@ -165,7 +165,7 @@ $filterUrl = static function (string $facet, string $value) use ($pageQuery): st
       </nav>
     <?php endif; ?>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-history"></i>
       <h3><?= !$hasFilters ? 'No activity yet' : 'No matching events' ?></h3>
       <p><?= !$hasFilters ? 'Changes made in Kontor will appear here.' : 'Try another action, component, entity type, or ID.' ?></p>

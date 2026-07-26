@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+
+- Standardized every Kontor admin screen on the ProcessWire design system:
+  native UIkit cards, buttons, tables, forms, labels, alerts and empty states
+  now share the live AdminTheme tokens instead of hardcoded colors and
+  component-specific visual overrides.
+
 ### Fixed
 
 - REST tokens now enforce resource-specific read/write scopes on every CRUD

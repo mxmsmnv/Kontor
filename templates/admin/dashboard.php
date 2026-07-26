@@ -34,7 +34,7 @@ $enabledComponents = count(array_filter(
     static fn (array $component): bool => ($component['status'] ?? '') === 'enabled'
 ));
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <section class="kontor-hero">
     <div class="kontor-hero__content">
       <p class="kontor-eyebrow">Operations workspace</p>
@@ -44,15 +44,15 @@ $enabledComponents = count(array_filter(
     <?php if ($contactsReady || $canCreateCatalogItems): ?>
       <div class="kontor-hero__actions">
         <?php if ($contactsReady): ?>
-          <a class="kontor-button kontor-button--light" href="<?= $e($adminUrl) ?>contact/">
+          <a class="uk-button uk-button-default kontor-button kontor-button--light" href="<?= $e($adminUrl) ?>contact/">
             <i class="fa fa-plus"></i> New contact
           </a>
-          <a class="kontor-button" href="<?= $e($adminUrl) ?>company/">
+          <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>company/">
             <i class="fa fa-building"></i> New company
           </a>
         <?php endif; ?>
         <?php if ($canCreateCatalogItems): ?>
-          <a class="kontor-button<?= $contactsReady ? ' kontor-button--light' : '' ?>" href="<?= $e($adminUrl) ?>catalog-item/">
+          <a class="uk-button <?= $contactsReady ? 'uk-button-default kontor-button--light' : 'uk-button-primary' ?> kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
             <i class="fa fa-cube"></i> New catalog item
           </a>
         <?php endif; ?>
@@ -61,7 +61,7 @@ $enabledComponents = count(array_filter(
   </section>
 
   <?php if ($dashboardReady && $canViewPersonalDashboard): ?>
-    <section class="kontor-card kontor-panel">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
       <header class="kontor-panel__head">
         <div>
           <p class="kontor-eyebrow">Personal layout</p>
@@ -73,7 +73,7 @@ $enabledComponents = count(array_filter(
           <form method="post" action="<?= $e($adminUrl) ?>dashboard-save/">
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
             <label>Dashboard name <input name="name" value="My dashboard" required></label>
-            <button class="kontor-button" type="submit">Create personal dashboard</button>
+            <button class="uk-button uk-button-primary kontor-button" type="submit">Create personal dashboard</button>
           </form>
         <?php else: ?>
           <p>No personal or role dashboard is configured for you yet.</p>
@@ -82,8 +82,8 @@ $enabledComponents = count(array_filter(
         <div class="kontor-grid">
           <?php foreach ($renderedPersonalDashboard['widgets'] ?? [] as $renderedWidget): ?>
             <?php $layout = $renderedWidget['layout']; ?>
-            <article class="kontor-card kontor-panel" style="grid-column: span <?= $e(max(2, min(12, $layout->width))) ?>;">
-              <header class="kontor-panel__head"><h3><?= $e($renderedWidget['title']) ?></h3><span class="kontor-pill<?= $renderedWidget['cacheHit'] ? '' : ' kontor-pill--inactive' ?>"><?= $renderedWidget['cacheHit'] ? 'cached' : 'fresh' ?></span></header>
+            <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel" style="grid-column: span <?= $e(max(2, min(12, $layout->width))) ?>;">
+              <header class="kontor-panel__head"><h3><?= $e($renderedWidget['title']) ?></h3><span class="uk-label kontor-pill<?= $renderedWidget['cacheHit'] ? '' : ' kontor-pill--inactive' ?>"><?= $renderedWidget['cacheHit'] ? 'cached' : 'fresh' ?></span></header>
               <?php if ($layout->widgetKey === 'welcome'): ?>
                 <p>Welcome to your saved Kontor workspace.</p>
                 <small>Generated <?= $e($renderedWidget['data']['generatedAt'] ?? '') ?></small>
@@ -94,7 +94,7 @@ $enabledComponents = count(array_filter(
                     <?php foreach ($renderedWidget['data']['tasks'] as $task): ?>
                       <li>
                         <a href="<?= $e($adminUrl) ?>task/?id=<?= $e(rawurlencode((string) $task['uid'])) ?>"><?= $e((string) $task['title']) ?></a>
-                        <span class="kontor-pill<?= !empty($task['overdue']) ? ' kontor-pill--danger' : '' ?>"><?= $e((string) $task['priority']) ?><?= !empty($task['dueAt']) ? ' · ' . $e(substr((string) $task['dueAt'], 0, 10)) : '' ?></span>
+                        <span class="uk-label kontor-pill<?= !empty($task['overdue']) ? ' kontor-pill--danger' : '' ?>"><?= $e((string) $task['priority']) ?><?= !empty($task['dueAt']) ? ' · ' . $e(substr((string) $task['dueAt'], 0, 10)) : '' ?></span>
                       </li>
                     <?php endforeach; ?>
                   </ul>
@@ -130,7 +130,7 @@ $enabledComponents = count(array_filter(
                 <?php foreach ($availableDashboardWidgets as $key => $provider): ?><option value="<?= $e($key) ?>"><?= $e($provider->title()) ?></option><?php endforeach; ?>
               </select>
             </label>
-            <button class="kontor-button" name="action" value="add" type="submit">Add widget</button>
+            <button class="uk-button uk-button-primary kontor-button" name="action" value="add" type="submit">Add widget</button>
           </form>
         <?php endif; ?>
       <?php endif; ?>
@@ -138,7 +138,7 @@ $enabledComponents = count(array_filter(
   <?php endif; ?>
 
   <?php if ($canViewCatalog): ?>
-    <section class="kontor-card kontor-catalogoverview">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-catalogoverview">
       <header class="kontor-panel__head">
         <div>
           <p class="kontor-eyebrow">Commercial catalog</p>
@@ -213,21 +213,21 @@ $enabledComponents = count(array_filter(
   <?php endif; ?>
 
   <section class="kontor-statgrid<?= $queueReady && $canViewQueue ? ' kontor-statgrid--four' : '' ?>">
-    <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>contacts/">
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>contacts/">
       <span class="kontor-stat__icon"><i class="fa fa-address-book"></i></span>
       <span>
         <strong class="kontor-stat__value"><?= $e($contactCount) ?></strong>
         <span class="kontor-stat__label">Active contacts</span>
       </span>
     </a>
-    <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>companies/">
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>companies/">
       <span class="kontor-stat__icon"><i class="fa fa-building"></i></span>
       <span>
         <strong class="kontor-stat__value"><?= $e($companyCount) ?></strong>
         <span class="kontor-stat__label">Companies</span>
       </span>
     </a>
-    <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>components/?status=enabled">
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>components/?status=enabled">
       <span class="kontor-stat__icon"><i class="fa fa-cubes"></i></span>
       <span>
         <strong class="kontor-stat__value"><?= $e($enabledComponents) ?></strong>
@@ -236,7 +236,7 @@ $enabledComponents = count(array_filter(
     </a>
     <?php if ($queueReady && $canViewQueue): ?>
       <?php $activeJobs = ($queueCounts['pending'] ?? 0) + ($queueCounts['reserved'] ?? 0); ?>
-      <a class="kontor-card kontor-stat" href="<?= $e($adminUrl) ?>queue/?status=active">
+      <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat" href="<?= $e($adminUrl) ?>queue/?status=active">
         <span class="kontor-stat__icon<?= ($queueCounts['dead'] ?? 0) > 0 ? ' kontor-stat__icon--danger' : '' ?>">
           <i class="fa fa-tasks"></i>
         </span>
@@ -251,7 +251,7 @@ $enabledComponents = count(array_filter(
   </section>
 
   <section class="kontor-grid">
-    <article class="kontor-card kontor-panel">
+    <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
       <header class="kontor-panel__head">
         <h3>Recently updated contacts</h3>
         <?php if ($contactsReady): ?>
@@ -273,7 +273,7 @@ $enabledComponents = count(array_filter(
           <?php endforeach; ?>
         </ul>
       <?php else: ?>
-        <div class="kontor-empty">
+        <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
           <i class="fa fa-user-plus"></i>
           <h3>No contacts yet</h3>
           <p>Create your first contact to start building the workspace.</p>
@@ -281,7 +281,7 @@ $enabledComponents = count(array_filter(
       <?php endif; ?>
     </article>
 
-    <aside class="kontor-card kontor-panel">
+    <aside class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-panel">
       <header class="kontor-panel__head"><h3>Quick access</h3></header>
       <div class="kontor-quicklinks">
         <a class="kontor-quicklink" href="<?= $e($adminUrl) ?>contacts/">
@@ -328,7 +328,7 @@ $enabledComponents = count(array_filter(
   </section>
 
   <?php if ($canViewActivity): ?>
-    <section class="kontor-card kontor-dashboardactivity">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-dashboardactivity">
       <header class="kontor-panel__head">
         <h3>Recent activity</h3>
         <a href="<?= $e($adminUrl) ?>activity/">Open audit trail</a>

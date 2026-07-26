@@ -11,8 +11,8 @@
 $defaultContext = '{"subject":"QA customer request"}';
 $defaultSchema = '{"invoiceNumber":"string","amount":"decimal"}';
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Advanced capabilities · Human in the loop</p>
       <h2>AI</h2>
@@ -20,7 +20,7 @@ $defaultSchema = '{"invoiceNumber":"string","amount":"decimal"}';
     </div>
   </header>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead">
       <div><p class="kontor-eyebrow">Provider boundary</p><h3>Runtime status</h3></div>
       <div><strong><?= $e((string) count($providers)) ?> registered</strong></div>
@@ -31,13 +31,13 @@ $defaultSchema = '{"invoiceNumber":"string","amount":"decimal"}';
         <?php foreach ($providers as $provider): ?><li><code><?= $e($provider::class) ?></code></li><?php endforeach; ?>
       </ul>
     <?php else: ?>
-      <div class="kontor-empty"><p>No production AI provider is registered.</p></div>
+      <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No production AI provider is registered.</p></div>
     <?php endif; ?>
   </section>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Capability bench</p><h3>Run AI request</h3></div></header>
-    <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>ai-execute/">
+    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>ai-execute/">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield"><span>Capability *</span>
         <select name="capability" required>
@@ -51,31 +51,31 @@ $defaultSchema = '{"invoiceNumber":"string","amount":"decimal"}';
       <label class="kontor-nativefield kontor-nativefield--wide"><span>Context object (JSON)</span><textarea name="context_json" rows="4"><?= $e($defaultContext) ?></textarea></label>
       <label class="kontor-nativefield kontor-nativefield--wide"><span>Extraction schema (JSON)</span><textarea name="schema_json" rows="4"><?= $e($defaultSchema) ?></textarea></label>
       <label class="kontor-nativefield kontor-nativefield--wide"><span><input type="checkbox" name="simulate" value="1" checked> Use local preview provider (no network)</span></label>
-      <div class="kontor-nativeform__actions"><button class="kontor-button" type="submit">Run AI request</button></div>
+      <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Run AI request</button></div>
     </form>
   </section>
 
   <?php if ($result !== null): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead">
         <div><p class="kontor-eyebrow"><?= $e($result['simulated'] ? 'Local preview' : 'Production provider') ?></p><h3>Workbench result</h3></div>
         <div><strong><?= $e($result['pending'] ? 'approval required' : ($result['success'] ? 'completed' : 'failed')) ?></strong></div>
       </header>
       <?php if ($result['pending']): ?>
         <p><strong>Output withheld.</strong> A human must approve or reject this draft before its generated output is exposed.</p>
-        <p><a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>ai/?id=<?= $e(rawurlencode((string) $result['pendingUid'])) ?>">Review pending action</a></p>
+        <p><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>ai/?id=<?= $e(rawurlencode((string) $result['pendingUid'])) ?>">Review pending action</a></p>
       <?php elseif ($result['success']): ?>
         <pre><code><?= $e(json_encode($result['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?></code></pre>
       <?php else: ?>
-        <div class="kontor-empty"><p><?= $e((string) ($result['error'] ?? 'Provider request failed.')) ?></p></div>
+        <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p><?= $e((string) ($result['error'] ?? 'Provider request failed.')) ?></p></div>
       <?php endif; ?>
     </section>
   <?php endif; ?>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Human approval</p><h3>Action queue</h3></div></header>
     <?php if ($actions !== []): ?>
-      <table class="kontor-table">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
         <thead><tr><th>Created</th><th>Capability</th><th>Status</th><th>Requested by</th><th>Decided</th></tr></thead>
         <tbody><?php foreach ($actions as $action): ?><tr>
           <td><strong><a href="<?= $e($adminUrl) ?>ai/?id=<?= $e(rawurlencode($action->uid->toString())) ?>"><?= $e($action->createdAt->format('Y-m-d H:i:s')) ?></a></strong></td>
@@ -85,11 +85,11 @@ $defaultSchema = '{"invoiceNumber":"string","amount":"decimal"}';
           <td><?= $e($action->decidedAt?->format('Y-m-d H:i:s') ?? '—') ?></td>
         </tr><?php endforeach; ?></tbody>
       </table>
-    <?php else: ?><div class="kontor-empty"><p>No AI actions have entered the approval queue.</p></div><?php endif; ?>
+    <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No AI actions have entered the approval queue.</p></div><?php endif; ?>
   </section>
 
   <?php if ($selected !== null): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow"><?= $e($selected->capability) ?> · <?= $e($selected->status) ?></p><h3>Approval detail</h3></div></header>
       <div class="kontor-detailgrid">
         <div><span>Action UID</span><strong><?= $e($selected->uid->toString()) ?></strong></div>
@@ -107,13 +107,13 @@ $defaultSchema = '{"invoiceNumber":"string","amount":"decimal"}';
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
             <input type="hidden" name="action_uid" value="<?= $e($selected->uid->toString()) ?>">
             <input type="hidden" name="decision" value="approve">
-            <button class="kontor-button" type="submit">Approve action</button>
+            <button class="uk-button uk-button-primary kontor-button" type="submit">Approve action</button>
           </form>
           <form method="post" action="<?= $e($adminUrl) ?>ai-decide/">
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
             <input type="hidden" name="action_uid" value="<?= $e($selected->uid->toString()) ?>">
             <input type="hidden" name="decision" value="reject">
-            <button class="kontor-button kontor-button--ghost" type="submit">Reject action</button>
+            <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">Reject action</button>
           </form>
         </div>
       <?php elseif ($selected->status === 'approved'): ?>

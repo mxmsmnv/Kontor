@@ -6,7 +6,7 @@
 /** @var string $adminUrl */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>catalog-price-list/?id=<?= $e(rawurlencode($priceList->uid->toString())) ?>">
       <i class="fa fa-arrow-left"></i> Back to <?= $e($priceList->name) ?>

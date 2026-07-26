@@ -15,20 +15,20 @@ $entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $t
     return $e($type . ' · ' . $uid);
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Team context</p>
       <h2>Collaboration</h2>
       <p>Recent notes and discussion attached to business records.</p>
     </div>
-    <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>tasks/"><i class="fa fa-check-square-o"></i> Tasks</a>
+    <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>tasks/"><i class="fa fa-check-square-o"></i> Tasks</a>
   </header>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <h3>Recent comments</h3>
     <?php if ($comments !== []): ?>
-      <table class="kontor-table"><thead><tr><th>Record</th><th>Comment</th><th>Author</th><th>Created</th></tr></thead><tbody>
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Record</th><th>Comment</th><th>Author</th><th>Created</th></tr></thead><tbody>
       <?php foreach ($comments as $comment): ?><tr>
         <td><?= $entityLink($comment->entityType, $comment->entityUid) ?></td>
         <td><?= $e($comment->body) ?></td>
@@ -39,10 +39,10 @@ $entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $t
     <?php else: ?><p>No comments yet. Open a task to start a discussion.</p><?php endif; ?>
   </section>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <h3>Recent notes</h3>
     <?php if ($notes !== []): ?>
-      <table class="kontor-table"><thead><tr><th>Record</th><th>Note</th><th>Author</th><th>Created</th></tr></thead><tbody>
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Record</th><th>Note</th><th>Author</th><th>Created</th></tr></thead><tbody>
       <?php foreach ($notes as $note): ?><tr>
         <td><?= $entityLink($note->entityType, $note->entityUid) ?></td>
         <td><?= $e($note->body) ?></td>

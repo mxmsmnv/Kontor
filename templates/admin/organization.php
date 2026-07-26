@@ -4,7 +4,7 @@
 /** @var \ProcessWire\InputfieldForm $form */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <p class="kontor-eyebrow">Workspace settings</p>
     <h2>Organization</h2>
@@ -19,7 +19,7 @@
         <small><?= $e($organization->uid->toString()) ?></small>
       </span>
     </div>
-    <span class="kontor-pill"><?= $e($organization->status) ?></span>
+    <span class="uk-label kontor-pill"><?= $e($organization->status) ?></span>
   </section>
 
   <?= $form->render() ?>

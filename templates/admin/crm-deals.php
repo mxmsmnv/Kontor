@@ -16,22 +16,22 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     return number_format($value->amountMinor() / 100, 2, '.', '') . ' ' . $value->currencyCode();
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Revenue pipeline</p>
       <h2>CRM · Deals</h2>
       <p>Move opportunities through stages and close them as won or lost.</p>
     </div>
-    <div class="kontor-pagehead__actions">
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm/">
+    <div class="pw-module-actions kontor-pagehead__actions">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm/">
         <i class="fa fa-list"></i> Leads
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-pipeline/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-pipeline/">
         <i class="fa fa-plus-square"></i> Pipeline
       </a>
       <?php if ($pipeline !== null): ?>
-        <a class="kontor-button" href="<?= $e($adminUrl) ?>crm-deal/?pipeline=<?= $e(rawurlencode($pipeline->uid->toString())) ?>">
+        <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>crm-deal/?pipeline=<?= $e(rawurlencode($pipeline->uid->toString())) ?>">
           <i class="fa fa-plus"></i> New deal
         </a>
       <?php endif; ?>
@@ -49,18 +49,18 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
   <?php endif; ?>
 
   <?php if ($pipeline === null): ?>
-    <section class="kontor-card kontor-empty">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-columns"></i>
       <h3>No pipeline yet</h3>
       <p>Create the first pipeline to start tracking deals.</p>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>crm-pipeline/">Create pipeline</a>
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>crm-pipeline/">Create pipeline</a>
     </section>
   <?php else: ?>
     <section class="kontor-kanban" aria-label="<?= $e($pipeline->name) ?> pipeline">
       <?php foreach ($columns as $column): ?>
         <?php $stage = $column['stage']; ?>
         <article class="kontor-kanban__column">
-          <header style="--kontor-stage-color: <?= $e($stage->color ?? '#64748b') ?>">
+          <header>
             <strong><?= $e($stage->displayNameIn('en') ?? $stage->nameKey) ?></strong>
             <span><?= $e(count($column['deals'])) ?></span>
           </header>
@@ -94,7 +94,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
                     </form>
                   </div>
                 <?php else: ?>
-                  <span class="kontor-pill kontor-pill--inactive"><?= $e($deal->status) ?></span>
+                  <span class="uk-label kontor-pill kontor-pill--inactive"><?= $e($deal->status) ?></span>
                 <?php endif; ?>
               </div>
             <?php endforeach; ?>

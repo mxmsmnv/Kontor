@@ -14,8 +14,8 @@
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     number_format($value->amountMinor() / 100, 2, '.', '') . ' ' . $value->currencyCode();
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Advanced capabilities · Customer experience</p>
       <h2>Portal</h2>
@@ -24,36 +24,36 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
   </header>
 
   <?php if ($verification !== null): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <p><strong><?= $e($verification['ok'] ? 'Login verified' : 'Login rejected') ?></strong> · <?= $e($verification['message']) ?></p>
     </section>
   <?php endif; ?>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Identity</p><h3>Create customer account</h3></div></header>
-    <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-account/">
+    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-account/">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield kontor-nativefield--wide"><span>Contact *</span><select name="contact_uid" required><option value="">Select contact</option><?php foreach ($contacts as $candidate): ?><option value="<?= $e($candidate->uid->toString()) ?>"><?= $e($candidate->displayName) ?><?= $candidate->email !== null ? ' · ' . $e($candidate->email) : '' ?></option><?php endforeach; ?></select></label>
       <label class="kontor-nativefield"><span>Login email *</span><input type="email" name="email" required></label>
       <label class="kontor-nativefield"><span>Temporary password *</span><input type="password" name="password" minlength="12" autocomplete="new-password" required></label>
-      <div class="kontor-nativeform__actions"><button class="kontor-button" type="submit">Create portal account</button></div>
+      <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Create portal account</button></div>
     </form>
   </section>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Authentication</p><h3>Verify customer login</h3></div></header>
-    <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-verify/">
+    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-verify/">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield"><span>Email *</span><input type="email" name="email" required></label>
       <label class="kontor-nativefield"><span>Password *</span><input type="password" name="password" autocomplete="current-password" required></label>
-      <div class="kontor-nativeform__actions"><button class="kontor-button kontor-button--ghost" type="submit">Verify login</button></div>
+      <div class="kontor-nativeform__actions"><button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">Verify login</button></div>
     </form>
   </section>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Access directory</p><h3>Portal accounts</h3></div></header>
     <?php if ($accounts !== []): ?>
-      <table class="kontor-table"><thead><tr><th>Email</th><th>Contact UID</th><th>Status</th><th>Last login</th></tr></thead><tbody>
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Email</th><th>Contact UID</th><th>Status</th><th>Last login</th></tr></thead><tbody>
       <?php foreach ($accounts as $account): ?><tr>
         <td><strong><a href="<?= $e($adminUrl) ?>portal/?id=<?= $e(rawurlencode($account->uid->toString())) ?>"><?= $e($account->email) ?></a></strong></td>
         <td><code><?= $e($account->contactUid) ?></code></td>
@@ -61,11 +61,11 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
         <td><?= $e($account->lastLoginAt?->format('Y-m-d H:i') ?? 'never') ?></td>
       </tr><?php endforeach; ?>
       </tbody></table>
-    <?php else: ?><div class="kontor-empty"><p>No portal accounts.</p></div><?php endif; ?>
+    <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No portal accounts.</p></div><?php endif; ?>
   </section>
 
   <?php if ($selected !== null && $contact !== null): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow"><?= $e($selected->status) ?> account</p><h3><?= $e($contact->displayName) ?></h3></div></header>
       <div class="kontor-detailgrid">
         <div><span>Login</span><strong><?= $e($selected->email) ?></strong></div>
@@ -77,13 +77,13 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
         <input type="hidden" name="account_uid" value="<?= $e($selected->uid->toString()) ?>">
         <input type="hidden" name="action" value="<?= $e($selected->isActive() ? 'disable' : 'enable') ?>">
-        <button class="kontor-button kontor-button--ghost" type="submit"><?= $e($selected->isActive() ? 'Disable account' : 'Enable account') ?></button>
+        <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit"><?= $e($selected->isActive() ? 'Disable account' : 'Enable account') ?></button>
       </form>
     </section>
 
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Customer-safe allowlist</p><h3>Profile</h3></div></header>
-      <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-profile/">
+      <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-profile/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
         <input type="hidden" name="account_uid" value="<?= $e($selected->uid->toString()) ?>">
         <label class="kontor-nativefield"><span>First name</span><input name="firstName" value="<?= $e($contact->firstName) ?>"></label>
@@ -92,14 +92,14 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
         <label class="kontor-nativefield"><span>Phone</span><input name="phone" value="<?= $e($contact->phone) ?>"></label>
         <label class="kontor-nativefield"><span>Mobile</span><input name="mobile" value="<?= $e($contact->mobile) ?>"></label>
         <label class="kontor-nativefield"><span>Preferred language</span><input name="preferredLanguage" value="<?= $e($contact->preferredLanguage) ?>" maxlength="10"></label>
-        <div class="kontor-nativeform__actions"><button class="kontor-button" type="submit">Update portal profile</button></div>
+        <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Update portal profile</button></div>
       </form>
     </section>
 
-    <section class="kontor-card kontor-tablewrap">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Customer scope</p><h3>Quotations</h3></div></header>
       <?php if ($quotationRows !== []): ?>
-        <table class="kontor-table"><thead><tr><th>Number</th><th>Status</th><th>Total</th><th>Validity</th><th>Files</th></tr></thead><tbody>
+        <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Number</th><th>Status</th><th>Total</th><th>Validity</th><th>Files</th></tr></thead><tbody>
         <?php foreach ($quotationRows as $row): $quotation = $row['quotation']; ?><tr>
           <td><strong><?= $e($quotation->number ?? 'Draft') ?></strong></td>
           <td><?= $e($quotation->status) ?></td>
@@ -108,13 +108,13 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
           <td><?php if ($row['files'] === []): ?>—<?php else: foreach ($row['files'] as $file): ?><a href="<?= $e($file['downloadUrl']) ?>"><?= $e($file['original_name']) ?></a> <?php endforeach; endif; ?></td>
         </tr><?php endforeach; ?>
         </tbody></table>
-      <?php else: ?><div class="kontor-empty"><p>No customer quotations.</p></div><?php endif; ?>
+      <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No customer quotations.</p></div><?php endif; ?>
     </section>
 
-    <section class="kontor-card kontor-tablewrap">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Customer scope</p><h3>Invoices, payments, and files</h3></div></header>
       <?php if ($invoiceRows !== []): ?>
-        <table class="kontor-table"><thead><tr><th>Number</th><th>Status</th><th>Total</th><th>Due</th><th>Payments</th><th>Files</th></tr></thead><tbody>
+        <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Number</th><th>Status</th><th>Total</th><th>Due</th><th>Payments</th><th>Files</th></tr></thead><tbody>
         <?php foreach ($invoiceRows as $row): $invoice = $row['invoice']; ?><tr>
           <td><strong><?= $e($invoice->number ?? 'Draft') ?></strong></td>
           <td><?= $e($invoice->status) ?></td>
@@ -124,7 +124,7 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
           <td><?php if ($row['files'] === []): ?>—<?php else: foreach ($row['files'] as $file): ?><a href="<?= $e($file['downloadUrl']) ?>"><?= $e($file['original_name']) ?></a> <?php endforeach; endif; ?></td>
         </tr><?php endforeach; ?>
         </tbody></table>
-      <?php else: ?><div class="kontor-empty"><p>No customer invoices.</p></div><?php endif; ?>
+      <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No customer invoices.</p></div><?php endif; ?>
     </section>
   <?php endif; ?>
 </div>

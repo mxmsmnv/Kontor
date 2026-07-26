@@ -14,17 +14,17 @@ $installed = count(array_filter($chartStatus, static fn (array $row): bool => $r
 $conflicts = count(array_filter($chartStatus, static fn (array $row): bool => !$row['compatible']));
 $money = static fn (int $minor): string => number_format($minor / 100, 2, '.', '') . ' EUR';
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Localization · <?= $e($countryCode) ?></p>
       <h2>Germany</h2>
       <p>German VAT checksum validation, an illustrative SKR03 account set, and country-specific document output.</p>
     </div>
-    <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>ledger/"><i class="fa fa-balance-scale"></i> Open Ledger</a>
+    <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>ledger/"><i class="fa fa-balance-scale"></i> Open Ledger</a>
   </header>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead">
       <div><p class="kontor-eyebrow">Localization capability</p><h3>Provider status</h3></div>
       <div><strong>localization.de</strong></div>
@@ -38,12 +38,12 @@ $money = static fn (int $minor): string => number_format($minor / 100, 2, '.', '
     <p>XRechnung output here is an illustrative UBL-inspired subset, not certified EN16931/CIUS compliance. ZUGFeRD is advertised for future composition with the Documents PDF pipeline but is not generated yet.</p>
   </section>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">USt-IdNr.</p><h3>Validate VAT ID checksum</h3></div></header>
-    <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>germany-tax-id/">
+    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>germany-tax-id/">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield kontor-nativefield--wide"><span>German VAT ID *</span><input name="tax_id" value="DE811569869" maxlength="32" required></label>
-      <div class="kontor-nativeform__actions"><button class="kontor-button" type="submit">Validate VAT ID</button></div>
+      <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Validate VAT ID</button></div>
     </form>
     <?php if ($taxResult !== null): ?>
       <div class="kontor-detailgrid">
@@ -54,19 +54,19 @@ $money = static fn (int $minor): string => number_format($minor / 100, 2, '.', '
     <?php endif; ?>
   </section>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <header class="kontor-sectionhead">
       <div><p class="kontor-eyebrow">Illustrative subset</p><h3>SKR03 account seed</h3></div>
       <div><strong><?= $e((string) $installed) ?>/<?= $e((string) count($chartStatus)) ?> present<?= $conflicts ? ' · ' . $e((string) $conflicts) . ' conflicts' : '' ?></strong></div>
     </header>
-    <table class="kontor-table">
+    <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
       <thead><tr><th>Code</th><th>German name</th><th>Type</th><th>Currency</th><th>Status</th></tr></thead>
       <tbody><?php foreach ($chartStatus as $row): ?><tr>
         <td><strong><?= $e($row['definition']['code']) ?></strong></td>
         <td><?= $e($row['definition']['name']) ?></td>
         <td><?= $e($row['definition']['type']) ?></td>
         <td>EUR</td>
-        <td><span class="kontor-pill<?= (!$row['compatible'] || ($row['account'] && !$row['account']->isActive())) ? ' kontor-pill--inactive' : '' ?>"><?= $e(
+        <td><span class="uk-label kontor-pill<?= (!$row['compatible'] || ($row['account'] && !$row['account']->isActive())) ? ' kontor-pill--inactive' : '' ?>"><?= $e(
             !$row['compatible']
                 ? 'conflict'
                 : ($row['account'] === null
@@ -78,14 +78,14 @@ $money = static fn (int $minor): string => number_format($minor / 100, 2, '.', '
     <?php if ($canConfigure): ?>
       <form method="post" action="<?= $e($adminUrl) ?>germany-seed-chart/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-        <button class="kontor-button" type="submit"<?= $conflicts ? ' disabled' : '' ?>>Seed missing German accounts</button>
+        <button class="uk-button uk-button-primary kontor-button" type="submit"<?= $conflicts ? ' disabled' : '' ?>>Seed missing German accounts</button>
       </form>
     <?php endif; ?>
   </section>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Country document bench</p><h3>Generate XRechnung preview</h3></div></header>
-    <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>germany-format/">
+    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>germany-format/">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield"><span>Invoice number *</span><input name="invoice_number" value="RE-2026-001" required></label>
       <label class="kontor-nativefield"><span>Issue date *</span><input type="date" name="issue_date" value="<?= $e(date('Y-m-d')) ?>" required></label>
@@ -107,12 +107,12 @@ $money = static fn (int $minor): string => number_format($minor / 100, 2, '.', '
       <label class="kontor-nativefield"><span>Quantity *</span><input name="quantity" value="10" inputmode="decimal" required></label>
       <label class="kontor-nativefield"><span>Unit price (EUR) *</span><input name="unit_price" value="100.00" inputmode="decimal" required></label>
       <label class="kontor-nativefield"><span>Tax rate (%) *</span><input name="tax_rate" value="19" inputmode="decimal" required></label>
-      <div class="kontor-nativeform__actions"><button class="kontor-button" type="submit">Generate XRechnung preview</button></div>
+      <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Generate XRechnung preview</button></div>
     </form>
   </section>
 
   <?php if ($xmlResult !== null): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead">
         <div><p class="kontor-eyebrow"><?= $e($xmlResult['invoiceNumber']) ?></p><h3>XRechnung XML preview</h3></div>
         <div><strong><?= $e(number_format($xmlResult['bytes'])) ?> bytes</strong></div>

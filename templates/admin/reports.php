@@ -26,8 +26,8 @@ $formatValue = static function (mixed $value, ?string $type): string {
     return (string) $value;
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Operational intelligence</p>
       <h2>Reports</h2>
@@ -36,15 +36,15 @@ $formatValue = static function (mixed $value, ?string $type): string {
   </header>
 
   <?php if ($providers === []): ?>
-    <section class="kontor-card">
-      <div class="kontor-empty">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
+      <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
         <i class="fa fa-bar-chart"></i>
         <h3>No report providers</h3>
         <p>Install or enable a component that contributes reports.</p>
       </div>
     </section>
   <?php else: ?>
-    <form class="kontor-card kontor-nativeform" method="get" action="./">
+    <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked kontor-nativeform" method="get" action="./">
       <label class="kontor-nativefield">
         <span>Report</span>
         <select name="provider" aria-label="Report">
@@ -80,14 +80,14 @@ $formatValue = static function (mixed $value, ?string $type): string {
       <?php endif; ?>
 
       <div class="kontor-nativeform__actions">
-        <button class="kontor-button" type="submit" name="run" value="1">
+        <button class="uk-button uk-button-primary kontor-button" type="submit" name="run" value="1">
           <i class="fa fa-play"></i> Run report
         </button>
       </div>
     </form>
 
     <?php if ($result !== null && $schema !== null): ?>
-      <section class="kontor-card kontor-tablewrap">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
         <header class="kontor-sectionhead">
           <div>
             <p class="kontor-eyebrow">Report result</p>
@@ -100,7 +100,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
               <input type="hidden" name="provider" value="<?= $e($providerKey) ?>">
               <input type="hidden" name="filters_json" value="<?= $e(json_encode($filters, JSON_THROW_ON_ERROR)) ?>">
               <input type="hidden" name="group_by_json" value="<?= $e(json_encode($groupBy, JSON_THROW_ON_ERROR)) ?>">
-              <button class="kontor-button kontor-button--ghost" type="submit">
+              <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
                 <i class="fa fa-download"></i> Export CSV
               </button>
             </form>
@@ -108,7 +108,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
         </header>
 
         <?php if ($result->rows !== []): ?>
-          <table class="kontor-table">
+          <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
             <thead>
               <tr>
                 <?php foreach ($schema->fields as $field => $type): ?>
@@ -144,7 +144,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
             <?php endif; ?>
           </table>
         <?php else: ?>
-          <div class="kontor-empty">
+          <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
             <i class="fa fa-check-circle"></i>
             <h3>Report ran successfully</h3>
             <p>No rows matched the current organization and filters.</p>
@@ -154,7 +154,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
     <?php endif; ?>
 
     <?php if ($canManageSchedules && $provider !== null): ?>
-      <section class="kontor-card">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
         <header class="kontor-sectionhead">
           <div>
             <p class="kontor-eyebrow">Automation</p>
@@ -162,7 +162,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
             <p>The current filters and grouping will run through Queue; each completed export is stored privately in Files.</p>
           </div>
         </header>
-        <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>reports-schedule/">
+        <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>reports-schedule/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="provider" value="<?= $e($providerKey) ?>">
           <input type="hidden" name="filters_json" value="<?= $e(json_encode($filters, JSON_THROW_ON_ERROR)) ?>">
@@ -192,13 +192,13 @@ $formatValue = static function (mixed $value, ?string $type): string {
             <input type="datetime-local" name="first_run_at" required value="<?= $e((new DateTimeImmutable('+5 minutes'))->format('Y-m-d\\TH:i')) ?>">
           </label>
           <div class="kontor-nativeform__actions">
-            <button class="kontor-button" type="submit"><i class="fa fa-clock-o"></i> Create schedule</button>
+            <button class="uk-button uk-button-primary kontor-button" type="submit"><i class="fa fa-clock-o"></i> Create schedule</button>
           </div>
         </form>
       </section>
     <?php endif; ?>
 
-    <section class="kontor-card kontor-tablewrap">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
       <header class="kontor-sectionhead">
         <div>
           <p class="kontor-eyebrow">Scheduled delivery</p>
@@ -208,12 +208,12 @@ $formatValue = static function (mixed $value, ?string $type): string {
         <?php if ($canManageSchedules): ?>
           <form method="post" action="<?= $e($adminUrl) ?>reports-dispatch-due/">
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-            <button class="kontor-button kontor-button--ghost" type="submit"><i class="fa fa-play"></i> Queue due now</button>
+            <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit"><i class="fa fa-play"></i> Queue due now</button>
           </form>
         <?php endif; ?>
       </header>
       <?php if ($schedules !== []): ?>
-        <table class="kontor-table">
+        <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
           <thead><tr><th>Name</th><th>Provider</th><th>Recurrence</th><th>Format</th><th>Next run</th><th>Last run</th><?php if ($canManageSchedules): ?><th></th><?php endif; ?></tr></thead>
           <tbody>
             <?php foreach ($schedules as $schedule): ?>
@@ -229,7 +229,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
                     <form method="post" action="<?= $e($adminUrl) ?>reports-schedule-action/">
                       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
                       <input type="hidden" name="uid" value="<?= $e($schedule->uid->toString()) ?>">
-                      <button class="kontor-button kontor-button--ghost" type="submit">Archive</button>
+                      <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">Archive</button>
                     </form>
                   </td>
                 <?php endif; ?>
@@ -238,7 +238,7 @@ $formatValue = static function (mixed $value, ?string $type): string {
           </tbody>
         </table>
       <?php else: ?>
-        <div class="kontor-empty"><i class="fa fa-clock-o"></i><h3>No schedules yet</h3><p>Create one from the selected report above.</p></div>
+        <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><i class="fa fa-clock-o"></i><h3>No schedules yet</h3><p>Create one from the selected report above.</p></div>
       <?php endif; ?>
     </section>
   <?php endif; ?>

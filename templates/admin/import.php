@@ -11,8 +11,8 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Data exchange</p>
       <h2>Import preview</h2>
@@ -20,7 +20,7 @@
     </div>
   </header>
 
-  <section class="kontor-card kontor-import">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-import">
     <form method="post" action="./" enctype="multipart/form-data">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label>
@@ -36,7 +36,7 @@
         <input type="file" name="import_file" required accept=".csv,.json,.jsonl,.ndjson,.xlsx">
         <small>Maximum 10 MB. Column names must use Kontor machine field names.</small>
       </label>
-      <button class="kontor-button" type="submit">
+      <button class="uk-button uk-button-primary kontor-button" type="submit">
         <i class="fa fa-search"></i> Preview import
       </button>
     </form>
@@ -53,7 +53,7 @@
           <p class="kontor-eyebrow"><?= $result->dryRun ? 'Preview complete' : 'Import complete' ?></p>
           <h3><?= $e($filename ?: 'Uploaded file') ?></h3>
         </div>
-        <span class="kontor-pill<?= $result->failed > 0 ? ' kontor-pill--inactive' : '' ?>">
+        <span class="uk-label kontor-pill<?= $result->failed > 0 ? ' kontor-pill--inactive' : '' ?>">
           <?= $result->failed > 0 ? $e($result->failed) . ' issues' : ($result->dryRun ? 'ready' : 'imported') ?>
         </span>
       </div>
@@ -75,7 +75,7 @@
             <strong>Ready to import <?= $e($result->totalRows) ?> rows</strong>
             <span>Kontor will create and verify a complete <?= $e($backupLabel) ?> snapshot before changing any data.</span>
           </div>
-          <button class="kontor-button" type="submit" onclick="return confirm('Create a verified backup and import these rows?')">
+          <button class="uk-button uk-button-primary kontor-button" type="submit" onclick="return confirm('Create a verified backup and import these rows?')">
             <i class="fa fa-shield"></i> Back up and import
           </button>
         </form>
@@ -91,8 +91,8 @@
       <?php endif; ?>
 
       <?php if ($result->rows): ?>
-        <div class="kontor-card kontor-tablewrap">
-          <table class="kontor-table">
+        <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+          <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
             <thead>
               <tr>
                 <th>Row</th>
@@ -105,7 +105,7 @@
               <?php foreach (array_slice($result->rows, 0, 100) as $row): ?>
                 <tr>
                   <td><?= $e($row->rowNumber) ?></td>
-                  <td><span class="kontor-pill<?= $row->outcome === 'failed' ? ' kontor-pill--inactive' : '' ?>"><?= $e(str_replace('_', ' ', $row->outcome)) ?></span></td>
+                  <td><span class="uk-label kontor-pill<?= $row->outcome === 'failed' ? ' kontor-pill--inactive' : '' ?>"><?= $e(str_replace('_', ' ', $row->outcome)) ?></span></td>
                   <td><?= $e($row->entityUid ?: '—') ?></td>
                   <td><?= $e($row->errorMessage ?: 'Validated') ?></td>
                 </tr>

@@ -30,18 +30,18 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     return number_format($value->amountMinor() / 100, 2, '.', '') . ' ' . $value->currencyCode();
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Revenue pipeline</p>
       <h2>CRM · Leads</h2>
       <p>Capture opportunities, qualify them, and connect them to customers.</p>
     </div>
-    <div class="kontor-pagehead__actions">
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/">
+    <div class="pw-module-actions kontor-pagehead__actions">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/">
         <i class="fa fa-columns"></i> Deals
       </a>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>crm-lead/">
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>crm-lead/">
         <i class="fa fa-plus"></i> New lead
       </a>
     </div>
@@ -59,7 +59,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         <option value="<?= $e($status) ?>"<?= $selectedStatus === $status ? ' selected' : '' ?>><?= $e(ucfirst($status)) ?></option>
       <?php endforeach; ?>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
     <?php if ($query !== '' || $selectedStatus !== null): ?>
       <a class="kontor-viewtoggle" href="<?= $showArchived ? './?archived=1' : './' ?>">
         <i class="fa fa-times"></i> Clear filters
@@ -72,9 +72,9 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     <span class="kontor-secondary"><?= $e($totalRecords) ?> total · <?= $e(count($leads)) ?> shown</span>
   </form>
 
-  <section class="kontor-card kontor-tablewrap kontor-directorytable">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap kontor-directorytable">
     <?php if ($leads): ?>
-      <table class="kontor-table">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
         <thead>
           <tr><th>Lead</th><th>Priority</th><th>Value</th><th>Next action</th><th>Status</th><th><span class="kontor-visually-hidden">Actions</span></th></tr>
         </thead>
@@ -88,7 +88,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
               <td><?= $e(ucfirst($lead->priority)) ?></td>
               <td><?= $e($money($lead->estimatedValue)) ?></td>
               <td><?= $e($lead->nextActionAt?->format('Y-m-d H:i') ?? '—') ?></td>
-              <td><span class="kontor-pill<?= $lead->status === 'new' || $lead->status === 'qualified' ? '' : ' kontor-pill--inactive' ?>"><?= $e($lead->status) ?></span></td>
+              <td><span class="uk-label kontor-pill<?= $lead->status === 'new' || $lead->status === 'qualified' ? '' : ' kontor-pill--inactive' ?>"><?= $e($lead->status) ?></span></td>
               <td class="kontor-rowaction">
                 <form method="post" action="<?= $e($adminUrl) ?>crm-lead-action/">
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
@@ -107,7 +107,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         </tbody>
       </table>
     <?php else: ?>
-      <div class="kontor-empty">
+      <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
         <i class="fa fa-handshake-o"></i>
         <h3><?= $query !== '' || $selectedStatus !== null || $showArchived ? 'No matching leads' : 'No leads yet' ?></h3>
         <p><?= $showArchived ? 'Archived leads will appear here.' : 'Create the first opportunity for your sales pipeline.' ?></p>
@@ -119,8 +119,8 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     <nav class="kontor-pagination" aria-label="CRM lead pages">
       <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
       <div>
-        <?php if ($page > 1): ?><a class="kontor-button kontor-button--ghost" href="<?= $e($url($page - 1, $showArchived)) ?>">Previous</a><?php endif; ?>
-        <?php if ($page < $totalPages): ?><a class="kontor-button kontor-button--ghost" href="<?= $e($url($page + 1, $showArchived)) ?>">Next</a><?php endif; ?>
+        <?php if ($page > 1): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page - 1, $showArchived)) ?>">Previous</a><?php endif; ?>
+        <?php if ($page < $totalPages): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page + 1, $showArchived)) ?>">Next</a><?php endif; ?>
       </div>
     </nav>
   <?php endif; ?>

@@ -45,8 +45,8 @@ $filterUrl = static function (string $component, string $status) use ($query): s
 };
 $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== '';
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Recovery</p>
       <h2>Backups</h2>
@@ -57,7 +57,7 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
         <form method="post" action="<?= $e($adminUrl) ?>backup-create/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="component" value="<?= $e($component) ?>">
-          <button class="kontor-button<?= $component === 'core' ? ' kontor-button--secondary' : '' ?>" type="submit">
+          <button class="uk-button <?= $component === 'core' ? 'uk-button-secondary' : 'uk-button-primary' ?> kontor-button" type="submit">
             <i class="fa fa-database"></i> <?= $e($label) ?>
           </button>
         </form>
@@ -87,15 +87,15 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
       <option value="verified"<?= $selectedStatus === 'verified' ? ' selected' : '' ?>>Verified</option>
       <option value="failed"<?= $selectedStatus === 'failed' ? ' selected' : '' ?>>Verification failed</option>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
-    <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
     <span class="kontor-secondary"><?= $e($totalBackups) ?> matching · <?= $e(count($backups)) ?> shown</span>
   </form>
 
   <?php if ($backups): ?>
     <section class="kontor-backuplist">
       <?php foreach ($backups as $backup): ?>
-        <article class="kontor-card kontor-backup">
+        <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-backup">
           <span class="kontor-backup__icon"><i class="fa fa-archive"></i></span>
           <div class="kontor-backup__body">
             <div>
@@ -104,7 +104,7 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
                   <?= $e(ucfirst((string) $backup['component'])) ?> <?= $e((string) $backup['kind']) ?>
                 </a>
               </strong>
-              <a class="kontor-pill<?= $backup['verified'] ? '' : ' kontor-pill--danger' ?>" href="<?= $e($filterUrl($selectedComponent, $backup['verified'] ? 'verified' : 'failed')) ?>">
+              <a class="uk-label kontor-pill<?= $backup['verified'] ? '' : ' kontor-pill--danger' ?>" href="<?= $e($filterUrl($selectedComponent, $backup['verified'] ? 'verified' : 'failed')) ?>">
                 <?= $backup['verified'] ? 'Verified' : 'Verification failed' ?>
               </a>
             </div>
@@ -135,12 +135,12 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
         <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
         <div>
           <?php if ($page > 1): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
               <i class="fa fa-chevron-left"></i> Previous
             </a>
           <?php endif; ?>
           <?php if ($page < $totalPages): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
               Next <i class="fa fa-chevron-right"></i>
             </a>
           <?php endif; ?>
@@ -148,7 +148,7 @@ $hasFilters = $query !== '' || $selectedComponent !== '' || $selectedStatus !== 
       </nav>
     <?php endif; ?>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-database"></i>
       <h3><?= $hasFilters ? 'No matching snapshots' : 'No snapshots yet' ?></h3>
       <p><?= $hasFilters ? 'Try another backup ID, component, or verification state.' : 'Create a Contacts or Core snapshot to establish a recovery point.' ?></p>

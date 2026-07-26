@@ -7,7 +7,7 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>inventory/">
       <i class="fa fa-arrow-left"></i> Back to inventory
@@ -18,10 +18,10 @@
   </header>
 
   <?php if ($error !== ''): ?>
-    <div class="kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
+    <div class="uk-alert uk-alert-warning kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
   <?php endif; ?>
 
-  <form class="kontor-card kontor-nativeform" method="post" action="./">
+  <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked kontor-nativeform" method="post" action="./">
     <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
     <label class="kontor-nativefield">
       <span>Code *</span>
@@ -32,10 +32,10 @@
       <input name="name" value="<?= $e($values['name']) ?>" placeholder="Main warehouse" required>
     </label>
     <div class="kontor-nativeform__actions">
-      <button class="kontor-button" type="submit" name="submit_save" value="1">
+      <button class="uk-button uk-button-primary kontor-button" type="submit" name="submit_save" value="1">
         <i class="fa fa-building"></i> Create warehouse
       </button>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>inventory/">Cancel</a>
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>inventory/">Cancel</a>
     </div>
   </form>
 </div>

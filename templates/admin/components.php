@@ -15,8 +15,8 @@ $registeredSelected = $query === '' && $selectedStatus === '';
 $enabledSelected = $query === '' && $selectedStatus === 'enabled';
 $attentionSelected = $query === '' && $selectedStatus === 'attention';
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">System</p>
       <h2>Components</h2>
@@ -25,13 +25,13 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
   </header>
 
   <section class="kontor-componentstats">
-    <a class="kontor-card<?= $registeredSelected ? ' kontor-card--selected' : '' ?>" href="./"<?= $registeredSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card<?= $registeredSelected ? ' kontor-card--selected' : '' ?>" href="./"<?= $registeredSelected ? ' aria-current="page"' : '' ?>>
       <strong><?= $e($counts['total']) ?></strong><span>Registered</span>
     </a>
-    <a class="kontor-card<?= $enabledSelected ? ' kontor-card--selected' : '' ?>" href="./?status=enabled"<?= $enabledSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card<?= $enabledSelected ? ' kontor-card--selected' : '' ?>" href="./?status=enabled"<?= $enabledSelected ? ' aria-current="page"' : '' ?>>
       <strong><?= $e($counts['enabled']) ?></strong><span>Enabled</span>
     </a>
-    <a class="kontor-card<?= $counts['attention'] > 0 ? ' kontor-componentstats--warning' : '' ?><?= $attentionSelected ? ' kontor-card--selected' : '' ?>" href="./?status=attention"<?= $attentionSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card<?= $counts['attention'] > 0 ? ' kontor-componentstats--warning' : '' ?><?= $attentionSelected ? ' kontor-card--selected' : '' ?>" href="./?status=attention"<?= $attentionSelected ? ' aria-current="page"' : '' ?>>
       <strong><?= $e($counts['attention']) ?></strong><span>Need attention</span>
     </a>
   </section>
@@ -49,22 +49,22 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
       <option value="uninstalled"<?= $selectedStatus === 'uninstalled' ? ' selected' : '' ?>>Uninstalled</option>
       <option value="attention"<?= $selectedStatus === 'attention' ? ' selected' : '' ?>>Needs attention</option>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
-    <?php if ($hasFilters): ?><a class="kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
+    <?php if ($hasFilters): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="./">Clear</a><?php endif; ?>
     <span class="kontor-secondary kontor-filtercount"><?= $e(count($components)) ?> matching component<?= count($components) === 1 ? '' : 's' ?></span>
   </form>
 
   <?php if ($components): ?>
     <section class="kontor-components">
       <?php foreach ($components as $component): ?>
-        <article class="kontor-card kontor-component">
+        <article class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-component">
           <div class="kontor-component__top">
             <span class="kontor-component__icon"><i class="fa fa-<?= $e($component['icon']) ?>"></i></span>
             <div>
               <h3><?= $e($component['title']) ?></h3>
               <code><?= $e($component['moduleName']) ?></code>
             </div>
-            <span class="kontor-pill<?= $component['status'] === 'enabled' ? '' : ' kontor-pill--inactive' ?>">
+            <span class="uk-label kontor-pill<?= $component['status'] === 'enabled' ? '' : ' kontor-pill--inactive' ?>">
               <?= $e($component['status']) ?>
             </span>
           </div>
@@ -110,7 +110,7 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
                 <form method="post" action="<?= $e($adminUrl) ?>component-sync/">
                   <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
                   <input type="hidden" name="component" value="<?= $e($component['name']) ?>">
-                  <button class="kontor-button kontor-button--ghost" type="submit">
+                  <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
                     <i class="fa fa-refresh"></i> Sync registry
                   </button>
                 </form>
@@ -121,7 +121,7 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
       <?php endforeach; ?>
     </section>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-cubes"></i>
       <h3>No matching components</h3>
       <p>Try another name or runtime status.</p>

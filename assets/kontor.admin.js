@@ -1,4 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.ProcessKontor').forEach((workspace) => {
+    workspace.querySelectorAll('input').forEach((input) => {
+      const type = (input.getAttribute('type') || 'text').toLowerCase();
+
+      if (type === 'checkbox') {
+        input.classList.add('uk-checkbox');
+      } else if (type === 'radio') {
+        input.classList.add('uk-radio');
+      } else if (type === 'range') {
+        input.classList.add('uk-range');
+      } else if (!['hidden', 'submit', 'button', 'reset', 'file'].includes(type)) {
+        input.classList.add('uk-input');
+      }
+    });
+    workspace.querySelectorAll('select').forEach((select) => select.classList.add('uk-select'));
+    workspace.querySelectorAll('textarea').forEach((textarea) => textarea.classList.add('uk-textarea'));
+    workspace.querySelectorAll('button:not(.uk-button)').forEach((button) => {
+      button.classList.add('uk-button', 'uk-button-default');
+    });
+  });
+
   document.querySelectorAll('[data-kontor-bulk-form]').forEach((form) => {
     const formId = form.getAttribute('id');
     const selectAll = document.querySelector(`[data-kontor-select-all="${formId}"]`);

@@ -33,7 +33,7 @@ $coveredPriceLists = count(array_unique(array_map(
     $priceEntries,
 )));
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <div class="kontor-formhead__toolbar">
       <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>catalog/">
@@ -43,7 +43,7 @@ $coveredPriceLists = count(array_unique(array_map(
         <form method="post" action="<?= $e($adminUrl) ?>catalog-item-duplicate/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="id" value="<?= $e($item->uid->toString()) ?>">
-          <button class="kontor-button kontor-button--ghost" type="submit">
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">
             <i class="fa fa-copy"></i> Duplicate item
           </button>
         </form>
@@ -57,7 +57,7 @@ $coveredPriceLists = count(array_unique(array_map(
   <?= $form->render() ?>
 
   <?php if ($item !== null && $canViewPriceLists): ?>
-    <header class="kontor-pagehead">
+    <header class="pw-module-head kontor-pagehead">
       <div>
         <p class="kontor-eyebrow">Pricing coverage</p>
         <h2>Price-list tiers</h2>
@@ -72,18 +72,18 @@ $coveredPriceLists = count(array_unique(array_map(
                 <option value="<?= $e($uid) ?>"><?= $e($details['name']) ?><?= $details['status'] !== 'active' ? ' · ' . $e($details['status']) : '' ?></option>
               <?php endforeach; ?>
             </select>
-            <button class="kontor-button" type="submit"><i class="fa fa-plus"></i> Add price tier</button>
+            <button class="uk-button uk-button-primary kontor-button" type="submit"><i class="fa fa-plus"></i> Add price tier</button>
           </form>
         <?php endif; ?>
-        <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
+        <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
           <i class="fa fa-tags"></i> Open price lists
         </a>
       </div>
     </header>
 
     <?php if ($priceEntries): ?>
-      <section class="kontor-card kontor-tablewrap">
-        <table class="kontor-table">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+        <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
           <thead>
             <tr><th>Price list</th><th>Minimum quantity</th><th>Price</th><th>Validity</th><th>Status</th></tr>
           </thead>
@@ -125,7 +125,7 @@ $coveredPriceLists = count(array_unique(array_map(
                 <td><?= $e($entry->validFrom?->format('Y-m-d') ?? '—') ?> → <?= $e($entry->validTo?->format('Y-m-d') ?? '—') ?></td>
                 <td>
                   <a
-                    class="kontor-catalogfacet kontor-pill<?= $details['status'] === 'active' ? '' : ' kontor-pill--inactive' ?>"
+                    class="kontor-catalogfacet uk-label kontor-pill<?= $details['status'] === 'active' ? '' : ' kontor-pill--inactive' ?>"
                     href="<?= $e($priceListFilterUrl('status', $details['status'])) ?>"
                   ><?= $e($details['status']) ?></a>
                 </td>
@@ -135,7 +135,7 @@ $coveredPriceLists = count(array_unique(array_map(
         </table>
       </section>
     <?php else: ?>
-      <div class="kontor-card kontor-empty">
+      <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
         <i class="fa fa-tag"></i>
         <h3>No price-list tiers</h3>
         <p>Add this item to a price list when customer or quantity pricing is needed.</p>

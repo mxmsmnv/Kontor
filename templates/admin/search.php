@@ -31,7 +31,7 @@ $scopeUrl = static fn (string $entityType): string => './?' . http_build_query([
 $allTypesUrl = './?' . http_build_query(['q' => $query]);
 $hasSearch = $query !== '' || $selectedEntityType !== '';
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-searchhero">
     <p class="kontor-eyebrow">Global directory</p>
     <h2>Find anything in Kontor</h2>
@@ -45,9 +45,9 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
           <option value="<?= $e($type) ?>"<?= $selectedEntityType === $type ? ' selected' : '' ?>><?= $e($label) ?> only</option>
         <?php endforeach; ?>
       </select>
-      <button class="kontor-button" type="submit">Search</button>
+      <button class="uk-button uk-button-primary kontor-button" type="submit">Search</button>
       <?php if ($hasSearch): ?>
-        <a class="kontor-button kontor-button--ghost" href="./">
+        <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="./">
           <i class="fa fa-times"></i> Clear search
         </a>
       <?php endif; ?>
@@ -68,14 +68,14 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
           <?php endif; ?>
         </div>
         <?php if ($selectedEntityType !== ''): ?>
-          <a class="kontor-button kontor-button--ghost" href="<?= $e($allTypesUrl) ?>">
+          <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($allTypesUrl) ?>">
             <i class="fa fa-list"></i> All result types
           </a>
         <?php endif; ?>
       </div>
 
       <?php if ($result->hits): ?>
-        <div class="kontor-card kontor-resultlist">
+        <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-resultlist">
           <?php foreach ($result->hits as $hit): ?>
             <?php [$resultRoute, $resultIcon, $resultLabel] = $resultPresentation($hit->entityType); ?>
             <article class="kontor-result">
@@ -88,7 +88,7 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
                 <i class="fa fa-arrow-right"></i>
               </a>
               <a
-                class="kontor-pill<?= $selectedEntityType === $hit->entityType ? '' : ' kontor-pill--inactive' ?>"
+                class="uk-label kontor-pill<?= $selectedEntityType === $hit->entityType ? '' : ' kontor-pill--inactive' ?>"
                 href="<?= $e($scopeUrl($hit->entityType)) ?>"
                 aria-label="Show only <?= $e($availableEntityTypes[$hit->entityType] ?? $hit->entityType) ?>"
                 <?= $selectedEntityType === $hit->entityType ? 'aria-current="page"' : '' ?>
@@ -101,12 +101,12 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
             <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
             <div>
               <?php if ($page > 1): ?>
-                <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+                <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
                   <i class="fa fa-chevron-left"></i> Previous
                 </a>
               <?php endif; ?>
               <?php if ($page < $totalPages): ?>
-                <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+                <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
                   Next <i class="fa fa-chevron-right"></i>
                 </a>
               <?php endif; ?>
@@ -114,7 +114,7 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
           </nav>
         <?php endif; ?>
       <?php else: ?>
-        <div class="kontor-card kontor-empty">
+        <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
           <i class="fa fa-search"></i>
           <h3>No results found</h3>
           <p>Try another name, email, SKU, or barcode within <?= $e($scopeLabel) ?>.</p>
@@ -122,7 +122,7 @@ $hasSearch = $query !== '' || $selectedEntityType !== '';
       <?php endif; ?>
     </section>
   <?php elseif ($query !== ''): ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-info-circle"></i>
       <h3>Enter at least two characters</h3>
     </div>

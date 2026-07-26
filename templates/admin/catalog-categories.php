@@ -36,24 +36,24 @@ $filterUrl = static function (string $facet, string $value) use ($filterParamete
 };
 $clearFiltersUrl = $showArchived ? './?archived=1' : './';
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Catalog structure</p>
       <h2>Categories</h2>
       <p>Organize products and services into reusable parent and child groups.</p>
     </div>
     <div class="kontor-backupactions">
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog/">
         <i class="fa fa-cubes"></i> Items
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
         <i class="fa fa-tags"></i> Price lists
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
         <i class="fa fa-book"></i> References
       </a>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-category/">
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>catalog-category/">
         <i class="fa fa-plus"></i> New category
       </a>
     </div>
@@ -69,7 +69,7 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
       <option value="active"<?= $selectedStatus === 'active' ? ' selected' : '' ?>>Active</option>
       <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
         <i class="fa fa-times"></i> Clear filters
@@ -98,7 +98,7 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
       <button
-        class="kontor-button kontor-button--ghost"
+        class="uk-button uk-button-secondary kontor-button kontor-button--ghost"
         type="submit"
         name="action"
         value="activate"
@@ -107,7 +107,7 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
         <i class="fa fa-play"></i> Activate selected
       </button>
       <button
-        class="kontor-button kontor-button--ghost"
+        class="uk-button uk-button-secondary kontor-button kontor-button--ghost"
         type="submit"
         name="action"
         value="deactivate"
@@ -116,7 +116,7 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
         <i class="fa fa-pause"></i> Deactivate selected
       </button>
       <button
-        class="kontor-button kontor-button--ghost"
+        class="uk-button uk-button-secondary kontor-button kontor-button--ghost"
         type="submit"
         name="action"
         value="<?= $showArchived ? 'restore' : 'archive' ?>"
@@ -126,8 +126,8 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
         <?= $showArchived ? 'Restore selected' : 'Archive selected' ?>
       </button>
     </form>
-    <section class="kontor-card kontor-tablewrap">
-      <table class="kontor-table">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
         <thead>
           <tr>
             <th class="kontor-selectcell">
@@ -169,7 +169,7 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
               </td>
               <td><?= $e($category->sortOrder) ?></td>
               <td>
-                <a class="kontor-catalogfacet kontor-pill<?= $category->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $category->status)) ?>">
+                <a class="kontor-catalogfacet uk-label kontor-pill<?= $category->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $category->status)) ?>">
                   <?= $e($category->status) ?>
                 </a>
               </td>
@@ -192,13 +192,13 @@ $clearFiltersUrl = $showArchived ? './?archived=1' : './';
       <nav class="kontor-pagination" aria-label="Category pages">
         <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
         <div>
-          <?php if ($page > 1): ?><a class="kontor-button kontor-button--ghost" href="<?= $e($url($page - 1, $showArchived)) ?>"><i class="fa fa-chevron-left"></i> Previous</a><?php endif; ?>
-          <?php if ($page < $totalPages): ?><a class="kontor-button kontor-button--ghost" href="<?= $e($url($page + 1, $showArchived)) ?>">Next <i class="fa fa-chevron-right"></i></a><?php endif; ?>
+          <?php if ($page > 1): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page - 1, $showArchived)) ?>"><i class="fa fa-chevron-left"></i> Previous</a><?php endif; ?>
+          <?php if ($page < $totalPages): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page + 1, $showArchived)) ?>">Next <i class="fa fa-chevron-right"></i></a><?php endif; ?>
         </div>
       </nav>
     <?php endif; ?>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-folder-open"></i>
       <h3><?= $query !== '' || $selectedStatus !== null || $showArchived ? 'No matching categories' : 'No categories yet' ?></h3>
       <p><?= $query !== '' || $selectedStatus !== null || $showArchived ? 'Try another search, status, or category view.' : 'Create a category to organize the catalog.' ?></p>

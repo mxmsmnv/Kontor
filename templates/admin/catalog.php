@@ -85,24 +85,24 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
     );
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Products and services</p>
       <h2>Catalog</h2>
       <p>Sellable items, service offerings, prices, units, and inventory behavior.</p>
     </div>
     <div class="kontor-backupactions">
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-categories/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-categories/">
         <i class="fa fa-folder-open"></i> Categories
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-price-lists/">
         <i class="fa fa-tags"></i> Price lists
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
         <i class="fa fa-book"></i> References
       </a>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
         <i class="fa fa-plus"></i> New item
       </a>
     </div>
@@ -159,7 +159,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <option value="priced"<?= $selectedPricing === 'priced' ? ' selected' : '' ?>>With sales price</option>
       <option value="unpriced"<?= $selectedPricing === 'unpriced' ? ' selected' : '' ?>>Without sales price</option>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
         <i class="fa fa-times"></i> Clear filters
@@ -200,17 +200,17 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
-      <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="activate" data-action-label="Activate">
+      <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="activate" data-action-label="Activate">
         <i class="fa fa-play"></i> Activate selected
       </button>
-      <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="deactivate" data-action-label="Deactivate">
+      <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="deactivate" data-action-label="Deactivate">
         <i class="fa fa-pause"></i> Deactivate selected
       </button>
-      <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="discontinue" data-action-label="Discontinue">
+      <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="discontinue" data-action-label="Discontinue">
         <i class="fa fa-stop"></i> Discontinue selected
       </button>
       <button
-        class="kontor-button kontor-button--ghost"
+        class="uk-button uk-button-secondary kontor-button kontor-button--ghost"
         type="submit"
         name="action"
         value="<?= $showArchived ? 'restore' : 'archive' ?>"
@@ -220,8 +220,8 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         <?= $showArchived ? 'Restore selected' : 'Archive selected' ?>
       </button>
     </form>
-    <section class="kontor-card kontor-tablewrap">
-      <table class="kontor-table kontor-catalogtable">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table kontor-catalogtable">
         <thead>
           <tr>
             <th class="kontor-selectcell">
@@ -284,7 +284,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
                 </a>
               </td>
               <td>
-                <a class="kontor-pill<?= $item->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $item->status)) ?>">
+                <a class="uk-label kontor-pill<?= $item->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $item->status)) ?>">
                   <?= $e($item->status) ?>
                 </a>
               </td>
@@ -319,12 +319,12 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
         <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
         <div>
           <?php if ($page > 1): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($url($page - 1, $showArchived)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page - 1, $showArchived)) ?>">
               <i class="fa fa-chevron-left"></i> Previous
             </a>
           <?php endif; ?>
           <?php if ($page < $totalPages): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($url($page + 1, $showArchived)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page + 1, $showArchived)) ?>">
               Next <i class="fa fa-chevron-right"></i>
             </a>
           <?php endif; ?>
@@ -332,7 +332,7 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       </nav>
     <?php endif; ?>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-cubes"></i>
       <h3><?= $hasFilters || $showArchived ? 'No matching items' : 'Your catalog is empty' ?></h3>
       <p><?= $hasFilters || $showArchived ? 'Try another search, type, category, status, inventory mode, unit, tax code, currency, pricing state, or catalog view.' : 'Create the first product or service offered by your organization.' ?></p>

@@ -19,7 +19,7 @@
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     number_format($value->amountMinor() / 100, 2, '.', '') . ' ' . $value->currencyCode();
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>sales/"><i class="fa fa-arrow-left"></i> Back to Sales</a>
     <p class="kontor-eyebrow">Sales · Order</p>
@@ -27,17 +27,17 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     <p>Confirmation and completion handoff into fulfillment.</p>
   </header>
 
-  <section class="kontor-card kontor-documenthead">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-documenthead">
     <div>
-      <span class="kontor-pill<?= $order->isPending() ? ' kontor-pill--inactive' : '' ?>"><?= $e($order->orderStatus) ?></span>
+      <span class="uk-label kontor-pill<?= $order->isPending() ? ' kontor-pill--inactive' : '' ?>"><?= $e($order->orderStatus) ?></span>
       <strong><?= $e($customerLabel) ?></strong>
       <span><?= $e($order->paymentStatus) ?> · <?= $e($order->fulfillmentStatus) ?></span>
     </div>
     <strong><?= $e($money($order->total)) ?></strong>
   </section>
 
-  <section class="kontor-card kontor-tablewrap">
-    <table class="kontor-table">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+    <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
       <thead><tr><th>Line</th><th>Quantity</th><th>Unit price</th><th>Tax</th><th>Total</th></tr></thead>
       <tbody>
         <?php foreach ($lines as $line): ?>
@@ -62,18 +62,18 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
             </select>
           </label>
           <?php if ($canReserveInventory && $inventoryWarehouses !== []): ?>
-            <button class="kontor-button" name="action" value="confirm" type="submit">Reserve stock + confirm</button>
+            <button class="uk-button uk-button-primary kontor-button" name="action" value="confirm" type="submit">Reserve stock + confirm</button>
           <?php endif; ?>
         <?php elseif ($order->isPending()): ?>
-          <button class="kontor-button" name="action" value="confirm" type="submit">Confirm order</button>
+          <button class="uk-button uk-button-primary kontor-button" name="action" value="confirm" type="submit">Confirm order</button>
         <?php endif; ?>
         <?php if ($order->isConfirmed() && $reservationWarehouseUid !== null && $canShipInventory): ?>
-          <button class="kontor-button" name="action" value="complete" type="submit">Ship stock + complete</button>
+          <button class="uk-button uk-button-primary kontor-button" name="action" value="complete" type="submit">Ship stock + complete</button>
         <?php elseif ($order->isConfirmed() && $reservationWarehouseUid === null): ?>
-          <button class="kontor-button" name="action" value="complete" type="submit">Complete order</button>
+          <button class="uk-button uk-button-primary kontor-button" name="action" value="complete" type="submit">Complete order</button>
         <?php endif; ?>
         <?php if ($reservationWarehouseUid === null || $canReleaseInventory): ?>
-          <button class="kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
         <?php endif; ?>
       </form>
     </div>
@@ -82,14 +82,14 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
   <?php if ($invoicesReady && in_array($order->orderStatus, ['confirmed', 'completed'], true)): ?>
     <div class="kontor-documentactions">
       <?php if ($existingInvoice !== null): ?>
-        <a class="kontor-button" href="<?= $e($adminUrl) ?>invoice/?id=<?= $e(rawurlencode($existingInvoice->uid->toString())) ?>">
+        <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>invoice/?id=<?= $e(rawurlencode($existingInvoice->uid->toString())) ?>">
           Open <?= $e($existingInvoice->number ?? 'invoice draft') ?>
         </a>
       <?php else: ?>
         <form method="post" action="<?= $e($adminUrl) ?>invoice-from-order/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="order_uid" value="<?= $e($order->uid->toString()) ?>">
-          <button class="kontor-button" type="submit"><i class="fa fa-file-text"></i> Create invoice</button>
+          <button class="uk-button uk-button-primary kontor-button" type="submit"><i class="fa fa-file-text"></i> Create invoice</button>
         </form>
       <?php endif; ?>
     </div>

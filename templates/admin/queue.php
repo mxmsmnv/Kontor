@@ -46,30 +46,30 @@ $statusClass = static fn (string $status): string => match ($status) {
     default => ' kontor-pill--inactive',
 };
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Background work</p>
       <h2>Queue monitor</h2>
       <p>Recent asynchronous work, retries, progress, and dead-letter failures.</p>
     </div>
-    <a class="kontor-button" href="<?= $e($refreshUrl) ?>"><i class="fa fa-refresh"></i> Refresh</a>
+    <a class="uk-button uk-button-primary kontor-button" href="<?= $e($refreshUrl) ?>"><i class="fa fa-refresh"></i> Refresh</a>
   </header>
 
   <section class="kontor-queuestats">
-    <a class="kontor-card kontor-stat<?= $allSelected ? ' kontor-card--selected' : '' ?>" href="./"<?= $allSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat<?= $allSelected ? ' kontor-card--selected' : '' ?>" href="./"<?= $allSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon"><i class="fa fa-list"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($total) ?></strong><span class="kontor-stat__label">All jobs</span></span>
     </a>
-    <a class="kontor-card kontor-stat<?= $activeSelected ? ' kontor-card--selected' : '' ?>" href="./?status=active"<?= $activeSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat<?= $activeSelected ? ' kontor-card--selected' : '' ?>" href="./?status=active"<?= $activeSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon kontor-stat__icon--warning"><i class="fa fa-clock-o"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($active) ?></strong><span class="kontor-stat__label">Active</span></span>
     </a>
-    <a class="kontor-card kontor-stat<?= $completedSelected ? ' kontor-card--selected' : '' ?>" href="./?status=completed"<?= $completedSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat<?= $completedSelected ? ' kontor-card--selected' : '' ?>" href="./?status=completed"<?= $completedSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon kontor-stat__icon--success"><i class="fa fa-check"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($counts['completed'] ?? 0) ?></strong><span class="kontor-stat__label">Completed</span></span>
     </a>
-    <a class="kontor-card kontor-stat<?= $deadSelected ? ' kontor-card--selected' : '' ?>" href="./?status=dead"<?= $deadSelected ? ' aria-current="page"' : '' ?>>
+    <a class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-stat<?= $deadSelected ? ' kontor-card--selected' : '' ?>" href="./?status=dead"<?= $deadSelected ? ' aria-current="page"' : '' ?>>
       <span class="kontor-stat__icon kontor-stat__icon--danger"><i class="fa fa-exclamation-triangle"></i></span>
       <span><strong class="kontor-stat__value"><?= $e($counts['dead'] ?? 0) ?></strong><span class="kontor-stat__label">Dead letter</span></span>
     </a>
@@ -89,17 +89,17 @@ $statusClass = static fn (string $status): string => match ($status) {
           <option value="<?= $e($status) ?>"<?= $selectedStatus === $status ? ' selected' : '' ?>><?= $e(ucfirst($status)) ?></option>
         <?php endforeach; ?>
       </select>
-      <button class="kontor-button" type="submit">Filter</button>
+      <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
     </div>
     <?php if ($selectedQueue !== null || $selectedStatus !== null): ?>
-      <a class="kontor-button kontor-button--ghost" href="./">Clear filters</a>
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="./">Clear filters</a>
     <?php endif; ?>
     <span class="kontor-secondary"><?= $e($totalJobs) ?> matching · <?= $e(count($jobs)) ?> shown</span>
   </form>
 
   <?php if ($jobs): ?>
-    <section class="kontor-card kontor-tablewrap">
-      <table class="kontor-table kontor-queuetable">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table kontor-queuetable">
         <thead>
           <tr>
             <th>Job</th>
@@ -131,7 +131,7 @@ $statusClass = static fn (string $status): string => match ($status) {
                 </a>
               </td>
               <td>
-                <a class="kontor-pill<?= $statusClass($status) ?>" href="<?= $e($filterUrl($selectedQueue, $status)) ?>">
+                <a class="uk-label kontor-pill<?= $statusClass($status) ?>" href="<?= $e($filterUrl($selectedQueue, $status)) ?>">
                   <?= $e($status) ?>
                 </a>
               </td>
@@ -180,12 +180,12 @@ $statusClass = static fn (string $status): string => match ($status) {
         <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
         <div>
           <?php if ($page > 1): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
               <i class="fa fa-chevron-left"></i> Previous
             </a>
           <?php endif; ?>
           <?php if ($page < $totalPages): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
               Next <i class="fa fa-chevron-right"></i>
             </a>
           <?php endif; ?>
@@ -193,7 +193,7 @@ $statusClass = static fn (string $status): string => match ($status) {
       </nav>
     <?php endif; ?>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-tasks"></i>
       <h3><?= $selectedQueue !== null || $selectedStatus !== null ? 'No matching jobs' : 'Queue is clear' ?></h3>
       <p><?= $selectedQueue !== null || $selectedStatus !== null ? 'Try another queue or status filter.' : 'Background jobs will appear here when components dispatch work.' ?></p>

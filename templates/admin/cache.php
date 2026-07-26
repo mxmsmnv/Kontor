@@ -15,17 +15,17 @@ $resultJson = $result !== null
     ? json_encode($result['value'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
     : null;
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Infrastructure · Namespaced generations</p>
       <h2>Cache</h2>
       <p>Exercise the configured cache adapter, inspect hits and misses, and invalidate tag or namespace generations without enumerating keys.</p>
     </div>
-    <span class="kontor-pill<?= $health->status === 'ok' ? '' : ' kontor-pill--inactive' ?>">Store <?= $e($health->status) ?></span>
+    <span class="uk-label kontor-pill<?= $health->status === 'ok' ? '' : ' kontor-pill--inactive' ?>">Store <?= $e($health->status) ?></span>
   </header>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Live adapter round-trip</p><h3>Store health</h3></div></header>
     <p><?= $e($health->message) ?></p>
     <div class="kontor-detailgrid">
@@ -36,22 +36,22 @@ $resultJson = $result !== null
     </div>
   </section>
 
-  <section class="kontor-card kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Capability consumers</p><h3>Connected components</h3></div></header>
-    <table class="kontor-table">
+    <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
       <thead><tr><th>Component</th><th>Namespace</th><th>Policy</th><th>Status</th></tr></thead>
       <tbody><?php foreach ($consumers as $consumer): ?><tr>
         <td><strong><?= $e($consumer['name']) ?></strong></td>
         <td><code><?= $e($consumer['namespace']) ?></code></td>
         <td><?= $e($consumer['policy']) ?></td>
-        <td><span class="kontor-pill<?= $consumer['status'] === 'connected' ? '' : ' kontor-pill--inactive' ?>"><?= $e($consumer['status']) ?></span></td>
+        <td><span class="uk-label kontor-pill<?= $consumer['status'] === 'connected' ? '' : ' kontor-pill--inactive' ?>"><?= $e($consumer['status']) ?></span></td>
       </tr><?php endforeach; ?></tbody>
     </table>
   </section>
 
-  <section class="kontor-card">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Operational workbench</p><h3>Read, write, and invalidate</h3></div></header>
-    <form class="kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>cache-operate/">
+    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>cache-operate/">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield"><span>Namespace *</span><input name="namespace" maxlength="40" value="<?= $e($state['namespace']) ?>" required></label>
       <label class="kontor-nativefield kontor-nativefield--wide"><span>Key *</span><input name="key" maxlength="128" value="<?= $e($state['key']) ?>" required></label>
@@ -64,13 +64,13 @@ $resultJson = $result !== null
       </p>
       <div class="kontor-nativeform__actions">
         <?php if ($canManage): ?>
-          <button class="kontor-button" type="submit" name="action" value="set">Set value</button>
-          <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="get">Get value</button>
-          <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="delete">Delete key</button>
+          <button class="uk-button uk-button-primary kontor-button" type="submit" name="action" value="set">Set value</button>
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="get">Get value</button>
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="delete">Delete key</button>
         <?php endif; ?>
         <?php if ($canFlush): ?>
-          <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="flush-tag" formaction="<?= $e($adminUrl) ?>cache-flush/">Flush one tag</button>
-          <button class="kontor-button kontor-button--ghost" type="submit" name="action" value="flush-namespace" formaction="<?= $e($adminUrl) ?>cache-flush/">Flush namespace</button>
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="flush-tag" formaction="<?= $e($adminUrl) ?>cache-flush/">Flush one tag</button>
+          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit" name="action" value="flush-namespace" formaction="<?= $e($adminUrl) ?>cache-flush/">Flush namespace</button>
         <?php endif; ?>
       </div>
     </form>
@@ -78,10 +78,10 @@ $resultJson = $result !== null
   </section>
 
   <?php if ($result !== null): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead">
         <div><p class="kontor-eyebrow"><?= $e($result['action']) ?></p><h3><?= $e($result['message']) ?></h3></div>
-        <span class="kontor-pill<?= !empty($result['hit']) ? '' : ' kontor-pill--inactive' ?>"><?= $e(!empty($result['hit']) ? 'hit' : 'miss') ?></span>
+        <span class="uk-label kontor-pill<?= !empty($result['hit']) ? '' : ' kontor-pill--inactive' ?>"><?= $e(!empty($result['hit']) ? 'hit' : 'miss') ?></span>
       </header>
       <?php if (!empty($result['hit'])): ?><pre><code><?= $e($resultJson) ?></code></pre><?php endif; ?>
     </section>

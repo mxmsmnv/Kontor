@@ -10,7 +10,7 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>crm/">
       <i class="fa fa-arrow-left"></i> Back to leads
@@ -21,10 +21,10 @@
   </header>
 
   <?php if ($error !== ''): ?>
-    <div class="kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
+    <div class="uk-alert uk-alert-warning kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
   <?php endif; ?>
 
-  <form class="kontor-card kontor-nativeform" method="post" action="./<?= $lead !== null ? '?id=' . $e(rawurlencode($lead->uid->toString())) : '' ?>">
+  <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked kontor-nativeform" method="post" action="./<?= $lead !== null ? '?id=' . $e(rawurlencode($lead->uid->toString())) : '' ?>">
     <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
     <label class="kontor-nativefield kontor-nativefield--wide">
       <span>Title *</span>
@@ -89,8 +89,8 @@
       <textarea name="description" rows="5"><?= $e($values['description']) ?></textarea>
     </label>
     <div class="kontor-nativeform__actions">
-      <button class="kontor-button" type="submit" name="submit_save" value="1"><i class="fa fa-save"></i> Save lead</button>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm/">Cancel</a>
+      <button class="uk-button uk-button-primary kontor-button" type="submit" name="submit_save" value="1"><i class="fa fa-save"></i> Save lead</button>
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm/">Cancel</a>
     </div>
   </form>
 </div>

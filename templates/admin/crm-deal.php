@@ -14,7 +14,7 @@
 /** @var string $csrfValue */
 /** @var callable $e */
 ?>
-<div class="kontor-shell">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
     <a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>crm-deals/?pipeline=<?= $e(rawurlencode($values['pipelineUid'])) ?>">
       <i class="fa fa-arrow-left"></i> Back to pipeline
@@ -25,24 +25,24 @@
   </header>
 
   <?php if ($error !== ''): ?>
-    <div class="kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
+    <div class="uk-alert uk-alert-warning kontor-warning"><i class="fa fa-exclamation-triangle"></i><strong><?= $e($error) ?></strong></div>
   <?php endif; ?>
 
   <?php if ($deal !== null && ($dealQuotations !== [] || $canCreateQuotation)): ?>
-    <section class="kontor-card">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <p class="kontor-eyebrow">Sales · Quotations</p>
       <h3>Commercial follow-through</h3>
       <?php if ($dealQuotations !== []): ?>
         <div class="kontor-actions">
           <?php foreach ($dealQuotations as $quotation): ?>
-            <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>sales-quotation/?id=<?= $e(rawurlencode($quotation->uid->toString())) ?>">
+            <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>sales-quotation/?id=<?= $e(rawurlencode($quotation->uid->toString())) ?>">
               Open <?= $e($quotation->number ?? 'draft quotation') ?>
             </a>
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
       <?php if ($canCreateQuotation): ?>
-        <a class="kontor-button" href="<?= $e($adminUrl) ?>sales-quotation/?deal=<?= $e(rawurlencode($deal->uid->toString())) ?>">
+        <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>sales-quotation/?deal=<?= $e(rawurlencode($deal->uid->toString())) ?>">
           <i class="fa fa-file-text-o"></i> Create quotation from deal
         </a>
       <?php endif; ?>
@@ -50,12 +50,12 @@
   <?php endif; ?>
 
   <?php if ($pipelines === []): ?>
-    <section class="kontor-card kontor-empty">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <h3>A pipeline is required</h3>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>crm-pipeline/">Create pipeline</a>
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>crm-pipeline/">Create pipeline</a>
     </section>
   <?php else: ?>
-    <form class="kontor-card kontor-nativeform" method="post" action="./<?= $deal !== null ? '?id=' . $e(rawurlencode($deal->uid->toString())) : '' ?>">
+    <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked kontor-nativeform" method="post" action="./<?= $deal !== null ? '?id=' . $e(rawurlencode($deal->uid->toString())) : '' ?>">
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
       <label class="kontor-nativefield kontor-nativefield--wide">
         <span>Title *</span>
@@ -129,8 +129,8 @@
         <textarea name="description" rows="5"><?= $e($values['description']) ?></textarea>
       </label>
       <div class="kontor-nativeform__actions">
-        <button class="kontor-button" type="submit" name="submit_save" value="1"><i class="fa fa-save"></i> Save deal</button>
-        <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/?pipeline=<?= $e(rawurlencode($values['pipelineUid'])) ?>">Cancel</a>
+        <button class="uk-button uk-button-primary kontor-button" type="submit" name="submit_save" value="1"><i class="fa fa-save"></i> Save deal</button>
+        <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>crm-deals/?pipeline=<?= $e(rawurlencode($values['pipelineUid'])) ?>">Cancel</a>
       </div>
     </form>
   <?php endif; ?>

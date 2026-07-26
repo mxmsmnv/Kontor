@@ -42,24 +42,24 @@ $filterUrl = static function (string $facet, string $value) use ($filterParamete
 $date = static fn (?\DateTimeImmutable $value): string => $value?->format('Y-m-d') ?? '—';
 $today = new \DateTimeImmutable('today');
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Catalog pricing</p>
       <h2>Price lists</h2>
       <p>Currency, validity periods, customer pricing, and quantity tiers.</p>
     </div>
     <div class="kontor-backupactions">
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog/">
         <i class="fa fa-cubes"></i> Items
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-categories/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-categories/">
         <i class="fa fa-folder-open"></i> Categories
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-references/">
         <i class="fa fa-book"></i> References
       </a>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-price-list/">
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>catalog-price-list/">
         <i class="fa fa-plus"></i> New price list
       </a>
     </div>
@@ -87,7 +87,7 @@ $today = new \DateTimeImmutable('today');
         <option value="<?= $e($code) ?>"<?= $selectedCurrency === $code ? ' selected' : '' ?>><?= $e($code) ?></option>
       <?php endforeach; ?>
     </select>
-    <button class="kontor-button" type="submit">Filter</button>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="./">
         <i class="fa fa-times"></i> Clear filters
@@ -113,7 +113,7 @@ $today = new \DateTimeImmutable('today');
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
       <button
-        class="kontor-button kontor-button--ghost"
+        class="uk-button uk-button-secondary kontor-button kontor-button--ghost"
         type="submit"
         name="action"
         value="activate"
@@ -122,7 +122,7 @@ $today = new \DateTimeImmutable('today');
         <i class="fa fa-play"></i> Activate selected
       </button>
       <button
-        class="kontor-button kontor-button--ghost"
+        class="uk-button uk-button-secondary kontor-button kontor-button--ghost"
         type="submit"
         name="action"
         value="deactivate"
@@ -131,8 +131,8 @@ $today = new \DateTimeImmutable('today');
         <i class="fa fa-pause"></i> Deactivate selected
       </button>
     </form>
-    <section class="kontor-card kontor-tablewrap">
-      <table class="kontor-table">
+    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
         <thead>
           <tr>
             <th class="kontor-selectcell">
@@ -175,7 +175,7 @@ $today = new \DateTimeImmutable('today');
               </td>
               <td><?= $e($entryCounts[$uid] ?? 0) ?></td>
               <td>
-                <a class="kontor-catalogfacet kontor-pill<?= $priceList->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $priceList->status)) ?>">
+                <a class="kontor-catalogfacet uk-label kontor-pill<?= $priceList->status === 'active' ? '' : ' kontor-pill--inactive' ?>" href="<?= $e($filterUrl('status', $priceList->status)) ?>">
                   <?= $e($priceList->status) ?>
                 </a>
               </td>
@@ -188,13 +188,13 @@ $today = new \DateTimeImmutable('today');
       <nav class="kontor-pagination" aria-label="Price list pages">
         <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
         <div>
-          <?php if ($page > 1): ?><a class="kontor-button kontor-button--ghost" href="<?= $e($url($page - 1)) ?>"><i class="fa fa-chevron-left"></i> Previous</a><?php endif; ?>
-          <?php if ($page < $totalPages): ?><a class="kontor-button kontor-button--ghost" href="<?= $e($url($page + 1)) ?>">Next <i class="fa fa-chevron-right"></i></a><?php endif; ?>
+          <?php if ($page > 1): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page - 1)) ?>"><i class="fa fa-chevron-left"></i> Previous</a><?php endif; ?>
+          <?php if ($page < $totalPages): ?><a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($url($page + 1)) ?>">Next <i class="fa fa-chevron-right"></i></a><?php endif; ?>
         </div>
       </nav>
     <?php endif; ?>
   <?php else: ?>
-    <div class="kontor-card kontor-empty">
+    <div class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-empty-state uk-placeholder uk-text-center kontor-empty">
       <i class="fa fa-tags"></i>
       <h3><?= $hasFilters ? 'No matching price lists' : 'No price lists yet' ?></h3>
       <p><?= $hasFilters ? 'Try another search, status, validity period, or currency.' : 'Create a price list, then add item and quantity tiers.' ?></p>

@@ -35,24 +35,24 @@ $statusUrl = static fn (string $status): string => './?' . http_build_query([
 $clearFiltersUrl = $showArchived ? './?archived=1' : './';
 $hasFilters = $query !== '' || $selectedStatus !== '';
 ?>
-<div class="kontor-shell">
-  <header class="kontor-pagehead">
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Commercial directory</p>
       <h2>Companies</h2>
       <p>Customers, partners and the organizations behind your work.</p>
     </div>
-    <div class="kontor-pagehead__actions">
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>import/?entity=company">
+    <div class="pw-module-actions kontor-pagehead__actions">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>import/?entity=company">
         <i class="fa fa-upload"></i> Import
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=company&amp;format=csv">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=company&amp;format=csv">
         <i class="fa fa-download"></i> CSV
       </a>
-      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=company&amp;format=json">
+      <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>export/?entity=company&amp;format=json">
         JSON
       </a>
-      <a class="kontor-button" href="<?= $e($adminUrl) ?>company/">
+      <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>company/">
         <i class="fa fa-plus"></i> New company
       </a>
     </div>
@@ -71,7 +71,7 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
         <option value="inactive"<?= $selectedStatus === 'inactive' ? ' selected' : '' ?>>Inactive</option>
       </select>
     <?php endif; ?>
-    <button class="kontor-button" type="submit">Filter</button>
+    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
     <?php if ($hasFilters): ?>
       <a class="kontor-viewtoggle" href="<?= $e($clearFiltersUrl) ?>">
         <i class="fa fa-times"></i> Clear filters
@@ -84,9 +84,9 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
     <span class="kontor-secondary"><?= $e($totalRecords) ?> total · <?= $e(count($companies)) ?> shown</span>
   </form>
 
-  <section class="kontor-card kontor-tablewrap kontor-directorytable">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap kontor-directorytable">
     <?php if ($companies): ?>
-      <table class="kontor-table">
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
         <thead>
           <tr>
             <th>Company</th>
@@ -117,10 +117,10 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
               <td><?= $e($company->registrationNumber ?: $company->vatNumber ?: '—') ?></td>
               <td>
                 <?php if ($showArchived): ?>
-                  <span class="kontor-pill kontor-pill--inactive">archived</span>
+                  <span class="uk-label kontor-pill kontor-pill--inactive">archived</span>
                 <?php else: ?>
                   <a
-                    class="kontor-pill<?= $company->status === 'active' ? '' : ' kontor-pill--inactive' ?>"
+                    class="uk-label kontor-pill<?= $company->status === 'active' ? '' : ' kontor-pill--inactive' ?>"
                     href="<?= $e($statusUrl($company->status)) ?>"
                     <?= $selectedStatus === $company->status ? 'aria-current="page"' : '' ?>
                   ><?= $e($company->status) ?></a>
@@ -141,7 +141,7 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
         </tbody>
       </table>
     <?php else: ?>
-      <div class="kontor-empty">
+      <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
         <i class="fa fa-building"></i>
         <h3><?= $query !== '' ? 'No matching companies' : ($showArchived ? 'The archive is empty' : 'No companies yet') ?></h3>
         <p><?= $query !== '' ? 'Try a broader search.' : ($showArchived ? 'Archived companies will appear here.' : 'Create your first customer or partner company.') ?></p>
@@ -153,12 +153,12 @@ $hasFilters = $query !== '' || $selectedStatus !== '';
       <span>Page <?= $e($page) ?> of <?= $e($totalPages) ?></span>
       <div>
         <?php if ($page > 1): ?>
-          <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
+          <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page - 1)) ?>">
             <i class="fa fa-chevron-left"></i> Previous
           </a>
         <?php endif; ?>
         <?php if ($page < $totalPages): ?>
-          <a class="kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
+          <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($pageUrl($page + 1)) ?>">
             Next <i class="fa fa-chevron-right"></i>
           </a>
         <?php endif; ?>
