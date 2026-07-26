@@ -3,7 +3,9 @@
 namespace ProcessWire;
 
 use Kontor\Catalog\Domain\CatalogItem;
+use Kontor\Catalog\Domain\Category;
 use Kontor\Catalog\Infrastructure\Persistence\CatalogItemRepository;
+use Kontor\Catalog\Infrastructure\Persistence\CategoryRepository;
 use Kontor\Catalog\Support\TaxCode;
 use Kontor\Catalog\Support\UnitOfMeasure;
 use Kontor\Contacts\Application\ContactDuplicateDetector;
@@ -54,7 +56,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '028',
+            'version' => '029',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -549,6 +551,125 @@ class ProcessKontor extends Process
             ? $this->_('Catalog item restored.')
             : $this->_('Catalog item archived.'));
         $this->wire()->session->redirect('../catalog/' . ($action === 'restore' ? '?archived=1' : ''));
+    }
+
+    public function ___executeCatalogCategories(): string
+    {
+        $this->requirePermission('kontor-catalog-category-view');
+        $this->requireCatalog();
+        $this->setPageTitle($this->_('Kontor · Catalog categories'));
+        $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
+        $showArchived = (string) $this->wire()->input->get('archived') === '1';
+        $organizationUid = $this->organizationUid();
+        $pageSize = 25;
+        $totalCategories = $this->categoryRepository()->countMatching(
+            $organizationUid,
+            $query,
+            $showArchived,
+        );
+        $totalPages = max(1, (int) ceil($totalCategories / $pageSize));
+        $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
+        $categories = $this->categoryRepository()->findAll(
+            $organizationUid,
+            $query,
+            $showArchived,
+            $pageSize,
+            ($page - 1) * $pageSize,
+        );
+        $categoryNames = [];
+
+        foreach ($this->categoryRepository()->findAll($organizationUid, limit: 250) as $category) {
+            $categoryNames[$category->uid->toString()] = $this->categoryName($category);
+        }
+
+        return $this->renderTemplate('catalog-categories', [
+            'categories' => $categories,
+            'categoryNames' => $categoryNames,
+            'query' => $query,
+            'showArchived' => $showArchived,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalCategories' => $totalCategories,
+        ]);
+    }
+
+    public function ___executeCatalogCategory(): string
+    {
+        $this->requireCatalog();
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
+        $category = $id !== '' ? $this->categoryRepository()->require($id) : null;
+
+        if ($category !== null) {
+            $this->requireSameOrganization($category->organizationId);
+        }
+
+        $this->requirePermission($category === null
+            ? 'kontor-catalog-category-create'
+            : 'kontor-catalog-category-edit');
+        $this->setPageTitle($category === null
+            ? $this->_('Kontor · New category')
+            : sprintf($this->_('Kontor · %s'), $this->categoryName($category)));
+        $form = $this->buildCatalogCategoryForm($category);
+        $isNew = $category === null;
+        $previous = $category === null ? null : $this->catalogCategoryAuditSnapshot($category);
+
+        if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
+            $form->processInput($this->wire()->input->post);
+            $this->validateCatalogCategoryForm($form, $category);
+
+            if (!$form->getErrors()) {
+                $category = $this->saveCatalogCategoryFromForm($form, $category);
+                $this->audit(
+                    'catalog',
+                    'catalog_category',
+                    $category->uid->toString(),
+                    $isNew ? 'created' : 'updated',
+                    previous: $previous,
+                    current: $this->catalogCategoryAuditSnapshot($category),
+                );
+                $this->message($this->_('Catalog category saved.'));
+                $this->wire()->session->redirect(
+                    '../catalog-category/?id=' . rawurlencode($category->uid->toString())
+                );
+            }
+        }
+
+        return $this->renderTemplate('catalog-category-form', [
+            'form' => $form,
+            'title' => $category === null ? $this->_('Create category') : $this->categoryName($category),
+        ]);
+    }
+
+    public function ___executeCatalogCategoryAction(): void
+    {
+        $this->requirePost();
+        $this->requireCatalog();
+        $this->requirePermission('kontor-catalog-category-edit');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['archive', 'restore']
+        );
+        $this->requireAction($action, ['archive', 'restore']);
+        $category = $this->categoryRepository()->require($id);
+        $this->requireSameOrganization($category->organizationId);
+
+        $action === 'restore'
+            ? $this->categoryRepository()->restore($id)
+            : $this->categoryRepository()->archive($id);
+        $this->audit(
+            'catalog',
+            'catalog_category',
+            $id,
+            $action === 'restore' ? 'restored' : 'archived',
+        );
+        $this->message($action === 'restore'
+            ? $this->_('Catalog category restored.')
+            : $this->_('Catalog category archived.'));
+        $this->wire()->session->redirect(
+            '../catalog-categories/' . ($action === 'restore' ? '?archived=1' : '')
+        );
     }
 
     public function ___executeActivity(): string
@@ -1523,6 +1644,33 @@ class ProcessKontor extends Process
         $tax->columnWidth = 25;
         $form->add($tax);
 
+        /** @var InputfieldSelect $categoryField */
+        $categoryField = $this->wire()->modules->get('InputfieldSelect');
+        $categoryField->name = 'category_uid';
+        $categoryField->label = $this->_('Category');
+        $categoryField->addOption('', $this->_('Uncategorized'));
+        $categoryOptions = [];
+
+        foreach ($this->categoryRepository()->findAll($this->organizationUid(), limit: 250) as $category) {
+            $categoryOptions[$category->uid->toString()] = $this->categoryName($category);
+        }
+
+        if ($item?->categoryUid !== null && !isset($categoryOptions[$item->categoryUid])) {
+            $assigned = $this->categoryRepository()->find($item->categoryUid);
+
+            if ($assigned !== null && hash_equals($assigned->organizationId, $this->organizationUid())) {
+                $categoryOptions[$item->categoryUid] = $this->categoryName($assigned) . ' · archived';
+            }
+        }
+
+        foreach ($categoryOptions as $uid => $label) {
+            $categoryField->addOption($uid, $label);
+        }
+
+        $categoryField->value = $item?->categoryUid ?? '';
+        $categoryField->columnWidth = 50;
+        $form->add($categoryField);
+
         $currencies = array_fill_keys(
             array_values(array_unique([$currency, 'EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD'])),
             '',
@@ -1565,6 +1713,58 @@ class ProcessKontor extends Process
             $item?->description[$language] ?? null,
         );
         $this->addSubmit($form, $this->_('Save catalog item'));
+
+        return $form;
+    }
+
+    private function buildCatalogCategoryForm(?Category $category): InputfieldForm
+    {
+        /** @var InputfieldForm $form */
+        $form = $this->wire()->modules->get('InputfieldForm');
+        $form->action = './' . ($category ? '?id=' . rawurlencode($category->uid->toString()) : '');
+        $form->addClass('InputfieldFormFocusFirst kontor-entity-form');
+        $language = $this->organization()->defaultLanguage;
+        $this->addTextField(
+            $form,
+            'name',
+            sprintf($this->_('Name (%s)'), strtoupper($language)),
+            $category?->nameIn($language),
+            true,
+            50,
+        );
+
+        /** @var InputfieldSelect $parent */
+        $parent = $this->wire()->modules->get('InputfieldSelect');
+        $parent->name = 'parent_uid';
+        $parent->label = $this->_('Parent category');
+        $parent->addOption('', $this->_('Top level'));
+
+        foreach ($this->categoryRepository()->findAll($this->organizationUid(), limit: 250) as $candidate) {
+            if ($candidate->uid->toString() !== $category?->uid->toString()) {
+                $parent->addOption($candidate->uid->toString(), $this->categoryName($candidate));
+            }
+        }
+
+        $parent->value = $category?->parentUid ?? '';
+        $parent->columnWidth = 50;
+        $form->add($parent);
+        $this->addTextField(
+            $form,
+            'sort_order',
+            $this->_('Sort order'),
+            (string) ($category?->sortOrder ?? 0),
+            true,
+            50,
+        );
+        $this->addSelectField(
+            $form,
+            'status',
+            $this->_('Status'),
+            ['active' => $this->_('Active'), 'inactive' => $this->_('Inactive')],
+            $category?->status ?? 'active',
+            50,
+        );
+        $this->addSubmit($form, $this->_('Save category'));
 
         return $form;
     }
@@ -1716,6 +1916,18 @@ class ProcessKontor extends Process
                 );
             }
         }
+
+        $categoryUid = $this->formValue($form, 'category_uid');
+
+        if ($categoryUid !== null) {
+            $category = $this->categoryRepository()->find($categoryUid);
+
+            if ($category === null || !hash_equals($category->organizationId, $this->organizationUid())) {
+                $form->getChildByName('category_uid')?->error(
+                    $this->_('Choose a category from this organization.')
+                );
+            }
+        }
     }
 
     private function saveCatalogItemFromForm(InputfieldForm $form, ?CatalogItem $item): CatalogItem
@@ -1744,6 +1956,7 @@ class ProcessKontor extends Process
         $item->barcode = $this->formValue($form, 'barcode');
         $item->unitCode = $this->requiredFormValue($form, 'unit_code');
         $item->taxCode = $this->formValue($form, 'tax_code');
+        $item->categoryUid = $this->formValue($form, 'category_uid');
         $item->salesPrice = $this->moneyFromForm($form, 'sales');
         $item->purchasePrice = $this->moneyFromForm($form, 'purchase');
         $item->costPrice = $this->moneyFromForm($form, 'cost');
@@ -1751,6 +1964,76 @@ class ProcessKontor extends Process
         $this->catalogItemRepository()->save($item);
 
         return $item;
+    }
+
+    private function validateCatalogCategoryForm(InputfieldForm $form, ?Category $category): void
+    {
+        $sortOrder = $this->requiredFormValue($form, 'sort_order');
+
+        if (preg_match('/^-?\d+$/', $sortOrder) !== 1) {
+            $form->getChildByName('sort_order')?->error($this->_('Sort order must be a whole number.'));
+        }
+
+        $parentUid = $this->formValue($form, 'parent_uid');
+
+        if ($parentUid === null) {
+            return;
+        }
+
+        $parent = $this->categoryRepository()->find($parentUid);
+
+        if ($parent === null || !hash_equals($parent->organizationId, $this->organizationUid())) {
+            $form->getChildByName('parent_uid')?->error($this->_('Choose a category from this organization.'));
+
+            return;
+        }
+
+        $visited = [];
+
+        while ($parent !== null) {
+            $uid = $parent->uid->toString();
+
+            if ($uid === $category?->uid->toString()) {
+                $form->getChildByName('parent_uid')?->error(
+                    $this->_('A category cannot be placed inside one of its descendants.')
+                );
+
+                return;
+            }
+
+            if (isset($visited[$uid])) {
+                $form->getChildByName('parent_uid')?->error(
+                    $this->_('The selected category hierarchy already contains a cycle.')
+                );
+
+                return;
+            }
+
+            $visited[$uid] = true;
+            $parent = $parent->parentUid !== null
+                ? $this->categoryRepository()->find($parent->parentUid)
+                : null;
+        }
+    }
+
+    private function saveCatalogCategoryFromForm(InputfieldForm $form, ?Category $category): Category
+    {
+        $language = $this->organization()->defaultLanguage;
+
+        if ($category === null) {
+            $category = Category::create(
+                $this->organizationUid(),
+                [$language => $this->requiredFormValue($form, 'name')],
+            );
+        }
+
+        $category->name[$language] = $this->requiredFormValue($form, 'name');
+        $category->parentUid = $this->formValue($form, 'parent_uid');
+        $category->sortOrder = (int) $this->requiredFormValue($form, 'sort_order');
+        $category->status = $this->requiredFormValue($form, 'status');
+        $this->categoryRepository()->save($category);
+
+        return $category;
     }
 
     private function moneyFromForm(InputfieldForm $form, string $prefix): ?Money
@@ -2183,6 +2466,7 @@ class ProcessKontor extends Process
             'itemType' => $item->itemType,
             'sku' => $item->sku,
             'barcode' => $item->barcode,
+            'categoryUid' => $item->categoryUid,
             'unitCode' => $item->unitCode,
             'taxCode' => $item->taxCode,
             'salesPrice' => $item->salesPrice?->toString(),
@@ -2201,6 +2485,29 @@ class ProcessKontor extends Process
         return $item->titleIn($language)
             ?? $item->titleIn('en')
             ?? (is_string($fallback) && $fallback !== '' ? $fallback : $this->_('Untitled item'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function catalogCategoryAuditSnapshot(Category $category): array
+    {
+        return [
+            'name' => $category->name,
+            'parentUid' => $category->parentUid,
+            'sortOrder' => $category->sortOrder,
+            'status' => $category->status,
+        ];
+    }
+
+    private function categoryName(Category $category): string
+    {
+        $language = $this->organization()->defaultLanguage;
+        $fallback = reset($category->name);
+
+        return $category->nameIn($language)
+            ?? $category->nameIn('en')
+            ?? (is_string($fallback) && $fallback !== '' ? $fallback : $this->_('Untitled category'));
     }
 
     /**
@@ -2439,6 +2746,14 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorCatalog');
 
         return $module->itemRepository();
+    }
+
+    private function categoryRepository(): CategoryRepository
+    {
+        /** @var KontorCatalog $module */
+        $module = $this->wire()->modules->get('KontorCatalog');
+
+        return $module->categoryRepository();
     }
 
     private function contactRepository(): ContactRepository

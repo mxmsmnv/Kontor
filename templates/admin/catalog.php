@@ -47,9 +47,14 @@ $money = static function (?\Kontor\SDK\ValueObjects\Money $value): string {
       <h2>Catalog</h2>
       <p>Sellable items, service offerings, prices, units, and inventory behavior.</p>
     </div>
-    <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
-      <i class="fa fa-plus"></i> New item
-    </a>
+    <div class="kontor-backupactions">
+      <a class="kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>catalog-categories/">
+        <i class="fa fa-folder-open"></i> Categories
+      </a>
+      <a class="kontor-button" href="<?= $e($adminUrl) ?>catalog-item/">
+        <i class="fa fa-plus"></i> New item
+      </a>
+    </div>
   </header>
 
   <form class="kontor-toolbar" method="get" action="./">

@@ -54,5 +54,23 @@ final class CategoryRepositoryTest extends DatabaseTestCase
 
         $row = $this->pdo->query('SELECT archived_at FROM kontor_catalog_categories')->fetch(\PDO::FETCH_ASSOC);
         $this->assertNotNull($row['archived_at']);
+
+        $this->assertSame(0, $repository->countMatching($this->organizationUid, 'Electronics'));
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Electronics', true));
+        $repository->restore($category->uid->toString());
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'Electronics'));
+    }
+
+    public function test_list_search_and_pagination(): void
+    {
+        $repository = $this->repository();
+        $repository->save(Category::create($this->organizationUid, ['en' => 'Nebula Hardware'], sortOrder: 10));
+        $repository->save(Category::create($this->organizationUid, ['en' => 'Nebula Services'], sortOrder: 20));
+
+        $this->assertSame(2, $repository->countMatching($this->organizationUid, 'Nebula'));
+        $first = $repository->findAll($this->organizationUid, 'Nebula', limit: 1);
+        $second = $repository->findAll($this->organizationUid, 'Nebula', limit: 1, offset: 1);
+        $this->assertNotSame($first[0]->uid->toString(), $second[0]->uid->toString());
+        $this->assertSame($first[0]->uid->toString(), $repository->require($first[0]->uid->toString())->uid->toString());
     }
 }

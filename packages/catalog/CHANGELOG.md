@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 - Organization-scoped catalog listing, search, type filters, archived views,
   exact counts, and offset pagination for the admin workspace.
+- Searchable and paginated category queries with active/archive counts,
+  deterministic ordering, required lookup, and restore support.
 - Initial alpha (Substage 3.2): `kontor_catalog_items` (products/services
   via `item_type`), `kontor_catalog_categories` (schema gap-fill, like
   Contacts' tags), `kontor_catalog_price_lists`, `kontor_catalog_prices`

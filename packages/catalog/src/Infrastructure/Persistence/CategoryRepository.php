@@ -53,6 +53,51 @@ final class CategoryRepository
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function require(string $uid): Category
+    {
+        return $this->find($uid) ?? throw new \RuntimeException("Catalog category \"{$uid}\" was not found.");
+    }
+
+    /**
+     * @return Category[]
+     */
+    public function findAll(
+        string $organizationUid,
+        string $query = '',
+        bool $archived = false,
+        int $limit = 100,
+        int $offset = 0,
+    ): array {
+        [$sql, $params] = $this->listQuery($organizationUid, $query, $archived);
+        $sql .= ' ORDER BY sort_order ASC, id ASC LIMIT :limit OFFSET :offset';
+        $statement = $this->pdo->prepare($sql);
+
+        foreach ($params as $name => $value) {
+            $statement->bindValue(':' . $name, $value);
+        }
+
+        $statement->bindValue(':limit', max(1, min($limit, 250)), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn (array $row): Category => $this->hydrate($row),
+            $statement->fetchAll(\PDO::FETCH_ASSOC),
+        );
+    }
+
+    public function countMatching(
+        string $organizationUid,
+        string $query = '',
+        bool $archived = false,
+    ): int {
+        [$sql, $params] = $this->listQuery($organizationUid, $query, $archived, true);
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
+    }
+
     /**
      * @return array<int, Category>
      */
@@ -85,6 +130,35 @@ final class CategoryRepository
     {
         $statement = $this->pdo->prepare('UPDATE kontor_catalog_categories SET archived_at = :now WHERE uid = :uid');
         $statement->execute(['now' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'), 'uid' => $uid]);
+    }
+
+    public function restore(string $uid): void
+    {
+        $statement = $this->pdo->prepare('UPDATE kontor_catalog_categories SET archived_at = NULL WHERE uid = :uid');
+        $statement->execute(['uid' => $uid]);
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, int|string>}
+     */
+    private function listQuery(
+        string $organizationUid,
+        string $query,
+        bool $archived,
+        bool $count = false,
+    ): array {
+        $params = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
+        $sql = 'SELECT ' . ($count ? 'COUNT(*)' : '*') . ' FROM kontor_catalog_categories
+            WHERE organization_id = :organization_id
+              AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
+        $query = trim($query);
+
+        if ($query !== '') {
+            $sql .= ' AND name_json LIKE :query';
+            $params['query'] = '%' . $query . '%';
+        }
+
+        return [$sql, $params];
     }
 
     private function hydrate(array $row): Category
