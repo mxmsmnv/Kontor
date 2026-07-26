@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Bulk Activate/Deactivate controls for Catalog categories, preserving filters
+  and recording tenant-scoped audit events.
 - Catalog category status filtering, preserved across pagination and bulk
   archive/restore flows.
 - Catalog item status filtering, preserved across pagination and bulk

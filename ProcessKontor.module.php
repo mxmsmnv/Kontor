@@ -61,7 +61,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '047',
+            'version' => '048',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -916,9 +916,9 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-catalog-category-edit');
         $action = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->post('action'),
-            ['archive', 'restore']
+            ['archive', 'restore', 'activate', 'deactivate']
         );
-        $this->requireAction($action, ['archive', 'restore']);
+        $this->requireAction($action, ['archive', 'restore', 'activate', 'deactivate']);
         $ids = $this->wire()->sanitizer->arrayVal(
             $this->wire()->input->post('ids'),
             ['maxItems' => 100, 'sanitizer' => 'text']
@@ -930,24 +930,35 @@ class ProcessKontor extends Process
             $this->wire()->session->redirect($redirect);
         }
 
-        $changedIds = $action === 'restore'
-            ? $this->categoryRepository()->restoreMany($this->organizationUid(), $ids)
-            : $this->categoryRepository()->archiveMany($this->organizationUid(), $ids);
+        $changedIds = match ($action) {
+            'restore' => $this->categoryRepository()->restoreMany($this->organizationUid(), $ids),
+            'activate' => $this->categoryRepository()->activateMany($this->organizationUid(), $ids),
+            'deactivate' => $this->categoryRepository()->deactivateMany($this->organizationUid(), $ids),
+            default => $this->categoryRepository()->archiveMany($this->organizationUid(), $ids),
+        };
 
         foreach ($changedIds as $id) {
             $this->audit(
                 'catalog',
                 'catalog_category',
                 $id,
-                $action === 'restore' ? 'restored' : 'archived',
+                match ($action) {
+                    'restore' => 'restored',
+                    'activate' => 'activated',
+                    'deactivate' => 'deactivated',
+                    default => 'archived',
+                },
                 metadata: ['bulk' => true],
             );
         }
 
         $this->message(sprintf(
-            $action === 'restore'
-                ? $this->_('%d catalog category(s) restored.')
-                : $this->_('%d catalog category(s) archived.'),
+            match ($action) {
+                'restore' => $this->_('%d catalog category(s) restored.'),
+                'activate' => $this->_('%d catalog category(s) activated.'),
+                'deactivate' => $this->_('%d catalog category(s) deactivated.'),
+                default => $this->_('%d catalog category(s) archived.'),
+            },
             count($changedIds),
         ));
         $this->wire()->session->redirect($redirect);

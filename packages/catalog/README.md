@@ -76,7 +76,8 @@ Price-list status can be activated or deactivated in tenant-scoped bulk
 operations without opening each list.
 Catalog items can be filtered by category, while the category workspace links
 back to organization-scoped active-item counts.
-Catalog categories can be filtered by active or inactive status.
+Catalog categories can be filtered by active or inactive status and changed
+between those states in tenant-scoped bulk operations.
 Catalog item forms show organization-scoped pricing coverage across all price
 lists and quantity tiers.
 New price tiers can be started directly from an item with the item preselected.

@@ -74,17 +74,39 @@ $url = static function (int $targetPage, bool $archived) use ($query, $selectedS
       method="post"
       action="<?= $e($adminUrl) ?>catalog-category-bulk-action/"
       data-kontor-bulk-form
-      data-action-label="<?= $showArchived ? 'Restore' : 'Archive' ?>"
       data-entity-label="catalog category"
     >
       <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-      <input type="hidden" name="action" value="<?= $showArchived ? 'restore' : 'archive' ?>">
       <input type="hidden" name="return_q" value="<?= $e($query) ?>">
       <input type="hidden" name="return_status" value="<?= $e($selectedStatus ?? '') ?>">
       <input type="hidden" name="return_archived" value="<?= $showArchived ? '1' : '0' ?>">
       <input type="hidden" name="return_page" value="<?= $e($page) ?>">
       <span class="kontor-secondary" data-kontor-selected-count>0 selected</span>
-      <button class="kontor-button kontor-button--ghost" type="submit">
+      <button
+        class="kontor-button kontor-button--ghost"
+        type="submit"
+        name="action"
+        value="activate"
+        data-action-label="Activate"
+      >
+        <i class="fa fa-play"></i> Activate selected
+      </button>
+      <button
+        class="kontor-button kontor-button--ghost"
+        type="submit"
+        name="action"
+        value="deactivate"
+        data-action-label="Deactivate"
+      >
+        <i class="fa fa-pause"></i> Deactivate selected
+      </button>
+      <button
+        class="kontor-button kontor-button--ghost"
+        type="submit"
+        name="action"
+        value="<?= $showArchived ? 'restore' : 'archive' ?>"
+        data-action-label="<?= $showArchived ? 'Restore' : 'Archive' ?>"
+      >
         <i class="fa fa-<?= $showArchived ? 'undo' : 'archive' ?>"></i>
         <?= $showArchived ? 'Restore selected' : 'Archive selected' ?>
       </button>
