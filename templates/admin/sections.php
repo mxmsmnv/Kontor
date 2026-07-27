@@ -15,7 +15,7 @@ $navigationCount = array_sum(array_map('count', $navigationGroups));
     <div class="uk-width-expand">
       <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Workspace directory</p>
       <h2 class="uk-margin-small-top uk-margin-small-bottom">All Kontor sections</h2>
-      <p class="uk-text-muted uk-margin-remove">Open any workspace or pin up to <?= $e($quickNavigationLimit) ?> frequently used sections to the Kontor menu.</p>
+      <p class="uk-text-muted uk-margin-remove">Open any workspace or pin up to <?= $e($quickNavigationLimit) ?> frequently used sections to the Kontor menu. Components is always available there.</p>
     </div>
     <div class="uk-width-auto">
       <span class="uk-label"><?= $e($navigationCount) ?> sections</span>
@@ -53,6 +53,8 @@ $navigationCount = array_sum(array_map('count', $navigationGroups));
                 </a>
                 <?php if ($item['key'] === 'dashboard'): ?>
                   <span class="uk-label">Home</span>
+                <?php elseif ($item['key'] === 'components'): ?>
+                  <span class="uk-label">Menu</span>
                 <?php else: ?>
                   <label class="uk-flex uk-flex-middle uk-text-meta uk-margin-small-left">
                     <input class="uk-checkbox uk-margin-small-right" type="checkbox" name="quick_navigation[]" value="<?= $e($item['key']) ?>" aria-label="Add <?= $e($item['label']) ?> to quick access"<?= in_array($item['key'], $quickNavigationKeys, true) ? ' checked' : '' ?> data-kontor-quick-toggle>

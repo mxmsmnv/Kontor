@@ -102,7 +102,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '152',
+            'version' => '153',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -144,7 +144,13 @@ class ProcessKontor extends Process
                     'icon' => 'check-square-o',
                     'permission' => 'kontor-tasks-task-view',
                 ],
-                ['url' => 'sections/', 'label' => 'All sections', 'icon' => 'th-large'],
+                [
+                    'url' => 'components/',
+                    'label' => 'Components',
+                    'icon' => 'cubes',
+                    'permission' => 'kontor-components-view',
+                ],
+                ['url' => 'sections/', 'label' => 'Quick Access', 'icon' => 'th-large'],
             ],
             'kontorNavigation' => [
                 ['url' => '', 'label' => 'Dashboard', 'icon' => 'dashboard'],
@@ -404,9 +410,16 @@ class ProcessKontor extends Process
                             (int) ($item['id'] ?? 0),
                         );
                     }
+                    $available = $this->availableNavigationItems();
+                    if (isset($available['components'])) {
+                        $children[] = $this->primaryNavigationChild(
+                            $available['components'],
+                            (int) ($item['id'] ?? 0),
+                        );
+                    }
                     $children[] = $this->primaryNavigationChild([
                         'url' => 'sections/',
-                        'label' => 'All sections & quick access',
+                        'label' => 'Quick Access',
                         'icon' => 'th-large',
                     ], (int) ($item['id'] ?? 0));
                     $item['children'] = $children;
@@ -426,7 +439,7 @@ class ProcessKontor extends Process
     {
         $moduleInfo = self::getModuleInfo();
         $signature = hash('sha256', json_encode(
-            ['mode' => 'personal-quick-access-v3', 'items' => $moduleInfo['kontorNavigation'] ?? []],
+            ['mode' => 'personal-quick-access-v4', 'items' => $moduleInfo['kontorNavigation'] ?? []],
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
         ));
         $session = $this->wire()->session;
@@ -481,7 +494,8 @@ class ProcessKontor extends Process
 
         return array_slice(array_values(array_filter(
             array_unique(array_map('strval', $keys)),
-            static fn (string $key): bool => $key !== 'dashboard' && isset($available[$key]),
+            static fn (string $key): bool => !in_array($key, ['dashboard', 'components'], true)
+                && isset($available[$key]),
         )), 0, self::QUICK_NAVIGATION_LIMIT);
     }
 
@@ -668,7 +682,7 @@ class ProcessKontor extends Process
 
     public function ___executeSections(): string
     {
-        $this->setPageTitle($this->_('Kontor · Sections & quick access'));
+        $this->setPageTitle($this->_('Kontor · Quick Access'));
 
         return $this->renderTemplate('sections', [
             'navigationGroups' => $this->navigationGroups(),
@@ -686,7 +700,11 @@ class ProcessKontor extends Process
         $keys = [];
         foreach ($requested as $value) {
             $key = $this->wire()->sanitizer->pageName((string) $value);
-            if ($key !== 'dashboard' && isset($available[$key]) && !in_array($key, $keys, true)) {
+            if (
+                !in_array($key, ['dashboard', 'components'], true)
+                && isset($available[$key])
+                && !in_array($key, $keys, true)
+            ) {
                 $keys[] = $key;
             }
             if (count($keys) >= self::QUICK_NAVIGATION_LIMIT) {

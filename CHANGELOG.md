@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- The Kontor menu now keeps Components as a fixed destination directly above
+  the renamed Quick Access editor, while preventing duplicate pinned entries.
 - Contacts now uses a clear status-and-archive view switcher, focused search,
   grouped import/export actions, responsive directory rows and confirmed
   lifecycle actions instead of an overextended filter toolbar.
