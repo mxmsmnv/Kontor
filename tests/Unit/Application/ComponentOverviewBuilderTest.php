@@ -30,6 +30,8 @@ final class ComponentOverviewBuilderTest extends TestCase
                     'version' => '003',
                     'versionStr' => '0.0.3',
                     'requires' => ['Kontor'],
+                    'workspaceUrl' => '/admin/kontor/queue/',
+                    'settingsUrl' => '/admin/module/edit/?name=KontorQueue',
                 ],
             ],
         );
@@ -39,6 +41,8 @@ final class ComponentOverviewBuilderTest extends TestCase
         $this->assertFalse($overview['components'][1]['versionInSync']);
         $this->assertSame('0.0.1', $overview['components'][1]['registryVersion']);
         $this->assertSame(['Kontor'], $overview['components'][1]['requires']);
+        $this->assertSame('/admin/kontor/queue/', $overview['components'][1]['workspaceUrl']);
+        $this->assertSame('/admin/module/edit/?name=KontorQueue', $overview['components'][1]['settingsUrl']);
     }
 
     public function test_filters_by_search_and_attention_status(): void

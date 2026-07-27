@@ -13,6 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   close icon instead of inheriting ProcessWire's full button treatment.
 - Component cards now use larger unframed icons and native UIkit labels with
   system spacing for readable wrapped dependencies, and no longer expose Source.
+- Every component card now resolves its workspace from navigation metadata and
+  exposes a direct open action; configurable modules also show a settings action.
 - The Kontor menu now keeps Components as a fixed destination directly above
   the renamed Quick Access editor, while preventing duplicate pinned entries.
 - Contacts now uses a clear status-and-archive view switcher, focused search,

@@ -85,13 +85,39 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
                 </span>
               </div>
               <div class="uk-width-expand">
-                <h3 class="uk-card-title uk-margin-remove"><?= $e($component['title']) ?></h3>
+                <h3 class="uk-card-title uk-margin-remove">
+                  <?php if ($component['workspaceUrl'] !== ''): ?>
+                    <a class="uk-link-reset" href="<?= $e($component['workspaceUrl']) ?>"><?= $e($component['title']) ?></a>
+                  <?php else: ?>
+                    <?= $e($component['title']) ?>
+                  <?php endif; ?>
+                </h3>
                 <div class="uk-text-meta"><?= $e($component['moduleName']) ?></div>
               </div>
               <div class="uk-width-auto">
-                <span class="uk-label<?= $component['status'] === 'enabled' ? ' uk-label-success' : ' uk-label-warning' ?>">
-                  <?= $e($component['status']) ?>
-                </span>
+                <div class="uk-flex uk-flex-middle">
+                  <span class="uk-label<?= $component['status'] === 'enabled' ? ' uk-label-success' : ' uk-label-warning' ?>">
+                    <?= $e($component['status']) ?>
+                  </span>
+                  <?php if ($component['workspaceUrl'] !== ''): ?>
+                    <a
+                      class="uk-icon-link uk-margin-small-left"
+                      href="<?= $e($component['workspaceUrl']) ?>"
+                      uk-icon="arrow-right"
+                      aria-label="Open <?= $e($component['title']) ?>"
+                      title="Open component"
+                    ></a>
+                  <?php endif; ?>
+                  <?php if ($component['settingsUrl'] !== ''): ?>
+                    <a
+                      class="uk-icon-link uk-margin-small-left"
+                      href="<?= $e($component['settingsUrl']) ?>"
+                      uk-icon="settings"
+                      aria-label="Configure <?= $e($component['title']) ?>"
+                      title="Component settings"
+                    ></a>
+                  <?php endif; ?>
+                </div>
               </div>
             </header>
 

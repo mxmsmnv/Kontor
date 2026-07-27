@@ -63,6 +63,8 @@ final class ComponentOverviewBuilder
                     static fn (string $dependency): bool => $dependency !== 'ProcessWire'
                 )),
                 'href' => (string) ($runtime['href'] ?? ''),
+                'workspaceUrl' => (string) ($runtime['workspaceUrl'] ?? ''),
+                'settingsUrl' => (string) ($runtime['settingsUrl'] ?? ''),
                 'updatedAt' => (string) ($row['updated_at'] ?? ''),
             ];
             $haystack = mb_strtolower(implode(' ', [

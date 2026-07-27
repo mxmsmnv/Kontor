@@ -105,7 +105,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '158',
+            'version' => '159',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -9185,11 +9185,26 @@ class ProcessKontor extends Process
         $rows = $this->componentRegistry()->all();
         $builder = new ComponentOverviewBuilder();
         $runtimeInfo = [];
+        $navigation = array_values($this->availableNavigationItems());
+        $canConfigureModules = $this->wire()->user->isSuperuser()
+            || $this->wire()->user->hasPermission('module-admin');
 
         foreach ($rows as $row) {
             $moduleName = $builder->moduleName((string) ($row['name'] ?? ''));
             $info = $this->wire()->modules->getModuleInfoVerbose($moduleName);
-            $runtimeInfo[$moduleName] = is_array($info) ? $info : [];
+            $info = is_array($info) ? $info : [];
+            $info['workspaceUrl'] = $this->componentWorkspaceUrl(
+                (string) ($row['name'] ?? ''),
+                $moduleName,
+                (string) ($info['title'] ?? $moduleName),
+                $navigation,
+            );
+            $info['settingsUrl'] = $canConfigureModules
+                && (bool) ($info['configurable'] ?? false)
+                && (bool) ($info['installed'] ?? false)
+                    ? $this->wire()->modules->getModuleEditUrl($moduleName)
+                    : '';
+            $runtimeInfo[$moduleName] = $info;
         }
         $overview = $builder->build($rows, $runtimeInfo, $query, $status);
 
@@ -9201,6 +9216,56 @@ class ProcessKontor extends Process
             'canSyncComponents' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-components-update'),
         ]);
+    }
+
+    /**
+     * @param array<int, array{url: string, label: string, icon: string, permission?: string}> $navigation
+     */
+    private function componentWorkspaceUrl(
+        string $componentName,
+        string $moduleName,
+        string $title,
+        array $navigation,
+    ): string {
+        $baseUrl = $this->wire()->config->urls->admin . 'kontor/';
+        if ($moduleName === 'Kontor') {
+            foreach ($navigation as $item) {
+                if ((string) ($item['url'] ?? '') === '') {
+                    return $baseUrl;
+                }
+            }
+        }
+
+        $identifiers = array_filter(array_unique([
+            $this->normalizeComponentNavigationName($componentName),
+            $this->normalizeComponentNavigationName(
+                str_starts_with($moduleName, 'Kontor') ? substr($moduleName, 6) : $moduleName
+            ),
+            $this->normalizeComponentNavigationName(
+                str_starts_with($title, 'Kontor ') ? substr($title, 7) : $title
+            ),
+        ]));
+
+        foreach ($navigation as $item) {
+            if (in_array(
+                $this->normalizeComponentNavigationName((string) ($item['label'] ?? '')),
+                $identifiers,
+                true,
+            )) {
+                return $baseUrl . ltrim((string) ($item['url'] ?? ''), '/');
+            }
+        }
+
+        return '';
+    }
+
+    private function normalizeComponentNavigationName(string $value): string
+    {
+        $normalized = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $value));
+
+        return strlen($normalized) > 3 && str_ends_with($normalized, 's')
+            ? substr($normalized, 0, -1)
+            : $normalized;
     }
 
     public function ___executeComponentSync(): void
