@@ -79,7 +79,7 @@ $catalogIssues = array_filter([
 
   <div id="kontor-dashboard-intro" uk-modal>
     <div class="uk-modal-dialog uk-modal-body">
-      <button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>
+      <a class="uk-modal-close-default" href="#" role="button" uk-close aria-label="Close"></a>
       <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Personal setting</p>
       <h2 class="uk-modal-title uk-margin-small-top">Dashboard intro</h2>
       <p class="uk-text-muted">Set a personal headline or motivational note. Only your Dashboard is changed.</p>

@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 - Dashboard users can now replace the default hero copy with a personal
   motivational headline and optional supporting note, or restore the defaults.
+- The Dashboard intro dialog now keeps its close control as a native UIkit
+  close icon instead of inheriting ProcessWire's full button treatment.
 - Component cards now use native UIkit icon and label primitives with system
   spacing for readable wrapped dependencies, and no longer expose Source.
 - The Kontor menu now keeps Components as a fixed destination directly above
