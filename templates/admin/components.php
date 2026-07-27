@@ -80,7 +80,7 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
           <article class="uk-card uk-card-default uk-card-small uk-card-body uk-flex uk-flex-column">
             <header class="uk-grid-small uk-flex-middle" uk-grid>
               <div class="uk-width-auto">
-                <span class="kontor-component-icon" aria-hidden="true">
+                <span class="uk-icon-button uk-text-primary" aria-hidden="true">
                   <i class="fa fa-<?= $e($component['icon']) ?>"></i>
                 </span>
               </div>
@@ -120,9 +120,9 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
             <?php if ($component['requires']): ?>
               <div class="uk-margin-top">
                 <div class="uk-text-meta uk-margin-small-bottom">Requires</div>
-                <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid aria-label="Required components">
+                <div class="uk-flex uk-flex-wrap" aria-label="Required components">
                   <?php foreach ($component['requires'] as $dependency): ?>
-                    <span class="uk-label kontor-component-tag"><?= $e($dependency) ?></span>
+                    <span class="uk-label uk-margin-small-right uk-margin-small-bottom"><?= $e($dependency) ?></span>
                   <?php endforeach; ?>
                 </div>
               </div>
