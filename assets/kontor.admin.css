@@ -436,10 +436,27 @@
   min-width: 220px;
 }
 
+.kontor-identity__body {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .kontor-identity a {
   color: var(--pw-text-color);
   font-weight: 720;
   text-decoration: none;
+}
+
+.ProcessKontor .uk-dropdown-nav a,
+.ProcessKontor .uk-dropdown-nav .uk-button-text {
+  text-decoration: none;
+}
+
+.ProcessKontor .uk-dropdown-nav .uk-button-text {
+  justify-content: flex-start;
+  text-transform: none;
+  width: 100%;
 }
 
 .kontor-secondary {

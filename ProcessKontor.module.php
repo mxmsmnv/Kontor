@@ -102,7 +102,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '151',
+            'version' => '152',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -851,6 +851,21 @@ class ProcessKontor extends Process
             'page' => $page,
             'totalPages' => $totalPages,
             'totalRecords' => $totalRecords,
+            'contactCounts' => [
+                'all' => $this->contactRepository()->countMatching($organizationUid),
+                'active' => $this->contactRepository()->countMatching(
+                    $organizationUid,
+                    status: 'active',
+                ),
+                'inactive' => $this->contactRepository()->countMatching(
+                    $organizationUid,
+                    status: 'inactive',
+                ),
+                'archived' => $this->contactRepository()->countMatching(
+                    $organizationUid,
+                    archived: true,
+                ),
+            ],
         ]);
     }
 

@@ -173,6 +173,14 @@ document.addEventListener('DOMContentLoaded', () => {
     update();
   });
 
+  document.querySelectorAll('form[data-kontor-confirm]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      if (!window.confirm(form.dataset.kontorConfirm)) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('[data-kontor-directory]').forEach((directory) => {
     const search = directory.querySelector('[data-kontor-directory-search]');
     const items = Array.from(directory.querySelectorAll('[data-kontor-directory-item]'));

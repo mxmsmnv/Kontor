@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Contacts now uses a clear status-and-archive view switcher, focused search,
+  grouped import/export actions, responsive directory rows and confirmed
+  lifecycle actions instead of an overextended filter toolbar.
 - Dashboard Catalog overview now separates primary inventory metrics, lifecycle
   context, actionable data-quality issues and recently updated items into a
   clearer responsive UIkit hierarchy.
