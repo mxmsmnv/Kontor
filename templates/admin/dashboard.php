@@ -26,6 +26,9 @@
 /** @var \Kontor\Dashboard\Domain\Dashboard|null $personalDashboard */
 /** @var array{dashboard: \Kontor\Dashboard\Domain\Dashboard, widgets: array<int, array{layout: \Kontor\Dashboard\Domain\DashboardWidget, title: string, data: array<string, mixed>, cacheHit: bool}>}|null $renderedPersonalDashboard */
 /** @var array<string, \Kontor\Dashboard\Contracts\WidgetProviderInterface> $availableDashboardWidgets */
+/** @var string $dashboardHeadline */
+/** @var string $dashboardMessage */
+/** @var bool $dashboardIntroCustomized */
 /** @var array<string, array<int, array{key: string, url: string, label: string, icon: string}>> $navigationGroups */
 /** @var string[] $quickNavigationKeys */
 /** @var string $adminUrl */
@@ -47,9 +50,16 @@ $catalogIssues = array_filter([
   <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
     <div class="uk-grid-medium uk-flex-middle" uk-grid>
       <div class="uk-width-1-1 uk-width-expand@m">
-        <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Operations workspace</p>
-        <h2 class="uk-h1 uk-margin-small-top uk-margin-small-bottom">Your business, in one place.</h2>
-        <p class="uk-text-muted uk-margin-remove">Kontor connects customer data, companies and operational components inside ProcessWire.</p>
+        <div class="uk-flex uk-flex-between uk-flex-middle">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Operations workspace</p>
+          <button class="uk-button uk-button-text uk-text-small" type="button" uk-toggle="target: #kontor-dashboard-intro">
+            <i class="fa fa-cog"></i> Customize intro
+          </button>
+        </div>
+        <h2 class="uk-h1 uk-margin-small-top uk-margin-small-bottom"><?= $e($dashboardHeadline) ?></h2>
+        <?php if ($dashboardMessage !== ''): ?>
+          <p class="uk-text-muted uk-margin-remove"><?= $e($dashboardMessage) ?></p>
+        <?php endif; ?>
       </div>
       <?php if ($contactsReady || $canCreateCatalogItems): ?>
         <div class="uk-width-1-1 uk-width-auto@m">
@@ -66,6 +76,37 @@ $catalogIssues = array_filter([
       <?php endif; ?>
     </div>
   </section>
+
+  <div id="kontor-dashboard-intro" uk-modal>
+    <div class="uk-modal-dialog uk-modal-body">
+      <button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>
+      <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Personal setting</p>
+      <h2 class="uk-modal-title uk-margin-small-top">Dashboard intro</h2>
+      <p class="uk-text-muted">Set a personal headline or motivational note. Only your Dashboard is changed.</p>
+      <form class="uk-form-stacked kontor-nativeform uk-padding-remove" method="post" action="<?= $e($adminUrl) ?>dashboard-intro-save/">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <label class="kontor-nativefield kontor-nativefield--wide">
+          <span>Headline *</span>
+          <input name="dashboard_headline" maxlength="90" value="<?= $e($dashboardHeadline) ?>" required>
+        </label>
+        <label class="kontor-nativefield kontor-nativefield--wide">
+          <span>Supporting text</span>
+          <textarea name="dashboard_message" maxlength="180" rows="3"><?= $e($dashboardMessage) ?></textarea>
+        </label>
+        <div class="kontor-nativeform__actions uk-flex uk-flex-between uk-flex-middle">
+          <?php if ($dashboardIntroCustomized): ?>
+            <button class="uk-button uk-button-default" name="action" value="reset" type="submit">Restore default</button>
+          <?php else: ?>
+            <span></span>
+          <?php endif; ?>
+          <div>
+            <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+            <button class="uk-button uk-button-primary" name="action" value="save" type="submit">Save intro</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <?php if ($dashboardReady && $canViewPersonalDashboard): ?>
     <section class="uk-margin-medium-bottom">

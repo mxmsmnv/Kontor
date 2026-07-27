@@ -89,6 +89,9 @@ class ProcessKontor extends Process
 {
     private const QUICK_NAVIGATION_META = 'kontor.quick_navigation';
     private const QUICK_NAVIGATION_LIMIT = 8;
+    private const DASHBOARD_INTRO_META = 'kontor.dashboard_intro';
+    private const DEFAULT_DASHBOARD_HEADLINE = 'Your business, in one place.';
+    private const DEFAULT_DASHBOARD_MESSAGE = 'Kontor connects customer data, companies and operational components inside ProcessWire.';
     private const DEFAULT_QUICK_NAVIGATION = [
         'contacts',
         'companies',
@@ -102,7 +105,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '154',
+            'version' => '155',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -636,6 +639,16 @@ class ProcessKontor extends Process
             }
             $availableDashboardWidgets = $dashboardModule->widgetRegistry()->all();
         }
+        $storedDashboardIntro = $user->meta(self::DASHBOARD_INTRO_META);
+        $dashboardHeadline = is_array($storedDashboardIntro)
+            && is_string($storedDashboardIntro['headline'] ?? null)
+            && trim($storedDashboardIntro['headline']) !== ''
+                ? trim($storedDashboardIntro['headline'])
+                : self::DEFAULT_DASHBOARD_HEADLINE;
+        $dashboardMessage = is_array($storedDashboardIntro)
+            && is_string($storedDashboardIntro['message'] ?? null)
+                ? trim($storedDashboardIntro['message'])
+                : self::DEFAULT_DASHBOARD_MESSAGE;
 
         return $this->renderTemplate('dashboard', [
             'components' => $components,
@@ -675,6 +688,9 @@ class ProcessKontor extends Process
             'personalDashboard' => $personalDashboard,
             'renderedPersonalDashboard' => $renderedPersonalDashboard,
             'availableDashboardWidgets' => $availableDashboardWidgets,
+            'dashboardHeadline' => $dashboardHeadline,
+            'dashboardMessage' => $dashboardMessage,
+            'dashboardIntroCustomized' => is_array($storedDashboardIntro),
             'navigationGroups' => $this->navigationGroups(),
             'quickNavigationKeys' => $this->quickNavigationKeys(),
         ]);
@@ -745,6 +761,41 @@ class ProcessKontor extends Process
             current: ['name' => $dashboard->name, 'scope' => 'personal', 'isDefault' => true],
         );
         $this->message($this->_('Personal dashboard created.'));
+        $this->wire()->session->redirect('../');
+    }
+
+    public function ___executeDashboardIntroSave(): void
+    {
+        $this->requirePost();
+        $action = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('action'),
+            ['save', 'reset'],
+        ) ?? 'save';
+
+        if ($action === 'reset') {
+            $this->wire()->user->meta()->set(self::DASHBOARD_INTRO_META, null);
+            $this->message($this->_('Dashboard intro restored to the default.'));
+            $this->wire()->session->redirect('../');
+
+            return;
+        }
+
+        $headline = mb_substr(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('dashboard_headline')
+        )), 0, 90);
+        $message = mb_substr(trim($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('dashboard_message')
+        )), 0, 180);
+
+        if ($headline === '') {
+            throw new WireException($this->_('Dashboard headline is required.'));
+        }
+
+        $this->wire()->user->meta()->set(self::DASHBOARD_INTRO_META, [
+            'headline' => $headline,
+            'message' => $message,
+        ]);
+        $this->message($this->_('Dashboard intro updated.'));
         $this->wire()->session->redirect('../');
     }
 

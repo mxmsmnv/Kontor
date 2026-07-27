@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
       code: ['A stable short code used in references, imports and integrations.', 'Use a concise value that will not need to change later.'],
       sku: ['Your internal stock-keeping code for search, imports and integrations.', 'Use a unique, stable code.'],
       barcode: ['The scannable identifier supplied by the manufacturer or your organization.', 'Enter digits exactly as printed, without spaces.'],
+      dashboard_headline: ['The personal phrase shown prominently at the top of your Dashboard.', 'Keep it short enough to read at a glance; up to 90 characters.'],
+      dashboard_message: ['Optional supporting context shown directly below your headline.', 'Use up to 180 characters, or leave blank for a headline-only intro.'],
     };
 
     let description = exact[name]?.[0];

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Dashboard users can now replace the default hero copy with a personal
+  motivational headline and optional supporting note, or restore the defaults.
 - Component cards now use larger decorative icons and readable wrapped
   dependency tags, and no longer expose the redundant Source link.
 - The Kontor menu now keeps Components as a fixed destination directly above
