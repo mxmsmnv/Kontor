@@ -80,7 +80,9 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
           <article class="uk-card uk-card-default uk-card-small uk-card-body uk-flex uk-flex-column">
             <header class="uk-grid-small uk-flex-middle" uk-grid>
               <div class="uk-width-auto">
-                <span class="uk-text-primary"><i class="fa fa-<?= $e($component['icon']) ?>"></i></span>
+                <span class="kontor-component-icon" aria-hidden="true">
+                  <i class="fa fa-<?= $e($component['icon']) ?>"></i>
+                </span>
               </div>
               <div class="uk-width-expand">
                 <h3 class="uk-card-title uk-margin-remove"><?= $e($component['title']) ?></h3>
@@ -118,33 +120,24 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
             <?php if ($component['requires']): ?>
               <div class="uk-margin-top">
                 <div class="uk-text-meta uk-margin-small-bottom">Requires</div>
-                <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
+                <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid aria-label="Required components">
                   <?php foreach ($component['requires'] as $dependency): ?>
-                    <code><?= $e($dependency) ?></code>
+                    <span class="uk-label kontor-component-tag"><?= $e($dependency) ?></span>
                   <?php endforeach; ?>
                 </div>
               </div>
             <?php endif; ?>
 
             <?php $canSync = $canSyncComponents && $component['needsAttention'] && $component['runtimeInstalled']; ?>
-            <?php if ($component['href'] !== '' || $canSync): ?>
-              <footer class="uk-flex uk-flex-middle uk-flex-between uk-margin-auto-top uk-padding-small uk-padding-remove-horizontal uk-padding-remove-bottom">
-                <?php if ($component['href'] !== ''): ?>
-                  <a class="uk-button uk-button-text" href="<?= $e($component['href']) ?>" target="_blank" rel="noreferrer">
-                    Source <i class="fa fa-external-link"></i>
-                  </a>
-                <?php else: ?>
-                  <span></span>
-                <?php endif; ?>
-                <?php if ($canSync): ?>
-                  <form method="post" action="<?= $e($adminUrl) ?>component-sync/">
-                    <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-                    <input type="hidden" name="component" value="<?= $e($component['name']) ?>">
-                    <button class="uk-button uk-button-default uk-button-small" type="submit">
-                      <i class="fa fa-refresh"></i> Sync registry
-                    </button>
-                  </form>
-                <?php endif; ?>
+            <?php if ($canSync): ?>
+              <footer class="uk-flex uk-flex-right uk-margin-auto-top uk-padding-small uk-padding-remove-horizontal uk-padding-remove-bottom">
+                <form method="post" action="<?= $e($adminUrl) ?>component-sync/">
+                  <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                  <input type="hidden" name="component" value="<?= $e($component['name']) ?>">
+                  <button class="uk-button uk-button-default uk-button-small" type="submit">
+                    <i class="fa fa-refresh"></i> Sync registry
+                  </button>
+                </form>
               </footer>
             <?php endif; ?>
           </article>

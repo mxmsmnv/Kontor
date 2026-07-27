@@ -442,6 +442,28 @@
   min-width: 0;
 }
 
+.kontor-component-icon {
+  align-items: center;
+  background: var(--pw-main-background);
+  border-radius: 50%;
+  color: var(--pw-main-color);
+  display: inline-flex;
+  font-size: 1.15rem;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.kontor-component-tag {
+  background: var(--pw-main-background);
+  border-radius: 999px;
+  color: var(--pw-text-color);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  padding: 0.28rem 0.55rem;
+  text-transform: none;
+}
+
 .kontor-identity a {
   color: var(--pw-text-color);
   font-weight: 720;
