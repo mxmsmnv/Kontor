@@ -11,8 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   motivational headline and optional supporting note, or restore the defaults.
 - The Dashboard intro dialog now keeps its close control as a native UIkit
   close icon instead of inheriting ProcessWire's full button treatment.
-- Component cards now use native UIkit icon and label primitives with system
-  spacing for readable wrapped dependencies, and no longer expose Source.
+- Component cards now use larger unframed icons and native UIkit labels with
+  system spacing for readable wrapped dependencies, and no longer expose Source.
 - The Kontor menu now keeps Components as a fixed destination directly above
   the renamed Quick Access editor, while preventing duplicate pinned entries.
 - Contacts now uses a clear status-and-archive view switcher, focused search,

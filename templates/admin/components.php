@@ -80,7 +80,7 @@ $attentionSelected = $query === '' && $selectedStatus === 'attention';
           <article class="uk-card uk-card-default uk-card-small uk-card-body uk-flex uk-flex-column">
             <header class="uk-grid-small uk-flex-middle" uk-grid>
               <div class="uk-width-auto">
-                <span class="uk-icon-button uk-text-primary" aria-hidden="true">
+                <span class="uk-text-primary uk-text-large" aria-hidden="true">
                   <i class="fa fa-<?= $e($component['icon']) ?>"></i>
                 </span>
               </div>
