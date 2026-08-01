@@ -63,7 +63,7 @@ and stashed as a `PendingAIAction` instead — the caller gets the pending
 record back, not the raw output, until a human calls `approve()`/
 `reject()`.
 
-External modules can submit an already-redacted approval through `KontorAI::submitExternalApproval()`. The provider/reference mapping is unique and idempotent. Mailbox decisions additionally require `mailbox-confirm-links` and are forwarded to Mailbox before Kontor changes local state; no message body, full URL, query token, or credential is copied into Kontor.
+External modules can submit an already-redacted approval through `KontorAI::submitExternalApproval()`. The provider/reference mapping is unique and idempotent. Mailbox decisions additionally require `mailbox-api` and `mailbox-confirm-links` and are forwarded to Mailbox before Kontor changes local state; no message body, full URL, query token, or credential is copied into Kontor.
 
 ## Contents
 
