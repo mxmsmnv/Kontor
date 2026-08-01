@@ -83,6 +83,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Kontor AI now accepts idempotent, redacted external approval records through a public API; the Mailbox bridge forwards approve/reject decisions through Mailbox's own permission and separation-of-duties checks before changing Kontor state.
+- ProcessKontor module version advanced to `160` for the external-approval decision bridge.
+
 - A complete grouped workspace directory on Dashboard with live search and
   per-user quick-access pinning persisted in ProcessWire user metadata.
 - The Kontor top menu is now a short personal quick-access list rather than a

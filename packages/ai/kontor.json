@@ -4,7 +4,7 @@
     "name": "KontorAI",
     "title": "Kontor AI",
     "description": "Provider contract, Squad adapter, summaries, drafting, extraction, approval workflow.",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "type": "platform",
     "category": "intelligence",
     "license": "MIT",
@@ -24,7 +24,7 @@
     },
     "suggests": {},
     "conflicts": {},
-    "capabilities": [],
+    "capabilities": ["external.approvals"],
     "permissions": [
         "kontor-ai-action-approve"
     ],
@@ -64,13 +64,14 @@
     },
     "storage": {
         "tables": [
-            "kontor_ai_pending_actions"
+            "kontor_ai_pending_actions",
+            "kontor_ai_external_approvals"
         ],
         "directories": []
     },
     "cli": [],
     "security": {
         "externalConnections": ["Squad AI provider (via a deployment-supplied SquadClientInterface)"],
-        "sensitiveData": ["text sent to an AI provider for summarization/drafting/extraction"]
+        "sensitiveData": ["text sent to an AI provider for summarization/drafting/extraction", "redacted external approval references"]
     }
 }

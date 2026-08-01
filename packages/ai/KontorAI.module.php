@@ -6,6 +6,7 @@ use Kontor\AI\Application\AIActionApprovalService;
 use Kontor\AI\Application\AIGateway;
 use Kontor\AI\Application\DraftingService;
 use Kontor\AI\Application\ExtractionService;
+use Kontor\AI\Application\ExternalApprovalService;
 use Kontor\AI\Application\SummaryService;
 use Kontor\AI\Health\AIHealthCheck;
 use Kontor\AI\Infrastructure\Persistence\PendingAIActionRepository;
@@ -14,6 +15,7 @@ use Kontor\AI\Infrastructure\Providers\PreviewAIProvider;
 use Kontor\AI\Infrastructure\Providers\SquadAdapter;
 use Kontor\AI\Infrastructure\Registry\AIProviderRegistry;
 use Kontor\AI\Migrations\Migration0001CreatePendingActionsTable;
+use Kontor\AI\Migrations\Migration0002CreateExternalApprovalsTable;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
@@ -35,7 +37,7 @@ class KontorAI extends WireData implements Module
         return [
             'title' => 'Kontor AI',
             'summary' => 'Provider contract, Squad adapter, summaries, drafting, extraction, approval workflow.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorAI',
             'icon' => 'magic',
@@ -123,6 +125,16 @@ class KontorAI extends WireData implements Module
         return new AIActionApprovalService($this->gateway(), $this->pendingActionRepository());
     }
 
+    public function externalApprovals(): ExternalApprovalService
+    {
+        return new ExternalApprovalService($this->pdo(), $this->pendingActionRepository());
+    }
+
+    public function submitExternalApproval(string $provider, string $externalId, string $organizationUid, array $redactedMetadata, ?int $requestedBy = null): \Kontor\AI\Domain\PendingAIAction
+    {
+        return $this->externalApprovals()->submit($provider, $externalId, $organizationUid, $redactedMetadata, $requestedBy);
+    }
+
     public function healthCheck(): AIHealthCheck
     {
         return new AIHealthCheck($this->pendingActionRepository());
@@ -149,6 +161,7 @@ class KontorAI extends WireData implements Module
         $runner->ensureLedgerExists();
         $runner->run([
             new Migration0001CreatePendingActionsTable(),
+            new Migration0002CreateExternalApprovalsTable(),
         ]);
 
         $components = new ComponentRegistry($pdo);
@@ -158,6 +171,9 @@ class KontorAI extends WireData implements Module
 
     public function ___upgrade($fromVersion, $toVersion): void
     {
+        $runner = new MigrationRunner($this->pdo());
+        $runner->ensureLedgerExists();
+        $runner->run([new Migration0001CreatePendingActionsTable(), new Migration0002CreateExternalApprovalsTable()]);
         $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('ai', self::getModuleInfo()['version'], 'ai');
         $components->enable('ai');

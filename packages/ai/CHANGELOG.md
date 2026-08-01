@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- Added an idempotent external-approval service and mapping migration. Mailbox proposals retain their authoritative permission and separation-of-duties checks when reviewed from Kontor, and only bounded redacted metadata enters the AI approval queue.
+
 - Admin workbench integration for summaries, drafting, and schema extraction;
   a deterministic local-only preview provider for safe end-to-end QA; and
   organization-scoped approval queue review with generated draft output

@@ -105,7 +105,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '159',
+            'version' => '160',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -6389,6 +6389,25 @@ class ProcessKontor extends Process
         $this->requireSameOrganization($pending->organizationId);
         if (!$pending->isPending()) {
             throw new WireException($this->_('This AI action has already been decided.'));
+        }
+        $external = $this->aiModule()->externalApprovals()->referenceForPending($uid);
+        if($external && $external['provider'] === 'mailbox') {
+            $this->requirePermission('mailbox-confirm-links');
+            if(!$this->wire()->modules->isInstalled('Mailbox')) throw new WireException($this->_('Mailbox is not installed.'));
+            $mailboxApi = $this->wire()->modules->get('Mailbox')->api($this->wire()->user);
+            try {
+                if($decision === 'approve') $mailboxApi->approveConfirmation($external['external_id']);
+                else $mailboxApi->rejectConfirmation($external['external_id']);
+            } catch(\Throwable $error) {
+                $wanted = $decision === 'approve' ? 'approved' : 'rejected';
+                $applied = false;
+                try {
+                    foreach($mailboxApi->proposals() as $proposal) {
+                        if(($proposal['id'] ?? '') === $external['external_id'] && ($proposal['status'] ?? '') === $wanted) $applied = true;
+                    }
+                } catch(\Throwable $ignored) {}
+                if(!$applied) throw new WireException($this->_('Mailbox decision failed; the Kontor action was not changed.'));
+            }
         }
         $decided = $decision === 'approve'
             ? $this->aiModule()->approvals()->approve($uid, (int) $this->wire()->user->id)
