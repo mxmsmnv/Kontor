@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Invoice details now separates customer billing, collection and accounting,
+  uses friendly payment and source-order links, and keeps issue, delivery,
+  payment, cancellation and credit actions permission-aware across optional
+  components.
 - Sales order details now separates fulfillment from billing, summarizes
   customer, delivery, payment and totals, guides inventory-aware confirmation,
   and links the source quotation, invoice and reservation warehouse by access.

@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '174',
+            'version' => '175',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2452,6 +2452,31 @@ class ProcessKontor extends Process
                 $invoice->organizationId,
             )
             : [];
+        $canViewPayments = $this->paymentsReady()
+            && $this->can('kontor-payments-payment-view');
+        $allocations = $this->paymentsReady()
+            ? $this->paymentModule()->allocationRepository()->forDocument('invoice', $id)
+            : [];
+        $paymentLabels = [];
+        if ($canViewPayments) {
+            foreach ($allocations as $allocation) {
+                $payment = $this->paymentModule()->paymentRepository()->find($allocation->paymentUid);
+                if ($payment === null || !hash_equals($invoice->organizationId, $payment->organizationId)) {
+                    continue;
+                }
+                $paymentLabels[$allocation->paymentUid] = $payment->number
+                    ?? $payment->transactionReference
+                    ?? sprintf($this->_('Payment on %s'), $allocation->allocatedAt->format('M j, Y'));
+            }
+        }
+        $sourceOrder = null;
+        if ($invoice->orderUid !== null && $this->salesReady() && $this->can('kontor-sales-order-view')) {
+            $candidate = $this->salesModule()->orderRepository()->find($invoice->orderUid);
+            if ($candidate !== null && hash_equals($invoice->organizationId, $candidate->organizationId)) {
+                $sourceOrder = $candidate;
+            }
+        }
+        $showLedger = $this->ledgerReady() && $this->can('kontor-ledger-entry-view');
 
         return $this->renderTemplate('invoice', [
             'invoice' => $invoice,
@@ -2464,19 +2489,24 @@ class ProcessKontor extends Process
             'issuedFile' => $issuedFiles[0] ?? null,
             'customerLabel' => $this->salesCustomerLabels()[
                 $invoice->customerType . ':' . $invoice->customerUid
-            ] ?? $invoice->customerUid,
+            ] ?? $this->_('Customer unavailable'),
+            'sourceOrder' => $sourceOrder,
             'paymentsReady' => $this->paymentsReady(),
-            'allocations' => $this->paymentsReady()
-                ? $this->paymentModule()->allocationRepository()->forDocument('invoice', $id)
-                : [],
+            'allocations' => $allocations,
+            'paymentLabels' => $paymentLabels,
+            'canViewPayments' => $canViewPayments,
+            'canRecordPayment' => $this->paymentsReady()
+                && $this->can('kontor-payments-payment-create')
+                && $this->can('kontor-payments-payment-allocate'),
             'ledgerReady' => $this->ledgerReady(),
-            'ledgerPosting' => $this->ledgerReady()
+            'showLedger' => $showLedger,
+            'ledgerPosting' => $showLedger
                 ? $this->ledgerModule()->entryRepository()->findByReference(
                     LedgerInvoicePostingService::ISSUE_REFERENCE,
                     $id,
                 )
                 : null,
-            'ledgerCancellation' => $this->ledgerReady()
+            'ledgerCancellation' => $showLedger
                 ? $this->ledgerModule()->entryRepository()->findByReference(
                     LedgerInvoicePostingService::CANCELLATION_REFERENCE,
                     $id,
@@ -2490,6 +2520,18 @@ class ProcessKontor extends Process
                 ))
                 : [],
             'customerEmail' => $this->invoiceCustomerEmail($invoice),
+            'canIssue' => $this->can('kontor-invoices-invoice-issue'),
+            'canSend' => $this->can('kontor-invoices-invoice-send'),
+            'canCancel' => $this->can('kontor-invoices-invoice-cancel'),
+            'canCredit' => $this->can('kontor-invoices-credit-note-create'),
+            'documentsReady' => $this->documentsReady(),
+            'filesReady' => $this->filesReady(),
+            'showDocuments' => $this->documentsReady()
+                && $this->can('kontor-documents-template-view'),
+            'showFiles' => $this->filesReady()
+                && $this->can('kontor-files-file-view'),
+            'canManageMailboxes' => $this->mailReady()
+                && $this->can('kontor-mail-mailbox-manage'),
         ]);
     }
 
