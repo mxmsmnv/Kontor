@@ -13,13 +13,17 @@
 /** @var callable $e */
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     number_format($value->amountMinor() / 100, 2, '.', '') . ' ' . $value->currencyCode();
+$contactLabels = [];
+foreach ($contacts as $candidate) {
+    $contactLabels[$candidate->uid->toString()] = $candidate->displayName;
+}
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
     <div>
-      <p class="kontor-eyebrow">Advanced capabilities · Customer experience</p>
+      <p class="kontor-eyebrow">Customer self-service</p>
       <h2>Portal</h2>
-      <p>Provision customer accounts and inspect the exact profile, documents, payments, and files exposed by the portal services.</p>
+      <p>Give customers secure access to their profile, quotations, invoices, payments, and shared files.</p>
     </div>
   </header>
 
@@ -41,27 +45,32 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
   </section>
 
   <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Authentication</p><h3>Verify customer login</h3></div></header>
-    <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-verify/">
-      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-      <label class="kontor-nativefield"><span>Email *</span><input type="email" name="email" required></label>
-      <label class="kontor-nativefield"><span>Password *</span><input type="password" name="password" autocomplete="current-password" required></label>
-      <div class="kontor-nativeform__actions"><button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit">Verify login</button></div>
-    </form>
+    <ul class="uk-margin-remove" uk-accordion><li>
+      <a class="uk-accordion-title" href>Authentication check</a>
+      <div class="uk-accordion-content">
+        <p class="uk-text-meta">Use this diagnostic only when helping a customer troubleshoot access.</p>
+        <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>portal-verify/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <label class="kontor-nativefield"><span>Email *</span><input type="email" name="email" autocomplete="off" required></label>
+          <label class="kontor-nativefield"><span>Password *</span><input type="password" name="password" autocomplete="new-password" required></label>
+          <div class="kontor-nativeform__actions"><button class="uk-button uk-button-default" type="submit">Check credentials</button></div>
+        </form>
+      </div>
+    </li></ul>
   </section>
 
   <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Access directory</p><h3>Portal accounts</h3></div></header>
     <?php if ($accounts !== []): ?>
-      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Email</th><th>Contact UID</th><th>Status</th><th>Last login</th></tr></thead><tbody>
+      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Customer</th><th>Login</th><th>Status</th><th>Last login</th></tr></thead><tbody>
       <?php foreach ($accounts as $account): ?><tr>
-        <td><strong><a href="<?= $e($adminUrl) ?>portal/?id=<?= $e(rawurlencode($account->uid->toString())) ?>"><?= $e($account->email) ?></a></strong></td>
-        <td><code><?= $e($account->contactUid) ?></code></td>
-        <td><?= $e($account->status) ?></td>
-        <td><?= $e($account->lastLoginAt?->format('Y-m-d H:i') ?? 'never') ?></td>
+        <td><strong><a href="<?= $e($adminUrl) ?>portal/?id=<?= $e(rawurlencode($account->uid->toString())) ?>"><?= $e($contactLabels[$account->contactUid] ?? 'Unavailable contact') ?></a></strong></td>
+        <td><?= $e($account->email) ?></td>
+        <td><span class="uk-label kontor-pill<?= $account->isActive() ? '' : ' kontor-pill--inactive' ?>"><?= $e($account->status) ?></span></td>
+        <td><?= $e($account->lastLoginAt?->format('M j, Y · H:i') ?? 'Never') ?></td>
       </tr><?php endforeach; ?>
       </tbody></table>
-    <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No portal accounts.</p></div><?php endif; ?>
+    <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><i class="fa fa-user-circle"></i><h3>No portal accounts</h3><p>Select a contact above to create their secure customer access.</p></div><?php endif; ?>
   </section>
 
   <?php if ($selected !== null && $contact !== null): ?>
@@ -69,8 +78,8 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow"><?= $e($selected->status) ?> account</p><h3><?= $e($contact->displayName) ?></h3></div></header>
       <div class="kontor-detailgrid">
         <div><span>Login</span><strong><?= $e($selected->email) ?></strong></div>
-        <div><span>Contact</span><strong><?= $e($selected->contactUid) ?></strong></div>
-        <div><span>Last login</span><strong><?= $e($selected->lastLoginAt?->format('Y-m-d H:i:s') ?? 'never') ?></strong></div>
+        <div><span>Customer</span><strong><a href="<?= $e($adminUrl) ?>contact/?id=<?= $e(rawurlencode($contact->uid->toString())) ?>"><?= $e($contact->displayName) ?></a></strong></div>
+        <div><span>Last login</span><strong><?= $e($selected->lastLoginAt?->format('M j, Y · H:i') ?? 'Never') ?></strong></div>
         <div><span>Language</span><strong><?= $e($contact->preferredLanguage ?: '—') ?></strong></div>
       </div>
       <form method="post" action="<?= $e($adminUrl) ?>portal-status/">

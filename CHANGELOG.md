@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Files now presents a business-focused document library and version summary,
+  keeping record identifiers, checksums, storage paths and structured metadata
+  inside explicit technical disclosures.
+- Portal now keeps credential diagnostics collapsed, uses customer names
+  instead of contact identifiers, prevents credential autofill in diagnostics,
+  and provides a clear account-empty state.
+- Documents now opens as a compact published-template library; template source
+  and advanced styling remain available on demand without dominating the page.
+- Collaboration now resolves comments and notes to permission-aware human
+  links for their Project, CRM, Tasks, Contacts, and Companies records.
+- Detail summaries across all components once again use a responsive shared
+  grid with readable labels, values and wrapping.
 - The AI workspace now presents outcome-focused tasks, provider readiness and
   human review without exposing provider classes, raw identifiers or JSON setup.
 

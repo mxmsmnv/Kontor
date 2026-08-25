@@ -2,21 +2,18 @@
 
 /** @var \Kontor\Collaboration\Domain\Note[] $notes */
 /** @var \Kontor\Collaboration\Domain\Comment[] $comments */
-/** @var array<string, string> $taskLabels */
+/** @var array<string, array{label: string, route: string}> $entityLinks */
 /** @var array<int, string> $authorLabels */
 /** @var string $adminUrl */
 /** @var callable $e */
 
-$entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $taskLabels): string {
-    if ($type === 'task') {
-        if (isset($taskLabels[$uid])) {
-            return '<a href="' . $e($adminUrl) . 'task/?id=' . $e(rawurlencode($uid)) . '">' . $e($taskLabels[$uid]) . '</a>';
-        }
-
-        return $e('Unavailable task');
+$entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $entityLinks): string {
+    $key = $type . ':' . $uid;
+    if (isset($entityLinks[$key])) {
+        return '<a href="' . $e($adminUrl . $entityLinks[$key]['route']) . '">' . $e($entityLinks[$key]['label']) . '</a>';
     }
 
-    return $e(ucfirst(str_replace('_', ' ', $type)));
+    return $e('Unavailable ' . str_replace('_', ' ', $type));
 };
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">

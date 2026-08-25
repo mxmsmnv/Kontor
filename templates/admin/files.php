@@ -23,6 +23,17 @@ $formatBytes = static function (int $bytes): string {
 
     return number_format($bytes / 1024 / 1024, 1) . ' MB';
 };
+$formatDate = static function (?string $value): string {
+    if ($value === null || $value === '') {
+        return '—';
+    }
+
+    try {
+        return (new DateTimeImmutable($value))->format('M j, Y · H:i');
+    } catch (Throwable) {
+        return $value;
+    }
+};
 $metadata = $selected !== null && is_string($selected['metadata_json'])
     ? json_decode($selected['metadata_json'], true)
     : [];
@@ -32,7 +43,7 @@ $metadata = $selected !== null && is_string($selected['metadata_json'])
     <div>
       <p class="kontor-eyebrow">Infrastructure · Private storage</p>
       <h2>Files</h2>
-      <p>Upload business files, inspect immutable checksums, manage versions, and issue short-lived signed downloads.</p>
+      <p>Keep business documents private, manage their versions, and create short-lived downloads when needed.</p>
     </div>
     <span class="uk-label kontor-pill<?= $storageHealth->status === 'ok' ? '' : ' kontor-pill--inactive' ?>">
       Storage <?= $e($storageHealth->status) ?>
@@ -60,9 +71,19 @@ $metadata = $selected !== null && is_string($selected['metadata_json'])
             <option value="restricted">Restricted</option>
           </select>
         </label>
-        <label class="kontor-nativefield"><span>Entity type</span><input name="entity_type" maxlength="50" placeholder="document"></label>
-        <label class="kontor-nativefield kontor-nativefield--wide"><span>Entity UID</span><input name="entity_uid" maxlength="26" placeholder="ULID; required with entity type"></label>
-        <label class="kontor-nativefield kontor-nativefield--wide"><span>Metadata JSON</span><textarea name="metadata_json" rows="4" placeholder='{"source":"contract"}'></textarea></label>
+        <div class="kontor-nativefield--wide">
+          <ul uk-accordion>
+            <li>
+              <a class="uk-accordion-title" href>Advanced record connection</a>
+              <div class="uk-accordion-content uk-form-stacked kontor-nativeform">
+                <p class="uk-text-meta">Use this only when another component provides a record type and identifier.</p>
+                <label class="kontor-nativefield"><span>Record type</span><input name="entity_type" maxlength="50" placeholder="document"></label>
+                <label class="kontor-nativefield kontor-nativefield--wide"><span>Record identifier</span><input name="entity_uid" maxlength="26"></label>
+                <label class="kontor-nativefield kontor-nativefield--wide"><span>Structured metadata</span><textarea name="metadata_json" rows="4" placeholder='{"source":"contract"}'></textarea></label>
+              </div>
+            </li>
+          </ul>
+        </div>
         <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Upload file</button></div>
       </form>
     </section>
@@ -79,16 +100,16 @@ $metadata = $selected !== null && is_string($selected['metadata_json'])
   <?php endif; ?>
 
   <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
-    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Metadata index</p><h3>Stored files</h3></div></header>
+    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Document library</p><h3>Stored files</h3></div></header>
     <?php if ($files !== []): ?>
       <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-        <thead><tr><th>Name</th><th>Version</th><th>Size</th><th>Classification</th><th>Entity</th><th>Status</th></tr></thead>
+        <thead><tr><th>Name</th><th>Version</th><th class="uk-visible@m">Size</th><th class="uk-visible@m">Classification</th><th class="uk-visible@m">Entity</th><th>Status</th></tr></thead>
         <tbody><?php foreach ($files as $file): ?><tr>
           <td><strong><a href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $file['uid'])) ?>"><?= $e($file['original_name']) ?></a></strong><span class="kontor-secondary"><?= $e($file['mime_type'] ?? 'unknown') ?></span></td>
           <td><?= $e($file['version_number']) ?></td>
-          <td><?= $e($formatBytes((int) $file['size_bytes'])) ?></td>
-          <td><?= $e($file['classification'] ?? '—') ?></td>
-          <td><?= $e($file['entity_type'] !== null ? $file['entity_type'] . ' · ' . $file['entity_uid'] : 'Unattached') ?></td>
+          <td class="uk-visible@m"><?= $e($formatBytes((int) $file['size_bytes'])) ?></td>
+          <td class="uk-visible@m"><?= $e($file['classification'] ?? '—') ?></td>
+          <td class="uk-visible@m"><?= $e($file['entity_type'] !== null ? ucfirst(str_replace('_', ' ', (string) $file['entity_type'])) : 'Unattached') ?></td>
           <td><span class="uk-label kontor-pill<?= $file['archived_at'] !== null ? ' kontor-pill--inactive' : '' ?>"><?= $e($file['archived_at'] !== null ? 'archived' : 'active') ?></span></td>
         </tr><?php endforeach; ?></tbody>
       </table>
@@ -97,48 +118,39 @@ $metadata = $selected !== null && is_string($selected['metadata_json'])
 
   <?php if ($selected !== null): ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-      <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Version <?= $e($selected['version_number']) ?> · <?= $e($selected['visibility']) ?></p><h3><?= $e($selected['original_name']) ?></h3></div></header>
+      <header class="kontor-sectionhead uk-flex-wrap uk-grid-small" uk-grid>
+        <div class="uk-width-expand@m"><p class="kontor-eyebrow">Version <?= $e($selected['version_number']) ?> · <?= $e($selected['visibility']) ?></p><h3><?= $e($selected['original_name']) ?></h3></div>
+        <div class="uk-width-auto@m"><div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
+          <?php if ($selected['archived_at'] === null && $canShare): ?><div><form method="post" action="<?= $e($adminUrl) ?>files-share/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="file_uid" value="<?= $e($selected['uid']) ?>"><button class="uk-button uk-button-primary kontor-button" type="submit"><i class="fa fa-download"></i> Create download</button></form></div><?php endif; ?>
+          <?php if ($canDelete): ?><div><form method="post" action="<?= $e($adminUrl) ?>files-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="file_uid" value="<?= $e($selected['uid']) ?>"><input type="hidden" name="action" value="<?= $e($selected['archived_at'] === null ? 'archive' : 'restore') ?>"><button class="uk-button uk-button-default" type="submit"><?= $e($selected['archived_at'] === null ? 'Archive' : 'Restore') ?></button></form></div><?php endif; ?>
+        </div></div>
+      </header>
       <div class="kontor-detailgrid">
-        <div><span>File UID</span><strong><?= $e($selected['uid']) ?></strong></div>
-        <div><span>Storage</span><strong><?= $e($selected['storage']) ?></strong></div>
-        <div><span>MIME type</span><strong><?= $e($selected['mime_type'] ?? 'unknown') ?></strong></div>
+        <div><span>Format</span><strong><?= $e($selected['mime_type'] ?? 'Unknown') ?></strong></div>
         <div><span>Size</span><strong><?= $e($formatBytes((int) $selected['size_bytes'])) ?></strong></div>
         <div><span>Classification</span><strong><?= $e($selected['classification'] ?? '—') ?></strong></div>
-        <div><span>Created</span><strong><?= $e($selected['created_at']) ?></strong></div>
-        <div><span>Entity type</span><strong><?= $e($selected['entity_type'] ?? '—') ?></strong></div>
-        <div><span>Entity UID</span><strong><?= $e($selected['entity_uid'] ?? '—') ?></strong></div>
+        <div><span>Added</span><strong><?= $e($formatDate((string) $selected['created_at'])) ?></strong></div>
+        <div><span>Connected to</span><strong><?= $e($selected['entity_type'] !== null ? ucfirst(str_replace('_', ' ', (string) $selected['entity_type'])) : 'No record') ?></strong></div>
       </div>
-      <p><strong>SHA-256</strong><br><code><?= $e($selected['checksum']) ?></code></p>
-      <p><strong>Private storage path</strong><br><code><?= $e($selected['path']) ?></code></p>
-      <?php if (is_array($metadata) && $metadata !== []): ?><p><strong>Metadata</strong><br><code><?= $e(json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?></code></p><?php endif; ?>
-      <div class="kontor-actions">
-        <?php if ($selected['archived_at'] === null && $canShare): ?>
-          <form method="post" action="<?= $e($adminUrl) ?>files-share/">
-            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-            <input type="hidden" name="file_uid" value="<?= $e($selected['uid']) ?>">
-            <button class="uk-button uk-button-primary kontor-button" type="submit">Create 15-minute download</button>
-          </form>
-        <?php endif; ?>
-        <?php if ($canDelete): ?>
-          <form method="post" action="<?= $e($adminUrl) ?>files-action/">
-            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-            <input type="hidden" name="file_uid" value="<?= $e($selected['uid']) ?>">
-            <input type="hidden" name="action" value="<?= $e($selected['archived_at'] === null ? 'archive' : 'restore') ?>">
-            <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit"><?= $e($selected['archived_at'] === null ? 'Archive' : 'Restore') ?></button>
-          </form>
-        <?php endif; ?>
-      </div>
+      <ul class="uk-margin-top" uk-accordion><li><a class="uk-accordion-title" href>Technical details</a><div class="uk-accordion-content">
+        <dl class="uk-description-list uk-description-list-divider">
+          <dt>File identifier</dt><dd><code><?= $e($selected['uid']) ?></code></dd>
+          <dt>Checksum</dt><dd><code><?= $e($selected['checksum']) ?></code></dd>
+          <dt>Private storage path</dt><dd><code><?= $e($selected['path']) ?></code></dd>
+          <?php if ($selected['entity_uid'] !== null): ?><dt>Connected record identifier</dt><dd><code><?= $e($selected['entity_uid']) ?></code></dd><?php endif; ?>
+          <?php if (is_array($metadata) && $metadata !== []): ?><dt>Structured metadata</dt><dd><code><?= $e(json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?></code></dd><?php endif; ?>
+        </dl>
+      </div></li></ul>
     </section>
 
     <?php if ($versions !== []): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
         <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Same entity and filename</p><h3>Version history</h3></div></header>
         <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-          <thead><tr><th>Version</th><th>Checksum</th><th>Created</th><th>Status</th></tr></thead>
+          <thead><tr><th>Version</th><th>Created</th><th>Status</th></tr></thead>
           <tbody><?php foreach ($versions as $version): ?><tr>
             <td><strong><a href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $version['uid'])) ?>">Version <?= $e($version['version_number']) ?></a></strong></td>
-            <td><code><?= $e(substr((string) $version['checksum'], 0, 16)) ?>…</code></td>
-            <td><?= $e($version['created_at']) ?></td>
+            <td><?= $e($formatDate((string) $version['created_at'])) ?></td>
             <td><span class="uk-label kontor-pill<?= $version['archived_at'] !== null ? ' kontor-pill--inactive' : '' ?>"><?= $e($version['archived_at'] !== null ? 'archived' : 'active') ?></span></td>
           </tr><?php endforeach; ?></tbody>
         </table>

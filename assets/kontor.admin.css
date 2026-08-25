@@ -564,6 +564,32 @@
   margin: 0 0 0.35rem;
 }
 
+.kontor-detailgrid {
+  display: grid;
+  gap: var(--pw-space-m, 1.25rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  margin-block: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-detailgrid > div {
+  min-width: 0;
+}
+
+.kontor-detailgrid span,
+.kontor-detailgrid strong {
+  display: block;
+}
+
+.kontor-detailgrid span {
+  color: var(--pw-muted-color);
+  font-size: 0.875rem;
+  margin-bottom: var(--pw-space-2xs, 0.25rem);
+}
+
+.kontor-detailgrid strong {
+  overflow-wrap: anywhere;
+}
+
 .kontor-priceactions,
 .kontor-priceactions form {
   align-items: center;

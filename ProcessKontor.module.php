@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '163',
+            'version' => '164',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3183,7 +3183,7 @@ class ProcessKontor extends Process
         return $this->renderTemplate('collaboration', [
             'notes' => $notes,
             'comments' => $comments,
-            'taskLabels' => $this->collaborationTaskLabels(),
+            'entityLinks' => $this->collaborationEntityLinks(array_merge($notes, $comments)),
             'authorLabels' => $this->collaborationAuthorLabels(array_merge($notes, $comments)),
         ]);
     }
@@ -12660,23 +12660,59 @@ class ProcessKontor extends Process
     }
 
     /**
-     * @return array<string, string>
+     * @param array<int, Note|Comment> $records
+     * @return array<string, array{label: string, route: string}>
      */
-    private function collaborationTaskLabels(): array
+    private function collaborationEntityLinks(array $records): array
     {
-        if (!$this->tasksReady()) {
-            return [];
+        $links = [];
+        foreach ($records as $record) {
+            $key = $record->entityType . ':' . $record->entityUid;
+            if (isset($links[$key])) {
+                continue;
+            }
+
+            $entity = null;
+            $route = '';
+            $label = '';
+            if ($record->entityType === 'task' && $this->tasksReady() && $this->can('kontor-tasks-task-view')) {
+                $entity = $this->taskModule()->taskRepository()->find($record->entityUid);
+                $route = 'task/';
+                $label = $entity?->title ?? '';
+            } elseif ($record->entityType === 'project' && $this->projectsReady() && $this->can('kontor-projects-project-view')) {
+                $entity = $this->projectsModule()->projectRepository()->find($record->entityUid);
+                $route = 'project/';
+                $label = $entity?->name ?? '';
+            } elseif ($record->entityType === 'deal' && $this->crmReady() && $this->can('kontor-crm-deal-view')) {
+                $entity = $this->crmModule()->dealRepository()->find($record->entityUid);
+                $route = 'crm-deal/';
+                $label = $entity?->title ?? '';
+            } elseif ($record->entityType === 'lead' && $this->crmReady() && $this->can('kontor-crm-lead-view')) {
+                $entity = $this->crmModule()->leadRepository()->find($record->entityUid);
+                $route = 'crm-lead/';
+                $label = $entity?->title ?? '';
+            } elseif ($record->entityType === 'contact' && $this->contactsReady() && $this->can('kontor-contacts-contact-view')) {
+                $entity = $this->contactRepository()->find($record->entityUid);
+                $route = 'contact/';
+                $label = $entity?->displayName ?? '';
+            } elseif ($record->entityType === 'company' && $this->contactsReady() && $this->can('kontor-contacts-company-view')) {
+                $entity = $this->companyRepository()->find($record->entityUid);
+                $route = 'company/';
+                $label = $entity?->legalName ?? '';
+            }
+
+            if ($entity !== null
+                && property_exists($entity, 'organizationId')
+                && hash_equals($this->organizationUid(), $entity->organizationId)
+                && $label !== '') {
+                $links[$key] = [
+                    'label' => $label,
+                    'route' => $route . '?id=' . rawurlencode($record->entityUid),
+                ];
+            }
         }
 
-        $labels = [];
-        foreach ($this->taskModule()->taskRepository()->findMatching(
-            $this->organizationUid(),
-            limit: 250,
-        ) as $task) {
-            $labels[$task->uid->toString()] = $task->title;
-        }
-
-        return $labels;
+        return $links;
     }
 
     /**

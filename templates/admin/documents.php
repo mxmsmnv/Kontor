@@ -36,13 +36,16 @@ $editing = $selected !== null;
     <div>
       <p class="kontor-eyebrow">Business operations · Output</p>
       <h2>Documents</h2>
-      <p>Versioned multilingual templates, HTML/PDF rendering, and immutable issue snapshots.</p>
+      <p>Create reusable business documents, publish controlled versions, and preview their customer-ready output.</p>
     </div>
   </header>
 
   <?php if ($canCreate || $canEdit): ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-      <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Designer v1</p><h3><?= $e($editing ? 'Publish a new version' : 'Publish template') ?></h3></div></header>
+      <ul class="uk-margin-remove" uk-accordion><li>
+      <a class="uk-accordion-title" href><?= $e($editing ? 'Edit and publish a new version' : 'Create document template') ?></a>
+      <div class="uk-accordion-content">
+      <p class="uk-text-meta">Define the content once, then let invoices, quotations, and other workflows render consistent output.</p>
       <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>documents-publish/">
         <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
         <label class="kontor-nativefield"><span>Template key *</span><input name="template_key" value="<?= $e($selected?->templateKey ?? '') ?>" placeholder="invoice.standard" required></label>
@@ -50,14 +53,17 @@ $editing = $selected !== null;
         <label class="kontor-nativefield"><span>Language *</span><input name="language" value="<?= $e($selected?->language ?? 'en') ?>" maxlength="5" required></label>
         <label class="kontor-nativefield kontor-nativefield--wide"><span>Name *</span><input name="name" value="<?= $e($selected?->name ?? '') ?>" required></label>
         <label class="kontor-nativefield kontor-nativefield--wide"><span>Body HTML *</span><textarea name="body_html" rows="12" required><?= $e($selected?->bodyHtml ?? $defaultBody) ?></textarea></label>
-        <label class="kontor-nativefield kontor-nativefield--wide"><span>Custom CSS</span><textarea name="custom_css" rows="6"><?= $e($selected?->customCss ?? 'body { font: 16px sans-serif; }') ?></textarea></label>
+        <div class="kontor-nativefield--wide"><ul uk-accordion><li><a class="uk-accordion-title" href>Advanced styling</a><div class="uk-accordion-content">
+          <label class="kontor-nativefield kontor-nativefield--wide"><span>Custom CSS</span><textarea name="custom_css" rows="6"><?= $e($selected?->customCss ?? 'body { font: 16px sans-serif; }') ?></textarea></label>
+        </div></li></ul></div>
         <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Publish version</button></div>
       </form>
+      </div></li></ul>
     </section>
   <?php endif; ?>
 
   <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
-    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Version ledger</p><h3>Templates</h3></div></header>
+    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Published library</p><h3>Document templates</h3></div></header>
     <?php if ($templates !== []): ?>
       <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table"><thead><tr><th>Name</th><th>Key</th><th>Type</th><th>Language</th><th>Version</th><th>Status</th></tr></thead><tbody>
       <?php foreach ($templates as $template): ?><tr>
@@ -66,7 +72,7 @@ $editing = $selected !== null;
         <td><?= $e($template->documentType) ?></td>
         <td><?= $e($template->language) ?></td>
         <td>v<?= $e((string) $template->versionNumber) ?></td>
-        <td><?= $e($template->isArchived() ? 'archived' : 'current') ?></td>
+        <td><span class="uk-label kontor-pill<?= $template->isArchived() ? ' kontor-pill--inactive' : '' ?>"><?= $e($template->isArchived() ? 'archived' : 'current') ?></span></td>
       </tr><?php endforeach; ?>
       </tbody></table>
     <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No document templates.</p></div><?php endif; ?>
@@ -76,9 +82,8 @@ $editing = $selected !== null;
     <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
       <header class="kontor-sectionhead"><div><p class="kontor-eyebrow"><?= $e($selected->documentType) ?> · <?= $e($selected->language) ?> · v<?= $e((string) $selected->versionNumber) ?></p><h3><?= $e($selected->name) ?></h3></div></header>
       <div class="kontor-detailgrid">
-        <div><span>Template UID</span><strong><?= $e($selected->uid->toString()) ?></strong></div>
         <div><span>Family key</span><strong><?= $e($selected->templateKey) ?></strong></div>
-        <div><span>Published</span><strong><?= $e($selected->createdAt->format('Y-m-d H:i:s')) ?></strong></div>
+        <div><span>Published</span><strong><?= $e($selected->createdAt->format('M j, Y · H:i')) ?></strong></div>
         <div><span>Status</span><strong><?= $e($selected->isArchived() ? 'archived' : 'current') ?></strong></div>
       </div>
       <?php if ($canArchive): ?><form method="post" action="<?= $e($adminUrl) ?>documents-archive/">
