@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Quotation details now centers the customer, value, commercial terms and
+  locked document output, presents a status-aware next action, links CRM and
+  order context, and hides every workflow action the current role cannot use.
 - New quotation creation now follows a responsive customer-offer and commercial
   terms workflow, uses the organization's currency and language defaults,
   validates numeric inputs in the browser and guides missing customer setup.

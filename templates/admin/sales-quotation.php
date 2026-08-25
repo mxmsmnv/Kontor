@@ -15,6 +15,17 @@
 /** @var bool $mailReady */
 /** @var \Kontor\Mail\Domain\Mailbox[] $mailboxes */
 /** @var string $customerEmail */
+/** @var bool $canIssue */
+/** @var bool $canSend */
+/** @var bool $canAccept */
+/** @var bool $canCancel */
+/** @var bool $canCreateOrder */
+/** @var bool $canViewOrder */
+/** @var bool $documentsReady */
+/** @var bool $filesReady */
+/** @var bool $showDocuments */
+/** @var bool $showFiles */
+/** @var bool $canManageMailboxes */
 /** @var string $error */
 /** @var string $adminUrl */
 /** @var string $csrfName */
@@ -23,6 +34,13 @@
 
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     number_format($value->amountMinor() / 100, 2, '.', ',') . ' ' . $value->currencyCode();
+$humanize = static fn (string $value): string => ucwords(str_replace('_', ' ', $value));
+$statusClass = static fn (string $status): string => match ($status) {
+    'accepted' => ' uk-label-success',
+    'rejected', 'cancelled', 'expired' => ' uk-label-danger',
+    'issued', 'sent' => ' uk-label-warning',
+    default => '',
+};
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
@@ -38,7 +56,7 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
     <div class="uk-alert-danger uk-margin-medium-bottom" uk-alert><p><strong>Quotation could not be saved.</strong> <?= $e($error) ?></p></div>
   <?php endif; ?>
 
-  <?php if ($sourceDeal !== null): ?>
+  <?php if ($sourceDeal !== null && $quotation === null): ?>
     <section class="uk-alert-primary uk-margin-medium-bottom" uk-alert>
       <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid><div><strong>Based on won deal: <?= $e($sourceDeal->title) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $sourceDeal->value !== null ? $e($money($sourceDeal->value)) . ' · ' : '' ?>Customer and value have been carried into this quotation.</div></div><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>crm-deal/?id=<?= $e(rawurlencode($sourceDeal->uid->toString())) ?>">Open deal</a></div></div>
     </section>
@@ -104,85 +122,127 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       </form>
     <?php endif; ?>
   <?php else: ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-documenthead">
-      <div>
-        <span class="uk-label kontor-pill<?= $quotation->isDraft() ? ' kontor-pill--inactive' : '' ?>"><?= $e($quotation->status) ?></span>
-        <strong><?= $e($customers[$quotation->customerType . ':' . $quotation->customerUid] ?? $quotation->customerUid) ?></strong>
-        <span><?= $e($quotation->documentLanguage) ?> · valid until <?= $e($quotation->validUntil?->format('Y-m-d') ?? 'not set') ?></span>
-      </div>
-      <strong><?= $e($money($quotation->total)) ?></strong>
-    </section>
-
-    <?php if ($quotation->isDraft() && $quotationTemplate === null): ?>
-      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-alert uk-alert-warning kontor-warning">
-        <div>
-          <strong>Issuance needs a document template</strong>
-          <p>Publish an active <code>quotation.standard</code> template in <?= $e(strtoupper($quotation->documentLanguage)) ?> (or English fallback) first.</p>
+    <?php
+    $customerName = $customers[$quotation->customerType . ':' . $quotation->customerUid] ?? 'Customer unavailable';
+    $languageName = $languageOptions[$quotation->documentLanguage] ?? strtoupper($quotation->documentLanguage);
+    $nextStep = match ($quotation->status) {
+        'draft' => ['Prepare the customer document', 'Issue the quotation to assign its number and lock the customer-facing PDF.'],
+        'issued' => ['Send or record the decision', 'Deliver the quotation by email, then record whether the customer accepted it.'],
+        'sent' => ['Await the customer decision', 'The quotation has been sent. Record acceptance when the customer confirms.'],
+        'accepted' => $existingOrder === null
+            ? ['Hand off to fulfillment', 'Create a sales order from this accepted quotation.']
+            : ['Continue with the sales order', 'The accepted quotation has already been converted to an order.'],
+        default => ['Quotation closed', 'No further sales action is required for this quotation.'],
+    };
+    ?>
+    <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
+      <div class="uk-grid-medium uk-flex-middle" uk-grid>
+        <div class="uk-width-1-1 uk-width-expand@m">
+          <div class="uk-flex uk-flex-wrap uk-flex-middle uk-grid-small" uk-grid><div><span class="uk-label<?= $statusClass($quotation->status) ?>"><?= $e($humanize($quotation->status)) ?></span></div><?php if ($quotation->number === null): ?><div><span class="uk-text-meta">Not issued</span></div><?php endif; ?></div>
+          <h3 class="uk-card-title uk-margin-small-top uk-margin-small-bottom"><?= $e($customerName) ?></h3>
+          <p class="uk-text-muted uk-margin-remove">Customer quotation<?= $sourceDeal !== null ? ' created from a won CRM deal' : '' ?>.</p>
         </div>
-        <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>documents/">Open Documents</a>
-      </section>
-    <?php elseif ($quotationTemplate !== null): ?>
-      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-        <p class="kontor-eyebrow"><?= $quotation->isDraft() ? 'Issuance template' : 'Immutable issued output' ?></p>
-        <h3><?= $e($quotationTemplate->name) ?> · v<?= $e((string) $quotationTemplate->versionNumber) ?></h3>
-        <p><code><?= $e($quotationTemplate->templateKey) ?></code> · <?= $e(strtoupper($quotationTemplate->language)) ?></p>
-        <?php if ($issuedFile !== null): ?>
-          <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $issuedFile['uid'])) ?>">Open private PDF</a>
-        <?php endif; ?>
-      </section>
-    <?php endif; ?>
-
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
-      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-        <thead><tr><th>Line</th><th>Quantity</th><th>Unit price</th><th>Tax</th><th>Total</th></tr></thead>
-        <tbody>
-          <?php foreach ($lines as $line): ?>
-            <tr><td><strong><?= $e($line->title) ?></strong></td><td><?= $e($line->quantity) ?> <?= $e($line->unitCode) ?></td><td><?= $e($money($line->unitPrice)) ?></td><td><?= $e($line->taxRate) ?>%</td><td><?= $e($money($line->total())) ?></td></tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+        <div class="uk-width-auto@m uk-text-right@m"><div class="uk-text-meta">Quotation total</div><div class="uk-text-large"><strong><?= $e($money($quotation->total)) ?></strong></div></div>
+      </div>
+      <hr>
+      <div class="uk-grid-small uk-grid-divider uk-child-width-1-2 uk-child-width-1-4@l" uk-grid>
+        <div><div class="uk-text-meta">Issued</div><strong><?= $e($quotation->issueDate?->format('M j, Y') ?? 'Not issued yet') ?></strong></div>
+        <div><div class="uk-text-meta">Valid until</div><strong><?= $e($quotation->validUntil?->format('M j, Y') ?? 'No expiry') ?></strong></div>
+        <div><div class="uk-text-meta">Document language</div><strong><?= $e($languageName) ?></strong></div>
+        <div><div class="uk-text-meta">Currency</div><strong><?= $e($quotation->currencyCode) ?></strong></div>
+      </div>
     </section>
 
-    <div class="kontor-documentactions">
-      <?php if ($quotation->status === 'draft'): ?>
-        <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
-          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
+    <div class="uk-grid-medium" uk-grid>
+      <div class="uk-width-1-1 uk-width-2-3@l">
+        <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Commercial terms</p>
+          <h3 class="uk-card-title uk-margin-small-top">Quoted items</h3>
+          <?php if ($lines !== []): ?>
+            <div class="uk-overflow-auto uk-visible@m">
+              <table class="uk-table uk-table-divider uk-table-middle uk-table-small uk-margin-remove-bottom">
+                <thead><tr><th>Item or service</th><th>Quantity</th><th>Unit price</th><th>Tax</th><th class="uk-text-right">Line total</th></tr></thead>
+                <tbody><?php foreach ($lines as $line): ?><tr><td><strong><?= $e($line->title) ?></strong></td><td><?= $e($line->quantity) ?> <?= $e($line->unitCode) ?></td><td><?= $e($money($line->unitPrice)) ?></td><td><?= $e($line->taxRate) ?>%</td><td class="uk-text-right"><strong><?= $e($money($line->total())) ?></strong></td></tr><?php endforeach; ?></tbody>
+              </table>
+            </div>
+            <ul class="uk-list uk-list-divider uk-hidden@m uk-margin-remove-bottom"><?php foreach ($lines as $line): ?><li><strong><?= $e($line->title) ?></strong><div class="uk-grid-small uk-child-width-1-2 uk-margin-small-top" uk-grid><div><span class="uk-text-meta">Quantity</span><br><?= $e($line->quantity) ?> <?= $e($line->unitCode) ?></div><div><span class="uk-text-meta">Unit price</span><br><?= $e($money($line->unitPrice)) ?></div><div><span class="uk-text-meta">Tax</span><br><?= $e($line->taxRate) ?>%</div><div><span class="uk-text-meta">Line total</span><br><strong><?= $e($money($line->total())) ?></strong></div></div></li><?php endforeach; ?></ul>
+          <?php else: ?><div class="uk-placeholder uk-text-center"><p class="uk-text-muted">No commercial items have been added.</p></div><?php endif; ?>
+          <hr>
+          <div class="uk-grid-small uk-flex-right" uk-grid>
+            <div class="uk-width-1-1 uk-width-1-2@s">
+              <dl class="uk-description-list uk-margin-remove">
+                <div class="uk-flex uk-flex-between"><dt>Subtotal</dt><dd><?= $e($money($quotation->subtotal)) ?></dd></div>
+                <?php if ($quotation->discount->amountMinor() > 0): ?><div class="uk-flex uk-flex-between uk-margin-small-top"><dt>Discount</dt><dd>−<?= $e($money($quotation->discount)) ?></dd></div><?php endif; ?>
+                <div class="uk-flex uk-flex-between uk-margin-small-top"><dt>Tax</dt><dd><?= $e($money($quotation->tax)) ?></dd></div>
+                <div class="uk-flex uk-flex-between uk-margin-small-top"><dt><strong>Total</strong></dt><dd><strong><?= $e($money($quotation->total)) ?></strong></dd></div>
+              </dl>
+            </div>
+          </div>
+        </section>
+
+        <section class="uk-card uk-card-default uk-card-small uk-card-body">
+          <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid>
+            <div><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom"><?= $quotation->isDraft() ? 'Document readiness' : 'Customer document' ?></p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom"><?= $quotation->isDraft() ? 'Quotation PDF' : 'Issued quotation' ?></h3></div>
+            <?php if (!$quotation->isDraft()): ?><div><span class="uk-label uk-label-success"><i class="fa fa-lock"></i> Locked output</span></div><?php endif; ?>
+          </div>
           <?php if ($quotationTemplate !== null): ?>
-            <button class="uk-button uk-button-primary kontor-button" name="action" value="issue" type="submit">Issue quotation + PDF</button>
-          <?php endif; ?>
-          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
-        </form>
-      <?php elseif ($quotation->isOpen()): ?>
-        <?php if ($mailReady && $mailboxes !== []): ?>
-          <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
-            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
-            <label>From
-              <select name="mailbox_uid" required>
-                <?php foreach ($mailboxes as $mailbox): ?><option value="<?= $e($mailbox->uid->toString()) ?>"><?= $e($mailbox->name . ' · ' . $mailbox->emailAddress) ?></option><?php endforeach; ?>
-              </select>
-            </label>
-            <label>Recipient <input type="email" name="recipient" value="<?= $e($customerEmail) ?>" required></label>
-            <label><input type="checkbox" name="dry_run" value="1" checked> Simulate delivery</label>
-            <button class="uk-button uk-button-primary kontor-button" name="action" value="send" type="submit"><?= $quotation->status === 'sent' ? 'Send again via Mail' : 'Send via Mail' ?></button>
-          </form>
-        <?php elseif ($mailReady): ?>
-          <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>mail/">Create an active mailbox first</a>
-        <?php else: ?>
-          <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>components/">Enable Kontor Mail first</a>
+            <p class="uk-text-muted"><?= $quotation->isDraft() ? 'Ready to render with' : 'Rendered from' ?> <?= $e($quotationTemplate->name) ?>, version <?= $e((string) $quotationTemplate->versionNumber) ?> in <?= $e($languageName) ?>.</p>
+            <?php if ($quotation->isDraft() && !$filesReady): ?><div class="uk-alert-warning" uk-alert><p><strong>Private file storage is required to issue this quotation.</strong> Enable Files so Kontor can preserve the locked PDF.</p></div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>components/">Open components</a><?php endif; ?>
+            <?php if ($issuedFile !== null && $showFiles): ?><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>files/?id=<?= $e(rawurlencode((string) $issuedFile['uid'])) ?>"><i class="fa fa-file-pdf-o"></i> Open issued PDF</a><?php elseif (!$quotation->isDraft()): ?><p class="uk-text-meta uk-margin-remove-bottom">The issued document is stored privately. File access is required to open it.</p><?php endif; ?>
+          <?php elseif ($quotation->isDraft()): ?>
+            <div class="uk-alert-warning" uk-alert><p><strong>A published quotation template is required before issue.</strong> <?= $documentsReady ? 'Publish a template for this document language or an English fallback.' : 'Enable Documents and Files to generate locked customer PDFs.' ?></p></div>
+            <?php if ($showDocuments): ?><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>documents/"><i class="fa fa-file-text-o"></i> Open document templates</a><?php elseif (!$documentsReady || !$filesReady): ?><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>components/">Open components</a><?php endif; ?>
+          <?php else: ?><p class="uk-text-muted uk-margin-remove-bottom">The customer document metadata is unavailable because Documents is not active.</p><?php endif; ?>
+        </section>
+      </div>
+
+      <div class="uk-width-1-1 uk-width-1-3@l">
+        <section class="uk-card uk-card-default uk-card-small uk-card-body">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Next step</p>
+          <h3 class="uk-card-title uk-margin-small-top"><?= $e($nextStep[0]) ?></h3>
+          <p class="uk-text-muted"><?= $e($nextStep[1]) ?></p>
+
+          <?php if ($quotation->status === 'draft'): ?>
+            <?php if ($canIssue && $quotationTemplate !== null && $filesReady): ?><form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>"><button class="uk-button uk-button-primary uk-width-1-1" name="action" value="issue" type="submit" data-kontor-confirm="Issue this quotation and lock its customer PDF?"><i class="fa fa-file-pdf-o"></i> Issue quotation</button></form><?php elseif ($canIssue): ?><p class="uk-text-meta">Complete the document setup shown beside the quotation before issuing.</p><?php endif; ?>
+          <?php elseif ($quotation->isOpen()): ?>
+            <?php if ($canSend && $mailReady && $mailboxes !== []): ?><button class="uk-button uk-button-primary uk-width-1-1" type="button" uk-toggle="target: #quotation-send"><i class="fa fa-envelope"></i> <?= $quotation->status === 'sent' ? 'Send again' : 'Send quotation' ?></button>
+            <?php elseif ($canSend && $mailReady && $canManageMailboxes): ?><a class="uk-button uk-button-default uk-width-1-1 uk-link-reset" href="<?= $e($adminUrl) ?>mail/">Set up a mailbox</a>
+            <?php elseif ($canSend && $mailReady): ?><p class="uk-text-meta">An active shared mailbox is required. Ask a Mail administrator to configure one.</p>
+            <?php elseif ($canSend && !$mailReady): ?><a class="uk-button uk-button-default uk-width-1-1 uk-link-reset" href="<?= $e($adminUrl) ?>components/">Enable Mail to send</a><?php endif; ?>
+            <?php if ($canAccept): ?><form class="uk-margin-small-top" method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>"><button class="uk-button uk-button-default uk-width-1-1" name="action" value="accept" type="submit" data-kontor-confirm="Record that the customer accepted this quotation?"><i class="fa fa-check"></i> Record acceptance</button></form><?php endif; ?>
+          <?php elseif ($quotation->isAccepted() && $existingOrder === null && $canCreateOrder): ?>
+            <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>"><button class="uk-button uk-button-primary uk-width-1-1" name="action" value="convert" type="submit"><i class="fa fa-shopping-cart"></i> Create sales order</button></form>
+          <?php elseif ($existingOrder !== null && $canViewOrder): ?>
+            <a class="uk-button uk-button-primary uk-width-1-1 uk-link-reset" href="<?= $e($adminUrl) ?>sales-order/?id=<?= $e(rawurlencode($existingOrder->uid->toString())) ?>"><i class="fa fa-shopping-cart"></i> Open <?= $e($existingOrder->number ?? 'sales order') ?></a>
+          <?php elseif ($existingOrder !== null): ?><p class="uk-text-meta">A sales order has been created. Order access is required to continue.</p><?php endif; ?>
+
+          <?php if ($canCancel && !$quotation->isClosed()): ?><hr><form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>"><button class="uk-button uk-button-text uk-text-danger" name="action" value="cancel" type="submit" data-kontor-confirm="Cancel this quotation?">Cancel quotation</button></form><?php endif; ?>
+        </section>
+
+        <?php if ($sourceDeal !== null || $existingOrder !== null): ?>
+          <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
+            <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Connected work</p><h3 class="uk-card-title uk-margin-small-top">Related records</h3>
+            <ul class="uk-list uk-list-divider uk-margin-remove-bottom">
+              <?php if ($sourceDeal !== null): ?><li><div class="uk-text-meta">Source CRM deal</div><strong><?= $e($sourceDeal->title) ?></strong><div class="uk-margin-small-top"><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>crm-deal/?id=<?= $e(rawurlencode($sourceDeal->uid->toString())) ?>">Open deal</a></div></li><?php endif; ?>
+              <?php if ($existingOrder !== null && $canViewOrder): ?><li><div class="uk-text-meta">Sales order</div><strong><?= $e($existingOrder->number ?? 'Pending order') ?></strong><div class="uk-margin-small-top"><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>sales-order/?id=<?= $e(rawurlencode($existingOrder->uid->toString())) ?>">Open order</a></div></li><?php endif; ?>
+            </ul>
+          </section>
         <?php endif; ?>
-        <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
-          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
-          <button class="uk-button uk-button-primary kontor-button" name="action" value="accept" type="submit">Accept quotation</button>
-          <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" name="action" value="cancel" type="submit">Cancel</button>
-        </form>
-      <?php elseif ($quotation->isAccepted() && $existingOrder === null): ?>
-        <form method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
-          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
-          <button class="uk-button uk-button-primary kontor-button" name="action" value="convert" type="submit">Create sales order</button>
-        </form>
-      <?php elseif ($existingOrder !== null): ?>
-        <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>sales-order/?id=<?= $e(rawurlencode($existingOrder->uid->toString())) ?>">Open <?= $e($existingOrder->number ?? 'sales order') ?></a>
-      <?php endif; ?>
+      </div>
     </div>
+
+    <?php if ($quotation->isOpen() && $canSend && $mailReady && $mailboxes !== []): ?>
+      <div id="quotation-send" uk-modal><div class="uk-modal-dialog uk-modal-body">
+        <a class="uk-modal-close-default" href="#" role="button" uk-close aria-label="Close"></a>
+        <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Customer delivery</p><h2 class="uk-modal-title uk-margin-small-top"><?= $quotation->status === 'sent' ? 'Send quotation again' : 'Send quotation' ?></h2><p class="uk-text-muted">Kontor records the message in Mail and links it to this quotation.</p>
+        <form class="uk-form-stacked" method="post" action="<?= $e($adminUrl) ?>sales-quotation-action/">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($quotation->uid->toString()) ?>">
+          <div class="uk-margin"><label class="uk-form-label" for="quotation-mailbox">From mailbox</label><select class="uk-select uk-margin-small-top" id="quotation-mailbox" name="mailbox_uid" required><?php foreach ($mailboxes as $mailbox): ?><option value="<?= $e($mailbox->uid->toString()) ?>"><?= $e($mailbox->name . ' · ' . $mailbox->emailAddress) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Choose the shared mailbox the customer should reply to.</div></div>
+          <div class="uk-margin"><label class="uk-form-label" for="quotation-recipient">Recipient</label><input class="uk-input uk-margin-small-top" id="quotation-recipient" type="email" name="recipient" value="<?= $e($customerEmail) ?>" placeholder="customer@example.com" required><div class="uk-text-meta uk-margin-small-top">Confirm the address before sending customer information.</div></div>
+          <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="dry_run" value="1" checked> <span class="uk-margin-small-left"><strong>Test only</strong></span><span class="uk-text-meta uk-display-block uk-margin-small-left">Record the delivery without sending an external email.</span></label>
+          <div class="uk-flex uk-flex-right uk-grid-small" uk-grid><div><button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button></div><div><button class="uk-button uk-button-primary" name="action" value="send" type="submit"><i class="fa fa-envelope"></i> <?= $quotation->status === 'sent' ? 'Send again' : 'Send quotation' ?></button></div></div>
+        </form>
+      </div></div>
+    <?php endif; ?>
   <?php endif; ?>
 </div>

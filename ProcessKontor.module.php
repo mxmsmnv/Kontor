@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '172',
+            'version' => '173',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1976,6 +1976,17 @@ class ProcessKontor extends Process
             'customerEmail' => $quotation !== null
                 ? $this->quotationCustomerEmail($quotation)
                 : '',
+            'canIssue' => $this->can('kontor-sales-quotation-issue'),
+            'canSend' => $this->can('kontor-sales-quotation-send'),
+            'canAccept' => $this->can('kontor-sales-quotation-accept'),
+            'canCancel' => $this->can('kontor-sales-quotation-cancel'),
+            'canCreateOrder' => $this->can('kontor-sales-order-create'),
+            'canViewOrder' => $this->can('kontor-sales-order-view'),
+            'documentsReady' => $this->documentsReady(),
+            'filesReady' => $this->filesReady(),
+            'showDocuments' => $this->documentsReady() && $this->can('kontor-documents-template-view'),
+            'showFiles' => $this->filesReady() && $this->can('kontor-files-file-view'),
+            'canManageMailboxes' => $this->mailReady() && $this->can('kontor-mail-mailbox-manage'),
             'error' => $error,
         ]);
     }
