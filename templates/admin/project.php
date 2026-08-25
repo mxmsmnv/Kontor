@@ -15,6 +15,8 @@
 /** @var bool $canGenerateInvoice */
 /** @var bool $canViewTasks */
 /** @var bool $canViewInvoices */
+/** @var bool $canViewContacts */
+/** @var bool $canViewCompanies */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -100,17 +102,44 @@ $projectUid = $project?->uid->toString() ?? '';
   <?php if ($project === null): ?>
     <div class="uk-grid-medium" uk-grid>
       <div class="uk-width-1-1 uk-width-2-3@l">
-        <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked kontor-nativeform" method="post" action="./">
+        <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-form-stacked" method="post" action="./">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-          <label class="kontor-nativefield"><span>Project code *</span><input name="code" value="<?= $e($values['code']) ?>" maxlength="50" placeholder="WEBSITE-2026" required></label>
-          <label class="kontor-nativefield"><span>Project name *</span><input name="name" value="<?= $e($values['name']) ?>" placeholder="Customer-facing outcome" required></label>
-          <label class="kontor-nativefield kontor-nativefield--wide"><span>Customer *</span><select name="customer" aria-label="Customer" required><option value="">Select customer</option><?php foreach ($customers as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['customer'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select></label>
-          <label class="kontor-nativefield"><span>Default hourly rate *</span><input name="hourly_rate" type="number" min="0.01" step="0.01" value="<?= $e($values['hourlyRate']) ?>" placeholder="125.00" required></label>
-          <label class="kontor-nativefield"><span>Currency *</span><input name="currency_code" value="<?= $e($values['currencyCode']) ?>" maxlength="3" required></label>
-          <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit" name="submit_save" value="1">Create project</button><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>projects/">Cancel</a></div>
+          <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Project foundation</p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom">Create a delivery strategy</h3><p class="uk-text-muted uk-margin-small-top">Start with the customer outcome and commercial agreement. Detailed planning comes next.</p></div><div><span class="uk-label"><?= $e((string) count($customers)) ?> customer<?= count($customers) === 1 ? '' : 's' ?> available</span></div></div>
+
+          <fieldset class="uk-fieldset uk-margin-medium-top">
+            <legend class="uk-legend">1. Define the outcome</legend>
+            <p class="uk-text-muted uk-margin-small-top">Use language the customer and delivery team will both understand.</p>
+            <div class="uk-grid-small" uk-grid>
+              <label class="kontor-nativefield uk-width-1-1 uk-width-2-3@m"><span>Project name *</span><input name="name" value="<?= $e($values['name']) ?>" maxlength="191" placeholder="Modernize the customer onboarding process" autocomplete="off" required><span class="kontor-field-guidance"><span class="kontor-field-description">The outcome teammates and the customer will recognize throughout delivery.</span><span class="kontor-field-note"><strong>Note:</strong> Describe the result, not the internal activity.</span></span></label>
+              <label class="kontor-nativefield uk-width-1-1 uk-width-1-3@m"><span>Project code *</span><input name="code" value="<?= $e($values['code']) ?>" maxlength="50" pattern="[A-Za-z0-9_-]{1,50}" placeholder="ONBOARDING-2026" autocomplete="off" required><span class="kontor-field-guidance"><span class="kontor-field-description">A stable short reference used in lists, exports and integrations.</span><span class="kontor-field-note"><strong>Note:</strong> Letters, numbers, hyphens and underscores only.</span></span></label>
+            </div>
+          </fieldset>
+
+          <hr class="uk-margin-medium">
+          <fieldset class="uk-fieldset">
+            <legend class="uk-legend">2. Connect the customer</legend>
+            <p class="uk-text-muted uk-margin-small-top">The project will inherit its customer context for delivery and future invoicing.</p>
+            <?php if ($customers !== []): ?><label class="kontor-nativefield"><span>Customer *</span><select name="customer" aria-label="Customer" required><option value="">Select customer</option><?php foreach ($customers as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['customer'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><span class="kontor-field-guidance"><span class="kontor-field-description">The contact or company that owns the commercial relationship.</span><span class="kontor-field-note"><strong>Note:</strong> Confirm the correct record before creating delivery and billing history.</span></span></label><?php else: ?><div class="uk-alert-warning" uk-alert><p><strong>A customer is required before a project can begin.</strong><br>Create a contact or company, then return here to connect the project.</p></div><?php endif; ?>
+          </fieldset>
+
+          <hr class="uk-margin-medium">
+          <fieldset class="uk-fieldset">
+            <legend class="uk-legend">3. Set commercial defaults</legend>
+            <p class="uk-text-muted uk-margin-small-top">These values price tracked time and keep future draft invoices consistent.</p>
+            <div class="uk-grid-small" uk-grid>
+              <label class="kontor-nativefield uk-width-1-1 uk-width-2-3@s"><span>Default hourly rate *</span><div class="uk-inline uk-width-1-1"><span class="uk-form-icon"><i class="fa fa-money"></i></span><input name="hourly_rate" type="number" min="0.01" step="0.01" inputmode="decimal" value="<?= $e($values['hourlyRate']) ?>" placeholder="125.00" required></div><span class="kontor-field-guidance"><span class="kontor-field-description">The default price applied to billable time unless an entry overrides it.</span><span class="kontor-field-note"><strong>Note:</strong> Enter the amount without a currency symbol.</span></span></label>
+              <label class="kontor-nativefield uk-width-1-1 uk-width-1-3@s"><span>Currency *</span><input name="currency_code" value="<?= $e($values['currencyCode']) ?>" maxlength="3" pattern="[A-Za-z]{3}" placeholder="EUR" autocomplete="off" required><span class="kontor-field-guidance"><span class="kontor-field-description">The currency used for project time, charges and draft invoices.</span><span class="kontor-field-note"><strong>Note:</strong> Use a three-letter code such as EUR or USD.</span></span></label>
+            </div>
+          </fieldset>
+
+          <div class="uk-alert-primary uk-margin-medium-top" uk-alert><p><i class="fa fa-info-circle"></i> The project starts as <strong>Active</strong>. After creation, add dates and milestones before recording delivery.</p></div>
+          <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small uk-margin-medium-top" uk-grid><div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>projects/"><i class="fa fa-arrow-left"></i> Cancel</a></div><div><button class="uk-button uk-button-primary" type="submit" name="submit_save" value="1"<?= $customers === [] ? ' disabled' : '' ?>>Create project <i class="fa fa-angle-right"></i></button></div></div>
         </form>
       </div>
-      <div class="uk-width-1-1 uk-width-1-3@l"><aside class="uk-card uk-card-default uk-card-small uk-card-body"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Before you begin</p><h3 class="uk-card-title uk-margin-small-top">Define the commercial frame</h3><p class="uk-text-muted">The customer, rate and currency become the defaults for tracked time and future billing. You can add milestones and charges after creating the project.</p></aside></div>
+      <div class="uk-width-1-1 uk-width-1-3@l">
+        <aside class="uk-card uk-card-default uk-card-small uk-card-body"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">What happens next</p><h3 class="uk-card-title uk-margin-small-top">From strategy to delivery</h3><p class="uk-text-muted">Creation establishes the project shell. No invoice is created and nothing is sent to the customer.</p><ol class="uk-list uk-list-divider uk-margin-medium-top"><li><div class="uk-flex uk-flex-top"><span class="uk-label uk-margin-small-right">1</span><span><strong>Plan milestones</strong><br><span class="uk-text-meta">Turn the desired outcome into reviewable stages and dates.</span></span></div></li><li><div class="uk-flex uk-flex-top"><span class="uk-label uk-margin-small-right">2</span><span><strong>Capture delivery</strong><br><span class="uk-text-meta">Record billable time and customer-approved charges.</span></span></div></li><li><div class="uk-flex uk-flex-top"><span class="uk-label uk-margin-small-right">3</span><span><strong>Review billing</strong><br><span class="uk-text-meta">Prepare a draft invoice only when the work is ready.</span></span></div></li></ol></aside>
+        <aside class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Customer records</p><h3 class="uk-card-title uk-margin-small-top"><?= $customers !== [] ? 'Need another customer?' : 'Create the first customer' ?></h3><p class="uk-text-muted"><?= $customers !== [] ? 'Create or review the commercial party before starting the project when the right record is not listed.' : 'Projects require a contact or company so delivery and invoicing stay connected.' ?></p><div class="uk-grid-small uk-child-width-1-1" uk-grid><?php if ($canViewCompanies): ?><div><a class="uk-button uk-button-default uk-width-1-1 uk-link-reset" href="<?= $e($adminUrl) ?>companies/"><i class="fa fa-building-o"></i> Companies</a></div><?php endif; ?><?php if ($canViewContacts): ?><div><a class="uk-button uk-button-default uk-width-1-1 uk-link-reset" href="<?= $e($adminUrl) ?>contacts/"><i class="fa fa-address-book-o"></i> Contacts</a></div><?php endif; ?></div></aside>
+      </div>
     </div>
   <?php else: ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">

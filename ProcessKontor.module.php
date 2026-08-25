@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '199',
+            'version' => '200',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5258,6 +5258,8 @@ class ProcessKontor extends Process
             'canGenerateInvoice' => $this->can('kontor-projects-invoice-generate'),
             'canViewTasks' => $this->tasksReady() && $this->can('kontor-tasks-task-view'),
             'canViewInvoices' => $this->invoicesReady() && $this->can('kontor-invoices-invoice-view'),
+            'canViewContacts' => $this->contactsReady() && $this->can('kontor-contacts-contact-view'),
+            'canViewCompanies' => $this->contactsReady() && $this->can('kontor-contacts-company-view'),
         ]);
     }
 

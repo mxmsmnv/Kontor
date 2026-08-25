@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- New project creation now guides users through the desired outcome, customer
+  promise and commercial defaults, explains the resulting workflow, and handles
+  missing customer records with clear permission-aware next steps.
+
 - Project details now acts as a strategic delivery workspace with progress,
   schedule, tracked effort, invoice readiness, a guided plan-to-billing flow and
   compact on-demand forms for milestones, time and additional charges.
