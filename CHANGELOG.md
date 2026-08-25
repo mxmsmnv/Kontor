@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Files now separates the searchable document library from focused file
+  details, uses a guided upload dialog, presents human file types and storage
+  health, links available business records, and keeps raw storage metadata in
+  an explicit technical disclosure.
 - Portal now centers the customer access directory, account readiness and
   customer-visible documents; account creation uses a guided modal, account
   details use a responsive profile-and-content workspace, and sign-in

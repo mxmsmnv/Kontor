@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '166',
+            'version' => '167',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5846,14 +5846,63 @@ class ProcessKontor extends Process
         }
         $shareResult = $this->wire()->session->get('kontorFilesShareResult');
         $this->wire()->session->set('kontorFilesShareResult', null);
-        $this->setPageTitle($this->_('Kontor · Files'));
+        $allFiles = $module->fileRepository()->forOrganization($this->organizationInternalId());
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $classification = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('classification'),
+            ['general', 'financial', 'confidential', 'restricted']
+        );
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['active', 'archived']
+        );
+        $files = array_values(array_filter(
+            $allFiles,
+            static function (array $file) use ($query, $classification, $status): bool {
+                if ($query !== '' && stripos((string) $file['original_name'], $query) === false) {
+                    return false;
+                }
+                if ($classification !== null && $classification !== ''
+                    && (string) $file['classification'] !== $classification) {
+                    return false;
+                }
+                if ($status === 'active' && $file['archived_at'] !== null) {
+                    return false;
+                }
+                if ($status === 'archived' && $file['archived_at'] === null) {
+                    return false;
+                }
+
+                return true;
+            }
+        ));
+        $entityRoutes = array_filter([
+            'contact' => $this->contactsReady() && $this->can('kontor-contacts-contact-view') ? 'contact/' : null,
+            'company' => $this->contactsReady() && $this->can('kontor-contacts-company-view') ? 'company/' : null,
+            'lead' => $this->crmReady() && $this->can('kontor-crm-lead-view') ? 'crm-lead/' : null,
+            'deal' => $this->crmReady() && $this->can('kontor-crm-deal-view') ? 'crm-deal/' : null,
+            'task' => $this->tasksReady() && $this->can('kontor-tasks-task-view') ? 'task/' : null,
+            'project' => $this->projectsReady() && $this->can('kontor-projects-project-view') ? 'project/' : null,
+            'catalog_item' => $this->catalogReady() && $this->can('kontor-catalog-item-view') ? 'catalog-item/' : null,
+            'invoice' => $this->invoicesReady() && $this->can('kontor-invoices-invoice-view') ? 'invoice/' : null,
+            'quotation' => $this->salesReady() && $this->can('kontor-sales-quotation-view') ? 'quotation/' : null,
+            'document_template' => $this->documentsReady() && $this->can('kontor-documents-template-view') ? 'documents/' : null,
+        ]);
+        $this->setPageTitle($selected === null
+            ? $this->_('Kontor · Files')
+            : sprintf($this->_('Kontor · %s'), (string) $selected['original_name']));
 
         return $this->renderTemplate('files', [
-            'files' => $module->fileRepository()->forOrganization($this->organizationInternalId()),
+            'files' => $files,
+            'allFiles' => $allFiles,
             'selected' => $selected,
             'versions' => $versions,
             'shareResult' => is_array($shareResult) ? $shareResult : null,
             'storageHealth' => $module->healthCheck()->run(),
+            'query' => $query,
+            'selectedClassification' => $classification,
+            'selectedStatus' => $status,
+            'entityRoutes' => $entityRoutes,
             'canUpload' => $this->can('kontor-files-file-upload'),
             'canDownload' => $this->can('kontor-files-file-download'),
             'canShare' => $this->can('kontor-files-file-share'),
