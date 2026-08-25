@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '201',
+            'version' => '202',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4369,7 +4369,7 @@ class ProcessKontor extends Process
                 'legalName' => trim($this->wire()->sanitizer->text(
                     (string) $this->wire()->input->post('legal_name')
                 )),
-                'email' => trim($this->wire()->sanitizer->email(
+                'email' => trim($this->wire()->sanitizer->text(
                     (string) $this->wire()->input->post('email')
                 )),
                 'phone' => trim($this->wire()->sanitizer->text(
@@ -4386,6 +4386,8 @@ class ProcessKontor extends Process
                 $error = $this->_('Supplier code must use letters, numbers, hyphens, or underscores.');
             } elseif ($values['legalName'] === '') {
                 $error = $this->_('Supplier legal name is required.');
+            } elseif ($values['email'] !== '' && filter_var($values['email'], FILTER_VALIDATE_EMAIL) === false) {
+                $error = $this->_('Enter a valid ordering email address.');
             } elseif (preg_match('/^[A-Z]{3}$/', $values['currencyCode']) !== 1) {
                 $error = $this->_('Currency must be a three-letter code.');
             }

@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- New supplier setup now separates vendor identity, ordering contacts and
+  commercial defaults, adds specific field guidance and validation, and
+  explains the downstream purchase-order and receipt workflow.
+
 - Purchasing now provides an operational buy-side workspace with supplier-first
   onboarding, purchase-order search and status filters, receipt and overdue
   signals, committed-value context, and permission-aware inventory and expense
