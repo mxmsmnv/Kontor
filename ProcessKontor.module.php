@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '164',
+            'version' => '165',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -6161,7 +6161,11 @@ class ProcessKontor extends Process
         }
         $preview = $this->wire()->session->get('kontorDocumentsPreview');
         $this->wire()->session->set('kontorDocumentsPreview', null);
-        $this->setPageTitle($this->_('Kontor · Documents'));
+        $this->setPageTitle($selected !== null
+            ? sprintf($this->_('Kontor · %s'), $selected->name)
+            : $this->_('Kontor · Documents'));
+
+        $filesReady = $this->wire()->modules->isInstalled('KontorFiles');
 
         return $this->renderTemplate('documents', [
             'templates' => $module->templateRepository()->forOrganization($this->organizationUid()),
@@ -6170,7 +6174,8 @@ class ProcessKontor extends Process
             'canCreate' => $this->can('kontor-documents-template-create'),
             'canEdit' => $this->can('kontor-documents-template-edit'),
             'canArchive' => $this->can('kontor-documents-template-archive'),
-            'canRender' => $this->can('kontor-documents-render'),
+            'canRender' => $filesReady && $this->can('kontor-documents-render'),
+            'filesReady' => $filesReady,
         ]);
     }
 
@@ -6242,16 +6247,46 @@ class ProcessKontor extends Process
         $template = $this->documentsModule()->templateRepository()->require($uid);
         $this->requireSameOrganization($template->organizationId);
         $rawData = trim((string) $this->wire()->input->post('data_json'));
-        if ($rawData === '' || strlen($rawData) > 262144) {
-            throw new WireException($this->_('Preview JSON is required and must be at most 256 KB.'));
+        if (strlen($rawData) > 262144) {
+            throw new WireException($this->_('Advanced preview data must be at most 256 KB.'));
         }
-        try {
-            $data = json_decode($rawData, true, flags: JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            throw new WireException($this->_('Preview data must be valid JSON.'));
-        }
-        if (!is_array($data)) {
-            throw new WireException($this->_('Preview data must be a JSON object or array.'));
+        if ($rawData !== '') {
+            try {
+                $data = json_decode($rawData, true, flags: JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw new WireException($this->_('Advanced preview data must contain valid JSON.'));
+            }
+            if (!is_array($data)) {
+                throw new WireException($this->_('Advanced preview data must be a JSON object or array.'));
+            }
+        } else {
+            $title = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('preview_title')
+            ));
+            $customer = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('customer_name')
+            ));
+            $description = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('line_description')
+            ));
+            $amount = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('line_amount')
+            ));
+            $note = trim($this->wire()->sanitizer->textarea(
+                (string) $this->wire()->input->post('note')
+            ));
+            if ($title === '' || $customer === '' || $description === '' || $amount === '') {
+                throw new WireException($this->_('Title, customer, line description and amount are required for a preview.'));
+            }
+            $data = [
+                'title' => mb_substr($title, 0, 255),
+                'customer' => ['name' => mb_substr($customer, 0, 255)],
+                'lines' => [[
+                    'description' => mb_substr($description, 0, 500),
+                    'amount' => mb_substr($amount, 0, 100),
+                ]],
+                'note' => $note !== '' ? mb_substr($note, 0, 1000) : null,
+            ];
         }
         $renderer = $this->documentsModule()->renderService();
         $snapshot = $this->documentsModule()->snapshotBuilder()->build($template, $data);
@@ -11176,6 +11211,9 @@ class ProcessKontor extends Process
                 ['catalog/', 'Catalog'],
                 ['catalog-price-lists/', 'Price lists'],
             ],
+            'documents' => (string) $this->wire()->input->get('id') !== ''
+                ? [['documents/', 'Documents']]
+                : [],
             'import' => $this->importBreadcrumbTrail(),
             default => [],
         };
