@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- CRM leads now provides a business-readable qualification workspace with
+  stage counts, guided workflow context, customer-aware opportunity rows,
+  explicit record and archive actions, meaningful follow-up states and a
+  responsive search and view experience that respects optional permissions.
+
 - Contact details now provides a responsive customer workspace with compact
   identity, communication and notes editing, component-aware quick actions,
   business-readable connected work, companies, tags, AI and address sections,

@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '215',
+            'version' => '216',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1194,31 +1194,61 @@ class ProcessKontor extends Process
         /** @var KontorCRM $crm */
         $crm = $this->wire()->modules->get('KontorCRM');
         $repository = $crm->leadRepository();
+        $organizationUid = $this->organizationUid();
         $pageSize = 25;
         $totalRecords = $repository->countMatching(
-            $this->organizationUid(),
+            $organizationUid,
             $query,
             $status,
             $showArchived,
         );
         $totalPages = max(1, (int) ceil($totalRecords / $pageSize));
         $page = min($totalPages, max(1, (int) $this->wire()->input->get('page')));
+        $leads = $repository->findMatching(
+            $organizationUid,
+            $query,
+            $status,
+            $showArchived,
+            $pageSize,
+            ($page - 1) * $pageSize,
+        );
+        $canViewContact = $this->contactsReady() && $this->can('kontor-contacts-contact-view');
+        $canViewCompany = $this->contactsReady() && $this->can('kontor-contacts-company-view');
+        $customerLabels = [];
+        if ($canViewContact) {
+            foreach ($this->contactRepository()->findAll($organizationUid, limit: 250) as $contact) {
+                $customerLabels['contact:' . $contact->uid->toString()] = $contact->displayName;
+            }
+        }
+        if ($canViewCompany) {
+            foreach ($this->companyRepository()->findAll($organizationUid, limit: 250) as $company) {
+                $customerLabels['company:' . $company->uid->toString()] = $company->legalName;
+            }
+        }
 
         return $this->renderTemplate('crm', [
-            'leads' => $repository->findMatching(
-                $this->organizationUid(),
-                $query,
-                $status,
-                $showArchived,
-                $pageSize,
-                ($page - 1) * $pageSize,
-            ),
+            'leads' => $leads,
             'query' => $query,
             'selectedStatus' => $status,
             'showArchived' => $showArchived,
             'page' => $page,
             'totalPages' => $totalPages,
             'totalRecords' => $totalRecords,
+            'leadCounts' => [
+                'all' => $repository->countMatching($organizationUid),
+                'new' => $repository->countMatching($organizationUid, status: 'new'),
+                'contacted' => $repository->countMatching($organizationUid, status: 'contacted'),
+                'qualified' => $repository->countMatching($organizationUid, status: 'qualified'),
+                'converted' => $repository->countMatching($organizationUid, status: 'converted'),
+                'lost' => $repository->countMatching($organizationUid, status: 'lost'),
+                'archived' => $repository->countMatching($organizationUid, archived: true),
+            ],
+            'customerLabels' => $customerLabels,
+            'canViewContact' => $canViewContact,
+            'canViewCompany' => $canViewCompany,
+            'canViewDeals' => $this->can('kontor-crm-deal-view'),
+            'canCreateLead' => $this->can('kontor-crm-lead-create'),
+            'canArchiveLead' => $this->can('kontor-crm-lead-archive'),
         ]);
     }
 

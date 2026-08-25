@@ -696,6 +696,14 @@
   text-decoration: none !important;
 }
 
+.kontor-crm-workspace .uk-button {
+  text-decoration: none !important;
+}
+
+.kontor-crm-workspace .uk-button-primary {
+  color: #fff !important;
+}
+
 .kontor-contact-avatar {
   align-items: center;
   background: var(--pw-main-color);
