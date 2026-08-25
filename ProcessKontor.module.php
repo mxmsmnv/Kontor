@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '210',
+            'version' => '211',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5678,49 +5678,100 @@ class ProcessKontor extends Process
         } else {
             $this->requirePermission('kontor-workflow-definition-manage');
         }
+        $entityTypeOptions = [];
+        if ($this->contactsReady()) {
+            $entityTypeOptions += ['contact' => $this->_('Contact'), 'company' => $this->_('Company')];
+        }
+        if ($this->crmReady()) {
+            $entityTypeOptions += ['crm_lead' => $this->_('CRM lead'), 'crm_deal' => $this->_('CRM deal')];
+        }
+        if ($this->salesReady()) {
+            $entityTypeOptions += ['sales_quotation' => $this->_('Sales quotation'), 'sales_order' => $this->_('Sales order')];
+        }
+        if ($this->tasksReady()) {
+            $entityTypeOptions['task'] = $this->_('Task');
+        }
+        if ($this->projectsReady()) {
+            $entityTypeOptions['project'] = $this->_('Project');
+        }
+        if ($this->expensesReady()) {
+            $entityTypeOptions['expense'] = $this->_('Expense');
+        }
+        if ($this->purchasingReady()) {
+            $entityTypeOptions['purchase_order'] = $this->_('Purchase order');
+        }
+        if ($this->invoicesReady()) {
+            $entityTypeOptions['invoice'] = $this->_('Invoice');
+        }
+        if ($this->paymentsReady()) {
+            $entityTypeOptions['payment'] = $this->_('Payment');
+        }
+        if ($this->demoReady()) {
+            $entityTypeOptions['demo_scenario'] = $this->_('Demo scenario');
+        }
+        $entityTypeOptions['custom'] = $this->_('Other business record');
+
         $values = [
             'workflowKey' => '',
-            'entityType' => '',
+            'entityType' => array_key_first($entityTypeOptions) ?? 'custom',
+            'entityTypeChoice' => array_key_first($entityTypeOptions) ?? 'custom',
+            'customEntityType' => '',
             'name' => '',
-            'initialState' => 'draft',
-            'states' => 'draft, review, approved, rejected',
+            'initialState' => 'Draft',
+            'states' => "Draft\nIn review\nApproved\nRejected",
         ];
         $error = '';
 
         if ($definition === null && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
+            $name = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('name')
+            ));
+            $selectedEntityType = $this->wire()->sanitizer->option(
+                (string) $this->wire()->input->post('entity_type'),
+                array_keys($entityTypeOptions),
+            ) ?? '';
+            $customEntityType = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('custom_entity_type')
+            ));
+            $normalizeIdentifier = static function (string $value, int $limit = 64): string {
+                $value = mb_strtolower(trim($value));
+                $value = preg_replace('/[^a-z0-9]+/u', '_', $value) ?? '';
+
+                return mb_substr(trim($value, '_'), 0, $limit);
+            };
+            $resolvedEntityType = $selectedEntityType === 'custom'
+                ? $normalizeIdentifier($customEntityType, 128)
+                : $selectedEntityType;
+            $workflowKey = $normalizeIdentifier($resolvedEntityType . ' ' . $name);
+            if ($workflowKey === '') {
+                $workflowKey = 'workflow_' . substr(hash('sha256', $name), 0, 12);
+            }
+            $rawStates = (string) $this->wire()->input->post('states');
             $values = [
-                'workflowKey' => strtolower($this->wire()->sanitizer->text(
-                    (string) $this->wire()->input->post('workflow_key')
-                )),
-                'entityType' => strtolower($this->wire()->sanitizer->text(
-                    (string) $this->wire()->input->post('entity_type')
-                )),
-                'name' => trim($this->wire()->sanitizer->text(
-                    (string) $this->wire()->input->post('name')
-                )),
-                'initialState' => strtolower($this->wire()->sanitizer->text(
-                    (string) $this->wire()->input->post('initial_state')
-                )),
-                'states' => (string) $this->wire()->input->post('states'),
+                'workflowKey' => $workflowKey,
+                'entityType' => $resolvedEntityType,
+                'entityTypeChoice' => $selectedEntityType,
+                'customEntityType' => $customEntityType,
+                'name' => $name,
+                'initialState' => $normalizeIdentifier((string) $this->wire()->input->post('initial_state')),
+                'states' => $rawStates,
             ];
             $states = array_values(array_unique(array_filter(array_map(
-                static fn (string $state): string => strtolower(trim($state)),
-                explode(',', $values['states']),
+                static fn (string $state): string => $normalizeIdentifier($state),
+                preg_split('/[,\r\n]+/', $rawStates) ?: [],
             ))));
-            if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $values['workflowKey']) !== 1) {
-                $error = $this->_('Workflow key must be a lowercase identifier.');
-            } elseif (preg_match('/^[a-z][a-z0-9_.-]{0,127}$/', $values['entityType']) !== 1) {
-                $error = $this->_('Entity type must be a lowercase identifier.');
-            } elseif ($values['name'] === '') {
+            if ($values['name'] === '') {
                 $error = $this->_('Workflow name is required.');
+            } elseif (preg_match('/^[a-z][a-z0-9_.-]{0,127}$/', $values['entityType']) !== 1) {
+                $error = $this->_('Choose the kind of business record this workflow controls.');
             } elseif ($states === [] || array_filter(
                 $states,
                 static fn (string $state): bool => preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $state) !== 1,
             ) !== []) {
-                $error = $this->_('States must be comma-separated lowercase identifiers.');
+                $error = $this->_('Add one or more stage names using letters and numbers.');
             } elseif (!in_array($values['initialState'], $states, true)) {
-                $error = $this->_('Initial state must appear in the state list.');
+                $error = $this->_('The starting stage must match one of the stages in the list.');
             }
             if ($error === '') {
                 try {
@@ -5735,7 +5786,7 @@ class ProcessKontor extends Process
                     );
                 } catch (\InvalidArgumentException|\PDOException $exception) {
                     $error = $exception instanceof \PDOException && $exception->getCode() === '23000'
-                        ? $this->_('That workflow key is already in use.')
+                        ? $this->_('A workflow with this name already exists. Choose a more specific name.')
                         : $exception->getMessage();
                 }
                 if ($error === '') {
@@ -5770,6 +5821,7 @@ class ProcessKontor extends Process
                 : [],
             'canManage' => $this->can('kontor-workflow-definition-manage'),
             'canTransition' => $this->can('kontor-workflow-transition'),
+            'entityTypeOptions' => $entityTypeOptions,
         ]);
     }
 

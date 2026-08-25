@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- New workflow setup now generates internal keys automatically, offers
+  component-aware business record choices, accepts human-readable stage names
+  and guides users from process purpose through states to transition design.
+
 - Workflows now presents business-readable process cards, lifecycle guidance
   and approval decisions without exposing workflow keys, raw entity types or
   internal record identifiers, with responsive review and rejection controls.
