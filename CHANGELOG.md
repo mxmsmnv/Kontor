@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- GraphQL now opens as a responsive integration explorer with business-readable
+  data collections, guided token and query inputs, clear request outcomes, and
+  technical schema details kept in an optional developer reference.
+
 - Germany localization now presents compliance scope, VAT checksum checking,
   accounting readiness and electronic-invoice preview as focused responsive
   workspaces, with technical mappings and the long preview builder collapsed.

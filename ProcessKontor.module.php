@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '188',
+            'version' => '189',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7587,7 +7587,7 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-api-token-manage');
         $result = $this->wire()->session->get('kontorGraphqlResult');
         $this->wire()->session->set('kontorGraphqlResult', null);
-        $this->setPageTitle($this->_('Kontor · GraphQL'));
+        $this->setPageTitle($this->_('Kontor · GraphQL explorer'));
 
         return $this->renderTemplate('graphql', [
             'schema' => $this->graphqlModule()->schemaRegistry()->toSdl(),
