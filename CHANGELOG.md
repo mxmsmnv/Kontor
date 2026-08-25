@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Deal details now centers pipeline outcome, value, customer context and the
+  next commercial action, links permission-aware customer and quotation
+  workspaces, and keeps the guided editor safely collapsed on every viewport.
 - Collaboration now works as a responsive team inbox with focused discussion
   and internal-note views, human authors, friendly dates, search and direct
   permission-aware navigation to records supplied by optional components.

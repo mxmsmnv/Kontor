@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '180',
+            'version' => '181',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1495,7 +1495,8 @@ class ProcessKontor extends Process
 
         $this->requirePermission($deal === null
             ? 'kontor-crm-deal-create'
-            : 'kontor-crm-deal-edit');
+            : 'kontor-crm-deal-view');
+        $canEdit = $deal === null || $this->can('kontor-crm-deal-edit');
         $pipelines = $crm->pipelineRepository()->forOrganization($this->organizationUid());
         $requestedPipeline = $this->wire()->sanitizer->text(
             (string) ($this->wire()->input->post('pipeline_uid') ?: $this->wire()->input->get('pipeline'))
@@ -1528,6 +1529,9 @@ class ProcessKontor extends Process
 
         if ($this->wire()->input->post('submit_save')) {
             $this->requirePost();
+            $this->requirePermission($deal === null
+                ? 'kontor-crm-deal-create'
+                : 'kontor-crm-deal-edit');
             $values = [
                 'title' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('title')),
                 'pipelineUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('pipeline_uid')),
@@ -1640,24 +1644,70 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New deal')
             : sprintf($this->_('Kontor · %s'), $deal->title));
 
+        $contacts = $this->contactRepository()->findAll($this->organizationUid(), limit: 250);
+        $companies = $this->companyRepository()->findAll($this->organizationUid(), limit: 250);
+        $selectedPipeline = $values['pipelineUid'] !== ''
+            ? $crm->pipelineRepository()->find($values['pipelineUid'])
+            : null;
+        if ($selectedPipeline !== null
+            && !hash_equals($this->organizationUid(), $selectedPipeline->organizationId)) {
+            $selectedPipeline = null;
+        }
+        $selectedStage = $values['stageUid'] !== ''
+            ? $crm->stageRepository()->find($values['stageUid'])
+            : null;
+        if ($selectedStage !== null
+            && ($selectedPipeline === null
+                || !hash_equals($selectedPipeline->uid->toString(), $selectedStage->pipelineUid))) {
+            $selectedStage = null;
+        }
+        $selectedContact = $values['contactUid'] !== ''
+            ? $this->contactRepository()->find($values['contactUid'])
+            : null;
+        if ($selectedContact !== null
+            && !hash_equals($this->organizationUid(), $selectedContact->organizationId)) {
+            $selectedContact = null;
+        }
+        $selectedCompany = $values['companyUid'] !== ''
+            ? $this->companyRepository()->find($values['companyUid'])
+            : null;
+        if ($selectedCompany !== null
+            && !hash_equals($this->organizationUid(), $selectedCompany->organizationId)) {
+            $selectedCompany = null;
+        }
+        $dealQuotations = $deal !== null
+            && $this->salesReady()
+            && $this->can('kontor-sales-quotation-view')
+            ? $this->salesModule()->quotationRepository()->forDeal(
+                $this->organizationUid(),
+                $deal->uid->toString(),
+            )
+            : [];
+
         return $this->renderTemplate('crm-deal', [
             'deal' => $deal,
             'values' => $values,
             'pipelines' => $pipelines,
             'stages' => $stages,
-            'contacts' => $this->contactRepository()->findAll($this->organizationUid(), limit: 250),
-            'companies' => $this->companyRepository()->findAll($this->organizationUid(), limit: 250),
-            'dealQuotations' => $deal !== null
-                && $this->salesReady()
-                && $this->can('kontor-sales-quotation-view')
-                ? $this->salesModule()->quotationRepository()->forDeal(
-                    $this->organizationUid(),
-                    $deal->uid->toString(),
-                )
-                : [],
+            'contacts' => $contacts,
+            'companies' => $companies,
+            'selectedPipeline' => $selectedPipeline,
+            'selectedStage' => $selectedStage,
+            'selectedContact' => $selectedContact,
+            'selectedCompany' => $selectedCompany,
+            'canEdit' => $canEdit,
+            'canMove' => $deal !== null && $deal->isOpen() && $this->can('kontor-crm-deal-move'),
+            'canCloseWon' => $deal !== null && $deal->isOpen()
+                && $this->can('kontor-crm-deal-close-won'),
+            'canCloseLost' => $deal !== null && $deal->isOpen()
+                && $this->can('kontor-crm-deal-close-lost'),
+            'canViewContact' => $this->can('kontor-contacts-contact-view'),
+            'canViewCompany' => $this->can('kontor-contacts-company-view'),
+            'dealQuotations' => $dealQuotations,
             'canCreateQuotation' => $deal !== null
                 && $deal->status === 'won'
                 && ($deal->companyUid !== null || $deal->contactUid !== null)
+                && $dealQuotations === []
                 && $this->salesReady()
                 && $this->can('kontor-sales-quotation-create'),
             'error' => $error,
@@ -1705,9 +1755,13 @@ class ProcessKontor extends Process
 
         $this->audit('crm', 'deal', $id, $action);
         $this->message($this->_('Deal updated.'));
-        $this->wire()->session->redirect(
-            '../crm-deals/?pipeline=' . rawurlencode($deal->pipelineUid)
+        $returnTo = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('return_to'),
+            ['deal'],
         );
+        $this->wire()->session->redirect($returnTo === 'deal'
+            ? '../crm-deal/?id=' . rawurlencode($deal->uid->toString())
+            : '../crm-deals/?pipeline=' . rawurlencode($deal->pipelineUid));
     }
 
     public function ___executeSales(): string
