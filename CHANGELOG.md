@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Germany localization now presents compliance scope, VAT checksum checking,
+  accounting readiness and electronic-invoice preview as focused responsive
+  workspaces, with technical mappings and the long preview builder collapsed.
+
 - Expenses now provides a responsive spend workspace with first-run setup,
   approval-queue indicators, status counts, search and category filtering,
   readable expense cards, and a compact category overview without internal codes.

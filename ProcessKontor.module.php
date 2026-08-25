@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '187',
+            'version' => '188',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7312,6 +7312,7 @@ class ProcessKontor extends Process
             'taxResult' => is_array($taxResult) ? $taxResult : null,
             'xmlResult' => is_array($xmlResult) ? $xmlResult : null,
             'canConfigure' => $this->can('kontor-germany-configure'),
+            'canViewLedger' => $this->can('kontor-ledger-entry-view'),
         ]);
     }
 
