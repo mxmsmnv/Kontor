@@ -12,6 +12,8 @@
 /** @var bool $canCreateCompany */
 /** @var array<string, string> $languageOptions */
 /** @var \Kontor\CRM\Domain\Deal|null $sourceDeal */
+/** @var \Kontor\Sales\Domain\Quotation[] $existingDealQuotations */
+/** @var bool $canViewExistingQuotation */
 /** @var bool $mailReady */
 /** @var \Kontor\Mail\Domain\Mailbox[] $mailboxes */
 /** @var string $customerEmail */
@@ -41,13 +43,14 @@ $statusClass = static fn (string $status): string => match ($status) {
     'issued', 'sent' => ' uk-label-warning',
     default => '',
 };
+$duplicateQuotation = $quotation === null && $existingDealQuotations !== [];
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
     <div>
       <p class="kontor-eyebrow">Sales · Quotation</p>
-      <h2><?= $e($quotation?->number ?? ($quotation !== null ? 'Draft quotation' : 'New quotation')) ?></h2>
-      <p><?= $quotation === null ? 'Choose the customer, commercial terms and starting item for the offer.' : 'Review the offer, customer decision and order handoff in one workspace.' ?></p>
+      <h2><?= $e($duplicateQuotation ? 'Quotation already exists' : ($quotation?->number ?? ($quotation !== null ? 'Draft quotation' : 'New quotation'))) ?></h2>
+      <p><?= $duplicateQuotation ? 'Continue the existing customer offer instead of creating a duplicate.' : ($quotation === null ? 'Choose the customer, commercial terms and starting item for the offer.' : 'Review the offer, customer decision and order handoff in one workspace.') ?></p>
     </div>
     <div class="pw-module-actions kontor-pagehead__actions"><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>sales/"><i class="fa fa-arrow-left"></i> All sales</a></div>
   </header>
@@ -56,14 +59,32 @@ $statusClass = static fn (string $status): string => match ($status) {
     <div class="uk-alert-danger uk-margin-medium-bottom" uk-alert><p><strong>Quotation could not be saved.</strong> <?= $e($error) ?></p></div>
   <?php endif; ?>
 
-  <?php if ($sourceDeal !== null && $quotation === null): ?>
+  <?php if ($sourceDeal !== null && $quotation === null && !$duplicateQuotation): ?>
     <section class="uk-alert-primary uk-margin-medium-bottom" uk-alert>
       <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid><div><strong>Based on won deal: <?= $e($sourceDeal->title) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $sourceDeal->value !== null ? $e($money($sourceDeal->value)) . ' · ' : '' ?>Customer and value have been carried into this quotation.</div></div><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>crm-deal/?id=<?= $e(rawurlencode($sourceDeal->uid->toString())) ?>">Open deal</a></div></div>
     </section>
   <?php endif; ?>
 
   <?php if ($quotation === null): ?>
-    <?php if ($customers === []): ?>
+    <?php if ($duplicateQuotation): ?>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body">
+        <div>
+          <div>
+            <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Connected sales workflow</p>
+            <h3 class="uk-card-title uk-margin-small-top uk-margin-small-bottom">This won deal already has a quotation</h3>
+            <p class="uk-text-muted uk-margin-remove">Open the existing offer to review its customer decision and continue to the sales order. Kontor prevents another quotation from being created for the same deal.</p>
+          </div>
+        </div>
+        <?php if ($canViewExistingQuotation): ?>
+          <ul class="uk-list uk-list-divider uk-margin">
+            <?php foreach ($existingDealQuotations as $existingQuotation): ?>
+              <li><div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid><div><span class="uk-label<?= $statusClass($existingQuotation->status) ?>"><?= $e($humanize($existingQuotation->status)) ?></span><h4 class="uk-margin-small-top uk-margin-remove-bottom"><?= $e($existingQuotation->number ?? 'Draft quotation') ?></h4><div class="uk-text-meta uk-margin-small-top"><?= $e($money($existingQuotation->total)) ?></div></div><div><a class="uk-button uk-button-primary uk-link-reset" href="<?= $e($adminUrl) ?>sales-quotation/?id=<?= $e(rawurlencode($existingQuotation->uid->toString())) ?>">Open quotation <i class="fa fa-angle-right"></i></a></div></div></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?><div class="uk-alert-primary uk-margin" uk-alert><p class="uk-margin-remove">A quotation is already connected to this deal. Quotation access is required to open it.</p></div><?php endif; ?>
+        <a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>crm-deal/?id=<?= $e(rawurlencode($sourceDeal->uid->toString())) ?>"><i class="fa fa-arrow-left"></i> Back to deal</a>
+      </section>
+    <?php elseif ($customers === []): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body uk-text-center">
         <span class="fa fa-address-book-o fa-2x uk-text-muted"></span>
         <h3><?= $contactsReady ? 'Add your first customer' : 'Customer records are not available' ?></h3>
@@ -89,8 +110,9 @@ $statusClass = static fn (string $status): string => match ($status) {
               <p class="uk-text-muted">Start with one clearly described item. The draft will remain unnumbered until it is issued.</p>
               <div class="uk-margin">
                 <label class="uk-form-label" for="quotation-customer">Customer</label>
-                <select class="uk-select uk-margin-small-top" id="quotation-customer" name="customer" required><option value="">Select a contact or company</option><?php foreach ($customers as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['customer'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select>
-                <div class="uk-text-meta uk-margin-small-top">The offer and any resulting order stay connected to this customer.</div>
+                <?php if ($sourceDeal !== null): ?><input type="hidden" name="customer" value="<?= $e($values['customer']) ?>"><?php endif; ?>
+                <select class="uk-select uk-margin-small-top" id="quotation-customer"<?= $sourceDeal === null ? ' name="customer" required' : ' disabled' ?>><option value="">Select a contact or company</option><?php foreach ($customers as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['customer'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select>
+                <div class="uk-text-meta uk-margin-small-top"><?= $sourceDeal !== null ? 'Customer inherited from the won deal. Update the CRM deal if this relationship is wrong.' : 'The offer and any resulting order stay connected to this customer.' ?></div>
               </div>
               <div class="uk-margin">
                 <label class="uk-form-label" for="quotation-line-title">Item or service</label>
@@ -114,7 +136,7 @@ $statusClass = static fn (string $status): string => match ($status) {
               <div class="uk-margin"><label class="uk-form-label" for="quotation-valid-until">Valid until <span class="uk-text-meta">(optional)</span></label><input class="uk-input uk-margin-small-top" id="quotation-valid-until" type="date" name="valid_until" value="<?= $e($values['validUntil']) ?>"><div class="uk-text-meta uk-margin-small-top">Leave blank when the offer has no fixed expiry date.</div></div>
               <hr>
               <button class="uk-button uk-button-primary uk-width-1-1" type="submit" name="submit_save" value="1"><i class="fa fa-save"></i> Create draft</button>
-              <a class="uk-button uk-button-default uk-width-1-1 uk-margin-small-top uk-link-reset" href="<?= $e($adminUrl) ?>sales/">Cancel</a>
+              <a class="uk-button uk-button-default uk-width-1-1 uk-margin-small-top uk-link-reset" href="<?= $e($adminUrl) ?><?= $sourceDeal !== null ? 'crm-deal/?id=' . $e(rawurlencode($sourceDeal->uid->toString())) : 'sales/' ?>">Cancel</a>
               <p class="uk-text-meta uk-text-center uk-margin-small-top uk-margin-remove-bottom">Review the draft before issuing a numbered PDF.</p>
             </section>
           </div>

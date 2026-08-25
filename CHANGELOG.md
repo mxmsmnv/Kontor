@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Deal-to-quotation handoff now prevents duplicate customer offers, redirects
+  repeat submissions to the existing workflow, locks the inherited customer
+  relationship and presents a responsive continuation page with human context.
 - Deal details now centers pipeline outcome, value, customer context and the
   next commercial action, links permission-aware customer and quotation
   workspaces, and keeps the guided editor safely collapsed on every viewport.

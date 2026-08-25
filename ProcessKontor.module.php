@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '181',
+            'version' => '182',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1833,6 +1833,24 @@ class ProcessKontor extends Process
             }
         }
 
+        $existingDealQuotations = $quotation === null && $sourceDeal !== null
+            ? $sales->quotationRepository()->forDeal(
+                $this->organizationUid(),
+                $sourceDeal->uid->toString(),
+            )
+            : [];
+        if ($existingDealQuotations !== []) {
+            $sourceDealError = '';
+        }
+        if ($this->wire()->input->post('submit_save') && $existingDealQuotations !== []) {
+            $this->requirePost();
+            $existingQuotation = $existingDealQuotations[0];
+            $this->message($this->_('This deal already has a quotation.'));
+            $this->wire()->session->redirect($this->can('kontor-sales-quotation-view')
+                ? '../sales-quotation/?id=' . rawurlencode($existingQuotation->uid->toString())
+                : '../crm-deal/?id=' . rawurlencode($sourceDeal->uid->toString()));
+        }
+
         $supportedLanguages = ['en', 'de', 'fr', 'es'];
         $defaultLanguage = strtolower($this->organization()->defaultLanguage);
         if (!in_array($defaultLanguage, $supportedLanguages, true)) {
@@ -1847,7 +1865,7 @@ class ProcessKontor extends Process
             'language' => $defaultLanguage,
             'lineTitle' => $sourceDeal?->title ?? '',
             'quantity' => '1',
-            'unitCode' => 'pcs',
+            'unitCode' => $sourceDeal !== null ? 'project' : 'pcs',
             'unitPrice' => $sourceDeal?->value !== null
                 ? number_format($sourceDeal->value->amountMinor() / 100, 2, '.', '')
                 : '',
@@ -1885,6 +1903,11 @@ class ProcessKontor extends Process
                     (string) $this->wire()->input->post('tax_rate')
                 ),
             ];
+            if ($sourceDeal !== null) {
+                $values['customer'] = $sourceDeal->companyUid !== null
+                    ? 'company:' . $sourceDeal->companyUid
+                    : 'contact:' . $sourceDeal->contactUid;
+            }
             [$customerType, $customerUid] = array_pad(explode(':', $values['customer'], 2), 2, '');
 
             if ($error !== '') {
@@ -1999,7 +2022,9 @@ class ProcessKontor extends Process
             )
             : [];
         $this->setPageTitle($quotation === null
-            ? $this->_('Kontor · New quotation')
+            ? ($existingDealQuotations !== []
+                ? $this->_('Kontor · Quotation already exists')
+                : $this->_('Kontor · New quotation'))
             : sprintf($this->_('Kontor · %s'), $quotation->number ?? $this->_('Draft quotation')));
 
         return $this->renderTemplate('sales-quotation', [
@@ -2020,6 +2045,8 @@ class ProcessKontor extends Process
                 'es' => $this->_('Spanish'),
             ],
             'sourceDeal' => $sourceDeal,
+            'existingDealQuotations' => $existingDealQuotations,
+            'canViewExistingQuotation' => $this->can('kontor-sales-quotation-view'),
             'mailReady' => $this->mailReady(),
             'mailboxes' => $quotation !== null && $this->mailReady()
                 ? array_values(array_filter(
