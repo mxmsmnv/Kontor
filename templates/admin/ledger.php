@@ -6,6 +6,9 @@
 /** @var \Kontor\Ledger\Domain\LedgerEntry|null $selected */
 /** @var \Kontor\Ledger\Domain\LedgerLine[] $selectedLines */
 /** @var array<string, string> $accountLabels */
+/** @var array<string, array{label: string, url: string}> $referenceLinks */
+/** @var array<string, string> $recordedByLabels */
+/** @var array<int, array{label: string, url: string, icon: string}> $financeLinks */
 /** @var string $defaultCurrency */
 /** @var bool $canManageAccounts */
 /** @var bool $canRecordEntries */
@@ -13,126 +16,176 @@
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
+
 $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
-    number_format($value->amountMinor() / 100, 2, '.', '') . ' ' . $value->currencyCode();
+    number_format($value->amountMinor() / 100, 2, '.', ',') . ' ' . $value->currencyCode();
+$typeLabels = [
+    'asset' => 'Asset',
+    'liability' => 'Liability',
+    'equity' => 'Equity',
+    'revenue' => 'Revenue',
+    'expense' => 'Expense',
+];
+$activeCount = count($activeAccounts);
+$archivedCount = count($accountRows) - $activeCount;
+$nonZeroCount = count(array_filter(
+    $accountRows,
+    static fn (array $row): bool => !$row['balance']->isZero(),
+));
+$currencies = array_values(array_unique(array_map(
+    static fn (array $row): string => $row['account']->currencyCode,
+    $accountRows,
+)));
+$latestEntry = null;
+foreach ($entryRows as $row) {
+    if ($latestEntry === null || $row['entry']->createdAt > $latestEntry->createdAt) {
+        $latestEntry = $row['entry'];
+    }
+}
+$selectedUid = $selected?->uid->toString();
+$selectedAmount = null;
+foreach ($entryRows as $row) {
+    if ($selectedUid !== null && $row['entry']->uid->toString() === $selectedUid) {
+        $selectedAmount = $row['amount'];
+        break;
+    }
+}
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
     <div>
-      <p class="kontor-eyebrow">Finance · Double entry</p>
+      <p class="kontor-eyebrow">Finance · Accounting</p>
       <h2>Ledger</h2>
-      <p>Chart of accounts, balanced journal entries, immutable posting history, and live account balances.</p>
+      <p>Review account balances and the permanent history created by invoices, payments, expenses and manual postings.</p>
     </div>
+    <?php if ($financeLinks !== []): ?>
+      <div class="pw-module-actions kontor-pagehead__actions">
+        <?php foreach ($financeLinks as $link): ?><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl . $link['url']) ?>"><i class="fa fa-<?= $e($link['icon']) ?>"></i> <?= $e($link['label']) ?></a><?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </header>
 
-  <?php if ($canManageAccounts): ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-      <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Chart setup</p><h3>Create account</h3></div></header>
-      <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>ledger-account-create/">
-        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-        <label class="kontor-nativefield"><span>Code *</span><input name="code" maxlength="20" placeholder="1000" required></label>
-        <label class="kontor-nativefield kontor-nativefield--wide"><span>Name *</span><input name="name" maxlength="255" placeholder="Cash" required></label>
-        <label class="kontor-nativefield"><span>Type *</span>
-          <select name="type" required>
-            <option value="asset">Asset</option>
-            <option value="liability">Liability</option>
-            <option value="equity">Equity</option>
-            <option value="revenue">Revenue</option>
-            <option value="expense">Expense</option>
-          </select>
-        </label>
-        <label class="kontor-nativefield"><span>Currency *</span><input name="currency_code" value="<?= $e($defaultCurrency) ?>" maxlength="3" required></label>
-        <label class="kontor-nativefield kontor-nativefield--wide"><span>Parent account</span>
-          <select name="parent_uid">
-            <option value="">No parent</option>
-            <?php foreach ($activeAccounts as $account): ?><option value="<?= $e($account->uid->toString()) ?>"><?= $e($account->code . ' · ' . $account->name) ?></option><?php endforeach; ?>
-          </select>
-        </label>
-        <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Create account</button></div>
-      </form>
-    </section>
-  <?php endif; ?>
+  <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-margin-medium-bottom" uk-grid>
+    <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon<?= $activeCount >= 2 ? ' kontor-stat__icon--success' : ' kontor-stat__icon--warning' ?>"><i class="fa fa-book"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $activeCount) ?></strong><span class="kontor-stat__label">Active accounts<?= $archivedCount > 0 ? ' · ' . $e((string) $archivedCount) . ' archived' : '' ?></span></span></div></div>
+    <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-money"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $nonZeroCount) ?></strong><span class="kontor-stat__label">Accounts with a balance</span></span></div></div>
+    <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-exchange"></i></span><span><strong class="kontor-stat__value"><?= $e((string) count($entryRows)) ?></strong><span class="kontor-stat__label">Posted journal entries</span></span></div></div>
+    <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-clock-o"></i></span><span><strong class="kontor-stat__value"><?= $latestEntry !== null ? $e($latestEntry->entryDate->format('M j')) : '—' ?></strong><span class="kontor-stat__label"><?= $latestEntry !== null ? 'Latest accounting date' : 'No postings yet' ?></span></span></div></div>
+  </div>
 
-  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
-    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Live balances</p><h3>Chart of accounts</h3></div></header>
-    <?php if ($accountRows !== []): ?>
-      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-        <thead><tr><th>Account</th><th>Type</th><th>Currency</th><th>Normal side</th><th>Balance</th><th>Status</th><th></th></tr></thead>
-        <tbody><?php foreach ($accountRows as $row): $account = $row['account']; ?><tr>
-          <td><strong><?= $e($account->code) ?> · <?= $e($account->name) ?></strong><?php if ($account->parentUid): ?><span class="kontor-secondary">Parent: <?= $e($accountLabels[$account->parentUid] ?? $account->parentUid) ?></span><?php endif; ?></td>
-          <td><?= $e($account->type) ?></td>
-          <td><?= $e($account->currencyCode) ?></td>
-          <td><?= $e($account->isDebitNormal() ? 'debit' : 'credit') ?></td>
-          <td><strong><?= $e($money($row['balance'])) ?></strong></td>
-          <td><span class="uk-label kontor-pill<?= $account->isArchived() ? ' kontor-pill--inactive' : '' ?>"><?= $e($account->isArchived() ? 'archived' : $account->status) ?></span></td>
-          <td><?php if ($canManageAccounts): ?><form method="post" action="<?= $e($adminUrl) ?>ledger-account-action/">
-            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-            <input type="hidden" name="account_uid" value="<?= $e($account->uid->toString()) ?>">
-            <input type="hidden" name="action" value="<?= $e($account->isArchived() ? 'restore' : 'archive') ?>">
-            <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit"><?= $e($account->isArchived() ? 'Restore' : 'Archive') ?></button>
-          </form><?php endif; ?></td>
-        </tr><?php endforeach; ?></tbody>
-      </table>
-    <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><i class="fa fa-balance-scale"></i><h3>No accounts yet</h3><p>Create at least two accounts before recording a journal entry.</p></div><?php endif; ?>
-  </section>
-
-  <?php if ($canRecordEntries): ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-      <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Immutable journal</p><h3>Record balanced entry</h3></div></header>
-      <?php if (count($activeAccounts) >= 2): ?>
-        <form class="uk-form-stacked kontor-nativeform" method="post" action="<?= $e($adminUrl) ?>ledger-entry-record/">
-          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-          <label class="kontor-nativefield kontor-nativefield--wide"><span>Description *</span><input name="description" maxlength="500" placeholder="Cash sale" required></label>
-          <label class="kontor-nativefield"><span>Entry date *</span><input type="date" name="entry_date" value="<?= $e(date('Y-m-d')) ?>" required></label>
-          <label class="kontor-nativefield"><span>Amount *</span><input name="amount" inputmode="decimal" value="1250.00" required></label>
-          <label class="kontor-nativefield kontor-nativefield--wide"><span>Debit account *</span>
-            <select name="debit_account_uid" required><?php foreach ($activeAccounts as $account): ?><option value="<?= $e($account->uid->toString()) ?>"><?= $e($account->code . ' · ' . $account->name . ' · ' . $account->currencyCode) ?></option><?php endforeach; ?></select>
-          </label>
-          <label class="kontor-nativefield kontor-nativefield--wide"><span>Credit account *</span>
-            <select name="credit_account_uid" required><?php foreach ($activeAccounts as $account): ?><option value="<?= $e($account->uid->toString()) ?>"><?= $e($account->code . ' · ' . $account->name . ' · ' . $account->currencyCode) ?></option><?php endforeach; ?></select>
-          </label>
-          <label class="kontor-nativefield"><span>Reference type</span><input name="reference_type" maxlength="50" placeholder="invoice"></label>
-          <label class="kontor-nativefield kontor-nativefield--wide"><span>Reference UID</span><input name="reference_uid" maxlength="26" placeholder="Optional ULID"></label>
-          <div class="kontor-nativeform__actions"><button class="uk-button uk-button-primary kontor-button" type="submit">Record entry</button></div>
-        </form>
-      <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>Two active accounts in the same currency are required for a posting.</p></div><?php endif; ?>
-    </section>
-  <?php endif; ?>
-
-  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
-    <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Append-only ledger</p><h3>Journal entries</h3></div></header>
-    <?php if ($entryRows !== []): ?>
-      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-        <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Debits = credits</th><th>Recorded</th></tr></thead>
-        <tbody><?php foreach ($entryRows as $row): $entry = $row['entry']; ?><tr>
-          <td><?= $e($entry->entryDate->format('Y-m-d')) ?></td>
-          <td><strong><a href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($entry->uid->toString())) ?>"><?= $e($entry->description) ?></a></strong></td>
-          <td><?= $e($entry->referenceType && $entry->referenceUid ? $entry->referenceType . ' · ' . $entry->referenceUid : '—') ?></td>
-          <td><?= $e($money($row['amount'])) ?></td>
-          <td><?= $e($entry->createdAt->format('Y-m-d H:i:s')) ?></td>
-        </tr><?php endforeach; ?></tbody>
-      </table>
-    <?php else: ?><div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><p>No ledger entries have been recorded.</p></div><?php endif; ?>
-  </section>
+  <div class="uk-alert-primary uk-margin-medium-bottom" uk-alert>
+    <h3 class="uk-h4"><i class="fa fa-info-circle"></i> About this workspace</h3>
+    <p>Every posting moves the same amount between a debit and a credit account. Posted entries are permanent: correct a mistake with a reversing entry so the audit trail remains complete.</p>
+  </div>
 
   <?php if ($selected !== null): ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
-      <header class="kontor-sectionhead"><div><p class="kontor-eyebrow"><?= $e($selected->entryDate->format('Y-m-d')) ?> · immutable</p><h3><?= $e($selected->description) ?></h3></div></header>
-      <div class="kontor-detailgrid">
-        <div><span>Entry UID</span><strong><?= $e($selected->uid->toString()) ?></strong></div>
-        <div><span>Recorded by</span><strong><?= $e((string) ($selected->createdBy ?? 'system')) ?></strong></div>
-        <div><span>Reference type</span><strong><?= $e($selected->referenceType ?? '—') ?></strong></div>
-        <div><span>Reference UID</span><strong><?= $e($selected->referenceUid ?? '—') ?></strong></div>
+    <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom" data-testid="ledger-entry-detail">
+      <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid>
+        <div class="uk-width-expand@m">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom"><?= $e($selected->entryDate->format('M j, Y')) ?> · Posted entry</p>
+          <h3 class="uk-card-title uk-margin-small-top"><?= $e($selected->description) ?></h3>
+          <p class="uk-text-muted uk-margin-small-top">Recorded by <?= $e($recordedByLabels[$selectedUid] ?? 'System') ?> on <?= $e($selected->createdAt->format('M j, Y · H:i')) ?>.</p>
+        </div>
+        <div class="uk-flex uk-flex-middle uk-grid-small" uk-grid>
+          <?php if ($selectedAmount !== null): ?><div><strong><?= $e($money($selectedAmount)) ?></strong></div><?php endif; ?>
+          <div><span class="uk-label uk-label-success">Balanced</span></div>
+          <?php if (isset($referenceLinks[$selectedUid])): ?><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl . $referenceLinks[$selectedUid]['url']) ?>"><i class="fa fa-external-link"></i> <?= $e($referenceLinks[$selectedUid]['label']) ?></a></div><?php endif; ?>
+        </div>
       </div>
-      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-        <thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead>
-        <tbody><?php foreach ($selectedLines as $line): ?><tr>
-          <td><strong><?= $e($accountLabels[$line->accountUid] ?? $line->accountUid) ?></strong></td>
-          <td><?= $e($line->debit->isZero() ? '—' : $money($line->debit)) ?></td>
-          <td><?= $e($line->credit->isZero() ? '—' : $money($line->credit)) ?></td>
-        </tr><?php endforeach; ?></tbody>
-      </table>
-      <p>This posting is append-only. Corrections must be entered as a new reversing journal entry.</p>
+
+      <ul class="uk-list uk-list-divider uk-margin-medium-top">
+        <?php foreach ($selectedLines as $line): ?>
+          <li><div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><strong><?= $e($accountLabels[$line->accountUid] ?? 'Unavailable account') ?></strong></div><div class="uk-text-right@m"><?php if (!$line->debit->isZero()): ?><span class="uk-text-meta">Debit</span><br><strong><?= $e($money($line->debit)) ?></strong><?php else: ?><span class="uk-text-meta">Credit</span><br><strong><?= $e($money($line->credit)) ?></strong><?php endif; ?></div></div></li>
+        <?php endforeach; ?>
+      </ul>
+
+      <div class="uk-alert-warning uk-margin-top" uk-alert><p><i class="fa fa-lock"></i> This entry cannot be edited or deleted. Record a reversing entry if a correction is required.</p></div>
+      <details><summary>Technical reference</summary><div class="uk-text-meta uk-margin-small-top">Entry <?= $e($selectedUid) ?><?php if ($selected->referenceType !== null && $selected->referenceUid !== null): ?><br>Source <?= $e($selected->referenceType) ?> · <?= $e($selected->referenceUid) ?><?php endif; ?></div></details>
     </section>
   <?php endif; ?>
+
+  <div class="uk-grid-medium" uk-grid>
+    <div class="uk-width-1-1 uk-width-3-5@l">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+        <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid>
+          <div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Live balances</p><h3 class="uk-card-title uk-margin-small-top">Chart of accounts</h3><p class="uk-text-muted uk-margin-small-top">Accounts organize financial activity by purpose. Balances update automatically whenever a journal entry is posted.</p></div>
+          <div><?php foreach ($currencies as $currency): ?><span class="uk-label uk-margin-small-left"><?= $e($currency) ?></span><?php endforeach; ?></div>
+        </div>
+
+        <?php if ($canManageAccounts): ?>
+          <details<?= $accountRows === [] ? ' open' : '' ?> class="uk-margin-medium-top">
+            <summary class="uk-button uk-button-primary"><i class="fa fa-plus"></i> Add account</summary>
+            <form class="uk-form-stacked uk-margin-medium-top" method="post" action="<?= $e($adminUrl) ?>ledger-account-create/">
+              <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+              <div class="uk-grid-small" uk-grid>
+                <div class="uk-width-1-1 uk-width-1-3@m"><label class="uk-form-label" for="ledger-account-code">Account code</label><input class="uk-input uk-margin-small-top" id="ledger-account-code" name="code" maxlength="20" pattern="[A-Za-z0-9._-]{1,20}" placeholder="1000" aria-describedby="ledger-account-code-help" required><div class="uk-text-meta uk-margin-small-top" id="ledger-account-code-help">Use your accounting plan's stable code.</div></div>
+                <div class="uk-width-1-1 uk-width-2-3@m"><label class="uk-form-label" for="ledger-account-name">Account name</label><input class="uk-input uk-margin-small-top" id="ledger-account-name" name="name" maxlength="255" placeholder="Cash" aria-describedby="ledger-account-name-help" required><div class="uk-text-meta uk-margin-small-top" id="ledger-account-name-help">Describe what the account holds or measures.</div></div>
+                <div class="uk-width-1-1 uk-width-1-3@m"><label class="uk-form-label" for="ledger-account-type">Account type</label><select class="uk-select uk-margin-small-top" id="ledger-account-type" name="type" aria-describedby="ledger-account-type-help" required><?php foreach ($typeLabels as $type => $label): ?><option value="<?= $e($type) ?>"><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top" id="ledger-account-type-help">The type determines whether debit or credit normally increases the balance.</div></div>
+                <div class="uk-width-1-1 uk-width-1-3@m"><label class="uk-form-label" for="ledger-account-currency">Currency</label><input class="uk-input uk-margin-small-top" id="ledger-account-currency" name="currency_code" value="<?= $e($defaultCurrency) ?>" minlength="3" maxlength="3" pattern="[A-Za-z]{3}" aria-describedby="ledger-account-currency-help" required><div class="uk-text-meta uk-margin-small-top" id="ledger-account-currency-help">Use a three-letter currency code such as EUR or USD.</div></div>
+                <div class="uk-width-1-1 uk-width-1-3@m"><label class="uk-form-label" for="ledger-account-parent">Parent account</label><select class="uk-select uk-margin-small-top" id="ledger-account-parent" name="parent_uid" aria-describedby="ledger-account-parent-help"><option value="">No parent account</option><?php foreach ($activeAccounts as $account): ?><option value="<?= $e($account->uid->toString()) ?>"><?= $e($account->code . ' · ' . $account->name) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top" id="ledger-account-parent-help">Optional. Use a parent to group related accounts in the chart.</div></div>
+              </div>
+              <div class="uk-flex uk-flex-right uk-margin-medium-top"><button class="uk-button uk-button-primary" type="submit"><i class="fa fa-plus"></i> Create account</button></div>
+            </form>
+          </details>
+        <?php endif; ?>
+
+        <?php if ($accountRows !== []): ?>
+          <ul class="uk-list uk-list-divider uk-margin-medium-top">
+            <?php foreach ($accountRows as $row): ?>
+              <?php $account = $row['account']; ?>
+              <li>
+                <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid>
+                  <div class="uk-width-expand@m"><strong><?= $e($account->code) ?> · <?= $e($account->name) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $e($typeLabels[$account->type] ?? ucfirst($account->type)) ?> · <?= $e($account->currencyCode) ?><?php if ($account->parentUid !== null): ?> · Under <?= $e($accountLabels[$account->parentUid] ?? 'parent account') ?><?php endif; ?></div></div>
+                  <div class="uk-text-right@m"><strong><?= $e($money($row['balance'])) ?></strong><div class="uk-margin-small-top"><span class="uk-label<?= $account->isActive() ? ' uk-label-success' : ' uk-label-warning' ?>"><?= $account->isActive() ? 'Active' : 'Archived' ?></span></div></div>
+                </div>
+                <details class="uk-margin-small-top"><summary>Account details</summary><div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small uk-margin-small-top" uk-grid><div class="uk-text-meta">A <?= $e(strtolower($typeLabels[$account->type] ?? $account->type)) ?> account normally increases with a <?= $account->isDebitNormal() ? 'debit' : 'credit' ?>.</div><?php if ($canManageAccounts): ?><div><form method="post" action="<?= $e($adminUrl) ?>ledger-account-action/" data-kontor-confirm="<?= $account->isArchived() ? 'Restore this account for new postings?' : 'Archive this account? Existing journal history and balances will remain.' ?>"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="account_uid" value="<?= $e($account->uid->toString()) ?>"><input type="hidden" name="action" value="<?= $account->isArchived() ? 'restore' : 'archive' ?>"><button class="uk-button uk-button-default uk-button-small" type="submit"><i class="fa fa-<?= $account->isArchived() ? 'undo' : 'archive' ?>"></i> <?= $account->isArchived() ? 'Restore account' : 'Archive account' ?></button></form></div><?php endif; ?></div></details>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?><div class="uk-placeholder uk-text-center uk-margin-medium-top"><i class="fa fa-book fa-2x uk-text-muted"></i><h4>No accounts yet</h4><p class="uk-text-muted">Create at least two accounts in the same currency before recording a journal entry.</p></div><?php endif; ?>
+      </section>
+    </div>
+
+    <div class="uk-width-1-1 uk-width-2-5@l">
+      <section class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+        <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Manual posting</p>
+        <h3 class="uk-card-title uk-margin-small-top">Record a journal entry</h3>
+        <p class="uk-text-muted">Use this for adjustments and activity that did not originate in another Kontor component.</p>
+        <?php if ($canRecordEntries && count($activeAccounts) >= 2): ?>
+          <form class="uk-form-stacked uk-margin-medium-top" method="post" action="<?= $e($adminUrl) ?>ledger-entry-record/" data-kontor-ledger-entry-form>
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <div class="uk-margin"><label class="uk-form-label" for="ledger-entry-description">Description</label><input class="uk-input uk-margin-small-top" id="ledger-entry-description" name="description" maxlength="500" placeholder="Monthly bank fee" aria-describedby="ledger-entry-description-help" required><div class="uk-text-meta uk-margin-small-top" id="ledger-entry-description-help">Explain the business reason so another reviewer can understand the posting later.</div></div>
+            <div class="uk-grid-small" uk-grid>
+              <div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="ledger-entry-date">Accounting date</label><input class="uk-input uk-margin-small-top" id="ledger-entry-date" type="date" name="entry_date" value="<?= $e(date('Y-m-d')) ?>" aria-describedby="ledger-entry-date-help" required><div class="uk-text-meta uk-margin-small-top" id="ledger-entry-date-help">The date this activity belongs in the books.</div></div>
+              <div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="ledger-entry-amount">Amount</label><input class="uk-input uk-margin-small-top" id="ledger-entry-amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="125.00" aria-describedby="ledger-entry-amount-help" required><div class="uk-text-meta uk-margin-small-top" id="ledger-entry-amount-help">The selected accounts must use the same currency.</div></div>
+            </div>
+            <div class="uk-margin"><label class="uk-form-label" for="ledger-entry-debit">Debit account</label><select class="uk-select uk-margin-small-top" id="ledger-entry-debit" name="debit_account_uid" data-kontor-ledger-debit aria-describedby="ledger-entry-debit-help" required><option value="" selected disabled>Choose the account receiving the debit</option><?php foreach ($activeAccounts as $account): ?><option value="<?= $e($account->uid->toString()) ?>" data-currency="<?= $e($account->currencyCode) ?>"><?= $e($account->code . ' · ' . $account->name . ' · ' . $account->currencyCode) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top" id="ledger-entry-debit-help">Assets and expenses commonly increase on the debit side.</div></div>
+            <div class="uk-margin"><label class="uk-form-label" for="ledger-entry-credit">Credit account</label><select class="uk-select uk-margin-small-top" id="ledger-entry-credit" name="credit_account_uid" data-kontor-ledger-credit aria-describedby="ledger-entry-credit-help" required><option value="" selected disabled>Choose the account receiving the credit</option><?php foreach ($activeAccounts as $account): ?><option value="<?= $e($account->uid->toString()) ?>" data-currency="<?= $e($account->currencyCode) ?>"><?= $e($account->code . ' · ' . $account->name . ' · ' . $account->currencyCode) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top" id="ledger-entry-credit-help">Liabilities, equity and revenue commonly increase on the credit side.</div></div>
+
+            <details class="uk-margin-medium-top"><summary>Connect a source record</summary><div class="uk-grid-small uk-margin-top" uk-grid><div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="ledger-reference-type">Source type</label><input class="uk-input uk-margin-small-top" id="ledger-reference-type" name="reference_type" maxlength="50" placeholder="adjustment"><div class="uk-text-meta uk-margin-small-top">Optional technical category used to match this entry to another record.</div></div><div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="ledger-reference-uid">Source identifier</label><input class="uk-input uk-margin-small-top" id="ledger-reference-uid" name="reference_uid" minlength="26" maxlength="26" pattern="[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}" placeholder="26-character ID"><div class="uk-text-meta uk-margin-small-top">Provide both source fields together, or leave both blank.</div></div></div></details>
+
+            <div class="uk-alert-warning uk-margin-medium-top" uk-alert><p><i class="fa fa-lock"></i> Review both sides carefully. The entry becomes permanent after posting.</p></div>
+            <div class="uk-flex uk-flex-right"><button class="uk-button uk-button-primary" type="submit"><i class="fa fa-check"></i> Post balanced entry</button></div>
+          </form>
+        <?php elseif (!$canRecordEntries): ?><div class="uk-alert-primary uk-margin-top" uk-alert><p><i class="fa fa-lock"></i> Your role can review the ledger but cannot post manual entries.</p></div><?php else: ?><div class="uk-placeholder uk-text-center uk-margin-top"><i class="fa fa-exchange fa-2x uk-text-muted"></i><h4>Two active accounts required</h4><p class="uk-text-muted">Add two accounts in the same currency before recording a posting.</p></div><?php endif; ?>
+      </section>
+    </div>
+  </div>
+
+  <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
+    <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Permanent history</p><h3 class="uk-card-title uk-margin-small-top">Journal</h3><p class="uk-text-muted uk-margin-small-top">Open an entry to review both sides and follow it back to the source record when that component is available.</p></div><div><span class="uk-label"><?= $e((string) count($entryRows)) ?> entries</span></div></div>
+    <?php if ($entryRows !== []): ?>
+      <ul class="uk-list uk-list-divider uk-margin-medium-top">
+        <?php foreach ($entryRows as $row): ?>
+          <?php $entry = $row['entry']; $entryUid = $entry->uid->toString(); ?>
+          <li>
+            <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid>
+              <div class="uk-width-expand@m"><a class="uk-link-reset" href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($entryUid)) ?>"><strong><?= $e($entry->description) ?></strong></a><div class="uk-text-meta uk-margin-small-top"><?= $e($entry->entryDate->format('M j, Y')) ?> · Recorded by <?= $e($recordedByLabels[$entryUid] ?? 'System') ?></div></div>
+              <div class="uk-text-right@m"><strong><?= $e($money($row['amount'])) ?></strong><div class="uk-margin-small-top"><span class="uk-label uk-label-success">Balanced</span></div></div>
+            </div>
+            <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small uk-margin-small-top" uk-grid><div class="uk-text-meta"><?= $entry->referenceType !== null ? $e(ucfirst(str_replace('_', ' ', $entry->referenceType))) : 'Manual entry' ?></div><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>ledger/?id=<?= $e(rawurlencode($entryUid)) ?>"><i class="fa fa-eye"></i> Review entry</a><?php if (isset($referenceLinks[$entryUid])): ?> <a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl . $referenceLinks[$entryUid]['url']) ?>"><?= $e($referenceLinks[$entryUid]['label']) ?></a><?php endif; ?></div></div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php else: ?><div class="uk-placeholder uk-text-center uk-margin-medium-top"><i class="fa fa-list-alt fa-2x uk-text-muted"></i><h4>No journal entries</h4><p class="uk-text-muted">Entries will appear when connected finance workflows or an authorized teammate posts activity.</p></div><?php endif; ?>
+  </section>
 </div>

@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '190',
+            'version' => '191',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7079,6 +7079,8 @@ class ProcessKontor extends Process
         }
         $entries = $module->entryRepository()->forOrganization($this->organizationUid());
         $entryRows = [];
+        $referenceLinks = [];
+        $recordedByLabels = [];
         foreach ($entries as $entry) {
             $lines = $module->lineRepository()->forEntry($entry->uid->toString());
             $debitMinor = array_sum(array_map(
@@ -7092,6 +7094,60 @@ class ProcessKontor extends Process
                 'entry' => $entry,
                 'amount' => Money::ofMinor($debitMinor, $currencyCode),
             ];
+            $entryUid = $entry->uid->toString();
+            $recordedByLabels[$entryUid] = $this->_('System');
+            if ($entry->createdBy !== null) {
+                $recordedBy = $this->wire()->users->get($entry->createdBy);
+                $recordedByLabels[$entryUid] = $recordedBy->id
+                    ? ((string) $recordedBy->get('title') ?: (string) $recordedBy->name)
+                    : $this->_('Team member');
+            }
+            if (
+                in_array($entry->referenceType, [
+                    LedgerInvoicePostingService::ISSUE_REFERENCE,
+                    LedgerInvoicePostingService::CANCELLATION_REFERENCE,
+                ], true)
+                && $entry->referenceUid !== null
+                && $this->invoicesReady()
+                && $this->can('kontor-invoices-invoice-view')
+            ) {
+                $invoice = $this->invoiceModule()->invoiceRepository()->find($entry->referenceUid);
+                if ($invoice !== null && hash_equals($invoice->organizationId, $this->organizationUid())) {
+                    $referenceLinks[$entryUid] = [
+                        'label' => $this->_('Open invoice'),
+                        'url' => 'invoice/?id=' . rawurlencode($entry->referenceUid),
+                    ];
+                }
+            } elseif (
+                in_array($entry->referenceType, [
+                    LedgerAllocationPostingService::POSTING_REFERENCE,
+                    LedgerAllocationPostingService::REVERSAL_REFERENCE,
+                ], true)
+                && $entry->referenceUid !== null
+                && $this->paymentsReady()
+                && $this->can('kontor-payments-payment-view')
+            ) {
+                $allocation = $this->paymentModule()->allocationRepository()->find($entry->referenceUid);
+                if ($allocation !== null && hash_equals($allocation->organizationId, $this->organizationUid())) {
+                    $referenceLinks[$entryUid] = [
+                        'label' => $this->_('Open payment'),
+                        'url' => 'payment/?id=' . rawurlencode($allocation->paymentUid),
+                    ];
+                }
+            } elseif (
+                $entry->referenceType === LedgerExpensePostingService::REFERENCE_TYPE
+                && $entry->referenceUid !== null
+                && $this->expensesReady()
+                && $this->can('kontor-expenses-expense-view')
+            ) {
+                $expense = $this->expensesModule()->expenseRepository()->find($entry->referenceUid);
+                if ($expense !== null && hash_equals($expense->organizationId, $this->organizationUid())) {
+                    $referenceLinks[$entryUid] = [
+                        'label' => $this->_('Open expense'),
+                        'url' => 'expense/?id=' . rawurlencode($entry->referenceUid),
+                    ];
+                }
+            }
         }
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
         $selected = $id !== '' ? $module->entryRepository()->require($id) : null;
@@ -7102,6 +7158,16 @@ class ProcessKontor extends Process
         foreach ($accounts as $account) {
             $accountLabels[$account->uid->toString()] = $account->code . ' · ' . $account->name;
         }
+        $financeLinks = [];
+        if ($this->invoicesReady() && $this->can('kontor-invoices-invoice-view')) {
+            $financeLinks[] = ['label' => $this->_('Invoices'), 'url' => 'invoices/', 'icon' => 'file-text-o'];
+        }
+        if ($this->paymentsReady() && $this->can('kontor-payments-payment-view')) {
+            $financeLinks[] = ['label' => $this->_('Payments'), 'url' => 'payments/', 'icon' => 'credit-card'];
+        }
+        if ($this->expensesReady() && $this->can('kontor-expenses-expense-view')) {
+            $financeLinks[] = ['label' => $this->_('Expenses'), 'url' => 'expenses/', 'icon' => 'money'];
+        }
         $this->setPageTitle($this->_('Kontor · Ledger'));
 
         return $this->renderTemplate('ledger', [
@@ -7111,6 +7177,9 @@ class ProcessKontor extends Process
                 static fn (Account $account): bool => $account->isActive(),
             )),
             'entryRows' => $entryRows,
+            'referenceLinks' => $referenceLinks,
+            'recordedByLabels' => $recordedByLabels,
+            'financeLinks' => $financeLinks,
             'selected' => $selected,
             'selectedLines' => $selected !== null
                 ? $module->lineRepository()->forEntry($selected->uid->toString())

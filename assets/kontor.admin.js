@@ -179,6 +179,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  document.querySelectorAll('[data-kontor-ledger-entry-form]').forEach((form) => {
+    const debit = form.querySelector('[data-kontor-ledger-debit]');
+    const credit = form.querySelector('[data-kontor-ledger-credit]');
+    const selectedCurrency = (select) => select?.selectedOptions?.[0]?.dataset.currency || '';
+
+    const validateAccounts = () => {
+      if (!debit || !credit || debit.value === '' || credit.value === '') {
+        return true;
+      }
+
+      let message = '';
+      if (debit.value === credit.value) {
+        message = 'Choose different debit and credit accounts.';
+      } else if (selectedCurrency(debit) !== selectedCurrency(credit)) {
+        message = 'Choose accounts that use the same currency.';
+      }
+      credit.setCustomValidity(message);
+
+      return message === '';
+    };
+
+    debit?.addEventListener('change', validateAccounts);
+    credit?.addEventListener('change', validateAccounts);
+    form.addEventListener('submit', (event) => {
+      if (!validateAccounts()) {
+        event.preventDefault();
+        credit?.reportValidity();
+      }
+    });
+  });
+
   document.querySelectorAll('[data-kontor-ai-workbench]').forEach((workbench) => {
     const capability = workbench.querySelector('[data-kontor-ai-capability]');
     const groups = Array.from(workbench.querySelectorAll('[data-kontor-ai-fields]'));

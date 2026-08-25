@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Ledger now presents live account health, permanent journal history and manual
+  postings as a responsive accounting workspace, with guided forms, balanced
+  account validation and permission-aware links back to source finance records.
+
 - API access now provides a responsive integration workspace with dynamically
   generated token permissions, one-time secret copying, business-readable
   resources, guided webhook destinations and clear delivery health.
