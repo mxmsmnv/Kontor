@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Tasks now opens on active work, separates completed history from the daily
+  queue, provides clearer focus views and filter guidance, and presents task
+  ownership, urgency, due dates and record actions consistently across screen
+  sizes.
+
 - Global search now discovers permission-aware providers across Contacts,
   Companies, CRM Leads, Deals, Catalog and Components, presents readable
   result types, and routes every hit into its available business workspace.

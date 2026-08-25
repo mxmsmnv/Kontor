@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '206',
+            'version' => '207',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3153,6 +3153,7 @@ class ProcessKontor extends Process
     {
         $this->requireTasks();
         $this->requirePermission('kontor-tasks-task-view');
+        $archived = (string) $this->wire()->input->get('archived') === '1';
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $status = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('status'),
@@ -3164,9 +3165,11 @@ class ProcessKontor extends Process
         );
         $scope = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('scope'),
-            ['all', 'mine', 'overdue', 'today', 'upcoming']
-        ) ?? 'all';
-        $archived = (string) $this->wire()->input->get('archived') === '1';
+            ['active', 'all', 'mine', 'overdue', 'today', 'upcoming']
+        ) ?? ($archived ? 'all' : 'active');
+        if (in_array($status, ['done', 'cancelled'], true) && $scope !== 'all') {
+            $scope = 'all';
+        }
         $repository = $this->taskModule()->taskRepository();
         $allTasks = $repository->findMatching(
             $this->organizationUid(),
@@ -3188,6 +3191,7 @@ class ProcessKontor extends Process
         $tasks = array_values(array_filter(
             $tasks,
             static fn (Task $task): bool => match ($scope) {
+                'active' => $task->isOpen(),
                 'mine' => $task->isOpen() && $task->assignedTo === $currentUserId,
                 'overdue' => $task->isOverdue(),
                 'today' => $task->isOpen() && $task->dueAt !== null
