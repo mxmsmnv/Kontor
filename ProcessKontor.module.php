@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '204',
+            'version' => '205',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3757,6 +3757,35 @@ class ProcessKontor extends Process
         $filters = [];
         $groupBy = [];
         $result = null;
+        $fieldOptions = [];
+        $fieldLabels = [];
+
+        if ($providerKey === 'crm_pipeline' && $this->crmReady()) {
+            /** @var KontorCRM $crm */
+            $crm = $this->wire()->modules->get('KontorCRM');
+            $pipelineOptions = [];
+            $stageOptions = [];
+            foreach ($crm->pipelineRepository()->forOrganization($this->organizationUid()) as $pipeline) {
+                $pipelineUid = $pipeline->uid->toString();
+                $pipelineOptions[$pipelineUid] = $pipeline->name;
+                foreach ($crm->stageRepository()->forPipeline($pipelineUid) as $stage) {
+                    $stageOptions[$stage->uid->toString()] = $pipeline->name . ' · '
+                        . ($stage->displayNameIn('en') ?? ucwords(str_replace('_', ' ', $stage->nameKey)));
+                }
+            }
+            $fieldOptions = [
+                'pipeline_uid' => $pipelineOptions,
+                'stage_uid' => $stageOptions,
+                'status' => ['open' => $this->_('Open'), 'won' => $this->_('Won'), 'lost' => $this->_('Lost')],
+            ];
+            $fieldLabels = [
+                'pipeline_uid' => $this->_('Sales pipeline'),
+                'stage_uid' => $this->_('Sales stage'),
+                'status' => $this->_('Deal status'),
+                'deal_count' => $this->_('Deals'),
+                'total_value_minor' => $this->_('Pipeline value'),
+            ];
+        }
 
         if ($provider !== null) {
             $schema = $provider->schema();
@@ -3797,6 +3826,9 @@ class ProcessKontor extends Process
             'filters' => $filters,
             'groupBy' => $groupBy,
             'result' => $result,
+            'fieldOptions' => $fieldOptions,
+            'fieldLabels' => $fieldLabels,
+            'currencyCode' => $this->organization()->defaultCurrency,
             'schedules' => $module->scheduledReportRepository()->forOrganization(
                 $this->organizationUid()
             ),
