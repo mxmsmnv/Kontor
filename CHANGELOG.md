@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Task details now separates due and completion dates, shows a readable work
+  lifecycle, removes repeated headings and irrelevant reminder panels from
+  completed work, and adds consistent guidance to every editable setting.
+
 - Tasks now opens on active work, separates completed history from the daily
   queue, provides clearer focus views and filter guidance, and presents task
   ownership, urgency, due dates and record actions consistently across screen

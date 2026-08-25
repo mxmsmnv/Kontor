@@ -45,6 +45,10 @@ $priorityIcon = static fn (string $priority): string => match ($priority) {
     'low' => 'arrow-down',
     default => 'minus',
 };
+$priorityClass = static fn (string $priority): string => match ($priority) {
+    'urgent' => 'uk-text-danger',
+    default => '',
+};
 $dueLabel = static function ($task): string {
     if ($task->dueAt === null) {
         return 'No due date';
@@ -52,12 +56,19 @@ $dueLabel = static function ($task): string {
     if ($task->isOverdue()) {
         return $task->dueAt->format('M j, Y · H:i') . ' · Overdue';
     }
-    if ($task->status === 'done') {
-        return $task->dueAt->format('M j, Y · H:i') . ' · Completed';
-    }
 
     return $task->dueAt->format('M j, Y · H:i');
 };
+$workflowStage = $task === null ? 0 : match ($task->status) {
+    'open' => 1,
+    'in_progress' => 2,
+    'done' => 3,
+    default => 0,
+};
+$showReminderWorkspace = $task !== null && ($task->isOpen() || $reminders !== []);
+$tasksUrl = $adminUrl . 'tasks/' . ($archived
+    ? '?archived=1'
+    : ($task !== null && !$task->isOpen() ? '?scope=all' : ''));
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
@@ -69,7 +80,7 @@ $dueLabel = static function ($task): string {
           : 'Keep the outcome, timing, reminders and team context together in one place.' ?></p>
     </div>
     <div class="pw-module-actions kontor-pagehead__actions">
-      <a class="uk-button uk-button-default" href="<?= $e($adminUrl) ?>tasks/<?= $archived ? '?archived=1' : '' ?>"><i class="fa fa-arrow-left"></i> All tasks</a>
+      <a class="uk-button uk-button-default" href="<?= $e($tasksUrl) ?>"><i class="fa fa-arrow-left"></i> All tasks</a>
       <?php if ($task !== null && $canEdit && !$archived): ?><button class="uk-button uk-button-default" type="button" uk-toggle="target: #kontor-task-editor"><i class="fa fa-pencil"></i> Edit task</button><?php endif; ?>
     </div>
   </header>
@@ -144,8 +155,7 @@ $dueLabel = static function ($task): string {
       <div class="uk-grid-medium uk-flex-middle" uk-grid>
         <div class="uk-width-expand@m">
           <div class="uk-flex uk-flex-wrap uk-flex-middle uk-grid-small" uk-grid><div><span class="uk-label<?= $statusClass($task->status) ?>"><?= $e($humanize($task->status)) ?></span></div><?php if ($archived): ?><div><span class="uk-label">Archived</span></div><?php endif; ?></div>
-          <h3 class="uk-card-title uk-margin-small-top uk-margin-small-bottom"><?= $e($task->title) ?></h3>
-          <p class="uk-text-muted uk-margin-remove"><?= $e($task->description ?: 'No description has been added yet.') ?></p>
+          <p class="uk-text-large uk-margin-small-top uk-margin-remove-bottom"><?= $e($task->description ?: 'No description has been added yet. Edit the task to give teammates the context and definition of done.') ?></p>
         </div>
         <div class="uk-width-auto@m">
           <form class="uk-flex uk-flex-wrap uk-grid-small" uk-grid method="post" action="<?= $e($adminUrl) ?>task-action/">
@@ -157,17 +167,26 @@ $dueLabel = static function ($task): string {
           </form>
         </div>
       </div>
+      <?php if ($workflowStage > 0): ?>
+        <hr class="uk-margin">
+        <div class="uk-grid-small uk-grid-divider uk-child-width-1-3" uk-grid aria-label="Task progress">
+          <?php foreach ([1 => ['Open', 'circle-o'], 2 => ['In progress', 'play-circle-o'], 3 => ['Completed', 'check-circle-o']] as $stage => [$label, $icon]): ?>
+            <div><div class="uk-flex uk-flex-middle<?= $workflowStage >= $stage ? '' : ' uk-text-muted' ?>"><i class="fa fa-<?= $workflowStage >= $stage ? 'check-circle' : $icon ?> uk-margin-small-right"></i><strong><?= $e($label) ?></strong></div></div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     </section>
 
     <div class="uk-grid-medium uk-margin-medium-bottom" uk-grid>
-      <div class="uk-width-1-1 uk-width-2-3@l">
+      <div class="uk-width-1-1<?= $showReminderWorkspace ? ' uk-width-2-3@l' : '' ?>">
         <section class="uk-card uk-card-default uk-card-small uk-card-body">
           <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Execution</p><h3 class="uk-card-title uk-margin-small-top">Task overview</h3>
-          <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+          <div class="uk-grid-small uk-grid-divider uk-child-width-1-1 uk-child-width-1-2@s<?= $showReminderWorkspace ? '' : ' uk-child-width-1-5@l' ?>" uk-grid>
             <div><div class="uk-text-meta">Owner</div><strong><i class="fa fa-user"></i> <?= $e($assigneeLabel) ?></strong></div>
-            <div><div class="uk-text-meta">Priority</div><strong><i class="fa fa-<?= $e($priorityIcon($task->priority)) ?>"></i> <?= $e($humanize($task->priority)) ?></strong></div>
+            <div><div class="uk-text-meta">Priority</div><strong class="<?= $e($priorityClass($task->priority)) ?>"><i class="fa fa-<?= $e($priorityIcon($task->priority)) ?>"></i> <?= $e($humanize($task->priority)) ?></strong></div>
             <div><div class="uk-text-meta">Due</div><strong class="<?= $task->isOverdue() ? 'uk-text-danger' : '' ?>"><i class="fa fa-calendar"></i> <?= $e($dueLabel($task)) ?></strong></div>
             <div><div class="uk-text-meta">Schedule</div><strong><i class="fa fa-repeat"></i> <?= $e($task->recurrenceRule !== null ? 'Repeats ' . $humanize($task->recurrenceRule) : 'One-time task') ?></strong></div>
+            <?php if ($task->completedAt !== null): ?><div><div class="uk-text-meta">Completed</div><strong><i class="fa fa-check-circle"></i> <?= $e($task->completedAt->format('M j, Y · H:i')) ?></strong></div><?php endif; ?>
           </div>
         </section>
 
@@ -180,7 +199,7 @@ $dueLabel = static function ($task): string {
         <?php endif; ?>
       </div>
 
-      <div class="uk-width-1-1 uk-width-1-3@l">
+      <?php if ($showReminderWorkspace): ?><div class="uk-width-1-1 uk-width-1-3@l">
         <section class="uk-card uk-card-default uk-card-small uk-card-body">
           <div class="uk-flex uk-flex-between uk-flex-middle uk-grid-small" uk-grid><div><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Stay on track</p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom">Email reminders</h3></div><?php if ($canManageReminders && $task->assignedTo !== null && $task->isOpen() && !$archived): ?><div><button class="uk-button uk-button-default uk-button-small" type="button" uk-toggle="target: #kontor-task-reminder"><i class="fa fa-plus"></i> Add</button></div><?php endif; ?></div>
           <?php if ($reminders !== []): ?><ul class="uk-list uk-list-divider"><?php foreach ($reminders as $reminder): ?><li><div class="uk-flex uk-flex-between uk-flex-middle"><strong><?= $e($reminder->remindAt->format('M j · H:i')) ?></strong><span class="uk-label<?= $reminder->isSent() ? ' uk-label-success' : '' ?>"><?= $reminder->isSent() ? 'Sent' : 'Scheduled' ?></span></div><div class="uk-text-meta uk-margin-small-top">Email reminder</div></li><?php endforeach; ?></ul>
@@ -188,7 +207,7 @@ $dueLabel = static function ($task): string {
           <?php elseif (!$task->isOpen()): ?><div class="uk-text-center uk-padding-small"><span class="fa fa-check-circle-o fa-2x uk-text-muted"></span><p class="uk-text-muted uk-margin-small-top">No reminders are needed for this completed task.</p></div>
           <?php else: ?><div class="uk-text-center uk-padding-small"><span class="fa fa-bell-o fa-2x uk-text-muted"></span><p class="uk-text-muted uk-margin-small-top">No reminders scheduled.</p><?php if ($canManageReminders && !$archived): ?><button class="uk-button uk-button-default" type="button" uk-toggle="target: #kontor-task-reminder">Schedule reminder</button><?php endif; ?></div><?php endif; ?>
         </section>
-      </div>
+      </div><?php endif; ?>
     </div>
 
     <?php if ($collaborationReady): ?>
@@ -215,19 +234,19 @@ $dueLabel = static function ($task): string {
     <?php if ($canEdit && !$archived): ?>
       <div id="kontor-task-editor" class="uk-modal-container" uk-modal>
         <div class="uk-modal-dialog uk-modal-body">
-          <a class="uk-modal-close-default" href="#" role="button" uk-close aria-label="Close"></a>
+          <button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>
           <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Task settings</p><h2 class="uk-modal-title uk-margin-small-top">Edit task</h2>
           <form class="uk-form-stacked" method="post">
             <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
             <div class="uk-margin"><label class="uk-form-label" for="task-edit-title">Title</label><input class="uk-input uk-margin-small-top" id="task-edit-title" name="title" value="<?= $e($values['title']) ?>" required><div class="uk-text-meta uk-margin-small-top">Describe the outcome or action in a few clear words.</div></div>
             <div class="uk-margin"><label class="uk-form-label" for="task-edit-description">Description</label><textarea class="uk-textarea uk-margin-small-top" id="task-edit-description" name="description" rows="4"><?= $e($values['description']) ?></textarea><div class="uk-text-meta uk-margin-small-top">Add the context teammates need to execute the work.</div></div>
             <div class="uk-grid-small" uk-grid>
-              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-priority">Priority</label><select class="uk-select uk-margin-small-top" id="task-edit-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select></div>
-              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-due">Due date</label><input class="uk-input uk-margin-small-top" id="task-edit-due" type="datetime-local" name="due_at" value="<?= $e($values['dueAt']) ?>"></div>
-              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-recurrence">Repeats</label><select class="uk-select uk-margin-small-top" id="task-edit-recurrence" name="recurrence_rule"><option value="">Does not repeat</option><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['recurrenceRule'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select></div>
-              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-repeat-until">Repeat until</label><input class="uk-input uk-margin-small-top" id="task-edit-repeat-until" type="date" name="recurrence_until" value="<?= $e($values['recurrenceUntil']) ?>"></div>
+              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-priority">Priority</label><select class="uk-select uk-margin-small-top" id="task-edit-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Use High or Urgent only when delay blocks a customer or teammate.</div></div>
+              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-due">Due date</label><input class="uk-input uk-margin-small-top" id="task-edit-due" type="datetime-local" name="due_at" value="<?= $e($values['dueAt']) ?>"><div class="uk-text-meta uk-margin-small-top">Set the real commitment date, or leave it unscheduled.</div></div>
+              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-recurrence">Repeats</label><select class="uk-select uk-margin-small-top" id="task-edit-recurrence" name="recurrence_rule"><option value="">Does not repeat</option><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['recurrenceRule'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Repeating tasks require a due date.</div></div>
+              <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-repeat-until">Repeat until</label><input class="uk-input uk-margin-small-top" id="task-edit-repeat-until" type="date" name="recurrence_until" value="<?= $e($values['recurrenceUntil']) ?>"><div class="uk-text-meta uk-margin-small-top">Optional final date for creating future occurrences.</div></div>
             </div>
-            <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="assigned_to_me" value="1"<?= $values['assignedToMe'] ? ' checked' : '' ?>> <span class="uk-margin-small-left">Assigned to me</span></label>
+            <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="assigned_to_me" value="1"<?= $values['assignedToMe'] ? ' checked' : '' ?>> <span class="uk-margin-small-left"><strong>Assigned to me</strong></span><span class="uk-text-meta uk-display-block uk-margin-small-left">Show this task in your personal work queue.</span></label>
             <div class="uk-flex uk-flex-right uk-grid-small" uk-grid><div><button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button></div><div><button class="uk-button uk-button-primary" name="submit_save" value="1" type="submit"><i class="fa fa-check"></i> Save changes</button></div></div>
           </form>
         </div>
@@ -236,7 +255,7 @@ $dueLabel = static function ($task): string {
 
     <?php if ($canManageReminders && $task->assignedTo !== null && $task->isOpen() && !$archived): ?>
       <div id="kontor-task-reminder" uk-modal><div class="uk-modal-dialog uk-modal-body">
-        <a class="uk-modal-close-default" href="#" role="button" uk-close aria-label="Close"></a>
+        <button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>
         <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Email reminder</p><h2 class="uk-modal-title uk-margin-small-top">Schedule reminder</h2><p class="uk-text-muted">Kontor will email <?= $e($assigneeLabel) ?> at the selected local date and time.</p>
         <form class="uk-form-stacked" method="post" action="<?= $e($adminUrl) ?>task-reminder/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="task_uid" value="<?= $e($task->uid->toString()) ?>"><label class="uk-form-label" for="task-remind-at">Remind at</label><input class="uk-input uk-margin-small-top" id="task-remind-at" type="datetime-local" name="remind_at" required><div class="uk-text-meta uk-margin-small-top">Choose a useful moment before the due date so there is time to act.</div><div class="uk-flex uk-flex-right uk-grid-small uk-margin" uk-grid><div><button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button></div><div><button class="uk-button uk-button-primary" type="submit"><i class="fa fa-bell"></i> Schedule</button></div></div></form>
       </div></div>
