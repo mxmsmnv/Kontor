@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '191',
+            'version' => '192',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7168,7 +7168,9 @@ class ProcessKontor extends Process
         if ($this->expensesReady() && $this->can('kontor-expenses-expense-view')) {
             $financeLinks[] = ['label' => $this->_('Expenses'), 'url' => 'expenses/', 'icon' => 'money'];
         }
-        $this->setPageTitle($this->_('Kontor · Ledger'));
+        $this->setPageTitle($selected !== null
+            ? $this->_('Kontor · Journal entry')
+            : $this->_('Kontor · Ledger'));
 
         return $this->renderTemplate('ledger', [
             'accountRows' => $accountRows,
@@ -11823,6 +11825,9 @@ class ProcessKontor extends Process
             ],
             'documents' => (string) $this->wire()->input->get('id') !== ''
                 ? [['documents/', 'Documents']]
+                : [],
+            'ledger' => (string) $this->wire()->input->get('id') !== ''
+                ? [['ledger/', 'Ledger']]
                 : [],
             'import' => $this->importBreadcrumbTrail(),
             default => [],

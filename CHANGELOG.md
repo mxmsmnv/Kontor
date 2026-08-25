@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Individual journal entries now open as focused accounting records with their
+  own breadcrumb and title, balanced debit/credit presentation, source workflow
+  navigation, correction guidance and nearby-entry context.
+
 - Ledger now presents live account health, permanent journal history and manual
   postings as a responsive accounting workspace, with guided forms, balanced
   account validation and permission-aware links back to source finance records.
