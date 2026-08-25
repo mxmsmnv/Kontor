@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '179',
+            'version' => '180',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3385,17 +3385,31 @@ class ProcessKontor extends Process
         $module = $this->collaborationModule();
         $this->setPageTitle($this->_('Kontor · Collaboration'));
 
-        $notes = ($this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-collaboration-note-view'))
-                ? $module->noteRepository()->findRecent($this->organizationUid(), 50)
-                : [];
+        $canViewNotes = $this->wire()->user->isSuperuser()
+            || $this->wire()->user->hasPermission('kontor-collaboration-note-view');
+        $notes = $canViewNotes
+            ? $module->noteRepository()->findRecent($this->organizationUid(), 50)
+            : [];
         $comments = $module->commentRepository()->findRecent($this->organizationUid(), 50);
+        $records = array_merge($notes, $comments);
+        $selectedView = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('view'),
+            ['all', 'comments', 'notes'],
+        ) ?: 'all';
+        if (!$canViewNotes && $selectedView === 'notes') {
+            $selectedView = 'all';
+        }
 
         return $this->renderTemplate('collaboration', [
             'notes' => $notes,
             'comments' => $comments,
-            'entityLinks' => $this->collaborationEntityLinks(array_merge($notes, $comments)),
-            'authorLabels' => $this->collaborationAuthorLabels(array_merge($notes, $comments)),
+            'entityLinks' => $this->collaborationEntityLinks($records),
+            'authorLabels' => $this->collaborationAuthorLabels($records),
+            'canViewNotes' => $canViewNotes,
+            'canViewTasks' => $this->tasksReady() && $this->can('kontor-tasks-task-view'),
+            'canCreateTasks' => $this->tasksReady() && $this->can('kontor-tasks-task-create'),
+            'query' => trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q'))),
+            'selectedView' => $selectedView,
         ]);
     }
 

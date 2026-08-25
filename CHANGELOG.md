@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Collaboration now works as a responsive team inbox with focused discussion
+  and internal-note views, human authors, friendly dates, search and direct
+  permission-aware navigation to records supplied by optional components.
 - Cache now leads with service readiness, data-safety context and connected
   functionality, while isolating entry inspection and storage in advanced
   tools and protecting destructive invalidation inside a confirmed danger zone.
