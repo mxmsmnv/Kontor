@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- New task creation now separates the outcome from planning, keeps recurring
+  options in a native disclosure, explains every choice and stacks cleanly on
+  small screens without exposing implementation details.
 - Task details now presents a focused status workspace with owner, priority,
   due date, recurrence and connected records; editing and reminders use guided
   dialogs, completed work suppresses obsolete reminders, and collaboration is

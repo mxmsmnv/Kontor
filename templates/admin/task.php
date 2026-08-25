@@ -80,23 +80,65 @@ $dueLabel = static function ($task): string {
     <?php if ($contextLabel !== ''): ?>
       <div class="uk-alert-primary uk-margin-medium-bottom" uk-alert><p><strong>Connected to <?= $e($contextLabel) ?>.</strong> This task will appear in the related <?= $e($contextType) ?> workspace after creation.</p></div>
     <?php endif; ?>
-    <section class="uk-card uk-card-default uk-card-small uk-card-body">
-      <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Task details</p><h3 class="uk-card-title uk-margin-small-top">What needs to happen?</h3>
-      <form class="uk-form-stacked" method="post">
-        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
-        <?php if ($contextType !== '' && $contextUid !== ''): ?><input type="hidden" name="context_entity_type" value="<?= $e($contextType) ?>"><input type="hidden" name="context_entity_uid" value="<?= $e($contextUid) ?>"><?php endif; ?>
-        <div class="uk-margin"><label class="uk-form-label" for="task-title">Task title</label><input class="uk-input uk-margin-small-top" id="task-title" name="title" value="<?= $e($values['title']) ?>" placeholder="Describe the outcome in a few words" required><div class="uk-text-meta uk-margin-small-top">Lead with the result or action so teammates can understand it at a glance.</div></div>
-        <div class="uk-margin"><label class="uk-form-label" for="task-description">Description</label><textarea class="uk-textarea uk-margin-small-top" id="task-description" name="description" rows="5" placeholder="Add context, constraints or a useful definition of done"><?= $e($values['description']) ?></textarea><div class="uk-text-meta uk-margin-small-top">Include only the information that affects execution or a decision.</div></div>
-        <div class="uk-grid-small" uk-grid>
-          <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-priority">Priority</label><select class="uk-select uk-margin-small-top" id="task-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Use High or Urgent only when sequencing other work depends on it.</div></div>
-          <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-due">Due date</label><input class="uk-input uk-margin-small-top" id="task-due" type="datetime-local" name="due_at" value="<?= $e($values['dueAt']) ?>"><div class="uk-text-meta uk-margin-small-top">Leave blank when the work has no meaningful deadline.</div></div>
-          <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-recurrence">Repeats</label><select class="uk-select uk-margin-small-top" id="task-recurrence" name="recurrence_rule"><option value="">Does not repeat</option><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['recurrenceRule'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Recurring work needs a due date to create the next occurrence.</div></div>
-          <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-repeat-until">Repeat until</label><input class="uk-input uk-margin-small-top" id="task-repeat-until" type="date" name="recurrence_until" value="<?= $e($values['recurrenceUntil']) ?>"><div class="uk-text-meta uk-margin-small-top">Optional end date for recurring work.</div></div>
+    <form class="uk-form-stacked" method="post">
+      <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+      <?php if ($contextType !== '' && $contextUid !== ''): ?><input type="hidden" name="context_entity_type" value="<?= $e($contextType) ?>"><input type="hidden" name="context_entity_uid" value="<?= $e($contextUid) ?>"><?php endif; ?>
+      <div class="uk-grid-medium" uk-grid>
+        <div class="uk-width-1-1 uk-width-2-3@l">
+          <section class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+            <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Task details</p>
+            <h3 class="uk-card-title uk-margin-small-top">What needs to happen?</h3>
+            <p class="uk-text-muted">Write the task so another teammate can understand the outcome without asking for more context.</p>
+            <div class="uk-margin">
+              <label class="uk-form-label" for="task-title">Task title</label>
+              <input class="uk-input uk-margin-small-top" id="task-title" name="title" value="<?= $e($values['title']) ?>" placeholder="For example: Confirm the proposal with the customer" required>
+              <div class="uk-text-meta uk-margin-small-top">Start with an action and name the result that marks the work as complete.</div>
+            </div>
+            <div class="uk-margin-remove-bottom">
+              <label class="uk-form-label" for="task-description">Description <span class="uk-text-meta">(optional)</span></label>
+              <textarea class="uk-textarea uk-margin-small-top" id="task-description" name="description" rows="7" placeholder="Add the relevant background, constraints and definition of done"><?= $e($values['description']) ?></textarea>
+              <div class="uk-text-meta uk-margin-small-top">Keep decisions and execution details here. Team discussion can continue after the task is created.</div>
+            </div>
+          </section>
         </div>
-        <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="assigned_to_me" value="1"<?= $values['assignedToMe'] ? ' checked' : '' ?>> <span class="uk-margin-small-left">Assign this task to me</span></label>
-        <button class="uk-button uk-button-primary" name="submit_save" value="1" type="submit"><i class="fa fa-plus"></i> Create task</button>
-      </form>
-    </section>
+        <div class="uk-width-1-1 uk-width-1-3@l">
+          <section class="uk-card uk-card-default uk-card-small uk-card-body">
+            <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Planning</p>
+            <h3 class="uk-card-title uk-margin-small-top">Set responsibility</h3>
+            <div class="uk-margin">
+              <label class="uk-form-label" for="task-priority">Priority</label>
+              <select class="uk-select uk-margin-small-top" id="task-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select>
+              <div class="uk-text-meta uk-margin-small-top">Reserve High and Urgent for work that blocks a customer or teammate.</div>
+            </div>
+            <div class="uk-margin">
+              <label class="uk-form-label" for="task-due">Due date <span class="uk-text-meta">(optional)</span></label>
+              <input class="uk-input uk-margin-small-top" id="task-due" type="datetime-local" name="due_at" value="<?= $e($values['dueAt']) ?>">
+              <div class="uk-text-meta uk-margin-small-top">Choose a real commitment date, or leave this blank.</div>
+            </div>
+            <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="assigned_to_me" value="1"<?= $values['assignedToMe'] ? ' checked' : '' ?>> <span class="uk-margin-small-left"><strong>Assign to me</strong></span><span class="uk-text-meta uk-display-block uk-margin-small-left">The task will appear in your personal work queue.</span></label>
+            <ul class="uk-accordion uk-margin" uk-accordion>
+              <li<?= $values['recurrenceRule'] !== '' ? ' class="uk-open"' : '' ?>>
+                <a class="uk-accordion-title uk-link-reset" href>Repeat this task</a>
+                <div class="uk-accordion-content">
+                  <div class="uk-margin-small">
+                    <label class="uk-form-label" for="task-recurrence">Frequency</label>
+                    <select class="uk-select uk-margin-small-top" id="task-recurrence" name="recurrence_rule"><option value="">Does not repeat</option><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['recurrenceRule'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select>
+                    <div class="uk-text-meta uk-margin-small-top">A due date is required when the task repeats.</div>
+                  </div>
+                  <div class="uk-margin">
+                    <label class="uk-form-label" for="task-repeat-until">End repeating <span class="uk-text-meta">(optional)</span></label>
+                    <input class="uk-input uk-margin-small-top" id="task-repeat-until" type="date" name="recurrence_until" value="<?= $e($values['recurrenceUntil']) ?>">
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <hr>
+            <button class="uk-button uk-button-primary uk-width-1-1" name="submit_save" value="1" type="submit"><i class="fa fa-plus"></i> Create task</button>
+            <p class="uk-text-meta uk-text-center uk-margin-small-top uk-margin-remove-bottom">You can add reminders and team updates after creation.</p>
+          </section>
+        </div>
+      </div>
+    </form>
   <?php else: ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
       <div class="uk-grid-medium uk-flex-middle" uk-grid>
