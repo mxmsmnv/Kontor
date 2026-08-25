@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '186',
+            'version' => '187',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4587,22 +4587,50 @@ class ProcessKontor extends Process
         );
         $module = $this->expensesModule();
         $categories = $module->categoryRepository()->forOrganization($this->organizationUid());
+        $categoryLabels = array_column(array_map(
+            static fn (ExpenseCategory $category): array => [
+                $category->uid->toString(),
+                $category->name,
+            ],
+            $categories,
+        ), 1, 0);
+        $selectedCategory = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('category')
+        );
+        if ($selectedCategory !== '' && !isset($categoryLabels[$selectedCategory])) {
+            $selectedCategory = '';
+        }
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $allExpenses = $module->expenseRepository()->forOrganization($this->organizationUid());
+        $expenses = array_values(array_filter(
+            $allExpenses,
+            static function (Expense $expense) use ($status, $selectedCategory, $query, $categoryLabels): bool {
+                if ($status !== null && $expense->status !== $status) {
+                    return false;
+                }
+                if ($selectedCategory !== '' && $expense->categoryUid !== $selectedCategory) {
+                    return false;
+                }
+                if ($query !== '') {
+                    $category = $categoryLabels[$expense->categoryUid] ?? '';
+                    if (mb_stripos($expense->description . ' ' . $category, $query) === false) {
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+        ));
         $this->setPageTitle($this->_('Kontor · Expenses'));
 
         return $this->renderTemplate('expenses', [
-            'expenses' => $module->expenseRepository()->forOrganization(
-                $this->organizationUid(),
-                $status,
-            ),
+            'expenses' => $expenses,
+            'allExpenses' => $allExpenses,
             'categories' => $categories,
-            'categoryLabels' => array_column(array_map(
-                static fn (ExpenseCategory $category): array => [
-                    $category->uid->toString(),
-                    $category->code . ' · ' . $category->name,
-                ],
-                $categories,
-            ), 1, 0),
+            'categoryLabels' => $categoryLabels,
             'selectedStatus' => $status,
+            'selectedCategory' => $selectedCategory,
+            'query' => $query,
             'canCreateExpense' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-expenses-expense-create'),
             'canManageCategories' => $this->wire()->user->isSuperuser()

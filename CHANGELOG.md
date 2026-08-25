@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Expenses now provides a responsive spend workspace with first-run setup,
+  approval-queue indicators, status counts, search and category filtering,
+  readable expense cards, and a compact category overview without internal codes.
+
 - Recording an expense is now a guided draft workflow with category readiness,
   business-focused fields, optional supplier and Files connections, receipt
   ownership validation, native input constraints, and clear approval guidance.
