@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Invoices now works as a responsive billing queue with lifecycle filters,
+  customer search, outstanding and overdue signals, human due-date context,
+  and direct permission-aware handoff from sales orders into billing.
 - Invoice details now separates customer billing, collection and accounting,
   uses friendly payment and source-order links, and keeps issue, delivery,
   payment, cancellation and credit actions permission-aware across optional

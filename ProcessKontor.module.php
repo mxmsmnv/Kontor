@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '175',
+            'version' => '176',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2403,14 +2403,68 @@ class ProcessKontor extends Process
         $this->requireInvoices();
         $this->requirePermission('kontor-invoices-invoice-view');
         $this->setPageTitle($this->_('Kontor · Invoices'));
-        $invoices = $this->invoiceModule()->invoiceRepository()->findMatching(
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $selectedStatus = $this->wire()->sanitizer->text((string) $this->wire()->input->get('status'));
+        $selectedKind = $this->wire()->sanitizer->text((string) $this->wire()->input->get('kind'));
+        $selectedStatus = in_array($selectedStatus, [
+            'draft', 'issued', 'sent', 'overdue', 'partially_paid', 'outstanding', 'paid', 'cancelled',
+        ], true) ? $selectedStatus : '';
+        $selectedKind = in_array($selectedKind, ['invoice', 'credit_note'], true) ? $selectedKind : '';
+        $customerLabels = $this->salesCustomerLabels();
+        $allInvoices = $this->invoiceModule()->invoiceRepository()->findMatching(
             $this->organizationUid(),
-            limit: 50,
+            limit: 250,
         );
+        $today = new \DateTimeImmutable('today');
+        $invoices = array_values(array_filter(
+            $allInvoices,
+            static function (Invoice $invoice) use (
+                $query,
+                $selectedStatus,
+                $selectedKind,
+                $customerLabels,
+                $today,
+            ): bool {
+                if ($selectedKind !== '' && $invoice->kind !== $selectedKind) {
+                    return false;
+                }
+                if ($selectedStatus === 'outstanding') {
+                    if ($invoice->due->amountMinor() <= 0 || !in_array(
+                        $invoice->status,
+                        ['issued', 'sent', 'overdue', 'partially_paid'],
+                        true,
+                    )) {
+                        return false;
+                    }
+                } elseif ($selectedStatus === 'overdue') {
+                    $pastDue = $invoice->dueDate !== null
+                        && $invoice->dueDate < $today
+                        && !in_array($invoice->status, ['draft', 'paid', 'cancelled'], true);
+                    if ($invoice->due->amountMinor() <= 0
+                        || ($invoice->status !== 'overdue' && !$pastDue)) {
+                        return false;
+                    }
+                } elseif ($selectedStatus !== '' && $invoice->status !== $selectedStatus) {
+                    return false;
+                }
+                if ($query === '') {
+                    return true;
+                }
+                $customer = $customerLabels[$invoice->customerType . ':' . $invoice->customerUid] ?? '';
+                $haystack = mb_strtolower(($invoice->number ?? '') . ' ' . $customer);
+
+                return str_contains($haystack, mb_strtolower($query));
+            },
+        ));
 
         return $this->renderTemplate('invoices', [
             'invoices' => $invoices,
-            'customerLabels' => $this->salesCustomerLabels(),
+            'allInvoices' => $allInvoices,
+            'customerLabels' => $customerLabels,
+            'query' => $query,
+            'selectedStatus' => $selectedStatus,
+            'selectedKind' => $selectedKind,
+            'canViewSales' => $this->can('kontor-sales-order-view'),
         ]);
     }
 
