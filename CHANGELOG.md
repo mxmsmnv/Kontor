@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Task details now presents a focused status workspace with owner, priority,
+  due date, recurrence and connected records; editing and reminders use guided
+  dialogs, completed work suppresses obsolete reminders, and collaboration is
+  organized into native discussion and internal-note tabs.
 - Tasks now works as a responsive daily inbox with all, assigned, today,
   overdue and upcoming focus views, human due-date context and assignee names,
   compact filters, a separate archive entry point and mobile task cards.

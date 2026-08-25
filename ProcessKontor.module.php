@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '168',
+            'version' => '169',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3067,6 +3067,14 @@ class ProcessKontor extends Process
             }
         }
 
+        $assigneeLabel = $this->_('Unassigned');
+        if ($task?->assignedTo !== null) {
+            $assignee = $this->wire()->users->get($task->assignedTo);
+            $assigneeLabel = $assignee->id > 0
+                ? (string) ($assignee->get('title') ?: ucfirst((string) $assignee->name))
+                : $this->_('Former user');
+        }
+
         return $this->renderTemplate('task', [
             'task' => $task,
             'values' => $values,
@@ -3091,6 +3099,10 @@ class ProcessKontor extends Process
             'contextLabel' => $contextLabel,
             'relatedRecords' => $task !== null ? $this->taskRelatedRecords($task) : [],
             'authorLabels' => $this->collaborationAuthorLabels(array_merge($notes, $comments)),
+            'assigneeLabel' => $assigneeLabel,
+            'canComplete' => $this->can('kontor-tasks-task-complete'),
+            'canCancel' => $this->can('kontor-tasks-task-cancel'),
+            'canEdit' => $this->can('kontor-tasks-task-edit'),
         ]);
     }
 
