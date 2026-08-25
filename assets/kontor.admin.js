@@ -350,4 +350,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  document.querySelectorAll('[data-kontor-marketplace]').forEach((marketplace) => {
+    const search = marketplace.querySelector('[data-kontor-marketplace-search]');
+    const state = marketplace.querySelector('[data-kontor-marketplace-state]');
+    const listings = Array.from(marketplace.querySelectorAll('[data-kontor-marketplace-listing]'));
+    const count = marketplace.querySelector('[data-kontor-marketplace-count]');
+    const empty = marketplace.querySelector('[data-kontor-marketplace-empty]');
+
+    const update = () => {
+      const query = search?.value.trim().toLocaleLowerCase() || '';
+      const selectedState = state?.value || '';
+      let visible = 0;
+
+      listings.forEach((listing) => {
+        const matchesQuery = query === '' || listing.dataset.search.includes(query);
+        const matchesState = selectedState === '' || listing.dataset.state === selectedState;
+        listing.hidden = !matchesQuery || !matchesState;
+        if (!listing.hidden) visible += 1;
+      });
+
+      if (count) count.textContent = `${visible} shown`;
+      if (empty) empty.hidden = visible !== 0;
+    };
+
+    search?.addEventListener('input', update);
+    state?.addEventListener('change', update);
+    update();
+  });
 });

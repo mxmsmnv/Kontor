@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Marketplace now prioritizes component discovery, compatibility and security,
+  with searchable listing cards, publisher trust, readable registry health and
+  guarded custom-source and manual-import tools in a responsive UIkit layout.
+
 - Individual mail messages now use their subject as the page title and present
   compact delivery feedback, readable addressing, human commercial links and
   workflow context without redundant metric cards or empty history panels.
