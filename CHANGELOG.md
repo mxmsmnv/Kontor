@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- API access now provides a responsive integration workspace with dynamically
+  generated token permissions, one-time secret copying, business-readable
+  resources, guided webhook destinations and clear delivery health.
+
 - GraphQL now opens as a responsive integration explorer with business-readable
   data collections, guided token and query inputs, clear request outcomes, and
   technical schema details kept in an optional developer reference.

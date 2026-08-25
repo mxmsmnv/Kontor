@@ -124,6 +124,61 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  document.querySelectorAll('[data-kontor-copy-target]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const selector = button.dataset.kontorCopyTarget;
+      const target = selector ? document.querySelector(selector) : null;
+
+      if (!target) {
+        return;
+      }
+
+      const value = target.value || target.textContent || '';
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch (error) {
+        target.select?.();
+        document.execCommand('copy');
+      }
+      const originalLabel = button.innerHTML;
+      button.innerHTML = '<i class="fa fa-check"></i> Copied';
+      window.setTimeout(() => {
+        button.innerHTML = originalLabel;
+      }, 2000);
+    });
+  });
+
+  document.querySelectorAll('[data-kontor-api-token-form]').forEach((form) => {
+    const accessModes = Array.from(form.querySelectorAll('[name="access_mode"]'));
+    const scopes = Array.from(form.querySelectorAll('[data-kontor-api-scope]'));
+    const restricted = () => form.querySelector('[name="access_mode"]:checked')?.value === 'restricted';
+
+    const validateScopes = () => {
+      if (scopes.length === 0) {
+        return true;
+      }
+
+      const valid = !restricted() || scopes.some((scope) => scope.checked);
+      scopes[0].setCustomValidity(valid ? '' : 'Choose at least one data permission.');
+
+      return valid;
+    };
+
+    accessModes.forEach((mode) => mode.addEventListener('change', validateScopes));
+    scopes.forEach((scope) => scope.addEventListener('change', validateScopes));
+    form.addEventListener('submit', (event) => {
+      if (!validateScopes()) {
+        event.preventDefault();
+        scopes[0]?.reportValidity();
+        return;
+      }
+
+      if (!restricted() && !window.confirm('Issue a token with full access to current and future API resources?')) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('[data-kontor-ai-workbench]').forEach((workbench) => {
     const capability = workbench.querySelector('[data-kontor-ai-capability]');
     const groups = Array.from(workbench.querySelectorAll('[data-kontor-ai-fields]'));

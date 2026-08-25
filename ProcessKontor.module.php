@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '189',
+            'version' => '190',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7650,7 +7650,7 @@ class ProcessKontor extends Process
         );
         $secret = $this->wire()->session->get('kontorApiOneTimeSecret');
         $this->wire()->session->set('kontorApiOneTimeSecret', null);
-        $this->setPageTitle($this->_('Kontor · API'));
+        $this->setPageTitle($this->_('Kontor · API access'));
 
         return $this->renderTemplate('api', [
             'tokens' => $module->tokenRepository()->forOrganization($this->organizationUid()),
@@ -7671,10 +7671,22 @@ class ProcessKontor extends Process
         $name = trim($this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('name')
         ));
+        $rawScopes = $this->wire()->input->post('scopes');
+        $scopeValues = is_array($rawScopes)
+            ? $rawScopes
+            : explode(',', (string) $rawScopes);
         $scopes = array_values(array_unique(array_filter(array_map(
-            static fn (string $scope): string => trim(strtolower($scope)),
-            explode(',', (string) $this->wire()->input->post('scopes')),
+            static fn (mixed $scope): string => trim(strtolower((string) $scope)),
+            $scopeValues,
         ))));
+        $accessMode = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('access_mode')
+        ));
+        if ($accessMode === 'unrestricted') {
+            $scopes = [];
+        } elseif ($accessMode === 'restricted' && $scopes === []) {
+            throw new WireException($this->_('Choose at least one API permission.'));
+        }
         $expires = trim($this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('expires_at')
         ));
