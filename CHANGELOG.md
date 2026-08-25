@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- New task creation now assigns work to its creator by default, makes required
+  input explicit, explains the open-to-complete workflow, documents recurrence
+  behavior and provides balanced create and cancel actions.
+
 - Task details now separates due and completion dates, shows a readable work
   lifecycle, removes repeated headings and irrelevant reminder panels from
   completed work, and adds consistent guidance to every editable setting.

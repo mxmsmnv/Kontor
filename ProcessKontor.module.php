@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '208',
+            'version' => '209',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3272,7 +3272,8 @@ class ProcessKontor extends Process
             'dueAt' => $task?->dueAt?->format('Y-m-d\TH:i') ?? '',
             'recurrenceRule' => $task?->recurrenceRule ?? '',
             'recurrenceUntil' => $task?->recurrenceUntil?->format('Y-m-d') ?? '',
-            'assignedToMe' => $task?->assignedTo === (int) $this->wire()->user->id,
+            'assignedToMe' => $task === null
+                || $task->assignedTo === (int) $this->wire()->user->id,
         ];
         $error = '';
 

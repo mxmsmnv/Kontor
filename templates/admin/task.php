@@ -101,9 +101,9 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
             <h3 class="uk-card-title uk-margin-small-top">What needs to happen?</h3>
             <p class="uk-text-muted">Write the task so another teammate can understand the outcome without asking for more context.</p>
             <div class="uk-margin">
-              <label class="uk-form-label" for="task-title">Task title</label>
+              <label class="uk-form-label" for="task-title">Task title <span class="uk-text-danger">*</span></label>
               <input class="uk-input uk-margin-small-top" id="task-title" name="title" value="<?= $e($values['title']) ?>" placeholder="For example: Confirm the proposal with the customer" required>
-              <div class="uk-text-meta uk-margin-small-top">Start with an action and name the result that marks the work as complete.</div>
+              <div class="uk-text-meta uk-margin-small-top">Required. Start with an action and name the result that marks the work as complete.</div>
             </div>
             <div class="uk-margin-remove-bottom">
               <label class="uk-form-label" for="task-description">Description <span class="uk-text-meta">(optional)</span></label>
@@ -115,7 +115,7 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
         <div class="uk-width-1-1 uk-width-1-3@l">
           <section class="uk-card uk-card-default uk-card-small uk-card-body">
             <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Planning</p>
-            <h3 class="uk-card-title uk-margin-small-top">Set responsibility</h3>
+            <h3 class="uk-card-title uk-margin-small-top">Plan and assign the work</h3>
             <div class="uk-margin">
               <label class="uk-form-label" for="task-priority">Priority</label>
               <select class="uk-select uk-margin-small-top" id="task-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select>
@@ -139,16 +139,26 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
                   <div class="uk-margin">
                     <label class="uk-form-label" for="task-repeat-until">End repeating <span class="uk-text-meta">(optional)</span></label>
                     <input class="uk-input uk-margin-small-top" id="task-repeat-until" type="date" name="recurrence_until" value="<?= $e($values['recurrenceUntil']) ?>">
+                    <div class="uk-text-meta uk-margin-small-top">Leave blank to continue creating occurrences without an end date.</div>
                   </div>
                 </div>
               </li>
             </ul>
             <hr>
-            <button class="uk-button uk-button-primary uk-width-1-1" name="submit_save" value="1" type="submit"><i class="fa fa-plus"></i> Create task</button>
+            <div class="uk-grid-small uk-child-width-1-2" uk-grid><div><a class="uk-button uk-button-default uk-link-reset uk-width-1-1" href="<?= $e($tasksUrl) ?>">Cancel</a></div><div><button class="uk-button uk-button-primary uk-width-1-1" name="submit_save" value="1" type="submit"><i class="fa fa-plus"></i> Create task</button></div></div>
             <p class="uk-text-meta uk-text-center uk-margin-small-top uk-margin-remove-bottom">You can add reminders and team updates after creation.</p>
           </section>
         </div>
       </div>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
+        <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">After creation</p>
+        <h3 class="uk-card-title uk-margin-small-top">How the task moves forward</h3>
+        <div class="uk-grid-small uk-grid-divider uk-child-width-1-1 uk-child-width-1-3@m" uk-grid>
+          <div><div class="uk-flex uk-flex-top"><span class="uk-label uk-margin-small-right">1</span><span><strong>Open</strong><span class="uk-text-meta uk-display-block uk-margin-small-top">The task enters the active work queue.</span></span></div></div>
+          <div><div class="uk-flex uk-flex-top"><span class="uk-label uk-margin-small-right">2</span><span><strong>Execute</strong><span class="uk-text-meta uk-display-block uk-margin-small-top">Start it, add updates and use reminders.</span></span></div></div>
+          <div><div class="uk-flex uk-flex-top"><span class="uk-label uk-margin-small-right">3</span><span><strong>Complete</strong><span class="uk-text-meta uk-display-block uk-margin-small-top">Finish the work, then archive its history.</span></span></div></div>
+        </div>
+      </section>
     </form>
   <?php else: ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
