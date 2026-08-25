@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Project details now acts as a strategic delivery workspace with progress,
+  schedule, tracked effort, invoice readiness, a guided plan-to-billing flow and
+  compact on-demand forms for milestones, time and additional charges.
+
 - Projects now works as a delivery portfolio with searchable project and customer
   context, milestone progress, schedule risks, tracked time, unbilled value and
   permission-aware links into the optional task, customer and invoice workflows.

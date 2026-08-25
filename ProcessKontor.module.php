@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '198',
+            'version' => '199',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5225,6 +5225,15 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New project')
             : sprintf($this->_('Kontor · %s'), $project->name));
 
+        $customerRoute = null;
+        if ($project !== null && $this->contactsReady() && $project->customerUid !== null) {
+            if ($project->customerType === 'contact' && $this->can('kontor-contacts-contact-view')) {
+                $customerRoute = 'contact/?id=' . rawurlencode($project->customerUid);
+            } elseif ($project->customerType === 'company' && $this->can('kontor-contacts-company-view')) {
+                $customerRoute = 'company/?id=' . rawurlencode($project->customerUid);
+            }
+        }
+
         return $this->renderTemplate('project', [
             'project' => $project,
             'values' => $values,
@@ -5233,6 +5242,7 @@ class ProcessKontor extends Process
             'customerLabel' => $project !== null
                 ? ($customers[($project->customerType ?? '') . ':' . ($project->customerUid ?? '')] ?? '—')
                 : '—',
+            'customerRoute' => $customerRoute,
             'milestones' => $project !== null
                 ? $module->milestoneRepository()->forProject($project->uid->toString())
                 : [],
@@ -5246,6 +5256,8 @@ class ProcessKontor extends Process
             'canTrackTime' => $this->can('kontor-projects-time-track'),
             'canManageBillable' => $this->can('kontor-projects-billable-item-manage'),
             'canGenerateInvoice' => $this->can('kontor-projects-invoice-generate'),
+            'canViewTasks' => $this->tasksReady() && $this->can('kontor-tasks-task-view'),
+            'canViewInvoices' => $this->invoicesReady() && $this->can('kontor-invoices-invoice-view'),
         ]);
     }
 
