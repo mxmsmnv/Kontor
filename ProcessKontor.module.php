@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '216',
+            'version' => '217',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1292,6 +1292,9 @@ class ProcessKontor extends Process
 
         if ($this->wire()->input->post('submit_save')) {
             $this->requirePost();
+            $allowedStatuses = $lead?->isConverted()
+                ? ['converted']
+                : ['new', 'contacted', 'qualified', 'lost'];
             $values = [
                 'title' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('title')),
                 'contactUid' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('contact_uid')),
@@ -1299,7 +1302,7 @@ class ProcessKontor extends Process
                 'source' => $this->wire()->sanitizer->text((string) $this->wire()->input->post('source')),
                 'status' => $this->wire()->sanitizer->option(
                     (string) $this->wire()->input->post('status'),
-                    ['new', 'contacted', 'qualified', 'converted', 'lost']
+                    $allowedStatuses
                 ) ?? 'new',
                 'priority' => $this->wire()->sanitizer->option(
                     (string) $this->wire()->input->post('priority'),
@@ -1391,13 +1394,86 @@ class ProcessKontor extends Process
             }
         }
 
+        $organizationUid = $this->organizationUid();
+        $canViewContact = $this->contactsReady() && $this->can('kontor-contacts-contact-view');
+        $canViewCompany = $this->contactsReady() && $this->can('kontor-contacts-company-view');
+        $defaultPipeline = $lead !== null && $lead->status === 'qualified'
+            ? $crm->pipelineRepository()->defaultForEntityType($organizationUid, 'deal')
+            : null;
+        $firstDealStage = $defaultPipeline !== null
+            ? $crm->stageRepository()->firstOpenStage($defaultPipeline->uid->toString())
+            : null;
+
         return $this->renderTemplate('crm-lead', [
             'lead' => $lead,
             'values' => $values,
             'error' => $error,
-            'contacts' => $this->contactRepository()->findAll($this->organizationUid(), limit: 250),
-            'companies' => $this->companyRepository()->findAll($this->organizationUid(), limit: 250),
+            'contacts' => $canViewContact
+                ? $this->contactRepository()->findAll($organizationUid, limit: 250)
+                : [],
+            'companies' => $canViewCompany
+                ? $this->companyRepository()->findAll($organizationUid, limit: 250)
+                : [],
+            'canViewContact' => $canViewContact,
+            'canViewCompany' => $canViewCompany,
+            'canCreateContact' => $this->contactsReady() && $this->can('kontor-contacts-contact-create'),
+            'canCreateCompany' => $this->contactsReady() && $this->can('kontor-contacts-company-create'),
+            'canViewDeal' => $this->can('kontor-crm-deal-view'),
+            'canConvertLead' => $lead !== null
+                && $lead->status === 'qualified'
+                && $lead->isQualifiedForConversion()
+                && $defaultPipeline !== null
+                && $firstDealStage !== null
+                && $this->can('kontor-crm-deal-create'),
+            'canConfigurePipeline' => $this->can('kontor-crm-pipeline-admin'),
+            'conversionNeedsCustomer' => $lead !== null
+                && $lead->status === 'qualified'
+                && !$lead->isQualifiedForConversion(),
+            'conversionNeedsPipeline' => $lead !== null
+                && $lead->status === 'qualified'
+                && $lead->isQualifiedForConversion()
+                && ($defaultPipeline === null || $firstDealStage === null),
         ]);
+    }
+
+    public function ___executeCrmLeadConvert(): void
+    {
+        $this->requirePost();
+        $this->requireCrm();
+        $this->requirePermission('kontor-crm-lead-edit');
+        $this->requirePermission('kontor-crm-deal-create');
+        $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
+        /** @var KontorCRM $crm */
+        $crm = $this->wire()->modules->get('KontorCRM');
+        $lead = $crm->leadRepository()->require($id);
+        $this->requireSameOrganization($lead->organizationId);
+
+        if ($lead->isConverted() && $lead->convertedDealUid !== null) {
+            $this->message($this->_('This lead is already connected to a deal.'));
+            $this->wire()->session->redirect('../crm-deal/?id=' . rawurlencode($lead->convertedDealUid));
+        }
+        if ($lead->status !== 'qualified' || !$lead->isQualifiedForConversion()) {
+            $this->error($this->_('Qualify the lead and connect a contact or company before conversion.'));
+            $this->wire()->session->redirect('../crm-lead/?id=' . rawurlencode($id));
+        }
+        $pipeline = $crm->pipelineRepository()->defaultForEntityType($this->organizationUid(), 'deal');
+        if ($pipeline === null || $crm->stageRepository()->firstOpenStage($pipeline->uid->toString()) === null) {
+            $this->error($this->_('Configure a default deal pipeline with an open stage before conversion.'));
+            $this->wire()->session->redirect('../crm-lead/?id=' . rawurlencode($id));
+        }
+
+        $dealUid = $crm->crmService()->convertLead($id, (string) $this->wire()->user->id);
+        $this->audit(
+            'crm',
+            'lead',
+            $id,
+            'converted',
+            previous: ['status' => 'qualified'],
+            current: ['status' => 'converted'],
+            metadata: ['dealUid' => $dealUid],
+        );
+        $this->message($this->_('Lead converted to a deal.'));
+        $this->wire()->session->redirect('../crm-deal/?id=' . rawurlencode($dealUid));
     }
 
     public function ___executeCrmLeadAction(): void

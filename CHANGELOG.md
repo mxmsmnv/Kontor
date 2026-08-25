@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Lead creation and editing now follows a guided capture-to-deal workflow,
+  groups opportunity, customer and commercial context into responsive UIKit
+  sections, explains every field, links customer records, and converts only
+  qualified customer-linked leads through the real deal conversion service.
+
 - CRM leads now provides a business-readable qualification workspace with
   stage counts, guided workflow context, customer-aware opportunity rows,
   explicit record and archive actions, meaningful follow-up states and a
