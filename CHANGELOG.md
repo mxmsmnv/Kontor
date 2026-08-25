@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Purchase-order creation now has prerequisite-aware onboarding, guided
+  supplier, warehouse, item, price and delivery steps, and a clearer
+  permission-aware draft, issue and receipt workflow.
+
 - New supplier setup now separates vendor identity, ordering contacts and
   commercial defaults, adds specific field guidance and validation, and
   explains the downstream purchase-order and receipt workflow.

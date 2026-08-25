@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '202',
+            'version' => '203',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4442,14 +4442,24 @@ class ProcessKontor extends Process
         } else {
             $this->requirePermission('kontor-purchasing-po-create');
         }
+        $allSuppliers = $module->supplierRepository()->forOrganization($this->organizationUid());
         $suppliers = array_values(array_filter(
-            $module->supplierRepository()->forOrganization($this->organizationUid()),
+            $allSuppliers,
             static fn (Supplier $supplier): bool => $supplier->isActive(),
         ));
+        $allWarehouses = $this->inventoryModule()->warehouseRepository()->forOrganization($this->organizationUid());
         $warehouses = array_values(array_filter(
-            $this->inventoryModule()->warehouseRepository()->forOrganization($this->organizationUid()),
+            $allWarehouses,
             static fn (Warehouse $warehouse): bool => $warehouse->isActive(),
         ));
+        $supplierLabels = array_column(array_map(
+            static fn (Supplier $supplier): array => [$supplier->uid->toString(), $supplier->legalName],
+            $allSuppliers,
+        ), 1, 0);
+        $warehouseLabels = array_column(array_map(
+            static fn (Warehouse $warehouse): array => [$warehouse->uid->toString(), $warehouse->name],
+            $allWarehouses,
+        ), 1, 0);
         $items = $this->inventoryItemOptions();
         $values = [
             'supplierUid' => '',
@@ -4567,6 +4577,12 @@ class ProcessKontor extends Process
             'suppliers' => $suppliers,
             'warehouses' => $warehouses,
             'items' => $items,
+            'supplierLabel' => $order !== null
+                ? ($supplierLabels[$order->supplierUid] ?? $this->_('Supplier record unavailable'))
+                : '',
+            'warehouseLabel' => $order !== null
+                ? ($warehouseLabels[$order->warehouseUid ?? ''] ?? $this->_('Warehouse record unavailable'))
+                : '',
             'lines' => $lines,
             'receipts' => $order !== null
                 ? $module->receiptRepository()->forPurchaseOrder($order->uid->toString())
@@ -4580,6 +4596,13 @@ class ProcessKontor extends Process
             'canCancel' => $order !== null && $order->isCancellable()
                 && ($this->wire()->user->isSuperuser()
                     || $this->wire()->user->hasPermission('kontor-purchasing-po-cancel')),
+            'canCreateSupplier' => $this->can('kontor-purchasing-supplier-create'),
+            'canViewInventory' => $this->inventoryReady() && $this->can('kontor-inventory-stock-view'),
+            'canManageWarehouses' => $this->inventoryReady()
+                && $this->can('kontor-inventory-warehouse-admin'),
+            'canViewCatalog' => $this->catalogReady() && $this->can('kontor-catalog-item-view'),
+            'canCreateCatalogItem' => $this->catalogReady()
+                && $this->can('kontor-catalog-item-create'),
         ]);
     }
 
