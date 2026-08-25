@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '200',
+            'version' => '201',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4288,21 +4288,60 @@ class ProcessKontor extends Process
         $this->setPageTitle($this->_('Kontor · Purchasing'));
         $module = $this->purchasingModule();
         $suppliers = $module->supplierRepository()->forOrganization($this->organizationUid());
+        $supplierLabels = array_column(array_map(
+            static fn (Supplier $supplier): array => [
+                $supplier->uid->toString(),
+                $supplier->code . ' · ' . $supplier->legalName,
+            ],
+            $suppliers,
+        ), 1, 0);
+        $allOrders = $module->purchaseOrderRepository()->forOrganization($this->organizationUid());
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $selectedStatus = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('status')
+        ));
+        $statuses = [];
+        foreach ($allOrders as $order) {
+            $statuses[$order->status] = true;
+        }
+        ksort($statuses);
+        if ($selectedStatus !== '' && !isset($statuses[$selectedStatus])) {
+            $selectedStatus = '';
+        }
+        $orders = array_values(array_filter(
+            $allOrders,
+            static function ($order) use ($query, $selectedStatus, $supplierLabels): bool {
+                if ($selectedStatus !== '' && $order->status !== $selectedStatus) {
+                    return false;
+                }
+                if ($query === '') {
+                    return true;
+                }
+                $haystack = implode(' ', [
+                    (string) ($order->number ?? 'Draft'),
+                    (string) ($supplierLabels[$order->supplierUid] ?? ''),
+                ]);
+
+                return mb_stripos($haystack, $query) !== false;
+            }
+        ));
 
         return $this->renderTemplate('purchasing', [
             'suppliers' => $suppliers,
-            'supplierLabels' => array_column(array_map(
-                static fn (Supplier $supplier): array => [
-                    $supplier->uid->toString(),
-                    $supplier->code . ' · ' . $supplier->legalName,
-                ],
-                $suppliers,
-            ), 1, 0),
-            'orders' => $module->purchaseOrderRepository()->forOrganization($this->organizationUid()),
+            'supplierLabels' => $supplierLabels,
+            'orders' => $orders,
+            'allOrders' => $allOrders,
+            'query' => $query,
+            'selectedStatus' => $selectedStatus,
+            'statuses' => array_keys($statuses),
             'canCreateSupplier' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-purchasing-supplier-create'),
             'canCreateOrder' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-purchasing-po-create'),
+            'canReceive' => $this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-purchasing-receipt-create'),
+            'canViewInventory' => $this->inventoryReady() && $this->can('kontor-inventory-stock-view'),
+            'canViewExpenses' => $this->expensesReady() && $this->can('kontor-expenses-expense-view'),
         ]);
     }
 

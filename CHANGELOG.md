@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Purchasing now provides an operational buy-side workspace with supplier-first
+  onboarding, purchase-order search and status filters, receipt and overdue
+  signals, committed-value context, and permission-aware inventory and expense
+  workflow links.
+
 - New project creation now guides users through the desired outcome, customer
   promise and commercial defaults, explains the resulting workflow, and handles
   missing customer records with clear permission-aware next steps.
