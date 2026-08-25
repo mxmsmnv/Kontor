@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Custom entities now opens as a responsive business-workspace directory with
+  usage guidance, aggregate activity, searchable entity cards, human integration
+  states, and an actionable first-workspace experience instead of a technical table.
+
 - CRM deals now uses a responsive native UIkit pipeline board with customer context,
   search, pipeline value and weighted forecast summaries, correct closed-deal
   probabilities, and permission-aware workflow actions.

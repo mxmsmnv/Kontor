@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '183',
+            'version' => '184',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7733,16 +7733,22 @@ class ProcessKontor extends Process
             static fn ($definition): bool => $definition->isActive(),
         ));
         $recordCounts = [];
+        $fieldCounts = [];
+        $viewCounts = [];
         foreach ($definitions as $definition) {
-            $recordCounts[$definition->uid->toString()] = count(
-                $module->recordRepository()->forDefinition($definition->uid->toString())
-            );
+            $definitionUid = $definition->uid->toString();
+            $recordCounts[$definitionUid] = $module->recordRepository()->countForDefinition($definitionUid);
+            $fieldCounts[$definitionUid] = count($module->fieldRepository()->forDefinition($definitionUid));
+            $viewCounts[$definitionUid] = count($module->viewRepository()->forDefinition($definitionUid));
         }
         $this->setPageTitle($this->_('Kontor · Custom entities'));
 
         return $this->renderTemplate('custom-entities', [
             'definitions' => $definitions,
             'recordCounts' => $recordCounts,
+            'fieldCounts' => $fieldCounts,
+            'viewCounts' => $viewCounts,
+            'query' => trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q'))),
             'canManage' => $this->can('kontor-entities-definition-manage'),
         ]);
     }
