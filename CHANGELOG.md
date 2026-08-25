@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Mail now opens as a responsive shared communications workspace with message
+  history first, safe send simulation, guided composition, secondary mailbox
+  tools, focused message details and optional contact/company connections.
+
 - Individual journal entries now open as focused accounting records with their
   own breadcrumb and title, balanced debit/credit presentation, source workflow
   navigation, correction guidance and nearby-entry context.

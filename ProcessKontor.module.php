@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '192',
+            'version' => '193',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5945,18 +5945,26 @@ class ProcessKontor extends Process
         if ($selected !== null) {
             $this->requireSameOrganization($selected->organizationId);
         }
-        $this->setPageTitle($this->_('Kontor · Mail'));
+        $relations = $selected !== null
+            ? $module->entityLinking()->linkedEntities(
+                $this->organizationUid(),
+                $selected->uid->toString(),
+            )
+            : [];
+        $this->setPageTitle($selected === null
+            ? $this->_('Kontor · Mail')
+            : $this->_('Kontor · Message'));
 
         return $this->renderTemplate('mail', [
             'mailboxes' => $module->mailboxRepository()->forOrganization($this->organizationUid()),
             'messages' => $module->messageRepository()->forOrganization($this->organizationUid()),
             'selected' => $selected,
-            'relations' => $selected !== null
-                ? $module->entityLinking()->linkedEntities(
-                    $this->organizationUid(),
-                    $selected->uid->toString(),
-                )
-                : [],
+            'relations' => $relations,
+            'relationViews' => $this->mailRelationViews($relations),
+            'entityTargets' => $this->mailEntityTargets(),
+            'assignedLabel' => $selected?->assignedTo !== null
+                ? $this->mailAssignedUserLabel($selected->assignedTo)
+                : null,
             'adapters' => $module->inboundAdapterRegistry()->all(),
             'canManageMailboxes' => $this->can('kontor-mail-mailbox-manage'),
             'canSend' => $this->can('kontor-mail-message-send'),
@@ -6002,7 +6010,13 @@ class ProcessKontor extends Process
         if (filter_var($from, FILTER_VALIDATE_EMAIL) === false || $subject === '' || $body === '') {
             throw new WireException($this->_('Valid sender, subject, and body are required.'));
         }
-        $dryRun = (bool) $this->wire()->input->post('dry_run');
+        $deliveryMode = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->post('delivery_mode'),
+            ['simulate', 'live']
+        );
+        $dryRun = $deliveryMode !== null && $deliveryMode !== ''
+            ? $deliveryMode === 'simulate'
+            : (bool) $this->wire()->input->post('dry_run');
         $service = $dryRun
             ? $this->mailModule()->outboundWithSender(
                 new class implements \Kontor\Mail\Contracts\MailSenderInterface {
@@ -6083,14 +6097,25 @@ class ProcessKontor extends Process
         );
         $message = $this->mailModule()->messageRepository()->require($uid);
         $this->requireSameOrganization($message->organizationId);
-        $entityType = $this->wire()->sanitizer->text(
-            (string) $this->wire()->input->post('entity_type')
+        $target = $this->wire()->sanitizer->text(
+            (string) $this->wire()->input->post('entity_target')
         );
-        $entityUid = $this->wire()->sanitizer->text(
-            (string) $this->wire()->input->post('entity_uid')
-        );
+        if ($target !== '' && str_contains($target, ':')) {
+            [$entityType, $entityUid] = explode(':', $target, 2);
+        } else {
+            $entityType = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('entity_type')
+            );
+            $entityUid = $this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('entity_uid')
+            );
+        }
         if ($entityType === '' || $entityUid === '') {
-            throw new WireException($this->_('Entity type and UID are required.'));
+            throw new WireException($this->_('Choose a record to connect.'));
+        }
+        $availableTargets = array_column($this->mailEntityTargets(), 'value');
+        if (!in_array($entityType . ':' . $entityUid, $availableTargets, true)) {
+            throw new Wire404Exception($this->_('The selected record is not available.'));
         }
         $relationUid = $this->mailModule()->entityLinking()->link(
             $this->organizationUid(),
@@ -11829,6 +11854,9 @@ class ProcessKontor extends Process
             'ledger' => (string) $this->wire()->input->get('id') !== ''
                 ? [['ledger/', 'Ledger']]
                 : [],
+            'mail' => (string) $this->wire()->input->get('id') !== ''
+                ? [['mail/', 'Mail']]
+                : [],
             'import' => $this->importBreadcrumbTrail(),
             default => [],
         };
@@ -12737,6 +12765,111 @@ class ProcessKontor extends Process
         }
 
         throw new Wire404Exception();
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string, kind: string, route: string}>
+     */
+    private function mailEntityTargets(): array
+    {
+        if (!$this->contactsReady()) {
+            return [];
+        }
+
+        $targets = [];
+        if ($this->can('kontor-contacts-contact-view')) {
+            foreach ($this->contactRepository()->findAll($this->organizationUid(), limit: 100) as $contact) {
+                $uid = $contact->uid->toString();
+                $targets[] = [
+                    'value' => 'contact:' . $uid,
+                    'label' => $contact->displayName,
+                    'kind' => 'Contact',
+                    'route' => 'contact/?id=' . rawurlencode($uid),
+                ];
+            }
+        }
+        if ($this->can('kontor-contacts-company-view')) {
+            foreach ($this->companyRepository()->findAll($this->organizationUid(), limit: 100) as $company) {
+                $uid = $company->uid->toString();
+                $targets[] = [
+                    'value' => 'company:' . $uid,
+                    'label' => $company->tradingName ?: $company->legalName,
+                    'kind' => 'Company',
+                    'route' => 'company/?id=' . rawurlencode($uid),
+                ];
+            }
+        }
+
+        usort($targets, static fn (array $a, array $b): int => strcasecmp($a['label'], $b['label']));
+
+        return $targets;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $relations
+     * @return array<int, array{label: string, kind: string, route: ?string, uid: string}>
+     */
+    private function mailRelationViews(array $relations): array
+    {
+        $views = [];
+        foreach ($relations as $relation) {
+            $type = (string) ($relation['targetType'] ?? '');
+            $uid = (string) ($relation['targetUid'] ?? '');
+            if ($uid === '') {
+                continue;
+            }
+
+            $label = ucfirst(str_replace('_', ' ', $type)) . ' record';
+            $kind = ucfirst(str_replace('_', ' ', $type));
+            $route = match ($type) {
+                'quotation', 'sales_quotation' => $this->salesReady()
+                    && $this->can('kontor-sales-quotation-view')
+                    ? 'sales-quotation/?id=' . rawurlencode($uid) : null,
+                'order', 'sales_order' => $this->salesReady()
+                    && $this->can('kontor-sales-order-view')
+                    ? 'sales-order/?id=' . rawurlencode($uid) : null,
+                'invoice' => $this->invoicesReady()
+                    && $this->can('kontor-invoices-invoice-view')
+                    ? 'invoice/?id=' . rawurlencode($uid) : null,
+                'deal' => $this->crmReady() && $this->can('kontor-crm-deal-view')
+                    ? 'crm-deal/?id=' . rawurlencode($uid) : null,
+                'task' => $this->tasksReady() && $this->can('kontor-tasks-task-view')
+                    ? 'task/?id=' . rawurlencode($uid) : null,
+                'project' => $this->projectsReady() && $this->can('kontor-projects-project-view')
+                    ? 'project/?id=' . rawurlencode($uid) : null,
+                'catalog_item' => $this->catalogReady() && $this->can('kontor-catalog-item-view')
+                    ? 'catalog-item/?id=' . rawurlencode($uid) : null,
+                'expense' => $this->expensesReady() && $this->can('kontor-expenses-expense-view')
+                    ? 'expense/?id=' . rawurlencode($uid) : null,
+                default => null,
+            };
+            if ($this->contactsReady() && $type === 'contact' && $this->can('kontor-contacts-contact-view')) {
+                $contact = $this->contactRepository()->find($uid);
+                if ($contact !== null && hash_equals($this->organizationUid(), $contact->organizationId)) {
+                    $label = $contact->displayName;
+                    $kind = 'Contact';
+                    $route = 'contact/?id=' . rawurlencode($uid);
+                }
+            } elseif ($this->contactsReady() && $type === 'company' && $this->can('kontor-contacts-company-view')) {
+                $company = $this->companyRepository()->find($uid);
+                if ($company !== null && hash_equals($this->organizationUid(), $company->organizationId)) {
+                    $label = $company->tradingName ?: $company->legalName;
+                    $kind = 'Company';
+                    $route = 'company/?id=' . rawurlencode($uid);
+                }
+            }
+
+            $views[] = ['label' => $label, 'kind' => $kind, 'route' => $route, 'uid' => $uid];
+        }
+
+        return $views;
+    }
+
+    private function mailAssignedUserLabel(int $userId): string
+    {
+        $user = $this->wire()->users->get($userId);
+
+        return $user->id ? ($user->get('title') ?: $user->name) : $this->_('Unassigned');
     }
 
     /**

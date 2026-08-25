@@ -331,4 +331,23 @@ document.addEventListener('DOMContentLoaded', () => {
     toggles.forEach((toggle) => toggle.addEventListener('change', updateQuickAccess));
     updateQuickAccess();
   });
+
+  document.querySelectorAll('form[data-kontor-mail-compose]').forEach((form) => {
+    const mailbox = form.querySelector('[data-kontor-mailbox-select]');
+    const from = form.querySelector('[data-kontor-mail-from]');
+
+    mailbox?.addEventListener('change', () => {
+      const address = mailbox.selectedOptions[0]?.dataset.address || '';
+      if (address !== '' && from) {
+        from.value = address;
+      }
+    });
+
+    form.addEventListener('submit', (event) => {
+      if (event.submitter?.matches('[data-kontor-mail-live]')
+          && !window.confirm('Send this message to the real recipients now?')) {
+        event.preventDefault();
+      }
+    });
+  });
 });
