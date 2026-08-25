@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Contact details now provides a responsive customer workspace with compact
+  identity, communication and notes editing, component-aware quick actions,
+  business-readable connected work, companies, tags, AI and address sections,
+  and explicit guidance without ProcessWire field-panel clutter.
+
 - Dashboard now prioritizes daily work, pinned workspaces and business health,
   uses balanced native UIKit widget cards, and hides cache, layout and component
   internals behind concise personal controls.

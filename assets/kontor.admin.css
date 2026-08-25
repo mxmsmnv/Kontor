@@ -683,6 +683,155 @@
   gap: 0.65rem;
 }
 
+.kontor-nativeform--embedded {
+  margin-top: var(--pw-space-m, 1.25rem);
+  padding: 0;
+}
+
+.kontor-contact-hero {
+  margin-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-contact-workspace .uk-button {
+  text-decoration: none !important;
+}
+
+.kontor-contact-avatar {
+  align-items: center;
+  background: var(--pw-main-color);
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 750;
+  height: 3.25rem;
+  justify-content: center;
+  letter-spacing: 0.04em;
+  width: 3.25rem;
+}
+
+.kontor-contact-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pw-space-s, 0.75rem);
+  margin-top: var(--pw-space-xs, 0.5rem);
+}
+
+.kontor-contact-overview {
+  color: var(--pw-text-color);
+  font-size: 1rem;
+}
+
+.kontor-contact-channels a {
+  color: var(--pw-muted-color);
+  font-size: 0.875rem;
+}
+
+.kontor-contact-channels i {
+  color: var(--pw-main-color);
+  margin-right: var(--pw-space-2xs, 0.25rem);
+}
+
+.kontor-section-intro {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--pw-space-s, 0.75rem);
+  padding: var(--pw-space-s, 0.75rem) 0;
+}
+
+.kontor-section-intro > i {
+  color: var(--pw-main-color);
+  margin-top: 0.2rem;
+}
+
+.kontor-section-intro strong,
+.kontor-section-intro p {
+  display: block;
+}
+
+.kontor-section-intro p {
+  color: var(--pw-muted-color);
+  margin: var(--pw-space-2xs, 0.25rem) 0 0;
+}
+
+.kontor-contact-savecard {
+  position: sticky;
+  top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-contact-savecard h3 {
+  margin-top: 0;
+}
+
+.kontor-checklist li {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+}
+
+.kontor-checklist i {
+  color: var(--pw-main-color);
+  margin-top: 0.2rem;
+}
+
+.kontor-confirm-duplicate {
+  align-items: center;
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+}
+
+.kontor-contact-workgroup {
+  background: var(--pw-main-background);
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--pw-space-s, 0.75rem);
+}
+
+.kontor-contact-workgroup h4 {
+  margin: 0;
+}
+
+.kontor-contact-workgroup h4 i {
+  color: var(--pw-main-color);
+  margin-right: var(--pw-space-2xs, 0.25rem);
+}
+
+.kontor-contact-workgroup li {
+  align-items: center;
+  display: flex;
+  gap: var(--pw-space-s, 0.75rem);
+  justify-content: space-between;
+}
+
+.kontor-contact-workgroup li > div {
+  min-width: 0;
+}
+
+.kontor-contact-workgroup li strong,
+.kontor-contact-workgroup li span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.kontor-related-form {
+  border-top: 1px solid var(--pw-border-color);
+  margin-top: var(--pw-space-m, 1.25rem);
+  padding-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-taglist--left {
+  justify-content: flex-start;
+  margin-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-contact-checkbox {
+  align-items: center;
+  align-self: end;
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+  min-height: 40px;
+}
+
 .kontor-warning {
   align-items: flex-start;
   display: flex;
@@ -2094,6 +2243,15 @@
   .kontor-nativefield--wide,
   .kontor-nativeform__actions {
     grid-column: auto;
+  }
+
+  .kontor-contact-savecard {
+    position: static;
+  }
+
+  .kontor-contact-workgroup li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .kontor-dashboardwidgets {

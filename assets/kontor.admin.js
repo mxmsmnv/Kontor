@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const addNativeFieldGuidance = (workspace) => {
     workspace.querySelectorAll('.kontor-nativefield').forEach((field, fieldIndex) => {
       const control = field.querySelector('input:not([type="hidden"]), select, textarea');
-      if (!control || control.type === 'submit' || control.type === 'button' || field.querySelector('.kontor-field-guidance')) {
+      if (!control || control.type === 'submit' || control.type === 'button' || field.querySelector('.kontor-field-guidance, .kontor-field-description, .kontor-field-note')) {
         return;
       }
 

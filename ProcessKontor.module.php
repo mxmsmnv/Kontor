@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '214',
+            'version' => '215',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1021,8 +1021,26 @@ class ProcessKontor extends Process
             $this->wire()->session->set('kontorContactAISummary:' . $contact->uid->toString(), null);
         }
 
+        $formValues = [
+            'display_name' => $contact?->displayName ?? '',
+            'first_name' => $contact?->firstName ?? '',
+            'last_name' => $contact?->lastName ?? '',
+            'email' => $contact?->email ?? '',
+            'phone' => $contact?->phone ?? '',
+            'mobile' => $contact?->mobile ?? '',
+            'job_title' => $contact?->jobTitle ?? '',
+            'status' => $contact?->status ?? 'active',
+            'notes' => $contact?->notes ?? '',
+        ];
+        if ($this->wire()->input->post('submit_save')) {
+            foreach (array_keys($formValues) as $fieldName) {
+                $formValues[$fieldName] = (string) $this->wire()->input->post($fieldName);
+            }
+        }
+
         return $this->renderTemplate('entity-form', [
             'form' => $form,
+            'formValues' => $formValues,
             'backUrl' => '../contacts/',
             'backLabel' => $this->_('Back to contacts'),
             'eyebrow' => $this->_('Contacts'),

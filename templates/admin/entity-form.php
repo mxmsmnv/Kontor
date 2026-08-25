@@ -20,6 +20,10 @@
 /** @var callable $e */
 $aiReady = $aiReady ?? false;
 $aiSummary = $aiSummary ?? null;
+if ($entityType === 'contact') {
+    require __DIR__ . '/contact-form.php';
+    return;
+}
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="kontor-formhead">
