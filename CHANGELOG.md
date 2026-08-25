@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Workflow detail pages now show a business-readable process map, guided
+  action builder and linked live records instead of internal workflow keys,
+  permission strings and entity identifiers.
+
 - New workflow setup now generates internal keys automatically, offers
   component-aware business record choices, accepts human-readable stage names
   and guides users from process purpose through states to transition design.

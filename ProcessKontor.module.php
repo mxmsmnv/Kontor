@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '211',
+            'version' => '212',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5809,19 +5809,59 @@ class ProcessKontor extends Process
             ? $this->_('Kontor · New workflow')
             : sprintf($this->_('Kontor · %s'), $definition->name));
 
+        $transitions = $definition !== null
+            ? $module->transitionRepository()->forDefinition($definition->uid->toString())
+            : [];
+        $instances = $definition !== null
+            ? $module->instanceRepository()->forDefinition($definition->uid->toString())
+            : [];
+        $recordTypeLabel = $definition !== null
+            ? ($entityTypeOptions[$definition->entityType]
+                ?? ucfirst(str_replace(['_', '-', '.'], ' ', $definition->entityType)))
+            : '';
+        $workflowTargets = [];
+        if ($definition?->entityType === 'demo_scenario'
+            && $this->demoReady()
+            && $this->can('kontor-demo-view')) {
+            $startedEntityUids = array_fill_keys(array_map(
+                static fn ($instance): string => $instance->entityUid,
+                $instances,
+            ), true);
+            foreach ($this->demoModule()->scenarioRepository()->forOrganization(
+                $this->organizationUid(),
+                100,
+            ) as $scenario) {
+                $uid = $scenario->uid->toString();
+                $workflowTargets[$uid] = [
+                    'label' => $scenario->name,
+                    'route' => 'demo/?id=' . rawurlencode($uid),
+                    'available' => !isset($startedEntityUids[$uid]),
+                ];
+            }
+        }
+        $instanceViews = [];
+        foreach ($instances as $instance) {
+            $target = $workflowTargets[$instance->entityUid] ?? null;
+            $instanceViews[$instance->uid->toString()] = [
+                'label' => is_array($target)
+                    ? (string) $target['label']
+                    : sprintf($this->_('%s workflow run'), $recordTypeLabel),
+                'route' => is_array($target) ? (string) $target['route'] : null,
+            ];
+        }
+
         return $this->renderTemplate('workflow', [
             'definition' => $definition,
             'values' => $values,
             'error' => $error,
-            'transitions' => $definition !== null
-                ? $module->transitionRepository()->forDefinition($definition->uid->toString())
-                : [],
-            'instances' => $definition !== null
-                ? $module->instanceRepository()->forDefinition($definition->uid->toString())
-                : [],
+            'transitions' => $transitions,
+            'instances' => $instances,
             'canManage' => $this->can('kontor-workflow-definition-manage'),
             'canTransition' => $this->can('kontor-workflow-transition'),
             'entityTypeOptions' => $entityTypeOptions,
+            'recordTypeLabel' => $recordTypeLabel,
+            'workflowTargets' => $workflowTargets,
+            'instanceViews' => $instanceViews,
         ]);
     }
 
@@ -5831,9 +5871,11 @@ class ProcessKontor extends Process
         $this->requireWorkflow();
         $this->requirePermission('kontor-workflow-definition-manage');
         $definition = $this->requireWorkflowDefinitionFromPost();
-        $actionKey = strtolower($this->wire()->sanitizer->text(
+        $actionKey = mb_strtolower(trim($this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('action_key')
-        ));
+        )));
+        $actionKey = preg_replace('/[^a-z0-9]+/u', '_', $actionKey) ?? '';
+        $actionKey = mb_substr(trim($actionKey, '_'), 0, 64);
         $fromState = strtolower($this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('from_state')
         ));
@@ -5844,7 +5886,9 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->post('required_permission')
         ));
         if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/', $actionKey) !== 1) {
-            throw new WireException($this->_('Action key must be a lowercase identifier.'));
+            $this->error($this->_('Enter an action name using letters and numbers.'));
+            $this->redirectToWorkflow($definition->uid->toString());
+            return;
         }
         $transition = $this->workflowModule()->definitions()->addTransition(
             $definition->uid->toString(),
