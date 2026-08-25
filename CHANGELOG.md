@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Workflows now presents business-readable process cards, lifecycle guidance
+  and approval decisions without exposing workflow keys, raw entity types or
+  internal record identifiers, with responsive review and rejection controls.
+
 - New task creation now assigns work to its creator by default, makes required
   input explicit, explains the open-to-complete workflow, documents recurrence
   behavior and provides balanced create and cancel actions.
