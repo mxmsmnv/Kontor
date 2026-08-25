@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Queue now presents background work as an operator workspace with clear
+  waiting, running, completed and attention states, readable job names,
+  responsive recovery actions, and no exposed internal job identifiers.
+
 - Purchase-order creation now has prerequisite-aware onboarding, guided
   supplier, warehouse, item, price and delivery steps, and a clearer
   permission-aware draft, issue and receipt workflow.
