@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Portal now centers the customer access directory, account readiness and
+  customer-visible documents; account creation uses a guided modal, account
+  details use a responsive profile-and-content workspace, and sign-in
+  diagnostics remain a secondary support action.
 - Files now presents a business-focused document library and version summary,
   keeping record identifiers, checksums, storage paths and structured metadata
   inside explicit technical disclosures.
