@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '193',
+            'version' => '194',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5953,7 +5953,7 @@ class ProcessKontor extends Process
             : [];
         $this->setPageTitle($selected === null
             ? $this->_('Kontor · Mail')
-            : $this->_('Kontor · Message'));
+            : sprintf($this->_('Kontor · %s'), $selected->subject));
 
         return $this->renderTemplate('mail', [
             'mailboxes' => $module->mailboxRepository()->forOrganization($this->organizationUid()),
@@ -12843,7 +12843,21 @@ class ProcessKontor extends Process
                     ? 'expense/?id=' . rawurlencode($uid) : null,
                 default => null,
             };
-            if ($this->contactsReady() && $type === 'contact' && $this->can('kontor-contacts-contact-view')) {
+            if (in_array($type, ['quotation', 'sales_quotation'], true)
+                && $this->salesReady() && $this->can('kontor-sales-quotation-view')) {
+                $quotation = $this->salesModule()->quotationRepository()->find($uid);
+                if ($quotation !== null && hash_equals($this->organizationUid(), $quotation->organizationId)) {
+                    $label = $quotation->number !== null
+                        ? sprintf($this->_('Quotation %s'), $quotation->number)
+                        : $this->_('Draft quotation');
+                    $kind = ucfirst($quotation->status) . ' · ' . number_format(
+                        $quotation->total->amountMinor() / 100,
+                        2,
+                        '.',
+                        ','
+                    ) . ' ' . $quotation->currencyCode;
+                }
+            } elseif ($this->contactsReady() && $type === 'contact' && $this->can('kontor-contacts-contact-view')) {
                 $contact = $this->contactRepository()->find($uid);
                 if ($contact !== null && hash_equals($this->organizationUid(), $contact->organizationId)) {
                     $label = $contact->displayName;

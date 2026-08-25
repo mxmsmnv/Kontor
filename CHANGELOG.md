@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Individual mail messages now use their subject as the page title and present
+  compact delivery feedback, readable addressing, human commercial links and
+  workflow context without redundant metric cards or empty history panels.
+
 - Mail now opens as a responsive shared communications workspace with message
   history first, safe send simulation, guided composition, secondary mailbox
   tools, focused message details and optional contact/company connections.
