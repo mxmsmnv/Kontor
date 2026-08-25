@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Payments now presents receipt totals, reversal health, searchable history and
+  direct payer, invoice and ledger workflow links in a responsive UIkit layout,
+  with clear guidance for recording and safely correcting payments.
+
 - Marketplace now prioritizes component discovery, compatibility and security,
   with searchable listing cards, publisher trust, readable registry health and
   guarded custom-source and manual-import tools in a responsive UIkit layout.

@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '195',
+            'version' => '196',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2885,14 +2885,82 @@ class ProcessKontor extends Process
     {
         $this->requirePayments();
         $this->requirePermission('kontor-payments-payment-view');
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $status = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('status'),
+            ['draft', 'confirmed', 'reversed']
+        );
+        $module = $this->paymentModule();
+        $summaryPayments = $module->paymentRepository()->findMatching(
+            $this->organizationUid(),
+            limit: 250,
+        );
+        $payments = $module->paymentRepository()->findMatching(
+            $this->organizationUid(),
+            $query,
+            $status !== '' ? $status : null,
+            limit: 50,
+        );
+        $payerLabels = $this->salesCustomerLabels();
+        $paymentContexts = [];
+        $payerRoutes = [];
+        $canViewInvoices = $this->invoicesReady() && $this->can('kontor-invoices-invoice-view');
+        foreach ($payments as $payment) {
+            $paymentUid = $payment->uid->toString();
+            $activeAllocations = array_values(array_filter(
+                $module->allocationRepository()->forPayment($paymentUid),
+                static fn ($allocation): bool => !$allocation->isReversed(),
+            ));
+            $invoiceLabel = null;
+            $invoiceRoute = null;
+            foreach ($activeAllocations as $allocation) {
+                if ($allocation->documentType !== 'invoice' || !$canViewInvoices) {
+                    continue;
+                }
+                $invoice = $this->invoiceModule()->invoiceRepository()->find($allocation->documentUid);
+                if ($invoice !== null && hash_equals($invoice->organizationId, $this->organizationUid())) {
+                    $invoiceLabel ??= $invoice->number ?? $this->_('Draft invoice');
+                    $invoiceRoute ??= 'invoice/?id=' . rawurlencode($allocation->documentUid);
+                }
+            }
+            $paymentContexts[$paymentUid] = [
+                'allocationCount' => count($activeAllocations),
+                'invoiceLabel' => $invoiceLabel,
+                'invoiceRoute' => $invoiceRoute,
+            ];
+
+            $payerKey = $payment->payerType . ':' . $payment->payerUid;
+            if ($this->contactsReady() && $payment->payerType === 'contact'
+                && $this->can('kontor-contacts-contact-view')) {
+                $payerRoutes[$payerKey] = 'contact/?id=' . rawurlencode($payment->payerUid);
+            } elseif ($this->contactsReady() && $payment->payerType === 'company'
+                && $this->can('kontor-contacts-company-view')) {
+                $payerRoutes[$payerKey] = 'company/?id=' . rawurlencode($payment->payerUid);
+            }
+        }
         $this->setPageTitle($this->_('Kontor · Payments'));
 
         return $this->renderTemplate('payments', [
-            'payments' => $this->paymentModule()->paymentRepository()->findMatching(
-                $this->organizationUid(),
-                limit: 50,
-            ),
-            'payerLabels' => $this->salesCustomerLabels(),
+            'payments' => $payments,
+            'summaryPayments' => $summaryPayments,
+            'payerLabels' => $payerLabels,
+            'payerRoutes' => $payerRoutes,
+            'paymentContexts' => $paymentContexts,
+            'query' => $query,
+            'selectedStatus' => $status ?? '',
+            'counts' => [
+                'all' => $module->paymentRepository()->countMatching($this->organizationUid()),
+                'confirmed' => $module->paymentRepository()->countMatching(
+                    $this->organizationUid(),
+                    status: 'confirmed',
+                ),
+                'reversed' => $module->paymentRepository()->countMatching(
+                    $this->organizationUid(),
+                    status: 'reversed',
+                ),
+            ],
+            'canViewInvoices' => $canViewInvoices,
+            'canViewLedger' => $this->ledgerReady() && $this->can('kontor-ledger-entry-view'),
         ]);
     }
 
