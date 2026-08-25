@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Cache now leads with service readiness, data-safety context and connected
+  functionality, while isolating entry inspection and storage in advanced
+  tools and protecting destructive invalidation inside a confirmed danger zone.
 - The automation builder now offers human business events from installed
   components, a guided condition-to-action workflow, structured task actions,
   safe testing guidance and readable run history; custom event keys and JSON
