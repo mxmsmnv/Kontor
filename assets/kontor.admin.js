@@ -124,6 +124,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  document.querySelectorAll('[data-kontor-ai-workbench]').forEach((workbench) => {
+    const capability = workbench.querySelector('[data-kontor-ai-capability]');
+    const groups = Array.from(workbench.querySelectorAll('[data-kontor-ai-fields]'));
+    const update = () => {
+      groups.forEach((group) => {
+        const active = group.dataset.kontorAiFields === capability?.value;
+        group.hidden = !active;
+        group.querySelectorAll('input, select, textarea').forEach((control) => {
+          control.disabled = !active;
+          control.required = active && ['instructions', 'schema_fields'].includes(control.name);
+        });
+      });
+    };
+
+    capability?.addEventListener('change', update);
+    update();
+  });
+
   document.querySelectorAll('[data-kontor-bulk-form]').forEach((form) => {
     const formId = form.getAttribute('id');
     const selectAll = document.querySelector(`[data-kontor-select-all="${formId}"]`);

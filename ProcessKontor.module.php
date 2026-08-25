@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '162',
+            'version' => '163',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -6330,13 +6330,24 @@ class ProcessKontor extends Process
         if ($selected !== null) {
             $this->requireSameOrganization($selected->organizationId);
         }
+        $actions = $module->pendingActionRepository()->forOrganization($this->organizationUid());
+        $actionRequesters = [];
+        foreach ($actions as $action) {
+            $requester = $action->requestedBy !== null
+                ? $this->wire()->users->get((int) $action->requestedBy)
+                : null;
+            $actionRequesters[$action->uid->toString()] = $requester?->id
+                ? (string) ($requester->get('title') ?: $requester->name)
+                : $this->_('Automation');
+        }
         $result = $this->wire()->session->get('kontorAIWorkbenchResult');
         $this->wire()->session->set('kontorAIWorkbenchResult', null);
         $this->setPageTitle($this->_('Kontor · AI'));
 
         return $this->renderTemplate('ai', [
             'providers' => $module->providerRegistry()->all(),
-            'actions' => $module->pendingActionRepository()->forOrganization($this->organizationUid()),
+            'actions' => $actions,
+            'actionRequesters' => $actionRequesters,
             'selected' => $selected,
             'result' => is_array($result) ? $result : null,
         ]);
@@ -6377,7 +6388,7 @@ class ProcessKontor extends Process
                 'simulated' => $simulate,
             ];
         } elseif ($capability === 'extract') {
-            $schema = $this->aiJsonObjectFromPost('schema_json');
+            $schema = $this->aiExtractionSchemaFromPost();
             $normalizedSchema = [];
             foreach ($schema as $field => $type) {
                 if (!is_scalar($type)) {
@@ -12340,6 +12351,44 @@ class ProcessKontor extends Process
         }
 
         return $value;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function aiExtractionSchemaFromPost(): array
+    {
+        $raw = trim((string) $this->wire()->input->post('schema_fields'));
+        if ($raw === '' || strlen($raw) > 8192) {
+            throw new WireException($this->_('Add the details to extract using one “Name: type” line per detail.'));
+        }
+
+        $types = [
+            'text' => 'string',
+            'string' => 'string',
+            'number' => 'decimal',
+            'decimal' => 'decimal',
+            'date' => 'date',
+            'yes/no' => 'boolean',
+            'boolean' => 'boolean',
+        ];
+        $schema = [];
+        foreach (preg_split('/\R+/', $raw) ?: [] as $line) {
+            $parts = array_map('trim', explode(':', trim($line), 2));
+            if (count($parts) !== 2 || $parts[0] === '' || !isset($types[strtolower($parts[1])])) {
+                throw new WireException($this->_('Each extraction detail must use “Name: type”, for example “Amount: number”.'));
+            }
+            $field = $this->wire()->sanitizer->fieldName(str_replace(' ', '_', strtolower($parts[0])));
+            if ($field === '') {
+                throw new WireException($this->_('Each extraction detail needs a clear name.'));
+            }
+            $schema[$field] = $types[strtolower($parts[1])];
+        }
+        if ($schema === [] || count($schema) > 30) {
+            throw new WireException($this->_('Add between 1 and 30 details to extract.'));
+        }
+
+        return $schema;
     }
 
     private function ledgerAmountMinorFromPost(): int

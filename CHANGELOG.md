@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- The AI workspace now presents outcome-focused tasks, provider readiness and
+  human review without exposing provider classes, raw identifiers or JSON setup.
+
 - Contact and company records now expose one permission-aware connected
   workspace for related CRM leads, deals and active tasks, with contextual
   create actions that preselect the customer and gracefully disappear when an
