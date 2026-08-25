@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Creating a custom entity is now a guided, responsive data-workspace setup with
+  clear identity fields, integration intent, collapsed advanced permissions,
+  native validation, and an explanation of the next schema-building steps.
+
 - Custom entities now opens as a responsive business-workspace directory with
   usage guidance, aggregate activity, searchable entity cards, human integration
   states, and an actionable first-workspace experience instead of a technical table.

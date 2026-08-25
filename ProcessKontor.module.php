@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '184',
+            'version' => '185',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -7840,7 +7840,7 @@ class ProcessKontor extends Process
                 : $module->recordRepository()->forDefinition($definition->uid->toString()))
             : [];
         $this->setPageTitle($definition === null
-            ? $this->_('Kontor · New custom entity')
+            ? $this->_('Kontor · Create data workspace')
             : sprintf($this->_('Kontor · %s'), $definition->name));
 
         return $this->renderTemplate('custom-entity', [
