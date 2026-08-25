@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '176',
+            'version' => '177',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5484,14 +5484,54 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-automation-rule-view');
         $module = $this->automationModule();
         $this->setPageTitle($this->_('Kontor · Automations'));
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $selectedStatus = $this->wire()->sanitizer->text((string) $this->wire()->input->get('status'));
+        $selectedStatus = in_array($selectedStatus, ['active', 'paused'], true) ? $selectedStatus : '';
+        $allRules = $module->ruleRepository()->forOrganization($this->organizationUid());
+        $allLogs = $module->executionLogRepository()->forOrganization($this->organizationUid());
+        $rules = array_values(array_filter(
+            $allRules,
+            static function ($rule) use ($query, $selectedStatus): bool {
+                if ($selectedStatus !== '' && $rule->status !== $selectedStatus) {
+                    return false;
+                }
+                if ($query === '') {
+                    return true;
+                }
+
+                return str_contains(
+                    mb_strtolower($rule->name . ' ' . $rule->triggerEvent),
+                    mb_strtolower($query),
+                );
+            },
+        ));
+        $ruleSummaries = [];
+        foreach ($allRules as $rule) {
+            $ruleUid = $rule->uid->toString();
+            $ruleLogs = array_values(array_filter(
+                $allLogs,
+                static fn ($log): bool => $log->ruleUid === $ruleUid,
+            ));
+            $lastLog = $ruleLogs[0] ?? null;
+            $ruleSummaries[$ruleUid] = [
+                'conditions' => count($module->conditionRepository()->forRule($ruleUid)),
+                'actions' => count($module->actionRepository()->forRule($ruleUid)),
+                'executions' => count($ruleLogs),
+                'lastLog' => $lastLog,
+            ];
+        }
 
         return $this->renderTemplate('automations', [
-            'rules' => $module->ruleRepository()->forOrganization($this->organizationUid()),
-            'logs' => array_slice(
-                $module->executionLogRepository()->forOrganization($this->organizationUid()),
-                0,
-                25,
-            ),
+            'rules' => $rules,
+            'allRules' => $allRules,
+            'logs' => array_slice($allLogs, 0, 25),
+            'ruleSummaries' => $ruleSummaries,
+            'ruleLabels' => array_combine(
+                array_map(static fn ($rule): string => $rule->uid->toString(), $allRules),
+                array_map(static fn ($rule): string => $rule->name, $allRules),
+            ) ?: [],
+            'query' => $query,
+            'selectedStatus' => $selectedStatus,
             'canManage' => $this->can('kontor-automation-rule-manage'),
         ]);
     }

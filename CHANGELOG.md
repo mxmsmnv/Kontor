@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Automations now explains the event-to-action workflow, provides a responsive
+  searchable rule library with readiness and run context, and turns execution
+  logs into a human-readable activity feed with clear outcomes.
 - Invoices now works as a responsive billing queue with lifecycle filters,
   customer search, outstanding and overdue signals, human due-date context,
   and direct permission-aware handoff from sales orders into billing.
