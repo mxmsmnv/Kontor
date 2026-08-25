@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '185',
+            'version' => '186',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4689,6 +4689,13 @@ class ProcessKontor extends Process
                 static fn (Supplier $supplier): bool => $supplier->isActive(),
             ))
             : [];
+        $canUseFiles = $this->filesReady() && $this->can('kontor-files-file-view');
+        $receiptFiles = $canUseFiles
+            ? array_values(array_filter(
+                $this->filesModule()->fileRepository()->forOrganization($this->organizationInternalId()),
+                static fn (array $file): bool => $file['archived_at'] === null,
+            ))
+            : [];
         $values = [
             'categoryUid' => '',
             'supplierUid' => '',
@@ -4733,11 +4740,17 @@ class ProcessKontor extends Process
             foreach ($suppliers as $supplier) {
                 $supplierMap[$supplier->uid->toString()] = $supplier;
             }
+            $receiptFileMap = [];
+            foreach ($receiptFiles as $receiptFile) {
+                $receiptFileMap[(string) $receiptFile['uid']] = $receiptFile;
+            }
             $amount = str_replace(',', '.', $values['amount']);
             if (!isset($categoryMap[$values['categoryUid']])) {
                 $error = $this->_('Select an active expense category.');
             } elseif ($values['supplierUid'] !== '' && !isset($supplierMap[$values['supplierUid']])) {
                 $error = $this->_('Selected supplier is invalid.');
+            } elseif ($values['receiptFileUid'] !== '' && !isset($receiptFileMap[$values['receiptFileUid']])) {
+                $error = $this->_('Selected receipt file is unavailable.');
             } elseif ($values['description'] === '') {
                 $error = $this->_('Expense description is required.');
             } elseif ($amount === '' || !is_numeric($amount) || (float) $amount <= 0) {
@@ -4777,7 +4790,7 @@ class ProcessKontor extends Process
             }
         }
         $this->setPageTitle($expense === null
-            ? $this->_('Kontor · New expense')
+            ? $this->_('Kontor · Record expense')
             : sprintf($this->_('Kontor · %s'), $expense->description));
 
         $workflowCoordinator = $expense !== null ? $module->workflowCoordinator() : null;
@@ -4788,6 +4801,9 @@ class ProcessKontor extends Process
             'error' => $error,
             'categories' => $categories,
             'suppliers' => $suppliers,
+            'receiptFiles' => $receiptFiles,
+            'canUseFiles' => $canUseFiles,
+            'canManageCategories' => $this->can('kontor-expenses-category-manage'),
             'configuredWorkflowState' => $expense !== null
                 ? $workflowCoordinator?->currentState($expense)
                 : null,
