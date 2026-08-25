@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- New quotation creation now follows a responsive customer-offer and commercial
+  terms workflow, uses the organization's currency and language defaults,
+  validates numeric inputs in the browser and guides missing customer setup.
 - Sales now presents a permission-aware quote-to-order workspace with live
   pipeline signals, human customer and delivery context, optional Catalog and
   Invoices handoffs, and dedicated desktop tables and mobile document cards.

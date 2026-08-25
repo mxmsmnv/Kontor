@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '171',
+            'version' => '172',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1779,13 +1779,18 @@ class ProcessKontor extends Process
             }
         }
 
+        $supportedLanguages = ['en', 'de', 'fr', 'es'];
+        $defaultLanguage = strtolower($this->organization()->defaultLanguage);
+        if (!in_array($defaultLanguage, $supportedLanguages, true)) {
+            $defaultLanguage = 'en';
+        }
         $values = [
             'customer' => $sourceDeal?->companyUid !== null
                 ? 'company:' . $sourceDeal->companyUid
                 : ($sourceDeal?->contactUid !== null ? 'contact:' . $sourceDeal->contactUid : ''),
-            'currency' => $sourceDeal?->value?->currencyCode() ?? 'EUR',
+            'currency' => $sourceDeal?->value?->currencyCode() ?? $this->organization()->defaultCurrency,
             'validUntil' => '',
-            'language' => 'en',
+            'language' => $defaultLanguage,
             'lineTitle' => $sourceDeal?->title ?? '',
             'quantity' => '1',
             'unitCode' => 'pcs',
@@ -1951,6 +1956,15 @@ class ProcessKontor extends Process
             'issuedFile' => $issuedFiles[0] ?? null,
             'values' => $values,
             'customers' => $this->salesCustomerLabels(),
+            'contactsReady' => $this->contactsReady(),
+            'canCreateContact' => $this->contactsReady() && $this->can('kontor-contacts-contact-create'),
+            'canCreateCompany' => $this->contactsReady() && $this->can('kontor-contacts-company-create'),
+            'languageOptions' => [
+                'en' => $this->_('English'),
+                'de' => $this->_('German'),
+                'fr' => $this->_('French'),
+                'es' => $this->_('Spanish'),
+            ],
             'sourceDeal' => $sourceDeal,
             'mailReady' => $this->mailReady(),
             'mailboxes' => $quotation !== null && $this->mailReady()
