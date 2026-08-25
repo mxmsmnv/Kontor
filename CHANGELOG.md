@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Payment details now presents the receipt, payer, invoice allocation and ledger
+  postings as one focused financial record, with permission-aware navigation and
+  a guarded, clearly explained reversal workflow.
+
 - Payments now presents receipt totals, reversal health, searchable history and
   direct payer, invoice and ledger workflow links in a responsive UIkit layout,
   with clear guidance for recording and safely correcting payments.

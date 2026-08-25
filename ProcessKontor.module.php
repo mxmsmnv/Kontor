@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '196',
+            'version' => '197',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2974,7 +2974,10 @@ class ProcessKontor extends Process
         $this->requireSameOrganization($payment->organizationId);
         $allocations = $module->allocationRepository()->forPayment($id);
         $invoiceLabels = [];
+        $invoiceViews = [];
         $ledgerEntries = [];
+        $canViewInvoices = $this->invoicesReady() && $this->can('kontor-invoices-invoice-view');
+        $canViewLedger = $this->ledgerReady() && $this->can('kontor-ledger-entry-view');
 
         foreach ($allocations as $allocation) {
             if ($allocation->documentType !== 'invoice') {
@@ -2983,8 +2986,17 @@ class ProcessKontor extends Process
             $invoice = $this->invoiceModule()->invoiceRepository()->find($allocation->documentUid);
             if ($invoice !== null && hash_equals($invoice->organizationId, $this->organizationUid())) {
                 $invoiceLabels[$allocation->documentUid] = $invoice->number ?? $this->_('Draft invoice');
+                $invoiceViews[$allocation->documentUid] = [
+                    'label' => $invoice->number ?? $this->_('Draft invoice'),
+                    'status' => $invoice->status,
+                    'total' => $invoice->total,
+                    'due' => $invoice->due,
+                    'route' => $canViewInvoices
+                        ? 'invoice/?id=' . rawurlencode($allocation->documentUid)
+                        : null,
+                ];
             }
-            if ($this->ledgerReady()) {
+            if ($canViewLedger) {
                 $referenceUid = $allocation->uid->toString();
                 $ledgerEntries[$referenceUid] = [
                     'posting' => $this->ledgerModule()->entryRepository()->findByReference(
@@ -3008,11 +3020,18 @@ class ProcessKontor extends Process
             'payment' => $payment,
             'allocations' => $allocations,
             'invoiceLabels' => $invoiceLabels,
-            'ledgerReady' => $this->ledgerReady(),
+            'invoiceViews' => $invoiceViews,
+            'ledgerReady' => $canViewLedger,
             'ledgerEntries' => $ledgerEntries,
             'payerLabel' => $this->salesCustomerLabels()[
                 $payment->payerType . ':' . $payment->payerUid
             ] ?? $payment->payerUid,
+            'payerRoute' => $this->contactsReady()
+                && (($payment->payerType === 'contact' && $this->can('kontor-contacts-contact-view'))
+                    || ($payment->payerType === 'company' && $this->can('kontor-contacts-company-view')))
+                ? $payment->payerType . '/?id=' . rawurlencode($payment->payerUid)
+                : null,
+            'canReverse' => $this->can('kontor-payments-payment-reverse'),
         ]);
     }
 
