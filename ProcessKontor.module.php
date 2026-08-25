@@ -35,10 +35,12 @@ use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Application\BackupManager;
 use Kontor\Core\Application\BackupOverviewBuilder;
 use Kontor\Core\Application\ComponentOverviewBuilder;
+use Kontor\Core\Application\EntityActionResolver;
 use Kontor\Core\Application\ExportManager;
 use Kontor\Core\Application\HealthCheckRunner;
 use Kontor\Core\Application\HealthOverviewBuilder;
 use Kontor\Core\Application\ImportManager;
+use Kontor\Core\Application\NavigationAvailability;
 use Kontor\Core\Domain\ImportBatchResult;
 use Kontor\Core\Domain\Organization;
 use Kontor\Core\Health\CoreHealthCheck;
@@ -105,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '161',
+            'version' => '162',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -161,9 +163,10 @@ class ProcessKontor extends Process
                     'url' => 'demo/',
                     'label' => 'Demo',
                     'icon' => 'play-circle',
+                    'module' => 'KontorDemo',
                     'permission' => 'kontor-demo-view',
                 ],
-                ['url' => 'search/', 'label' => 'Search', 'icon' => 'search'],
+                ['url' => 'search/', 'label' => 'Search', 'icon' => 'search', 'module' => 'KontorSearch'],
                 [
                     'url' => 'activity/',
                     'label' => 'Activity',
@@ -186,6 +189,7 @@ class ProcessKontor extends Process
                     'url' => 'queue/',
                     'label' => 'Queue',
                     'icon' => 'tasks',
+                    'module' => 'KontorQueue',
                     'permission' => 'kontor-queue-view',
                 ],
                 [
@@ -198,168 +202,196 @@ class ProcessKontor extends Process
                     'url' => 'catalog/',
                     'label' => 'Catalog',
                     'icon' => 'cubes',
+                    'module' => 'KontorCatalog',
                     'permission' => 'kontor-catalog-item-view',
                 ],
                 [
                     'url' => 'inventory/',
                     'label' => 'Inventory',
                     'icon' => 'cube',
+                    'module' => 'KontorInventory',
                     'permission' => 'kontor-inventory-stock-view',
                 ],
                 [
                     'url' => 'purchasing/',
                     'label' => 'Purchasing',
                     'icon' => 'truck',
+                    'module' => 'KontorPurchasing',
                     'permission' => 'kontor-purchasing-po-view',
                 ],
                 [
                     'url' => 'expenses/',
                     'label' => 'Expenses',
                     'icon' => 'credit-card',
+                    'module' => 'KontorExpenses',
                     'permission' => 'kontor-expenses-expense-view',
                 ],
                 [
                     'url' => 'projects/',
                     'label' => 'Projects',
                     'icon' => 'tasks',
+                    'module' => 'KontorProjects',
                     'permission' => 'kontor-projects-project-view',
                 ],
                 [
                     'url' => 'workflows/',
                     'label' => 'Workflows',
                     'icon' => 'sitemap',
+                    'module' => 'KontorWorkflow',
                     'permission' => 'kontor-workflow-definition-view',
                 ],
                 [
                     'url' => 'automations/',
                     'label' => 'Automations',
                     'icon' => 'bolt',
+                    'module' => 'KontorAutomation',
                     'permission' => 'kontor-automation-rule-view',
                 ],
                 [
                     'url' => 'custom-entities/',
                     'label' => 'Custom entities',
                     'icon' => 'cube',
+                    'module' => 'KontorEntities',
                     'permission' => 'kontor-entities-record-view',
                 ],
                 [
                     'url' => 'api/',
                     'label' => 'API',
                     'icon' => 'plug',
+                    'module' => 'KontorAPI',
                     'permission' => 'kontor-api-token-manage',
                 ],
                 [
                     'url' => 'graphql/',
                     'label' => 'GraphQL',
                     'icon' => 'share-alt',
+                    'module' => 'KontorGraphQL',
                     'permission' => 'kontor-api-token-manage',
                 ],
                 [
                     'url' => 'marketplace/',
                     'label' => 'Marketplace',
                     'icon' => 'shopping-cart',
+                    'module' => 'KontorMarketplace',
                     'permission' => 'kontor-marketplace-advisory-view',
                 ],
                 [
                     'url' => 'mail/',
                     'label' => 'Mail',
                     'icon' => 'envelope',
+                    'module' => 'KontorMail',
                     'permission' => 'kontor-mail-message-view',
                 ],
                 [
                     'url' => 'portal/',
                     'label' => 'Portal',
                     'icon' => 'user-circle',
+                    'module' => 'KontorPortal',
                     'permission' => 'kontor-portal-account-manage',
                 ],
                 [
                     'url' => 'files/',
                     'label' => 'Files',
                     'icon' => 'folder-open',
+                    'module' => 'KontorFiles',
                     'permission' => 'kontor-files-file-view',
                 ],
                 [
                     'url' => 'cache/',
                     'label' => 'Cache',
                     'icon' => 'bolt',
+                    'module' => 'KontorCache',
                     'permission' => 'kontor-cache-view',
                 ],
                 [
                     'url' => 'documents/',
                     'label' => 'Documents',
                     'icon' => 'file-pdf-o',
+                    'module' => 'KontorDocuments',
                     'permission' => 'kontor-documents-template-view',
                 ],
                 [
                     'url' => 'ai/',
                     'label' => 'AI',
                     'icon' => 'magic',
+                    'module' => 'KontorAI',
                     'permission' => 'kontor-ai-action-approve',
                 ],
                 [
                     'url' => 'ledger/',
                     'label' => 'Ledger',
                     'icon' => 'balance-scale',
+                    'module' => 'KontorLedger',
                     'permission' => 'kontor-ledger-entry-view',
                 ],
                 [
                     'url' => 'germany/',
                     'label' => 'Germany',
                     'icon' => 'flag',
+                    'module' => 'KontorGermany',
                     'permission' => 'kontor-germany-view',
                 ],
                 [
                     'url' => 'contacts/',
                     'label' => 'Contacts',
                     'icon' => 'address-book',
+                    'module' => 'KontorContacts',
                     'permission' => 'kontor-contacts-contact-view',
                 ],
                 [
                     'url' => 'companies/',
                     'label' => 'Companies',
                     'icon' => 'building',
+                    'module' => 'KontorContacts',
                     'permission' => 'kontor-contacts-company-view',
                 ],
                 [
                     'url' => 'crm/',
                     'label' => 'CRM',
                     'icon' => 'handshake-o',
+                    'module' => 'KontorCRM',
                     'permission' => 'kontor-crm-lead-view',
                 ],
                 [
                     'url' => 'sales/',
                     'label' => 'Sales',
                     'icon' => 'file-text-o',
+                    'module' => 'KontorSales',
                     'permission' => 'kontor-sales-quotation-view',
                 ],
                 [
                     'url' => 'invoices/',
                     'label' => 'Invoices',
                     'icon' => 'file-text',
+                    'module' => 'KontorInvoices',
                     'permission' => 'kontor-invoices-invoice-view',
                 ],
                 [
                     'url' => 'payments/',
                     'label' => 'Payments',
                     'icon' => 'money',
+                    'module' => 'KontorPayments',
                     'permission' => 'kontor-payments-payment-view',
                 ],
                 [
                     'url' => 'tasks/',
                     'label' => 'Tasks',
                     'icon' => 'check-square-o',
+                    'module' => 'KontorTasks',
                     'permission' => 'kontor-tasks-task-view',
                 ],
                 [
                     'url' => 'collaboration/',
                     'label' => 'Collaboration',
                     'icon' => 'comments-o',
+                    'module' => 'KontorCollaboration',
                     'permission' => 'kontor-collaboration-comment-view',
                 ],
                 [
                     'url' => 'reports/',
                     'label' => 'Reports',
                     'icon' => 'bar-chart',
+                    'module' => 'KontorReports',
                     'permission' => 'kontor-reports-report-view',
                 ],
                 [
@@ -472,18 +504,14 @@ class ProcessKontor extends Process
      */
     private function availableNavigationItems(): array
     {
-        $items = [];
         $user = $this->wire()->user;
-        foreach (self::getModuleInfo()['kontorNavigation'] ?? [] as $item) {
-            $permission = (string) ($item['permission'] ?? '');
-            if ($permission !== '' && !$user->isSuperuser() && !$user->hasPermission($permission)) {
-                continue;
-            }
-            $key = $item['url'] === '' ? 'dashboard' : trim((string) $item['url'], '/');
-            $items[$key] = $item;
-        }
 
-        return $items;
+        return (new NavigationAvailability())->resolve(
+            self::getModuleInfo()['kontorNavigation'] ?? [],
+            fn (string $module): bool => $this->wire()->modules->isInstalled($module),
+            static fn (string $permission): bool => $user->isSuperuser()
+                || $user->hasPermission($permission),
+        );
     }
 
     /**
@@ -1019,6 +1047,9 @@ class ProcessKontor extends Process
                     'contact',
                     $contact->uid->toString()
                 ),
+            'workspace' => $contact === null
+                ? $this->emptyCustomerWorkspace()
+                : $this->customerWorkspace('contact', $contact->uid->toString()),
             'aiReady' => $this->aiReady(),
             'aiSummary' => is_array($aiSummary) ? $aiSummary : null,
         ]);
@@ -1193,8 +1224,12 @@ class ProcessKontor extends Process
             : sprintf($this->_('Kontor · %s'), $lead->title));
         $values = [
             'title' => $lead?->title ?? '',
-            'contactUid' => $lead?->contactUid ?? '',
-            'companyUid' => $lead?->companyUid ?? '',
+            'contactUid' => $lead?->contactUid ?? ($lead === null
+                ? $this->wire()->sanitizer->text((string) $this->wire()->input->get('contact'))
+                : ''),
+            'companyUid' => $lead?->companyUid ?? ($lead === null
+                ? $this->wire()->sanitizer->text((string) $this->wire()->input->get('company'))
+                : ''),
             'source' => $lead?->source ?? '',
             'status' => $lead?->status ?? 'new',
             'priority' => $lead?->priority ?? 'medium',
@@ -1474,8 +1509,12 @@ class ProcessKontor extends Process
             'title' => $deal?->title ?? '',
             'pipelineUid' => $pipelineUid,
             'stageUid' => $deal?->stageUid ?? ($stages[0]?->uid->toString() ?? ''),
-            'contactUid' => $deal?->contactUid ?? '',
-            'companyUid' => $deal?->companyUid ?? '',
+            'contactUid' => $deal?->contactUid ?? ($deal === null
+                ? $this->wire()->sanitizer->text((string) $this->wire()->input->get('contact'))
+                : ''),
+            'companyUid' => $deal?->companyUid ?? ($deal === null
+                ? $this->wire()->sanitizer->text((string) $this->wire()->input->get('company'))
+                : ''),
             'source' => $deal?->source ?? '',
             'valueAmount' => $deal?->value !== null
                 ? number_format($deal->value->amountMinor() / 100, 2, '.', '')
@@ -2824,8 +2863,29 @@ class ProcessKontor extends Process
             $this->requireSameOrganization($task->organizationId);
         }
 
+        $contextType = '';
+        $contextUid = '';
+        $contextLabel = '';
+        if ($task === null) {
+            $contextType = $this->wire()->sanitizer->option(
+                (string) ($this->wire()->input->post('context_entity_type')
+                    ?: $this->wire()->input->get('entity_type')),
+                ['contact', 'company'],
+            ) ?? '';
+            $contextUid = $this->wire()->sanitizer->text(
+                (string) ($this->wire()->input->post('context_entity_uid')
+                    ?: $this->wire()->input->get('entity_uid')),
+            );
+            if ($contextType !== '' && $contextUid !== '') {
+                $contextLabel = $this->customerEntityLabel($contextType, $contextUid);
+            } else {
+                $contextType = '';
+                $contextUid = '';
+            }
+        }
+
         $values = [
-            'title' => $task?->title ?? '',
+            'title' => $task?->title ?? ($contextLabel !== '' ? 'Follow up with ' . $contextLabel : ''),
             'description' => $task?->description ?? '',
             'priority' => $task?->priority ?? 'normal',
             'dueAt' => $task?->dueAt?->format('Y-m-d\TH:i') ?? '',
@@ -2889,6 +2949,14 @@ class ProcessKontor extends Process
                 $task->assignedTo = $values['assignedToMe'] ? (int) $this->wire()->user->id : null;
                 $isNew = $id === '';
                 $repository->save($task);
+                if ($isNew && $contextType !== '' && $contextUid !== '') {
+                    $this->taskModule()->relations()->linkToEntity(
+                        $this->organizationUid(),
+                        $task->uid->toString(),
+                        $contextType,
+                        $contextUid,
+                    );
+                }
                 $this->audit(
                     'tasks',
                     'task',
@@ -2972,6 +3040,11 @@ class ProcessKontor extends Process
             'canCreateComments' => $canCreateComments,
             'canArchiveComments' => $canArchiveComments,
             'canManageFollow' => $canManageFollow,
+            'contextType' => $contextType,
+            'contextUid' => $contextUid,
+            'contextLabel' => $contextLabel,
+            'relatedRecords' => $task !== null ? $this->taskRelatedRecords($task) : [],
+            'authorLabels' => $this->collaborationAuthorLabels(array_merge($notes, $comments)),
         ]);
     }
 
@@ -3101,13 +3174,17 @@ class ProcessKontor extends Process
         $module = $this->collaborationModule();
         $this->setPageTitle($this->_('Kontor · Collaboration'));
 
-        return $this->renderTemplate('collaboration', [
-            'notes' => ($this->wire()->user->isSuperuser()
+        $notes = ($this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-collaboration-note-view'))
                 ? $module->noteRepository()->findRecent($this->organizationUid(), 50)
-                : [],
-            'comments' => $module->commentRepository()->findRecent($this->organizationUid(), 50),
+                : [];
+        $comments = $module->commentRepository()->findRecent($this->organizationUid(), 50);
+
+        return $this->renderTemplate('collaboration', [
+            'notes' => $notes,
+            'comments' => $comments,
             'taskLabels' => $this->collaborationTaskLabels(),
+            'authorLabels' => $this->collaborationAuthorLabels(array_merge($notes, $comments)),
         ]);
     }
 
@@ -7495,6 +7572,9 @@ class ProcessKontor extends Process
                     'company',
                     $company->uid->toString()
                 ),
+            'workspace' => $company === null
+                ? $this->emptyCustomerWorkspace()
+                : $this->customerWorkspace('company', $company->uid->toString()),
         ]);
     }
 
@@ -11717,6 +11797,14 @@ class ProcessKontor extends Process
         return $module;
     }
 
+    private function crmModule(): KontorCRM
+    {
+        /** @var KontorCRM $module */
+        $module = $this->wire()->modules->get('KontorCRM');
+
+        return $module;
+    }
+
     private function collaborationModule(): KontorCollaboration
     {
         /** @var KontorCollaboration $module */
@@ -11891,6 +11979,154 @@ class ProcessKontor extends Process
         $module = $this->wire()->modules->get('KontorGermany');
 
         return $module;
+    }
+
+    /**
+     * @return array{
+     *   available: bool,
+     *   actions: array<int, array{label: string, icon: string, route: string, primary: bool}>,
+     *   leads: array<int, Lead>,
+     *   deals: array<int, Deal>,
+     *   tasks: array<int, Task>
+     * }
+     */
+    private function customerWorkspace(string $entityType, string $entityUid): array
+    {
+        $crmVisible = $this->crmReady() && $this->can('kontor-crm-lead-view');
+        $dealsVisible = $this->crmReady() && $this->can('kontor-crm-deal-view');
+        $tasksVisible = $this->tasksReady() && $this->can('kontor-tasks-task-view');
+        $actions = (new EntityActionResolver())->resolve($entityType, $entityUid, [
+            'crm.lead.create' => $this->crmReady() && $this->can('kontor-crm-lead-create'),
+            'crm.deal.create' => $this->crmReady() && $this->can('kontor-crm-deal-create'),
+            'tasks.task.create' => $this->tasksReady() && $this->can('kontor-tasks-task-create'),
+        ]);
+        $field = $entityType === 'contact' ? 'contactUid' : 'companyUid';
+        $leads = $crmVisible
+            ? array_values(array_filter(
+                $this->crmModule()->leadRepository()->findMatching(
+                    $this->organizationUid(),
+                    limit: 250,
+                ),
+                static fn (Lead $lead): bool => $lead->{$field} === $entityUid,
+            ))
+            : [];
+        $deals = $dealsVisible
+            ? array_values(array_filter(
+                $this->crmModule()->dealRepository()->findMatching(
+                    $this->organizationUid(),
+                    limit: 250,
+                ),
+                static fn (Deal $deal): bool => $deal->{$field} === $entityUid,
+            ))
+            : [];
+        $tasks = [];
+
+        if ($tasksVisible) {
+            foreach ($this->taskModule()->relations()->tasksRelatedTo(
+                $this->organizationUid(),
+                $entityType,
+                $entityUid,
+            ) as $taskUid) {
+                $task = $this->taskModule()->taskRepository()->findActive(
+                    $this->organizationUid(),
+                    $taskUid,
+                );
+                if ($task !== null) {
+                    $tasks[] = $task;
+                }
+            }
+        }
+
+        return [
+            'available' => $crmVisible || $dealsVisible || $tasksVisible || $actions !== [],
+            'actions' => $actions,
+            'leads' => $leads,
+            'deals' => $deals,
+            'tasks' => $tasks,
+        ];
+    }
+
+    private function customerEntityLabel(string $entityType, string $entityUid): string
+    {
+        if (!$this->contactsReady()) {
+            throw new Wire404Exception();
+        }
+
+        if ($entityType === 'contact') {
+            $this->requirePermission('kontor-contacts-contact-view');
+            $contact = $this->contactRepository()->find($entityUid);
+            if ($contact === null || !hash_equals($this->organizationUid(), $contact->organizationId)) {
+                throw new Wire404Exception();
+            }
+
+            return $contact->displayName;
+        }
+
+        if ($entityType === 'company') {
+            $this->requirePermission('kontor-contacts-company-view');
+            $company = $this->companyRepository()->find($entityUid);
+            if ($company === null || !hash_equals($this->organizationUid(), $company->organizationId)) {
+                throw new Wire404Exception();
+            }
+
+            return $company->tradingName ?: $company->legalName;
+        }
+
+        throw new Wire404Exception();
+    }
+
+    /**
+     * @return array<int, array{label: string, kind: string, route: string}>
+     */
+    private function taskRelatedRecords(Task $task): array
+    {
+        if (!$this->contactsReady()) {
+            return [];
+        }
+
+        $records = [];
+        foreach ($this->taskModule()->relations()->relatedEntities(
+            $this->organizationUid(),
+            $task->uid->toString(),
+        ) as $relation) {
+            $type = (string) ($relation['targetType'] ?? '');
+            $uid = (string) ($relation['targetUid'] ?? '');
+            if ($uid === '') {
+                continue;
+            }
+
+            if ($type === 'contact' && $this->can('kontor-contacts-contact-view')) {
+                $contact = $this->contactRepository()->find($uid);
+                if ($contact !== null && hash_equals($this->organizationUid(), $contact->organizationId)) {
+                    $records[] = [
+                        'label' => $contact->displayName,
+                        'kind' => 'Contact',
+                        'route' => 'contact/?id=' . rawurlencode($uid),
+                    ];
+                }
+            }
+
+            if ($type === 'company' && $this->can('kontor-contacts-company-view')) {
+                $company = $this->companyRepository()->find($uid);
+                if ($company !== null && hash_equals($this->organizationUid(), $company->organizationId)) {
+                    $records[] = [
+                        'label' => $company->tradingName ?: $company->legalName,
+                        'kind' => 'Company',
+                        'route' => 'company/?id=' . rawurlencode($uid),
+                    ];
+                }
+            }
+        }
+
+        return $records;
+    }
+
+    /**
+     * @return array{available: bool, actions: array, leads: array, deals: array, tasks: array}
+     */
+    private function emptyCustomerWorkspace(): array
+    {
+        return ['available' => false, 'actions' => [], 'leads' => [], 'deals' => [], 'tasks' => []];
     }
 
     private function can(string $permission): bool
@@ -12389,6 +12625,26 @@ class ProcessKontor extends Process
             limit: 250,
         ) as $task) {
             $labels[$task->uid->toString()] = $task->title;
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @param array<int, Note|Comment> $records
+     * @return array<int, string>
+     */
+    private function collaborationAuthorLabels(array $records): array
+    {
+        $labels = [];
+        foreach ($records as $record) {
+            if ($record->createdBy === null || isset($labels[$record->createdBy])) {
+                continue;
+            }
+            $author = $this->wire()->users->get($record->createdBy);
+            if ($author->id > 0) {
+                $labels[$record->createdBy] = (string) ($author->get('title') ?: $author->name);
+            }
         }
 
         return $labels;

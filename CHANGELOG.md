@@ -7,6 +7,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Contact and company records now expose one permission-aware connected
+  workspace for related CRM leads, deals and active tasks, with contextual
+  create actions that preselect the customer and gracefully disappear when an
+  optional component is unavailable.
+- Task creation can now preserve contact or company context, create the shared
+  relation atomically with the task, and show a human-readable linked customer
+  on the task while keeping technical identifiers out of the primary UI.
+- Kontor navigation now resolves optional-component availability and user
+  permissions through a shared tested resolver, so partial installations no
+  longer advertise unreachable workspaces.
+- Task and collaboration screens now show ProcessWire author names instead of
+  internal user IDs, and task forms use the same guided native UIkit fields as
+  the rest of the workspace.
 - Kontor workspaces now share one vertical rhythm across page headers, forms,
   cards, filters and empty states; form context headers no longer create a
   second framed panel, and Expenses uses a native responsive UIkit status nav.

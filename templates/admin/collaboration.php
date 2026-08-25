@@ -3,16 +3,20 @@
 /** @var \Kontor\Collaboration\Domain\Note[] $notes */
 /** @var \Kontor\Collaboration\Domain\Comment[] $comments */
 /** @var array<string, string> $taskLabels */
+/** @var array<int, string> $authorLabels */
 /** @var string $adminUrl */
 /** @var callable $e */
 
 $entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $taskLabels): string {
     if ($type === 'task') {
-        $label = $taskLabels[$uid] ?? $uid;
-        return '<a href="' . $e($adminUrl) . 'task/?id=' . $e(rawurlencode($uid)) . '">' . $e($label) . '</a>';
+        if (isset($taskLabels[$uid])) {
+            return '<a href="' . $e($adminUrl) . 'task/?id=' . $e(rawurlencode($uid)) . '">' . $e($taskLabels[$uid]) . '</a>';
+        }
+
+        return $e('Unavailable task');
     }
 
-    return $e($type . ' · ' . $uid);
+    return $e(ucfirst(str_replace('_', ' ', $type)));
 };
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
@@ -32,7 +36,7 @@ $entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $t
       <?php foreach ($comments as $comment): ?><tr>
         <td><?= $entityLink($comment->entityType, $comment->entityUid) ?></td>
         <td><?= $e($comment->body) ?></td>
-        <td>User #<?= $e($comment->createdBy ?? 'system') ?></td>
+        <td><?= $e($comment->createdBy !== null ? ($authorLabels[$comment->createdBy] ?? 'Former user') : 'System') ?></td>
         <td><?= $e($comment->createdAt->format('Y-m-d H:i')) ?></td>
       </tr><?php endforeach; ?>
       </tbody></table>
@@ -46,7 +50,7 @@ $entityLink = static function (string $type, string $uid) use ($adminUrl, $e, $t
       <?php foreach ($notes as $note): ?><tr>
         <td><?= $entityLink($note->entityType, $note->entityUid) ?></td>
         <td><?= $e($note->body) ?></td>
-        <td>User #<?= $e($note->createdBy ?? 'system') ?></td>
+        <td><?= $e($note->createdBy !== null ? ($authorLabels[$note->createdBy] ?? 'Former user') : 'System') ?></td>
         <td><?= $e($note->createdAt->format('Y-m-d H:i')) ?></td>
       </tr><?php endforeach; ?>
       </tbody></table>

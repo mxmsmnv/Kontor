@@ -29,6 +29,21 @@ final class TaskRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function findActive(string $organizationUid, string $id): ?Task
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_tasks
+             WHERE uid = :uid AND organization_id = :organization_id AND archived_at IS NULL'
+        );
+        $statement->execute([
+            'uid' => $id,
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function require(string $id): Task
     {
         return $this->find($id) ?? throw new RuntimeException("Task \"{$id}\" was not found.");

@@ -13,6 +13,7 @@
 /** @var array $addresses */
 /** @var array $duplicates */
 /** @var array $tags */
+/** @var array{available: bool, actions: array, leads: array, deals: array, tasks: array} $workspace */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -47,6 +48,57 @@ $aiSummary = $aiSummary ?? null;
   <?= $form->render() ?>
 
   <?php if ($entity !== null): ?>
+    <?php if ($workspace['available']): ?>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
+        <header class="kontor-sectionhead uk-flex-wrap uk-grid-small" uk-grid>
+          <div class="uk-width-expand@m">
+            <p class="kontor-eyebrow">Connected workspace</p>
+            <h3>Customer work</h3>
+            <p class="uk-text-meta uk-margin-small-top">Leads, deals and tasks connected to this <?= $e($entityType) ?>.</p>
+          </div>
+          <?php if ($workspace['actions'] !== []): ?>
+            <div class="uk-width-auto@m">
+              <div class="uk-flex uk-flex-wrap uk-flex-right@m uk-grid-small" uk-grid>
+                <?php foreach ($workspace['actions'] as $action): ?>
+                  <div><a class="uk-button <?= $action['primary'] ? 'uk-button-primary' : 'uk-button-default' ?>" href="<?= $e($adminUrl . $action['route']) ?>"><i class="fa fa-<?= $e($action['icon']) ?>"></i> <?= $e($action['label']) ?></a></div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+        </header>
+
+        <?php if ($workspace['leads'] === [] && $workspace['deals'] === [] && $workspace['tasks'] === []): ?>
+          <div class="uk-placeholder uk-text-center uk-margin-top">
+            <p class="uk-margin-remove">No customer work is connected yet. Start with one of the available actions above.</p>
+          </div>
+        <?php else: ?>
+          <div class="uk-child-width-1-3@m uk-grid-small uk-grid-match uk-margin-top" uk-grid>
+            <?php foreach ([
+              ['title' => 'Leads', 'route' => 'crm-lead/', 'records' => $workspace['leads']],
+              ['title' => 'Deals', 'route' => 'crm-deal/', 'records' => $workspace['deals']],
+              ['title' => 'Tasks', 'route' => 'task/', 'records' => $workspace['tasks']],
+            ] as $group): ?>
+              <?php if ($group['records'] !== []): ?>
+                <div>
+                  <div>
+                    <h4 class="uk-margin-remove-top"><?= $e($group['title']) ?></h4>
+                    <ul class="uk-list uk-list-divider uk-margin-remove-bottom">
+                      <?php foreach ($group['records'] as $record): ?>
+                        <li>
+                          <a class="uk-link-text" href="<?= $e($adminUrl . $group['route']) ?>?id=<?= $e(rawurlencode($record->uid->toString())) ?>"><strong><?= $e($record->title) ?></strong></a>
+                          <div class="uk-text-meta uk-text-capitalize"><?= $e(str_replace('_', ' ', $record->status)) ?></div>
+                        </li>
+                      <?php endforeach; ?>
+                    </ul>
+                  </div>
+                </div>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
+    <?php endif; ?>
+
     <?php if ($entityType === 'contact' && $aiReady): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
         <div class="kontor-sectionhead">

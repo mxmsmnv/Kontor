@@ -59,4 +59,17 @@ final class TaskRepositoryTest extends DatabaseTestCase
 
         $this->assertNotNull($repository->find($task->uid->toString()));
     }
+
+    public function test_find_active_hides_archived_tasks(): void
+    {
+        $repository = $this->repository();
+        $task = Task::create($this->organizationUid, 'Connected task');
+        $repository->save($task);
+
+        $this->assertNotNull($repository->findActive($this->organizationUid, $task->uid->toString()));
+
+        $repository->archive($task->uid->toString());
+
+        $this->assertNull($repository->findActive($this->organizationUid, $task->uid->toString()));
+    }
 }
