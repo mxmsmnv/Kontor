@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Projects now works as a delivery portfolio with searchable project and customer
+  context, milestone progress, schedule risks, tracked time, unbilled value and
+  permission-aware links into the optional task, customer and invoice workflows.
+
 - Payment details now presents the receipt, payer, invoice allocation and ledger
   postings as one focused financial record, with permission-aware navigation and
   a guarded, clearly explained reversal workflow.

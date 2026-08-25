@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '197',
+            'version' => '198',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5014,12 +5014,122 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-projects-project-view');
         $this->setPageTitle($this->_('Kontor · Projects'));
 
+        $module = $this->projectsModule();
+        $customerLabels = $this->salesCustomerLabels();
+        $allProjects = $module->projectRepository()->forOrganization($this->organizationUid());
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $selectedStatus = strtolower($this->wire()->sanitizer->text(
+            (string) $this->wire()->input->get('status')
+        ));
+        $statuses = [];
+        $projectContexts = [];
+        $today = new \DateTimeImmutable('today');
+
+        foreach ($allProjects as $project) {
+            $projectUid = $project->uid->toString();
+            $customerKey = ($project->customerType ?? '') . ':' . ($project->customerUid ?? '');
+            $milestones = $module->milestoneRepository()->forProject($projectUid);
+            $timeEntries = $module->timeEntryRepository()->forProject($projectUid);
+            $billableItems = $module->billableItemRepository()->forProject($projectUid);
+            $completedMilestones = 0;
+            $overdueMilestones = 0;
+            foreach ($milestones as $milestone) {
+                if ($milestone->isCompleted()) {
+                    ++$completedMilestones;
+                } elseif ($milestone->dueDate !== null && $milestone->dueDate < $today) {
+                    ++$overdueMilestones;
+                }
+            }
+
+            $trackedMinutes = 0;
+            $unbilledMinutes = 0;
+            $runningTimers = 0;
+            $unbilledByCurrency = [];
+            foreach ($timeEntries as $entry) {
+                $trackedMinutes += $entry->durationMinutes ?? 0;
+                if ($entry->isRunning()) {
+                    ++$runningTimers;
+                }
+                if (!$entry->billable || $entry->isInvoiced() || $entry->durationMinutes === null) {
+                    continue;
+                }
+                $unbilledMinutes += $entry->durationMinutes;
+                $rate = $entry->hourlyRateMinor ?? $project->defaultHourlyRateMinor;
+                $currency = $entry->currencyCode ?? $project->currencyCode;
+                if ($rate !== null && $currency !== null) {
+                    $unbilledByCurrency[$currency] = ($unbilledByCurrency[$currency] ?? 0)
+                        + (int) round(($entry->durationMinutes / 60) * $rate);
+                }
+            }
+            foreach ($billableItems as $item) {
+                if ($item->isInvoiced()) {
+                    continue;
+                }
+                $total = $item->total();
+                $currency = $total->currencyCode();
+                $unbilledByCurrency[$currency] = ($unbilledByCurrency[$currency] ?? 0)
+                    + $total->amountMinor();
+            }
+            ksort($unbilledByCurrency);
+
+            $customerRoute = null;
+            if ($this->contactsReady() && $project->customerUid !== null) {
+                if ($project->customerType === 'contact' && $this->can('kontor-contacts-contact-view')) {
+                    $customerRoute = 'contact/?id=' . rawurlencode($project->customerUid);
+                } elseif ($project->customerType === 'company' && $this->can('kontor-contacts-company-view')) {
+                    $customerRoute = 'company/?id=' . rawurlencode($project->customerUid);
+                }
+            }
+
+            $statuses[$project->status] = true;
+            $projectContexts[$projectUid] = [
+                'customerLabel' => $customerLabels[$customerKey] ?? null,
+                'customerRoute' => $customerRoute,
+                'milestoneCount' => count($milestones),
+                'completedMilestones' => $completedMilestones,
+                'overdueMilestones' => $overdueMilestones,
+                'trackedMinutes' => $trackedMinutes,
+                'unbilledMinutes' => $unbilledMinutes,
+                'runningTimers' => $runningTimers,
+                'unbilledByCurrency' => $unbilledByCurrency,
+            ];
+        }
+        ksort($statuses);
+        if ($selectedStatus !== '' && !isset($statuses[$selectedStatus])) {
+            $selectedStatus = '';
+        }
+
+        $projects = array_values(array_filter(
+            $allProjects,
+            static function ($project) use ($query, $selectedStatus, $projectContexts): bool {
+                if ($selectedStatus !== '' && $project->status !== $selectedStatus) {
+                    return false;
+                }
+                if ($query === '') {
+                    return true;
+                }
+                $context = $projectContexts[$project->uid->toString()];
+                $haystack = implode(' ', [
+                    $project->code,
+                    $project->name,
+                    (string) ($context['customerLabel'] ?? ''),
+                ]);
+
+                return mb_stripos($haystack, $query) !== false;
+            }
+        ));
+
         return $this->renderTemplate('projects', [
-            'projects' => $this->projectsModule()->projectRepository()
-                ->forOrganization($this->organizationUid()),
-            'customerLabels' => $this->salesCustomerLabels(),
+            'projects' => $projects,
+            'allProjects' => $allProjects,
+            'projectContexts' => $projectContexts,
+            'query' => $query,
+            'selectedStatus' => $selectedStatus,
+            'statuses' => array_keys($statuses),
             'canCreate' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-projects-project-create'),
+            'canViewTasks' => $this->tasksReady() && $this->can('kontor-tasks-task-view'),
+            'canViewInvoices' => $this->invoicesReady() && $this->can('kontor-invoices-invoice-view'),
         ]);
     }
 
