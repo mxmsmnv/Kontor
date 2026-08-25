@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Sales order details now separates fulfillment from billing, summarizes
+  customer, delivery, payment and totals, guides inventory-aware confirmation,
+  and links the source quotation, invoice and reservation warehouse by access.
 - Quotation details now centers the customer, value, commercial terms and
   locked document output, presents a status-aware next action, links CRM and
   order context, and hides every workflow action the current role cannot use.

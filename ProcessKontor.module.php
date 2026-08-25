@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '173',
+            'version' => '174',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2184,10 +2184,25 @@ class ProcessKontor extends Process
         $order = $sales->orderRepository()->require($id);
         $this->requireSameOrganization($order->organizationId);
         $lines = $sales->documentLineRepository()->forDocument('order', $id);
-        $trackedLines = $order->isPending() ? $this->salesOrderTrackedLines($lines) : [];
+        $trackedLines = $this->salesOrderTrackedLines($lines);
         $reservationMovements = $order->isConfirmed()
             ? $this->salesOrderReservationMovements($id)
             : [];
+        $reservationWarehouseUid = $this->reservationWarehouseUid($reservationMovements);
+        $reservationWarehouseLabel = null;
+        if ($reservationWarehouseUid !== null && $this->inventoryReady()) {
+            $warehouse = $this->inventoryModule()->warehouseRepository()->find($reservationWarehouseUid);
+            if ($warehouse !== null && hash_equals($order->organizationId, $warehouse->organizationId)) {
+                $reservationWarehouseLabel = $warehouse->code . ' · ' . $warehouse->name;
+            }
+        }
+        $sourceQuotation = null;
+        if ($order->quotationUid !== null && $this->can('kontor-sales-quotation-view')) {
+            $candidate = $sales->quotationRepository()->find($order->quotationUid);
+            if ($candidate !== null && hash_equals($order->organizationId, $candidate->organizationId)) {
+                $sourceQuotation = $candidate;
+            }
+        }
         $this->setPageTitle(sprintf($this->_('Kontor · %s'), $order->number ?? $this->_('Sales order')));
 
         return $this->renderTemplate('sales-order', [
@@ -2195,12 +2210,13 @@ class ProcessKontor extends Process
             'lines' => $lines,
             'customerLabel' => $this->salesCustomerLabels()[
                 $order->customerType . ':' . $order->customerUid
-            ] ?? $order->customerUid,
+            ] ?? $this->_('Customer unavailable'),
+            'sourceQuotation' => $sourceQuotation,
             'existingInvoice' => $this->invoicesReady()
                 ? $this->invoiceModule()->invoiceRepository()->findByOrder($id)
                 : null,
             'invoicesReady' => $this->invoicesReady(),
-            'inventoryWarehouses' => $trackedLines !== [] && $this->inventoryReady()
+            'inventoryWarehouses' => $order->isPending() && $trackedLines !== [] && $this->inventoryReady()
                 ? array_values(array_filter(
                     $this->inventoryModule()->warehouseRepository()->forOrganization(
                         $this->organizationUid()
@@ -2209,13 +2225,24 @@ class ProcessKontor extends Process
                 ))
                 : [],
             'trackedLineCount' => count($trackedLines),
-            'reservationWarehouseUid' => $this->reservationWarehouseUid($reservationMovements),
+            'reservationWarehouseUid' => $reservationWarehouseUid,
+            'reservationWarehouseLabel' => $reservationWarehouseLabel,
+            'inventoryReady' => $this->inventoryReady(),
+            'showInventory' => $this->inventoryReady()
+                && $this->can('kontor-inventory-stock-view'),
             'canReserveInventory' => $this->inventoryReady()
                 && $this->can('kontor-inventory-reserve'),
             'canShipInventory' => $this->inventoryReady()
                 && $this->can('kontor-inventory-adjust'),
             'canReleaseInventory' => $this->inventoryReady()
                 && $this->can('kontor-inventory-release'),
+            'canConfirm' => $this->can('kontor-sales-order-confirm'),
+            'canComplete' => $this->can('kontor-sales-order-complete'),
+            'canCancel' => $this->can('kontor-sales-order-cancel'),
+            'canCreateInvoice' => $this->invoicesReady()
+                && $this->can('kontor-invoices-invoice-create'),
+            'canViewInvoice' => $this->invoicesReady()
+                && $this->can('kontor-invoices-invoice-view'),
         ]);
     }
 
