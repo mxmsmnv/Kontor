@@ -1,65 +1,168 @@
 <?php
 
 /** @var \Kontor\Tasks\Domain\Task[] $tasks */
+/** @var \Kontor\Tasks\Domain\Task[] $allTasks */
 /** @var string $query */
 /** @var string|null $selectedStatus */
 /** @var string|null $selectedPriority */
+/** @var string $selectedScope */
 /** @var bool $archived */
+/** @var array<int, string> $assigneeLabels */
+/** @var int $currentUserId */
+/** @var bool $canCreate */
 /** @var string $adminUrl */
 /** @var callable $e */
+
+$today = new DateTimeImmutable('today');
+$tomorrow = $today->modify('+1 day');
+$nextWeek = $today->modify('+7 days');
+$allCount = count($allTasks);
+$overdueCount = count(array_filter($allTasks, static fn ($task): bool => $task->isOverdue()));
+$todayCount = count(array_filter(
+    $allTasks,
+    static fn ($task): bool => $task->isOpen() && $task->dueAt !== null
+        && $task->dueAt >= $today && $task->dueAt < $tomorrow
+));
+$mineCount = count(array_filter(
+    $allTasks,
+    static fn ($task): bool => $task->isOpen() && $task->assignedTo === $currentUserId
+));
+$humanize = static fn (?string $value): string => $value === null || $value === ''
+    ? 'Not set'
+    : ucwords(str_replace('_', ' ', $value));
+$description = static function (?string $value): string {
+    $value = trim((string) $value);
+    if ($value === '') {
+        return 'No description added';
+    }
+
+    return mb_strimwidth($value, 0, 150, '…');
+};
+$duePresentation = static function ($task) use ($today, $tomorrow, $nextWeek): array {
+    if ($task->dueAt === null) {
+        return ['label' => 'No due date', 'meta' => 'Unscheduled', 'class' => ''];
+    }
+    if ($task->isOverdue()) {
+        return [
+            'label' => $task->dueAt->format('M j · H:i'),
+            'meta' => 'Overdue',
+            'class' => 'uk-text-danger',
+        ];
+    }
+    if ($task->dueAt >= $today && $task->dueAt < $tomorrow) {
+        return ['label' => $task->dueAt->format('H:i'), 'meta' => 'Due today', 'class' => ''];
+    }
+    if ($task->dueAt >= $tomorrow && $task->dueAt < $nextWeek) {
+        return [
+            'label' => $task->dueAt->format('D · H:i'),
+            'meta' => 'This week',
+            'class' => '',
+        ];
+    }
+
+    return [
+        'label' => $task->dueAt->format('M j, Y · H:i'),
+        'meta' => $task->status === 'done' ? 'Completed task' : 'Scheduled',
+        'class' => '',
+    ];
+};
+$statusClass = static fn (string $status): string => match ($status) {
+    'done' => ' uk-label-success',
+    'cancelled' => ' uk-label-warning',
+    default => '',
+};
+$priorityIcon = static fn (string $priority): string => match ($priority) {
+    'urgent' => 'exclamation-circle',
+    'high' => 'arrow-up',
+    'low' => 'arrow-down',
+    default => 'minus',
+};
+$filtersActive = $query !== '' || $selectedStatus !== null || $selectedPriority !== null;
+$scopeUrl = static function (string $scope) use ($adminUrl, $archived): string {
+    $parameters = ['scope' => $scope];
+    if ($archived) {
+        $parameters['archived'] = '1';
+    }
+
+    return $adminUrl . 'tasks/?' . http_build_query($parameters);
+};
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
     <div>
-      <p class="kontor-eyebrow">Work queue</p>
+      <p class="kontor-eyebrow"><?= $archived ? 'Task history' : 'Daily work inbox' ?></p>
       <h2><?= $archived ? 'Archived tasks' : 'Tasks' ?></h2>
-      <p>Capture work, move it forward, and complete recurring items.</p>
+      <p><?= $archived
+          ? 'Review completed history and restore work that needs to return to the active queue.'
+          : 'See what needs attention, choose the next action and keep work moving across Kontor.' ?></p>
     </div>
-    <a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>task/"><i class="fa fa-plus"></i> New task</a>
+    <div class="pw-module-actions kontor-pagehead__actions">
+      <a class="uk-button uk-button-default" href="<?= $e($adminUrl) ?>tasks/?archived=<?= $archived ? '0' : '1' ?>"><i class="fa fa-<?= $archived ? 'check-square-o' : 'archive' ?>"></i> <?= $archived ? 'Active tasks' : 'Archive' ?></a>
+      <?php if ($canCreate && !$archived): ?><a class="uk-button uk-button-primary" href="<?= $e($adminUrl) ?>task/"><i class="fa fa-plus"></i> New task</a><?php endif; ?>
+    </div>
   </header>
 
-  <form class="uk-card uk-card-default uk-card-small uk-card-body kontor-card kontor-filterbar" method="get">
-    <label>Search <input name="q" value="<?= $e($query) ?>" placeholder="Title or description"></label>
-    <label>Status
-      <select name="status">
-        <option value="">All statuses</option>
-        <?php foreach (['open' => 'Open', 'in_progress' => 'In progress', 'done' => 'Done', 'cancelled' => 'Cancelled'] as $value => $label): ?>
-          <option value="<?= $e($value) ?>"<?= $selectedStatus === $value ? ' selected' : '' ?>><?= $e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </label>
-    <label>Priority
-      <select name="priority">
-        <option value="">All priorities</option>
-        <?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?>
-          <option value="<?= $e($value) ?>"<?= $selectedPriority === $value ? ' selected' : '' ?>><?= $e($label) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </label>
-    <?php if ($archived): ?><input type="hidden" name="archived" value="1"><?php endif; ?>
-    <button class="uk-button uk-button-primary kontor-button" type="submit">Filter</button>
-    <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>tasks/<?= $archived ? '?archived=1' : '' ?>">Clear</a>
-    <a href="<?= $e($adminUrl) ?>tasks/?archived=<?= $archived ? '0' : '1' ?>"><?= $archived ? 'Active tasks' : 'Archive' ?></a>
-  </form>
+  <?php if (!$archived): ?>
+    <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-margin-medium-bottom" uk-grid>
+      <div><a class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat uk-link-reset<?= $selectedScope === 'all' ? ' kontor-card--selected' : '' ?>" href="<?= $e($scopeUrl('all')) ?>"<?= $selectedScope === 'all' ? ' aria-current="page"' : '' ?>><span class="kontor-stat__icon"><i class="fa fa-list-ul"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $allCount) ?></strong><span class="kontor-stat__label">All tasks</span></span></a></div>
+      <div><a class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat uk-link-reset<?= $selectedScope === 'mine' ? ' kontor-card--selected' : '' ?>" href="<?= $e($scopeUrl('mine')) ?>"<?= $selectedScope === 'mine' ? ' aria-current="page"' : '' ?>><span class="kontor-stat__icon"><i class="fa fa-user"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $mineCount) ?></strong><span class="kontor-stat__label">Assigned to me</span></span></a></div>
+      <div><a class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat uk-link-reset<?= $selectedScope === 'today' ? ' kontor-card--selected' : '' ?>" href="<?= $e($scopeUrl('today')) ?>"<?= $selectedScope === 'today' ? ' aria-current="page"' : '' ?>><span class="kontor-stat__icon"><i class="fa fa-calendar-check-o"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $todayCount) ?></strong><span class="kontor-stat__label">Due today</span></span></a></div>
+      <div><a class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat uk-link-reset<?= $selectedScope === 'overdue' ? ' kontor-card--selected' : '' ?>" href="<?= $e($scopeUrl('overdue')) ?>"<?= $selectedScope === 'overdue' ? ' aria-current="page"' : '' ?>><span class="kontor-stat__icon<?= $overdueCount > 0 ? ' kontor-stat__icon--danger' : '' ?>"><i class="fa fa-exclamation-triangle"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $overdueCount) ?></strong><span class="kontor-stat__label">Overdue</span></span></a></div>
+    </div>
+  <?php endif; ?>
 
-  <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
+  <section class="uk-card uk-card-default uk-card-small uk-card-body">
+    <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid>
+      <div>
+        <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom"><?= $archived ? 'History' : 'Work queue' ?></p>
+        <h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom"><?= $e(match ($selectedScope) { 'mine' => 'Assigned to me', 'overdue' => 'Overdue tasks', 'today' => 'Due today', 'upcoming' => 'Coming up', default => $archived ? 'Archived tasks' : 'All tasks' }) ?></h3>
+        <p class="uk-text-muted uk-margin-small-top uk-margin-remove-bottom"><?= $e((string) count($tasks)) ?> task<?= count($tasks) === 1 ? '' : 's' ?> shown</p>
+      </div>
+      <?php if (!$archived): ?><div><a class="uk-button <?= $selectedScope === 'upcoming' ? 'uk-button-primary' : 'uk-button-default' ?> kontor-button" href="<?= $e($scopeUrl('upcoming')) ?>"><i class="fa fa-calendar"></i> Coming up</a></div><?php endif; ?>
+    </div>
+
+    <form class="uk-form-stacked uk-margin" method="get" action="<?= $e($adminUrl) ?>tasks/">
+      <input type="hidden" name="scope" value="<?= $e($selectedScope) ?>">
+      <?php if ($archived): ?><input type="hidden" name="archived" value="1"><?php endif; ?>
+      <div class="uk-grid-small uk-flex-bottom" uk-grid>
+        <div class="uk-width-1-1 uk-width-expand@m"><label class="uk-form-label" for="tasks-search">Search tasks</label><div class="uk-inline uk-width-1-1 uk-margin-small-top"><span class="uk-form-icon" uk-icon="icon: search"></span><input class="uk-input" id="tasks-search" type="search" name="q" value="<?= $e($query) ?>" placeholder="Search title or description"></div></div>
+        <div class="uk-width-1-1 uk-width-1-4@m"><label class="uk-form-label" for="tasks-status">Status</label><select class="uk-select uk-margin-small-top" id="tasks-status" name="status"><option value="">All statuses</option><?php foreach (['open' => 'Open', 'in_progress' => 'In progress', 'done' => 'Done', 'cancelled' => 'Cancelled'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $selectedStatus === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select></div>
+        <div class="uk-width-1-1 uk-width-1-5@m"><label class="uk-form-label" for="tasks-priority">Priority</label><select class="uk-select uk-margin-small-top" id="tasks-priority" name="priority"><option value="">All priorities</option><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $selectedPriority === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select></div>
+        <div class="uk-width-1-1 uk-width-auto@m"><button class="uk-button uk-button-default uk-width-1-1" type="submit">Apply</button></div>
+        <?php if ($filtersActive): ?><div class="uk-width-1-1 uk-width-auto@m"><a class="uk-button uk-button-text uk-width-1-1" href="<?= $e($scopeUrl($selectedScope)) ?>">Reset</a></div><?php endif; ?>
+      </div>
+    </form>
+
     <?php if ($tasks !== []): ?>
-      <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small kontor-table">
-        <thead><tr><th>Task</th><th>Due</th><th>Priority</th><th>Status</th><th>Recurrence</th></tr></thead>
-        <tbody>
-          <?php foreach ($tasks as $task): ?>
-            <tr>
-              <td><strong><a href="<?= $e($adminUrl) ?>task/?id=<?= $e(rawurlencode($task->uid->toString())) ?><?= $archived ? '&amp;archived=1' : '' ?>"><?= $e($task->title) ?></a></strong><span class="kontor-secondary"><?= $e($task->description ?? 'No description') ?></span></td>
-              <td><?= $e($task->dueAt?->format('Y-m-d H:i') ?? 'No due date') ?><?= $task->isOverdue() ? ' · overdue' : '' ?></td>
-              <td><?= $e($task->priority) ?></td>
-              <td><span class="uk-label kontor-pill<?= $task->status === 'cancelled' ? ' kontor-pill--inactive' : '' ?>"><?= $e(str_replace('_', ' ', $task->status)) ?></span></td>
-              <td><?= $e($task->recurrenceRule ?? 'One-off') ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+      <div class="uk-overflow-auto uk-visible@m">
+        <table class="uk-table uk-table-divider uk-table-hover uk-table-middle uk-table-small">
+          <thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th class="uk-table-shrink"><span class="uk-hidden">Open</span></th></tr></thead>
+          <tbody><?php foreach ($tasks as $task): $due = $duePresentation($task); $taskUrl = $adminUrl . 'task/?id=' . rawurlencode($task->uid->toString()) . ($archived ? '&archived=1' : ''); ?><tr>
+            <td><a class="uk-link-reset" href="<?= $e($taskUrl) ?>"><strong><?= $e($task->title) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $e($description($task->description)) ?><?= $task->recurrenceRule !== null ? ' · Repeats ' . $e($humanize($task->recurrenceRule)) : '' ?></div></a></td>
+            <td><?= $e($task->assignedTo !== null ? ($assigneeLabels[$task->assignedTo] ?? 'Former user') : 'Unassigned') ?></td>
+            <td class="<?= $e($due['class']) ?>"><strong><?= $e($due['label']) ?></strong><div class="uk-text-meta"><?= $e($due['meta']) ?></div></td>
+            <td><span class="uk-text-nowrap"><i class="fa fa-<?= $e($priorityIcon($task->priority)) ?>"></i> <?= $e($humanize($task->priority)) ?></span></td>
+            <td><span class="uk-label<?= $statusClass($task->status) ?>"><?= $e($humanize($task->status)) ?></span></td>
+            <td><a class="uk-button uk-button-text" href="<?= $e($taskUrl) ?>">Open <i class="fa fa-angle-right"></i></a></td>
+          </tr><?php endforeach; ?></tbody>
+        </table>
+      </div>
+      <div class="uk-hidden@m">
+        <?php foreach ($tasks as $task): $due = $duePresentation($task); $taskUrl = $adminUrl . 'task/?id=' . rawurlencode($task->uid->toString()) . ($archived ? '&archived=1' : ''); ?>
+          <a class="uk-card uk-card-default uk-card-small uk-card-body uk-display-block uk-link-reset uk-margin-small-bottom" href="<?= $e($taskUrl) ?>">
+            <div class="uk-flex uk-flex-between uk-flex-top uk-grid-small" uk-grid><div class="uk-width-expand"><strong><?= $e($task->title) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $e($description($task->description)) ?></div></div><div><span class="uk-label<?= $statusClass($task->status) ?>"><?= $e($humanize($task->status)) ?></span></div></div>
+            <div class="uk-grid-small uk-child-width-1-2 uk-margin-small-top" uk-grid><div><div class="uk-text-meta">Due</div><strong class="<?= $e($due['class']) ?>"><?= $e($due['label']) ?></strong></div><div><div class="uk-text-meta">Owner</div><strong><?= $e($task->assignedTo !== null ? ($assigneeLabels[$task->assignedTo] ?? 'Former user') : 'Unassigned') ?></strong></div></div>
+            <div class="uk-text-small uk-margin-small-top"><i class="fa fa-<?= $e($priorityIcon($task->priority)) ?>"></i> <?= $e($humanize($task->priority)) ?><?= $task->recurrenceRule !== null ? ' · Repeats ' . $e($humanize($task->recurrenceRule)) : '' ?></div>
+          </a>
+        <?php endforeach; ?>
+      </div>
     <?php else: ?>
-      <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty"><i class="fa fa-check-square-o"></i><h3>No matching tasks</h3><p>Create a task or change the filters.</p></div>
+      <div class="uk-placeholder uk-text-center">
+        <span class="fa fa-check-circle-o fa-2x uk-text-muted"></span>
+        <h3 class="uk-margin-small-top uk-margin-small-bottom"><?= $filtersActive ? 'No matching tasks' : match ($selectedScope) { 'mine' => 'Nothing assigned to you', 'overdue' => 'Nothing overdue', 'today' => 'Nothing due today', 'upcoming' => 'Nothing coming up', default => $archived ? 'Archive is empty' : 'No tasks yet' } ?></h3>
+        <p class="uk-text-muted uk-margin-small-top"><?= $filtersActive ? 'Try a broader search or reset the filters.' : ($selectedScope === 'all' ? 'Create a task to add work to this queue.' : 'Choose another focus view to see more work.') ?></p>
+        <?php if ($filtersActive): ?><a class="uk-button uk-button-default" href="<?= $e($scopeUrl($selectedScope)) ?>">Reset filters</a><?php elseif ($canCreate && !$archived && $selectedScope === 'all'): ?><a class="uk-button uk-button-primary" href="<?= $e($adminUrl) ?>task/"><i class="fa fa-plus"></i> Create first task</a><?php endif; ?>
+      </div>
     <?php endif; ?>
   </section>
 </div>

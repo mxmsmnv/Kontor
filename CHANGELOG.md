@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Tasks now works as a responsive daily inbox with all, assigned, today,
+  overdue and upcoming focus views, human due-date context and assignee names,
+  compact filters, a separate archive entry point and mobile task cards.
 - Files now separates the searchable document library from focused file
   details, uses a guided upload dialog, presents human file types and storage
   health, links available business records, and keeps raw storage metadata in

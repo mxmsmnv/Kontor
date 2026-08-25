@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '167',
+            'version' => '168',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -2831,22 +2831,68 @@ class ProcessKontor extends Process
             (string) $this->wire()->input->get('priority'),
             ['low', 'normal', 'high', 'urgent']
         );
+        $scope = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('scope'),
+            ['all', 'mine', 'overdue', 'today', 'upcoming']
+        ) ?? 'all';
         $archived = (string) $this->wire()->input->get('archived') === '1';
-        $this->setPageTitle($this->_('Kontor · Tasks'));
+        $repository = $this->taskModule()->taskRepository();
+        $allTasks = $repository->findMatching(
+            $this->organizationUid(),
+            archived: $archived,
+            limit: 500,
+        );
+        $tasks = $repository->findMatching(
+            $this->organizationUid(),
+            $query,
+            $status,
+            $priority,
+            $archived,
+            limit: 250,
+        );
+        $today = new \DateTimeImmutable('today');
+        $tomorrow = $today->modify('+1 day');
+        $upcoming = $today->modify('+7 days');
+        $currentUserId = (int) $this->wire()->user->id;
+        $tasks = array_values(array_filter(
+            $tasks,
+            static fn (Task $task): bool => match ($scope) {
+                'mine' => $task->isOpen() && $task->assignedTo === $currentUserId,
+                'overdue' => $task->isOverdue(),
+                'today' => $task->isOpen() && $task->dueAt !== null
+                    && $task->dueAt >= $today && $task->dueAt < $tomorrow,
+                'upcoming' => $task->isOpen() && $task->dueAt !== null
+                    && $task->dueAt >= $tomorrow && $task->dueAt < $upcoming,
+                default => true,
+            }
+        ));
+        $assigneeLabels = [];
+        foreach ($tasks as $task) {
+            if ($task->assignedTo === null || isset($assigneeLabels[$task->assignedTo])) {
+                continue;
+            }
+            $assignee = $this->wire()->users->get($task->assignedTo);
+            if ($assignee->id > 0) {
+                $assigneeLabels[$task->assignedTo] = (string) (
+                    $assignee->get('title') ?: ucfirst((string) $assignee->name)
+                );
+            }
+        }
+        $this->setPageTitle($archived
+            ? $this->_('Kontor · Archived tasks')
+            : $this->_('Kontor · Tasks'));
 
         return $this->renderTemplate('tasks', [
-            'tasks' => $this->taskModule()->taskRepository()->findMatching(
-                $this->organizationUid(),
-                $query,
-                $status,
-                $priority,
-                $archived,
-                limit: 100,
-            ),
+            'tasks' => $tasks,
+            'allTasks' => $allTasks,
             'query' => $query,
             'selectedStatus' => $status,
             'selectedPriority' => $priority,
+            'selectedScope' => $scope,
             'archived' => $archived,
+            'assigneeLabels' => $assigneeLabels,
+            'currentUserId' => $currentUserId,
+            'canCreate' => $this->can('kontor-tasks-task-create'),
         ]);
     }
 
