@@ -20,9 +20,13 @@ $money = static fn (\Kontor\SDK\ValueObjects\Money $value): string =>
       <?php if ($canCreateExpense): ?><a class="uk-button uk-button-primary kontor-button" href="<?= $e($adminUrl) ?>expense/"><i class="fa fa-plus"></i> New expense</a><?php endif; ?>
     </div>
   </header>
-  <nav class="kontor-tabs" aria-label="Expense statuses">
-    <a href="./"<?= $selectedStatus === null ? ' aria-current="page"' : '' ?>>All</a>
-    <?php foreach (['draft', 'submitted', 'approved', 'rejected', 'reimbursed', 'cancelled'] as $status): ?><a href="./?status=<?= $e($status) ?>"<?= $selectedStatus === $status ? ' aria-current="page"' : '' ?>><?= $e(ucfirst($status)) ?></a><?php endforeach; ?>
+  <nav aria-label="Expense statuses">
+    <ul class="uk-subnav uk-subnav-pill uk-flex-wrap uk-margin-remove">
+      <li<?= $selectedStatus === null ? ' class="uk-active"' : '' ?>><a href="./"<?= $selectedStatus === null ? ' aria-current="page"' : '' ?>>All</a></li>
+      <?php foreach (['draft', 'submitted', 'approved', 'rejected', 'reimbursed', 'cancelled'] as $status): ?>
+        <li<?= $selectedStatus === $status ? ' class="uk-active"' : '' ?>><a href="./?status=<?= $e($status) ?>"<?= $selectedStatus === $status ? ' aria-current="page"' : '' ?>><?= $e(ucfirst($status)) ?></a></li>
+      <?php endforeach; ?>
+    </ul>
   </nav>
   <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <?php if ($expenses !== []): ?>

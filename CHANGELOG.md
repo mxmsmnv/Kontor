@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Kontor workspaces now share one vertical rhythm across page headers, forms,
+  cards, filters and empty states; form context headers no longer create a
+  second framed panel, and Expenses uses a native responsive UIkit status nav.
 - Dashboard users can now replace the default hero copy with a personal
   motivational headline and optional supporting note, or restore the defaults.
 - The Dashboard intro dialog now keeps its close control as a native UIkit
@@ -54,6 +57,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Long component identifiers, cache namespaces and action groups now wrap or
+  reflow on narrow screens instead of widening the entire admin page.
+- Workflow instance pages use a readable page title while keeping the source
+  entity UID in the detail summary, so technical identifiers cannot overflow
+  the ProcessWire headline on narrow screens.
 - Personal Dashboard widgets now use their persisted 12-column width and
   horizontal position, with responsive cards and design-system controls.
 - Dashboard directory groups now stack vertically with compact responsive

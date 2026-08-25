@@ -105,7 +105,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '160',
+            'version' => '161',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5099,7 +5099,7 @@ class ProcessKontor extends Process
             $definition->uid->toString(),
             $instance->currentState,
         );
-        $this->setPageTitle(sprintf($this->_('Kontor · %s'), $instance->entityUid));
+        $this->setPageTitle($this->_('Kontor · Workflow instance'));
 
         return $this->renderTemplate('workflow-instance', [
             'instance' => $instance,
