@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '170',
+            'version' => '171',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1717,16 +1717,21 @@ class ProcessKontor extends Process
         $this->setPageTitle($this->_('Kontor · Sales'));
         /** @var KontorSales $sales */
         $sales = $this->wire()->modules->get('KontorSales');
+        $canViewOrders = $this->can('kontor-sales-order-view');
 
         return $this->renderTemplate('sales', [
             'quotations' => $sales->quotationRepository()->findMatching(
                 $this->organizationUid(),
                 limit: 50,
             ),
-            'orders' => $this->wire()->user->hasPermission('kontor-sales-order-view')
+            'orders' => $canViewOrders
                 ? $sales->orderRepository()->findMatching($this->organizationUid(), limit: 50)
                 : [],
             'customerLabels' => $this->salesCustomerLabels(),
+            'canCreateQuotation' => $this->can('kontor-sales-quotation-create'),
+            'canViewOrders' => $canViewOrders,
+            'showCatalog' => $this->catalogReady() && $this->can('kontor-catalog-item-view'),
+            'showInvoices' => $this->invoicesReady() && $this->can('kontor-invoices-invoice-view'),
         ]);
     }
 

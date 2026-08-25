@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Sales now presents a permission-aware quote-to-order workspace with live
+  pipeline signals, human customer and delivery context, optional Catalog and
+  Invoices handoffs, and dedicated desktop tables and mobile document cards.
 - New task creation now separates the outcome from planning, keeps recurring
   options in a native disclosure, explains every choice and stacks cleanly on
   small screens without exposing implementation details.
