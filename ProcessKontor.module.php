@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '182',
+            'version' => '183',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1403,12 +1403,22 @@ class ProcessKontor extends Process
             $pipeline = $pipelines[0];
         }
 
+        $columns = $pipeline !== null
+            ? $crm->kanbanBoard()->board($pipeline->uid->toString())
+            : [];
+
         return $this->renderTemplate('crm-deals', [
             'pipelines' => $pipelines,
             'pipeline' => $pipeline,
-            'columns' => $pipeline !== null
-                ? $crm->kanbanBoard()->board($pipeline->uid->toString())
-                : [],
+            'columns' => $columns,
+            'query' => trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q'))),
+            'customerLabels' => $this->salesCustomerLabels(),
+            'canViewLeads' => $this->can('kontor-crm-lead-view'),
+            'canCreateDeal' => $this->can('kontor-crm-deal-create'),
+            'canConfigurePipeline' => $this->can('kontor-crm-pipeline-admin'),
+            'canMoveDeals' => $this->can('kontor-crm-deal-move'),
+            'canViewContact' => $this->can('kontor-contacts-contact-view'),
+            'canViewCompany' => $this->can('kontor-contacts-company-view'),
         ]);
     }
 

@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- CRM deals now uses a responsive native UIkit pipeline board with customer context,
+  search, pipeline value and weighted forecast summaries, correct closed-deal
+  probabilities, and permission-aware workflow actions.
+
 - Deal-to-quotation handoff now prevents duplicate customer offers, redirects
   repeat submissions to the existing workflow, locks the inherited customer
   relationship and presents a responsive continuation page with human context.
