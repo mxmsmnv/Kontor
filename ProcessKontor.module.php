@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '205',
+            'version' => '206',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -8570,16 +8570,30 @@ class ProcessKontor extends Process
 
     public function ___executeSearch(): string
     {
-        $this->requireContacts();
+        $this->requireSearch();
         $this->setPageTitle($this->_('Kontor · Search'));
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
-        $availableEntityTypes = [
-            'contact' => $this->_('Contacts'),
-            'company' => $this->_('Companies'),
-        ];
+        $availableEntityTypes = [];
 
-        if ($this->catalogReady()) {
+        if ($this->contactsReady() && $this->can('kontor-contacts-contact-view')) {
+            $availableEntityTypes['contact'] = $this->_('Contacts');
+        }
+        if ($this->contactsReady() && $this->can('kontor-contacts-company-view')) {
+            $availableEntityTypes['company'] = $this->_('Companies');
+        }
+
+        if ($this->crmReady() && $this->can('kontor-crm-lead-view')) {
+            $availableEntityTypes['lead'] = $this->_('Leads');
+        }
+        if ($this->crmReady() && $this->can('kontor-crm-deal-view')) {
+            $availableEntityTypes['deal'] = $this->_('Deals');
+        }
+
+        if ($this->catalogReady() && $this->can('kontor-catalog-item-view')) {
             $availableEntityTypes['catalog_item'] = $this->_('Catalog items');
+        }
+        if ($this->can('kontor-components-view')) {
+            $availableEntityTypes['component'] = $this->_('Components');
         }
 
         $entityType = $this->wire()->sanitizer->option(
@@ -8591,7 +8605,7 @@ class ProcessKontor extends Process
         $totalPages = 1;
         $result = null;
 
-        if (mb_strlen($query) >= 2) {
+        if (mb_strlen($query) >= 2 && $availableEntityTypes !== []) {
             $result = $this->searchService()->search(new SearchQuery(
                 organizationId: $this->organizationUid(),
                 term: $query,
@@ -12460,6 +12474,13 @@ class ProcessKontor extends Process
     {
         if (!$this->reportsReady()) {
             throw new WireException($this->_('The Kontor Reports component is not installed.'));
+        }
+    }
+
+    private function requireSearch(): void
+    {
+        if (!$this->searchReady()) {
+            throw new WireException($this->_('The Kontor Search component is not installed.'));
         }
     }
 

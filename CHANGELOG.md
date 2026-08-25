@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Global search now discovers permission-aware providers across Contacts,
+  Companies, CRM Leads, Deals, Catalog and Components, presents readable
+  result types, and routes every hit into its available business workspace.
+
 - Reports now provides a guided build, review, export and scheduling workflow,
   resolves CRM pipeline and stage references to business labels, and removes
   internal identifiers from report results and scheduled-delivery views.
