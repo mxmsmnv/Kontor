@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '177',
+            'version' => '178',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -5540,6 +5540,47 @@ class ProcessKontor extends Process
     {
         $this->requireAutomation();
         $module = $this->automationModule();
+        $triggerEvents = [];
+        if ($this->crmReady()) {
+            $triggerEvents += [
+                'crm.lead.converted' => $this->_('CRM lead converted'),
+                'crm.deal.stage_changed' => $this->_('CRM deal stage changed'),
+                'crm.deal.won' => $this->_('CRM deal won'),
+                'crm.deal.lost' => $this->_('CRM deal lost'),
+            ];
+        }
+        if ($this->mailReady()) {
+            $triggerEvents += [
+                'mail.received' => $this->_('Mail received'),
+                'mail.sent' => $this->_('Mail sent'),
+                'mail.delivery_failed' => $this->_('Mail delivery failed'),
+            ];
+        }
+        if ($this->filesReady()) {
+            $triggerEvents += [
+                'file.uploaded' => $this->_('File uploaded'),
+                'file.version_created' => $this->_('New file version created'),
+                'file.shared' => $this->_('File shared'),
+                'file.archived' => $this->_('File archived'),
+                'file.restored' => $this->_('File restored'),
+            ];
+        }
+        if ($this->documentsReady()) {
+            $triggerEvents += [
+                'document_template.published' => $this->_('Document template published'),
+                'document_template.version_published' => $this->_('New document template version published'),
+            ];
+        }
+        if ($this->inventoryReady()) {
+            $triggerEvents['inventory.movement.completed'] = $this->_('Inventory movement completed');
+        }
+        if ($this->queueReady()) {
+            $triggerEvents += [
+                'queue.job.completed' => $this->_('Background job completed'),
+                'queue.job.retrying' => $this->_('Background job retrying'),
+                'queue.job.dead' => $this->_('Background job failed permanently'),
+            ];
+        }
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
         $rule = $id !== '' ? $module->ruleRepository()->require($id) : null;
         if ($rule !== null) {
@@ -5548,17 +5589,22 @@ class ProcessKontor extends Process
         } else {
             $this->requirePermission('kontor-automation-rule-manage');
         }
-        $values = ['name' => '', 'triggerEvent' => 'demo.request.received'];
+        $values = ['name' => '', 'triggerEvent' => array_key_first($triggerEvents) ?? 'custom.event.received'];
         $error = '';
         if ($rule === null && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
+            $customTriggerEvent = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('custom_trigger_event')
+            ));
             $values = [
                 'name' => trim($this->wire()->sanitizer->text(
                     (string) $this->wire()->input->post('name')
                 )),
-                'triggerEvent' => strtolower($this->wire()->sanitizer->text(
-                    (string) $this->wire()->input->post('trigger_event')
-                )),
+                'triggerEvent' => strtolower($customTriggerEvent !== ''
+                    ? $customTriggerEvent
+                    : $this->wire()->sanitizer->text(
+                        (string) $this->wire()->input->post('trigger_event')
+                    )),
             ];
             if ($values['name'] === '') {
                 $error = $this->_('Rule name is required.');
@@ -5603,6 +5649,7 @@ class ProcessKontor extends Process
                 ? $module->executionLogRepository()->forRule($rule->uid->toString())
                 : [],
             'actionHandlers' => array_keys($module->actionHandlerRegistry()->all()),
+            'triggerEvents' => $triggerEvents,
             'canManage' => $this->can('kontor-automation-rule-manage'),
             'canDryRun' => $this->can('kontor-automation-dry-run'),
         ]);
@@ -5647,16 +5694,42 @@ class ProcessKontor extends Process
         $actionKey = $this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('action_key')
         );
-        $paramsJson = trim((string) $this->wire()->input->post('params_json'));
-        try {
-            $params = $paramsJson !== ''
-                ? json_decode($paramsJson, associative: true, flags: JSON_THROW_ON_ERROR)
-                : [];
-        } catch (\JsonException $exception) {
-            throw new WireException($this->_('Action parameters must be valid JSON.'));
-        }
-        if (!is_array($params)) {
-            throw new WireException($this->_('Action parameters must be a JSON object.'));
+        if ($actionKey === 'tasks.create') {
+            $title = trim($this->wire()->sanitizer->text(
+                (string) $this->wire()->input->post('task_title')
+            ));
+            if ($title === '') {
+                throw new WireException($this->_('Task title is required.'));
+            }
+            $priority = $this->wire()->sanitizer->option(
+                (string) $this->wire()->input->post('task_priority'),
+                ['low', 'normal', 'high', 'urgent'],
+            ) ?? 'normal';
+            $dueInMinutes = max(0, (int) $this->wire()->input->post('due_in_minutes'));
+            $description = trim($this->wire()->sanitizer->textarea(
+                (string) $this->wire()->input->post('task_description')
+            ));
+            $params = array_filter([
+                'title' => mb_substr($title, 0, 255),
+                'description' => $description !== '' ? mb_substr($description, 0, 2000) : null,
+                'priority' => $priority,
+                'dueInMinutes' => $dueInMinutes > 0 ? $dueInMinutes : null,
+                'linkToTrigger' => (bool) $this->wire()->input->post('link_to_trigger'),
+            ], static fn (mixed $value): bool => $value !== null);
+        } elseif ($actionKey === 'log') {
+            $params = [];
+        } else {
+            $paramsJson = trim((string) $this->wire()->input->post('params_json'));
+            try {
+                $params = $paramsJson !== ''
+                    ? json_decode($paramsJson, associative: true, flags: JSON_THROW_ON_ERROR)
+                    : [];
+            } catch (\JsonException $exception) {
+                throw new WireException($this->_('Action parameters must be valid JSON.'));
+            }
+            if (!is_array($params)) {
+                throw new WireException($this->_('Action parameters must be a JSON object.'));
+            }
         }
         $action = $this->automationModule()->definitions()->addAction(
             $rule->uid->toString(),

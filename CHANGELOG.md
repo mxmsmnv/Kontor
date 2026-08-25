@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- The automation builder now offers human business events from installed
+  components, a guided condition-to-action workflow, structured task actions,
+  safe testing guidance and readable run history; custom event keys and JSON
+  configuration remain isolated as advanced options.
 - Automations now explains the event-to-action workflow, provides a responsive
   searchable rule library with readiness and run context, and turns execution
   logs into a human-readable activity feed with clear outcomes.
