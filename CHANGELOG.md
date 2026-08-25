@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Dashboard now prioritizes daily work, pinned workspaces and business health,
+  uses balanced native UIKit widget cards, and hides cache, layout and component
+  internals behind concise personal controls.
+
 - Catalog item editing now uses a native UIKit workspace for identity,
   pricing, fulfillment, translations and price-list tiers, while preserving
   existing non-standard unit codes instead of silently replacing them.
