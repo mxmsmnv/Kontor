@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- Catalog item editing now uses a native UIKit workspace for identity,
+  pricing, fulfillment, translations and price-list tiers, while preserving
+  existing non-standard unit codes instead of silently replacing them.
+
 - Workflow detail pages now show a business-readable process map, guided
   action builder and linked live records instead of internal workflow keys,
   permission strings and entity identifiers.

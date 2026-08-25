@@ -107,7 +107,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '212',
+            'version' => '213',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -8987,7 +8987,12 @@ class ProcessKontor extends Process
             'canEditPriceLists' => $canEditPriceLists,
             'priceEntries' => $priceEntries,
             'priceListDetails' => $priceListDetails,
-            'unitLabels' => (new UnitOfMeasure())->all(),
+            'unitLabels' => $this->catalogUnitOptions($item),
+            'selectedUnitCode' => $this->wire()->input->post('submit_save')
+                ? $this->requiredFormValue($form, 'unit_code')
+                : ($item?->unitCode ?? 'pcs'),
+            'formLanguages' => $this->catalogFormLanguages(),
+            'defaultLanguage' => $this->organization()->defaultLanguage,
             'title' => $item === null ? $this->_('Create catalog item') : $this->catalogItemTitle($item),
         ]);
     }
@@ -10624,7 +10629,7 @@ class ProcessKontor extends Process
             $form,
             'unit_code',
             $this->_('Unit'),
-            (new UnitOfMeasure())->all(),
+            $this->catalogUnitOptions($item),
             $item?->unitCode ?? 'pcs',
             25,
         );
@@ -11842,6 +11847,23 @@ class ProcessKontor extends Process
             $default => $languages[$default],
             ...array_diff_key($languages, [$default => true]),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function catalogUnitOptions(?CatalogItem $item = null): array
+    {
+        $options = (new UnitOfMeasure())->all();
+
+        if ($item !== null && !isset($options[$item->unitCode])) {
+            $options[$item->unitCode] = match ($item->unitCode) {
+                'h' => $this->_('Hour'),
+                default => sprintf($this->_('Current unit (%s)'), $item->unitCode),
+            };
+        }
+
+        return $options;
     }
 
     /**
