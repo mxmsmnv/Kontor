@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `KontorMCP`, a separate MCP Server provider that exposes 13 bounded tools
+  for live resource discovery and CRUD, cross-component search, component
+  inventory and reviewed settings migration. An `admin` MCP client receives
+  every published scope while arbitrary PHP, SQL, shell, filesystem and secret
+  access remain unavailable.
+
 - `KontorSettings`, a standalone optional component for versioned workspace
   settings export, validation-only preview and confirmed import. Its first
   provider migrates organization defaults, unavailable optional providers are

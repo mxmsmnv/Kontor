@@ -1,0 +1,50 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorMCP",
+    "title": "Kontor MCP",
+    "description": "Full scoped MCP integration for installed Kontor resources, search and settings.",
+    "version": "0.1.0",
+    "type": "platform",
+    "category": "integration",
+    "license": "MIT",
+    "author": {"name": "Maxim Semenov", "url": "https://github.com/mxmsmnv"},
+    "repository": "https://github.com/mxmsmnv/Kontor",
+    "package": "kontor/mcp",
+    "namespace": "Kontor\\MCP",
+    "processWireModule": "KontorMCP",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/core": "^0.1",
+        "kontor/api": "^0.1",
+        "mcpserver": "^1.0"
+    },
+    "suggests": {
+        "kontor/search": "Enables cross-component MCP search.",
+        "kontor/settings": "Enables reviewed settings migration over MCP."
+    },
+    "conflicts": {},
+    "capabilities": [{"name": "mcp-provider", "version": "1.0", "contract": "McpServer provider metadata"}],
+    "permissions": [],
+    "admin": {"sections": [], "routes": []},
+    "services": ["Kontor\\MCP\\Application\\KontorMcpBridge"],
+    "events": {"publishes": [], "subscribes": []},
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": ["Kontor\\MCP\\Health\\McpIntegrationHealthCheck"]
+    },
+    "translations": {"source": "en", "languages": ["en"]},
+    "migrations": {"path": null, "supportsRollback": false},
+    "storage": {"tables": [], "directories": []},
+    "cli": [],
+    "security": {
+        "externalConnections": ["McpServer authenticated Streamable HTTP gateway"],
+        "sensitiveData": ["Authorized CRM and operational records"],
+        "excludedFromProfiles": ["Passwords", "bearer tokens", "API keys", "private keys", "credentials", "raw files"]
+    }
+}

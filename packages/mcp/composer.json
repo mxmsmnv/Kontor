@@ -1,0 +1,21 @@
+{
+    "name": "kontor/mcp",
+    "description": "Scoped MCP Server integration for Kontor business operations.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [{"name": "Maxim Semenov", "homepage": "https://github.com/mxmsmnv"}],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1",
+        "kontor/api": "^0.1"
+    },
+    "repositories": [
+        {"type": "path", "url": "../sdk"},
+        {"type": "path", "url": "../api"},
+        {"type": "path", "url": "../.."}
+    ],
+    "autoload": {"psr-4": {"Kontor\\MCP\\": "src/"}},
+    "autoload-dev": {"psr-4": {"Kontor\\MCP\\Tests\\": "tests/"}},
+    "minimum-stability": "stable"
+}

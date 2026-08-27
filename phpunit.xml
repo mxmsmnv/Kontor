@@ -19,6 +19,7 @@
             <directory>src</directory>
             <directory>migrations</directory>
             <directory>packages/settings/src</directory>
+            <directory>packages/mcp/src</directory>
         </include>
     </source>
 </phpunit>

@@ -22,6 +22,7 @@ migrations/                 Core schema migrations
 packages/sdk/               kontor/sdk — contracts, DTOs, event envelope, value objects
 packages/queue/              kontor/queue — jobs, retries, dead-letter queue, CLI worker
 packages/settings/           kontor/settings — reviewed workspace settings migration
+packages/mcp/                kontor/mcp — scoped MCP Server provider for Kontor
 tests/                       Core unit/integration/migration tests
 ```
 

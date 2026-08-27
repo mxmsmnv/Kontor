@@ -70,6 +70,7 @@
             "Kontor\\Mail\\Migrations\\": "packages/mail/migrations/",
             "Kontor\\Marketplace\\": "packages/marketplace/src/",
             "Kontor\\Marketplace\\Migrations\\": "packages/marketplace/migrations/",
+            "Kontor\\MCP\\": "packages/mcp/src/",
             "Kontor\\Payments\\": "packages/payments/src/",
             "Kontor\\Payments\\Migrations\\": "packages/payments/migrations/",
             "Kontor\\Portal\\": "packages/portal/src/",
