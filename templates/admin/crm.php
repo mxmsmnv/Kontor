@@ -14,6 +14,7 @@
 /** @var bool $canViewDeals */
 /** @var bool $canCreateLead */
 /** @var bool $canArchiveLead */
+/** @var bool $crmIntakeReady */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -80,6 +81,7 @@ $now = new \DateTimeImmutable();
     <div class="uk-width-1-1 uk-width-auto@m">
       <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
         <?php if ($canViewDeals): ?><div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>crm-deals/"><i class="fa fa-columns"></i> Deal pipeline</a></div><?php endif; ?>
+        <?php if ($crmIntakeReady): ?><div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>crm-intake/"><i class="fa fa-list-alt"></i> Intake profile</a></div><?php endif; ?>
         <?php if ($canCreateLead): ?><div><a class="uk-button uk-button-primary uk-link-reset" href="<?= $e($adminUrl) ?>crm-lead/"><i class="fa fa-plus"></i> New lead</a></div><?php endif; ?>
       </div>
     </div>

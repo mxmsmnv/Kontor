@@ -1273,6 +1273,25 @@ class ProcessKontor extends Process
             'canViewDeals' => $this->can('kontor-crm-deal-view'),
             'canCreateLead' => $this->can('kontor-crm-lead-create'),
             'canArchiveLead' => $this->can('kontor-crm-lead-archive'),
+            'crmIntakeReady' => $this->crmIntakeReady(),
+        ]);
+    }
+
+    public function ___executeCrmIntake(): string
+    {
+        $this->requirePermission('kontor-crm-lead-view');
+        if (!$this->crmIntakeReady()) {
+            throw new Wire404Exception($this->_('CRM intake profiles are not installed.'));
+        }
+        $this->setPageTitle($this->_('CRM intake profile'));
+        $profile = $this->crmIntakeModule()->profileRepository()->defaultForOrganization(
+            $this->organizationUid(),
+        );
+
+        return $this->renderTemplate('crm-intake', [
+            'profile' => $profile,
+            'settingsReady' => $this->wire()->modules->isInstalled('KontorSettings'),
+            'canManage' => $this->can('kontor-crm-intake-admin'),
         ]);
     }
 
@@ -12620,7 +12639,7 @@ class ProcessKontor extends Process
             'contact' => [['contacts/', 'Contacts']],
             'company' => [['companies/', 'Companies']],
             'crm-deals' => [['crm/', 'CRM']],
-            'crm-lead', 'crm-pipeline' => [['crm/', 'CRM']],
+            'crm-lead', 'crm-pipeline', 'crm-intake' => [['crm/', 'CRM']],
             'crm-deal' => [['crm/', 'CRM'], ['crm-deals/', 'Deals']],
             'sales-quotation', 'sales-order' => [['sales/', 'Sales']],
             'invoice' => [['invoices/', 'Invoices']],
