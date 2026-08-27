@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- `KontorCRMIntake`, an optional component for portable, organization-specific
+  qualification forms on contacts, leads and deals. Captured answers remain
+  outside settings exports and carry forward when a lead becomes a deal.
+
 - `KontorMCP`, a separate MCP Server provider that exposes 13 bounded tools
   for live resource discovery and CRUD, cross-component search, component
   inventory and reviewed settings migration. An `admin` MCP client receives

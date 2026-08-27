@@ -23,6 +23,7 @@ packages/sdk/               kontor/sdk — contracts, DTOs, event envelope, valu
 packages/queue/              kontor/queue — jobs, retries, dead-letter queue, CLI worker
 packages/settings/           kontor/settings — reviewed workspace settings migration
 packages/mcp/                kontor/mcp — scoped MCP Server provider for Kontor
+packages/crm-intake/         kontor/crm-intake — configurable CRM qualification profiles
 tests/                       Core unit/integration/migration tests
 ```
 
@@ -71,6 +72,10 @@ tests/                       Core unit/integration/migration tests
   substage's milestones allow. First real consumer of
   `ReportProviderInterface`, which had no registry in Core until now — see
   its own README.
+- [`packages/crm-intake/`](../packages/crm-intake/) — `kontor/crm-intake`:
+  optional organization-specific qualification fields for contacts, leads
+  and deals. Profiles travel through Kontor Settings while captured customer
+  answers stay private, and lead answers follow the real lead-to-deal conversion.
 - [`packages/sales/`](../packages/sales/) — `kontor/sales` (Substage 4.1):
   quotations, orders, a document-lines table shared with future invoices,
   quotation-to-order conversion, and status workflows. Leanest dependency

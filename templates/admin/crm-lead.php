@@ -18,6 +18,8 @@
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
+/** @var array<int, array<string, mixed>> $intakeFields */
+/** @var array<string, mixed> $intakeValues */
 
 $humanize = static fn (?string $value): string => $value === null || $value === ''
     ? 'Not set'
@@ -110,6 +112,13 @@ if ($lead?->isConverted()) {
             <?php if (($canViewContact && $contacts === []) || ($canViewCompany && $companies === [])): ?><div class="uk-flex uk-flex-wrap uk-grid-small uk-margin-top" uk-grid><?php if ($canViewContact && $contacts === [] && $canCreateContact): ?><div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>contact/"><i class="fa fa-user-plus"></i> Create contact</a></div><?php endif; ?><?php if ($canViewCompany && $companies === [] && $canCreateCompany): ?><div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>company/"><i class="fa fa-building"></i> Create company</a></div><?php endif; ?></div><?php endif; ?>
           <?php endif; ?>
         </section>
+
+        <?php if ($intakeFields !== []): ?>
+          <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
+            <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">3 · Qualification brief</p><h3>What does the customer need?</h3><p class="uk-text-meta uk-margin-small-top">These fields are configured for this organization and follow the opportunity into the deal.</p></div></header>
+            <div class="kontor-nativeform kontor-nativeform--embedded"><?php require __DIR__ . '/crm-intake-fields.php'; ?></div>
+          </section>
+        <?php endif; ?>
 
         <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
           <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">3 · Commercial context</p><h3>What is it worth, and what happens next?</h3><p class="uk-text-meta uk-margin-small-top">Use a realistic estimate and schedule a concrete customer-facing action.</p></div></header>

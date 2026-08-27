@@ -46,6 +46,8 @@
             "Kontor\\Contacts\\Migrations\\": "packages/contacts/migrations/",
             "Kontor\\CRM\\": "packages/crm/src/",
             "Kontor\\CRM\\Migrations\\": "packages/crm/migrations/",
+            "Kontor\\CRMIntake\\": "packages/crm-intake/src/",
+            "Kontor\\CRMIntake\\Migrations\\": "packages/crm-intake/migrations/",
             "Kontor\\Dashboard\\": "packages/dashboard/src/",
             "Kontor\\Dashboard\\Migrations\\": "packages/dashboard/migrations/",
             "Kontor\\Documents\\": "packages/documents/src/",

@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '219',
+            'version' => '220',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -990,11 +990,21 @@ class ProcessKontor extends Process
         $previous = $contact === null ? null : $this->contactAuditSnapshot($contact);
         $form = $this->buildContactForm($contact);
         $duplicates = [];
+        $intakeFields = $this->crmIntakeFields('contact');
+        $intakeValues = $contact === null ? [] : $this->crmIntakeValues('contact', $contact->uid->toString());
+        $intakeAnswers = null;
+        $intakeError = '';
 
         if ($this->wire()->input->post('submit_save')) {
             $form->processInput($this->wire()->input->post);
+            try {
+                $intakeAnswers = $this->postedCrmIntakeAnswers('contact', $intakeFields);
+                $intakeValues = $intakeAnswers;
+            } catch (\InvalidArgumentException $exception) {
+                $intakeError = $exception->getMessage();
+            }
 
-            if (!$form->getErrors()) {
+            if (!$form->getErrors() && $intakeError === '') {
                 if ($contact === null) {
                     $duplicates = $this->duplicateDetector()->findDuplicates(
                         $this->organizationUid(),
@@ -1007,6 +1017,9 @@ class ProcessKontor extends Process
                     $this->addDuplicateConfirmation($form);
                 } else {
                     $contact = $this->saveContactFromForm($form, $contact);
+                    if ($intakeAnswers !== null) {
+                        $this->saveCrmIntakeAnswers('contact', $contact->uid->toString(), $intakeAnswers);
+                    }
                     $this->audit(
                         component: 'contacts',
                         entityType: 'contact',
@@ -1049,6 +1062,9 @@ class ProcessKontor extends Process
         return $this->renderTemplate('entity-form', [
             'form' => $form,
             'formValues' => $formValues,
+            'intakeFields' => $intakeFields,
+            'intakeValues' => $intakeValues,
+            'intakeError' => $intakeError,
             'backUrl' => '../contacts/',
             'backLabel' => $this->_('Back to contacts'),
             'eyebrow' => $this->_('Contacts'),
@@ -1297,6 +1313,9 @@ class ProcessKontor extends Process
             'description' => $lead?->description ?? '',
         ];
         $error = '';
+        $intakeFields = $this->crmIntakeFields('lead');
+        $intakeValues = $lead === null ? [] : $this->crmIntakeValues('lead', $lead->uid->toString());
+        $intakeAnswers = null;
 
         if ($this->wire()->input->post('submit_save')) {
             $this->requirePost();
@@ -1329,6 +1348,13 @@ class ProcessKontor extends Process
                     (string) $this->wire()->input->post('description')
                 ),
             ];
+
+            try {
+                $intakeAnswers = $this->postedCrmIntakeAnswers('lead', $intakeFields);
+                $intakeValues = $intakeAnswers;
+            } catch (\InvalidArgumentException $exception) {
+                $error = $exception->getMessage();
+            }
 
             if ($values['title'] === '') {
                 $error = $this->_('Lead title is required.');
@@ -1384,6 +1410,9 @@ class ProcessKontor extends Process
                 $lead->nextActionAt = $nextActionAt;
                 $lead->description = $values['description'] ?: null;
                 $crm->leadRepository()->save($lead);
+                if ($intakeAnswers !== null) {
+                    $this->saveCrmIntakeAnswers('lead', $lead->uid->toString(), $intakeAnswers);
+                }
                 $this->audit(
                     'crm',
                     'lead',
@@ -1416,6 +1445,8 @@ class ProcessKontor extends Process
             'lead' => $lead,
             'values' => $values,
             'error' => $error,
+            'intakeFields' => $intakeFields,
+            'intakeValues' => $intakeValues,
             'contacts' => $canViewContact
                 ? $this->contactRepository()->findAll($organizationUid, limit: 250)
                 : [],
@@ -1471,6 +1502,15 @@ class ProcessKontor extends Process
         }
 
         $dealUid = $crm->crmService()->convertLead($id, (string) $this->wire()->user->id);
+        if ($this->crmIntakeReady()) {
+            $this->crmIntakeModule()->service()->copyAnswers(
+                $this->organizationUid(),
+                'lead',
+                $id,
+                'deal',
+                $dealUid,
+            );
+        }
         $this->audit(
             'crm',
             'lead',
@@ -1668,6 +1708,9 @@ class ProcessKontor extends Process
             'description' => $deal?->description ?? '',
         ];
         $error = '';
+        $intakeFields = $this->crmIntakeFields('deal');
+        $intakeValues = $deal === null ? [] : $this->crmIntakeValues('deal', $deal->uid->toString());
+        $intakeAnswers = null;
 
         if ($this->wire()->input->post('submit_save')) {
             $this->requirePost();
@@ -1693,6 +1736,13 @@ class ProcessKontor extends Process
                     (string) $this->wire()->input->post('description')
                 ),
             ];
+
+            try {
+                $intakeAnswers = $this->postedCrmIntakeAnswers('deal', $intakeFields);
+                $intakeValues = $intakeAnswers;
+            } catch (\InvalidArgumentException $exception) {
+                $error = $exception->getMessage();
+            }
 
             $pipeline = $crm->pipelineRepository()->find($values['pipelineUid']);
             $stage = $crm->stageRepository()->find($values['stageUid']);
@@ -1766,6 +1816,9 @@ class ProcessKontor extends Process
                 $deal->expectedCloseDate = $expectedCloseDate;
                 $deal->description = $values['description'] ?: null;
                 $crm->dealRepository()->save($deal);
+                if ($intakeAnswers !== null) {
+                    $this->saveCrmIntakeAnswers('deal', $deal->uid->toString(), $intakeAnswers);
+                }
                 $this->audit(
                     'crm',
                     'deal',
@@ -1853,6 +1906,8 @@ class ProcessKontor extends Process
                 && $this->salesReady()
                 && $this->can('kontor-sales-quotation-create'),
             'error' => $error,
+            'intakeFields' => $intakeFields,
+            'intakeValues' => $intakeValues,
         ]);
     }
 
@@ -9850,7 +9905,7 @@ class ProcessKontor extends Process
             'KontorExpenses', 'KontorProjects', 'KontorWorkflow', 'KontorAutomation',
             'KontorEntities', 'KontorGraphQL', 'KontorMarketplace', 'KontorMail',
             'KontorPortal', 'KontorCache', 'KontorDocuments', 'KontorAI',
-            'KontorLedger', 'KontorSettings', 'KontorMCP', 'KontorDemo',
+            'KontorLedger', 'KontorSettings', 'KontorMCP', 'KontorCRMIntake', 'KontorDemo',
         ] as $moduleName) {
             if (!$this->wire()->modules->isInstalled($moduleName)) {
                 continue;
@@ -12698,6 +12753,78 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorCRM');
     }
 
+    private function crmIntakeReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorCRMIntake');
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function crmIntakeFields(string $entityType): array
+    {
+        if (!$this->crmIntakeReady()) {
+            return [];
+        }
+
+        return $this->crmIntakeModule()->service()->fieldsFor($this->organizationUid(), $entityType);
+    }
+
+    /** @return array<string, mixed> */
+    private function crmIntakeValues(string $entityType, string $entityUid): array
+    {
+        if (!$this->crmIntakeReady()) {
+            return [];
+        }
+
+        return $this->crmIntakeModule()->service()->valuesFor(
+            $this->organizationUid(),
+            $entityType,
+            $entityUid,
+        );
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $fields
+     * @return array<string, mixed>|null
+     */
+    private function postedCrmIntakeAnswers(string $entityType, array $fields): ?array
+    {
+        if (!$this->crmIntakeReady() || $fields === []) {
+            return null;
+        }
+        $answers = [];
+        foreach ($fields as $field) {
+            $name = 'crm_intake__' . $field['key'];
+            $value = $this->wire()->input->post($name);
+            if ($field['type'] === 'multiselect') {
+                $answers[$field['key']] = array_map(
+                    fn (mixed $item): string => $this->wire()->sanitizer->text((string) $item),
+                    is_array($value) ? $value : [],
+                );
+            } elseif ($field['type'] === 'textarea') {
+                $answers[$field['key']] = $this->wire()->sanitizer->textarea((string) $value);
+            } else {
+                $answers[$field['key']] = $this->wire()->sanitizer->text((string) $value);
+            }
+        }
+
+        return $this->crmIntakeModule()->service()->validateAnswers(
+            $this->organizationUid(),
+            $entityType,
+            $answers,
+        );
+    }
+
+    /** @param array<string, mixed> $answers */
+    private function saveCrmIntakeAnswers(string $entityType, string $entityUid, array $answers): void
+    {
+        $this->crmIntakeModule()->service()->saveAnswers(
+            $this->organizationUid(),
+            $entityType,
+            $entityUid,
+            $answers,
+        );
+    }
+
     private function salesReady(): bool
     {
         return $this->wire()->modules->isInstalled('KontorSales');
@@ -13252,6 +13379,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorCRM $module */
         $module = $this->wire()->modules->get('KontorCRM');
+
+        return $module;
+    }
+
+    private function crmIntakeModule(): KontorCRMIntake
+    {
+        /** @var KontorCRMIntake $module */
+        $module = $this->wire()->modules->get('KontorCRMIntake');
 
         return $module;
     }

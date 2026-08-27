@@ -17,6 +17,9 @@
 /** @var string $csrfName */
 /** @var string $csrfValue */
 /** @var callable $e */
+/** @var array<int, array<string, mixed>> $intakeFields */
+/** @var array<string, mixed> $intakeValues */
+/** @var string $intakeError */
 
 $inputfield = static fn (string $name) => $form->getChildByName($name);
 $fieldValue = static fn (string $name): string => $formValues[$name] ?? '';
@@ -125,6 +128,7 @@ $connectedCount = count($workspace['leads']) + count($workspace['deals']) + coun
     <?php if ($duplicates): ?>
       <label class="uk-alert uk-alert-warning kontor-confirm-duplicate"><input class="uk-checkbox" type="checkbox" name="confirm_duplicate" value="1"> <span>I reviewed the possible matches and still want to create this contact.</span></label>
     <?php endif; ?>
+    <?php if ($intakeError !== ''): ?><div class="uk-alert-danger" uk-alert><p><?= $e($intakeError) ?></p></div><?php endif; ?>
     <div class="uk-grid-medium" uk-grid>
       <div class="uk-width-2-3@l">
         <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card">
@@ -155,6 +159,13 @@ $connectedCount = count($workspace['leads']) + count($workspace['deals']) + coun
             <?php $field('mobile', 'Mobile', 'Direct number for time-sensitive communication.', 'Include the country code for international teams.'); ?>
           </div>
         </section>
+
+        <?php if ($intakeFields !== []): ?>
+          <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
+            <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Customer profile</p><h3>Relationship context</h3><p class="uk-text-meta uk-margin-small-top">Capture the profile details configured for this organization.</p></div></header>
+            <div class="kontor-nativeform kontor-nativeform--embedded"><?php require __DIR__ . '/crm-intake-fields.php'; ?></div>
+          </section>
+        <?php endif; ?>
 
         <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
           <header class="kontor-sectionhead"><div><p class="kontor-eyebrow">Shared context</p><h3>Internal notes</h3></div></header>
