@@ -1352,6 +1352,11 @@ class ProcessKontor extends Process
             try {
                 $intakeAnswers = $this->postedCrmIntakeAnswers('lead', $intakeFields);
                 $intakeValues = $intakeAnswers;
+                $values['source'] = $this->crmIntakeBoundValue(
+                    $intakeFields,
+                    $intakeAnswers ?? [],
+                    'source',
+                ) ?? $values['source'];
             } catch (\InvalidArgumentException $exception) {
                 $error = $exception->getMessage();
             }
@@ -1740,6 +1745,11 @@ class ProcessKontor extends Process
             try {
                 $intakeAnswers = $this->postedCrmIntakeAnswers('deal', $intakeFields);
                 $intakeValues = $intakeAnswers;
+                $values['source'] = $this->crmIntakeBoundValue(
+                    $intakeFields,
+                    $intakeAnswers ?? [],
+                    'source',
+                ) ?? $values['source'];
             } catch (\InvalidArgumentException $exception) {
                 $error = $exception->getMessage();
             }
@@ -12823,6 +12833,24 @@ class ProcessKontor extends Process
             $entityUid,
             $answers,
         );
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $fields
+     * @param array<string, mixed> $answers
+     */
+    private function crmIntakeBoundValue(array $fields, array $answers, string $binding): ?string
+    {
+        foreach ($fields as $field) {
+            if (($field['binding'] ?? null) !== $binding) {
+                continue;
+            }
+            $value = $answers[$field['key']] ?? null;
+
+            return is_scalar($value) && trim((string) $value) !== '' ? trim((string) $value) : null;
+        }
+
+        return null;
     }
 
     private function salesReady(): bool

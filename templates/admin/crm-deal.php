@@ -47,8 +47,9 @@ $probability = $deal === null
     };
 $closeLabel = $deal?->expectedCloseDate?->format('M j, Y') ?? 'Not scheduled';
 $showInlineForm = $deal === null || $error !== '';
+$hasBoundSource = array_filter($intakeFields, static fn (array $field): bool => ($field['binding'] ?? null) === 'source') !== [];
 
-$renderForm = static function () use ($deal, $values, $pipelines, $stages, $contacts, $companies, $adminUrl, $csrfName, $csrfValue, $e, $intakeFields, $intakeValues): void { ?>
+$renderForm = static function () use ($deal, $values, $pipelines, $stages, $contacts, $companies, $adminUrl, $csrfName, $csrfValue, $e, $intakeFields, $intakeValues, $hasBoundSource): void { ?>
   <form class="uk-form-stacked" method="post" action="./<?= $deal !== null ? '?id=' . $e(rawurlencode($deal->uid->toString())) : '' ?>">
     <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
     <div class="uk-grid-medium" uk-grid>
@@ -72,7 +73,7 @@ $renderForm = static function () use ($deal, $values, $pipelines, $stages, $cont
       <div class="uk-width-1-1"><section class="uk-card uk-card-default uk-card-small uk-card-body"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Relationship</p><h3 class="uk-card-title uk-margin-small-top">Connect the customer</h3><div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-3@m" uk-grid>
         <div><label class="uk-form-label" for="deal-company">Company</label><select class="uk-select uk-margin-small-top" id="deal-company" name="company_uid"><option value="">No company</option><?php foreach ($companies as $company): ?><option value="<?= $e($company->uid->toString()) ?>"<?= $values['companyUid'] === $company->uid->toString() ? ' selected' : '' ?>><?= $e($company->legalName) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">The organization buying the product or service.</div></div>
         <div><label class="uk-form-label" for="deal-contact">Primary contact</label><select class="uk-select uk-margin-small-top" id="deal-contact" name="contact_uid"><option value="">No contact</option><?php foreach ($contacts as $contact): ?><option value="<?= $e($contact->uid->toString()) ?>"<?= $values['contactUid'] === $contact->uid->toString() ? ' selected' : '' ?>><?= $e($contact->displayName) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">The person leading the customer conversation.</div></div>
-        <div><label class="uk-form-label" for="deal-source">Source <span class="uk-text-meta">(optional)</span></label><input class="uk-input uk-margin-small-top" id="deal-source" name="source" value="<?= $e($values['source']) ?>" placeholder="Referral, website or campaign"><div class="uk-text-meta uk-margin-small-top">How this opportunity entered the pipeline.</div></div>
+        <?php if (!$hasBoundSource): ?><div><label class="uk-form-label" for="deal-source">Source <span class="uk-text-meta">(optional)</span></label><input class="uk-input uk-margin-small-top" id="deal-source" name="source" value="<?= $e($values['source']) ?>" placeholder="Referral, website or campaign"><div class="uk-text-meta uk-margin-small-top">How this opportunity entered the pipeline.</div></div><?php else: ?><input type="hidden" name="source" value="<?= $e($values['source']) ?>"><?php endif; ?>
       </div></section></div>
       <?php if ($intakeFields !== []): ?><div class="uk-width-1-1"><section class="uk-card uk-card-default uk-card-small uk-card-body"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Qualification brief</p><h3 class="uk-card-title uk-margin-small-top">Customer scope and fit</h3><p class="uk-text-muted">This organization-specific context was captured during qualification and can be refined here.</p><div class="kontor-nativeform kontor-nativeform--embedded"><?php require __DIR__ . '/crm-intake-fields.php'; ?></div></section></div><?php endif; ?>
     </div>

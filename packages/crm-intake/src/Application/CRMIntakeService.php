@@ -191,6 +191,9 @@ final class CRMIntakeService
                 'group' => mb_substr(trim((string) ($field['group'] ?? 'Qualification')), 0, 80),
                 'description' => mb_substr(trim((string) ($field['description'] ?? '')), 0, 240),
                 'note' => mb_substr(trim((string) ($field['note'] ?? '')), 0, 240),
+                'binding' => in_array(($binding = strtolower(trim((string) ($field['binding'] ?? '')))), ['source'], true)
+                    ? $binding
+                    : null,
                 'sort' => (int) ($field['sort'] ?? (($position + 1) * 10)),
             ];
             $keys[$key] = true;

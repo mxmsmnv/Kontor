@@ -24,6 +24,7 @@
 $humanize = static fn (?string $value): string => $value === null || $value === ''
     ? 'Not set'
     : ucwords(str_replace('_', ' ', $value));
+$hasBoundSource = array_filter($intakeFields, static fn (array $field): bool => ($field['binding'] ?? null) === 'source') !== [];
 $contactMap = [];
 foreach ($contacts as $contact) {
     $contactMap[$contact->uid->toString()] = $contact;
@@ -94,7 +95,7 @@ if ($lead?->isConverted()) {
           <div class="kontor-nativeform kontor-nativeform--embedded">
             <label class="kontor-nativefield kontor-nativefield--wide"><span>Lead title *</span><small class="kontor-field-description">A short outcome or need teammates will recognize in the pipeline.</small><input class="uk-input" name="title" value="<?= $e($values['title']) ?>" placeholder="Modernize the customer onboarding process" maxlength="191" required><small class="kontor-field-note"><strong>Note:</strong> Describe the opportunity, not an internal code.</small></label>
             <label class="kontor-nativefield kontor-nativefield--wide"><span>Description</span><small class="kontor-field-description">The customer need, business context and evidence collected so far.</small><textarea class="uk-textarea" name="description" rows="5" placeholder="What is changing, why now, and what result is the customer seeking?"><?= $e($values['description']) ?></textarea><small class="kontor-field-note"><strong>Note:</strong> Keep assumptions separate from confirmed customer facts.</small></label>
-            <label class="kontor-nativefield"><span>Source</span><small class="kontor-field-description">Where this opportunity first came from.</small><input class="uk-input" name="source" value="<?= $e($values['source']) ?>" placeholder="Referral, website, campaign"><small class="kontor-field-note"><strong>Note:</strong> Use consistent source names for useful reporting.</small></label>
+            <?php if (!$hasBoundSource): ?><label class="kontor-nativefield"><span>Source</span><small class="kontor-field-description">Where this opportunity first came from.</small><input class="uk-input" name="source" value="<?= $e($values['source']) ?>" placeholder="Referral, website, campaign"><small class="kontor-field-note"><strong>Note:</strong> Use consistent source names for useful reporting.</small></label><?php else: ?><input type="hidden" name="source" value="<?= $e($values['source']) ?>"><?php endif; ?>
             <label class="kontor-nativefield"><span>Priority</span><small class="kontor-field-description">How urgently the team should work this lead.</small><select class="uk-select" name="priority"><?php foreach (['low', 'medium', 'high', 'urgent'] as $priority): ?><option value="<?= $e($priority) ?>"<?= $values['priority'] === $priority ? ' selected' : '' ?>><?= $e($humanize($priority)) ?></option><?php endforeach; ?></select><small class="kontor-field-note"><strong>Note:</strong> Use urgency for real timing or impact, not general importance.</small></label>
           </div>
         </section>
