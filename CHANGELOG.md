@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- `KontorSettings`, a standalone optional component for versioned workspace
+  settings export, validation-only preview and confirmed import. Its first
+  provider migrates organization defaults, unavailable optional providers are
+  skipped cleanly, and credential-like values are rejected from profiles.
+
 ### Changed
 
 - Lead creation and editing now follows a guided capture-to-deal workflow,

@@ -1,0 +1,39 @@
+{
+    "name": "kontor/settings",
+    "description": "Kontor Settings: safe, versioned workspace settings export and import.",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^0.2.1",
+        "kontor/core": "^0.1"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../sdk"
+        },
+        {
+            "type": "path",
+            "url": "../.."
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Settings\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Settings\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}

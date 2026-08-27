@@ -85,6 +85,7 @@
             "Kontor\\Sales\\": "packages/sales/src/",
             "Kontor\\Sales\\Migrations\\": "packages/sales/migrations/",
             "Kontor\\Search\\": "packages/search/src/",
+            "Kontor\\Settings\\": "packages/settings/src/",
             "Kontor\\Tasks\\": "packages/tasks/src/",
             "Kontor\\Tasks\\Migrations\\": "packages/tasks/migrations/",
             "Kontor\\Workflow\\": "packages/workflow/src/",

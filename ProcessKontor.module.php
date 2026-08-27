@@ -92,6 +92,7 @@ class ProcessKontor extends Process
     private const QUICK_NAVIGATION_META = 'kontor.quick_navigation';
     private const QUICK_NAVIGATION_LIMIT = 8;
     private const DASHBOARD_INTRO_META = 'kontor.dashboard_intro';
+    private const SETTINGS_IMPORT_SESSION = 'settingsMigrationPreview';
     private const DEFAULT_DASHBOARD_HEADLINE = 'Your business, in one place.';
     private const DEFAULT_DASHBOARD_MESSAGE = 'Kontor connects customer data, companies and operational components inside ProcessWire.';
     private const DEFAULT_QUICK_NAVIGATION = [
@@ -107,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '217',
+            'version' => '218',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -197,6 +198,13 @@ class ProcessKontor extends Process
                     'label' => 'Organization',
                     'icon' => 'briefcase',
                     'permission' => 'kontor-admin',
+                ],
+                [
+                    'url' => 'settings-migration/',
+                    'label' => 'Settings migration',
+                    'icon' => 'exchange',
+                    'module' => 'KontorSettings',
+                    'permission' => 'kontor-settings-export',
                 ],
                 [
                     'url' => 'catalog/',
@@ -584,7 +592,7 @@ class ProcessKontor extends Process
             'Finance & localization' => ['ledger', 'germany'],
             'Platform' => [
                 'api', 'graphql', 'marketplace', 'cache', 'activity', 'backups',
-                'health', 'queue', 'organization', 'components',
+                'health', 'queue', 'organization', 'settings-migration', 'components',
             ],
         ];
         $groups = [];
@@ -9842,7 +9850,7 @@ class ProcessKontor extends Process
             'KontorExpenses', 'KontorProjects', 'KontorWorkflow', 'KontorAutomation',
             'KontorEntities', 'KontorGraphQL', 'KontorMarketplace', 'KontorMail',
             'KontorPortal', 'KontorCache', 'KontorDocuments', 'KontorAI',
-            'KontorLedger', 'KontorDemo',
+            'KontorLedger', 'KontorSettings', 'KontorDemo',
         ] as $moduleName) {
             if (!$this->wire()->modules->isInstalled($moduleName)) {
                 continue;
@@ -9936,6 +9944,170 @@ class ProcessKontor extends Process
             'organization' => $organization,
             'form' => $form,
         ]);
+    }
+
+    public function ___executeSettingsMigration(): string
+    {
+        $this->requireSettings();
+        $canExport = $this->can('kontor-settings-export');
+        $canImport = $this->can('kontor-settings-import');
+
+        if (!$canExport && !$canImport) {
+            throw new WirePermissionException($this->_('You do not have access to settings migration.'));
+        }
+
+        $this->setPageTitle($this->_('Kontor · Settings migration'));
+        $stored = $this->wire()->session->getFor($this, self::SETTINGS_IMPORT_SESSION);
+        $providers = [];
+
+        foreach ($this->settingsModule()->providerRegistry()->all() as $key => $provider) {
+            $providers[] = ['key' => $key, 'label' => $provider->label()];
+        }
+
+        return $this->renderTemplate('settings-migration', [
+            'providers' => $providers,
+            'preview' => is_array($stored) ? ($stored['report'] ?? null) : null,
+            'canExport' => $canExport,
+            'canImport' => $canImport,
+        ]);
+    }
+
+    public function ___executeSettingsExport(): void
+    {
+        $this->requireSettings();
+        $this->requirePermission('kontor-settings-export');
+        $components = array_map(
+            static fn (array $component): array => [
+                'name' => (string) ($component['name'] ?? ''),
+                'version' => (string) ($component['version'] ?? ''),
+                'status' => (string) ($component['status'] ?? ''),
+            ],
+            $this->componentRegistry()->all(),
+        );
+        $profile = $this->settingsModule()->migrationService()->exportProfile([
+            'host' => (string) $this->wire()->config->httpHost,
+            'components' => $components,
+        ]);
+        $json = json_encode(
+            $profile,
+            JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        ) . "\n";
+        $fingerprint = $this->settingsModule()->migrationService()->fingerprint($profile);
+        $this->audit(
+            'settings',
+            'settings_profile',
+            'workspace-settings',
+            'exported',
+            metadata: [
+                'fingerprint' => $fingerprint,
+                'providerCount' => count($profile['providers']),
+            ],
+        );
+        $name = preg_replace('/[^a-z0-9]+/i', '-', $this->organization()->name) ?: 'workspace';
+        $filename = sprintf('kontor-settings-%s-%s.json', strtolower(trim($name, '-')), date('Y-m-d'));
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($json));
+        header('Cache-Control: private, no-store');
+        echo $json;
+        exit;
+    }
+
+    public function ___executeSettingsPreview(): void
+    {
+        $this->requirePost();
+        $this->requireSettings();
+        $this->requirePermission('kontor-settings-import');
+        $json = trim((string) $this->wire()->input->post('settings_payload'));
+
+        try {
+            $profile = $this->settingsModule()->migrationService()->decode($json);
+            $report = $this->settingsModule()->migrationService()->preview($profile);
+            $this->wire()->session->setFor($this, self::SETTINGS_IMPORT_SESSION, [
+                'json' => $json,
+                'report' => $report->toArray(),
+            ]);
+            $this->audit(
+                'settings',
+                'settings_profile',
+                'workspace-settings',
+                'previewed',
+                metadata: [
+                    'fingerprint' => $report->fingerprint,
+                    'changeCount' => $report->changeCount(),
+                    'successful' => $report->successful(),
+                ],
+            );
+
+            if ($report->successful()) {
+                $this->message(sprintf(
+                    $this->_('Settings profile checked: %d change(s) are ready for review.'),
+                    $report->changeCount(),
+                ));
+            } else {
+                $this->error($this->_('The settings profile contains validation errors.'));
+            }
+        } catch (\InvalidArgumentException $exception) {
+            $this->wire()->session->setFor($this, self::SETTINGS_IMPORT_SESSION, [
+                'report' => [
+                    'successful' => false,
+                    'changeCount' => 0,
+                    'providers' => [],
+                    'warnings' => [],
+                    'errors' => [$exception->getMessage()],
+                ],
+            ]);
+            $this->error($exception->getMessage());
+        }
+
+        $this->wire()->session->redirect('../settings-migration/');
+    }
+
+    public function ___executeSettingsApply(): void
+    {
+        $this->requirePost();
+        $this->requireSettings();
+        $this->requirePermission('kontor-settings-import');
+        $stored = $this->wire()->session->getFor($this, self::SETTINGS_IMPORT_SESSION);
+        $confirmed = (string) $this->wire()->input->post('confirm_apply') === '1';
+
+        if (!is_array($stored) || !is_string($stored['json'] ?? null) || !$confirmed) {
+            throw new WireException($this->_('Preview the profile and confirm the reviewed changes before importing.'));
+        }
+
+        $profile = $this->settingsModule()->migrationService()->decode($stored['json']);
+        $fingerprint = $this->settingsModule()->migrationService()->fingerprint($profile);
+        $submitted = $this->wire()->sanitizer->text((string) $this->wire()->input->post('fingerprint'));
+
+        if (!hash_equals($fingerprint, $submitted)) {
+            throw new WireException($this->_('The settings preview has changed. Run the preview again.'));
+        }
+
+        $previous = $this->organizationAuditSnapshot($this->organization());
+        $report = $this->settingsModule()->migrationService()->apply($profile);
+        $current = $this->organizationAuditSnapshot($this->organizationRepository()->require(
+            $this->organizationUid()
+        ));
+        $this->audit(
+            'settings',
+            'settings_profile',
+            'workspace-settings',
+            'imported',
+            previous: ['organization' => $previous],
+            current: ['organization' => $current],
+            metadata: [
+                'fingerprint' => $report->fingerprint,
+                'providerCount' => count($report->providers),
+                'changeCount' => $report->changeCount(),
+            ],
+        );
+        $this->wire()->session->setFor($this, self::SETTINGS_IMPORT_SESSION, null);
+        $this->message(sprintf(
+            $this->_('Settings imported successfully: %d change(s) applied.'),
+            $report->changeCount(),
+        ));
+        $this->wire()->session->redirect('../settings-migration/');
     }
 
     public function ___executeQueue(): string
@@ -12661,6 +12833,11 @@ class ProcessKontor extends Process
         return $this->wire()->modules->isInstalled('KontorGermany');
     }
 
+    private function settingsReady(): bool
+    {
+        return $this->wire()->modules->isInstalled('KontorSettings');
+    }
+
     private function requireCatalog(): void
     {
         if (!$this->catalogReady()) {
@@ -12861,6 +13038,13 @@ class ProcessKontor extends Process
     {
         if (!$this->germanyReady()) {
             throw new WireException($this->_('The Kontor Germany component is not installed.'));
+        }
+    }
+
+    private function requireSettings(): void
+    {
+        if (!$this->settingsReady()) {
+            throw new WireException($this->_('The Kontor Settings component is not installed.'));
         }
     }
 
@@ -13244,6 +13428,14 @@ class ProcessKontor extends Process
     {
         /** @var KontorGermany $module */
         $module = $this->wire()->modules->get('KontorGermany');
+
+        return $module;
+    }
+
+    private function settingsModule(): KontorSettings
+    {
+        /** @var KontorSettings $module */
+        $module = $this->wire()->modules->get('KontorSettings');
 
         return $module;
     }
