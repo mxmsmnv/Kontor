@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '218',
+            'version' => '219',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -9850,7 +9850,7 @@ class ProcessKontor extends Process
             'KontorExpenses', 'KontorProjects', 'KontorWorkflow', 'KontorAutomation',
             'KontorEntities', 'KontorGraphQL', 'KontorMarketplace', 'KontorMail',
             'KontorPortal', 'KontorCache', 'KontorDocuments', 'KontorAI',
-            'KontorLedger', 'KontorSettings', 'KontorDemo',
+            'KontorLedger', 'KontorSettings', 'KontorMCP', 'KontorDemo',
         ] as $moduleName) {
             if (!$this->wire()->modules->isInstalled($moduleName)) {
                 continue;
