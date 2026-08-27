@@ -1607,6 +1607,42 @@
   text-transform: uppercase;
 }
 
+.kontor-audit-event {
+  margin: 0;
+}
+
+.kontor-audit-event details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.kontor-audit-event details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.kontor-audit-value {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.kontor-audit-value--before {
+  color: var(--pw-muted-color);
+}
+
+.kontor-audit-value--after {
+  color: var(--pw-text-color);
+  font-weight: 600;
+}
+
+.kontor-audit-technical pre {
+  background: var(--pw-main-background);
+  font-size: 0.75rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
 .kontor-changes {
   border: 1px solid var(--pw-border-color);
   border-radius: var(--pw-input-radius);

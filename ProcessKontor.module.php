@@ -9809,17 +9809,33 @@ class ProcessKontor extends Process
             $totalPages,
             max(1, (int) $this->wire()->input->get('page'))
         );
+        $events = $this->auditEventRepository()->findRecent(
+            $organizationId,
+            $query,
+            $pageSize,
+            $component,
+            $entityType,
+            $action,
+            ($page - 1) * $pageSize,
+        );
+        $actorLabels = [];
+        foreach ($events as $event) {
+            if ($event->actorType !== 'user' || $event->actorUid === null || isset($actorLabels[$event->actorUid])) {
+                continue;
+            }
+            $actor = ctype_digit($event->actorUid)
+                ? $this->wire()->users->get((int) $event->actorUid)
+                : null;
+            if ($actor !== null && $actor->id) {
+                $label = trim((string) ($actor->get('title') ?: $actor->get('name')));
+                $actorLabels[$event->actorUid] = $actor->isSuperuser() && strtolower($label) === 'admin'
+                    ? $this->_('Administrator')
+                    : ($label !== '' ? $label : $this->_('User'));
+            }
+        }
 
         return $this->renderTemplate('activity', [
-            'events' => $this->auditEventRepository()->findRecent(
-                $organizationId,
-                $query,
-                $pageSize,
-                $component,
-                $entityType,
-                $action,
-                ($page - 1) * $pageSize,
-            ),
+            'events' => $events,
             'query' => $query,
             'filterOptions' => $filters['options'],
             'selectedComponent' => $component,
@@ -9829,6 +9845,8 @@ class ProcessKontor extends Process
             'totalPages' => $totalPages,
             'totalEvents' => $totalEvents,
             'changePresenter' => new AuditChangePresenter(),
+            'actorLabels' => $actorLabels,
+            'organizationName' => $this->organization()->name,
         ]);
     }
 
