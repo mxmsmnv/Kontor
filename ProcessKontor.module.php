@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '223',
+            'version' => '224',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -996,6 +996,7 @@ class ProcessKontor extends Process
         $intakeError = '';
 
         if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
             $form->processInput($this->wire()->input->post);
             try {
                 $intakeAnswers = $this->postedCrmIntakeAnswers('contact', $intakeFields);
@@ -8874,6 +8875,7 @@ class ProcessKontor extends Process
         $form = $this->buildCompanyForm($company);
 
         if ($this->wire()->input->post('submit_save')) {
+            $this->requirePost();
             $form->processInput($this->wire()->input->post);
 
             if (!$form->getErrors()) {

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Inline Contact and Company saves now enforce the shared POST and ProcessWire
+  CSRF guard before processing submitted fields.
 - Creating a task with a contact or company relation now requires the dedicated
   task relation permission before the task is persisted.
 - Core database backups now restore dependent tables in reverse order, insert
