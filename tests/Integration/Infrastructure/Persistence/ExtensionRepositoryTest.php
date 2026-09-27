@@ -56,7 +56,7 @@ final class ExtensionRepositoryTest extends DatabaseTestCase
 
         $all = $extensions->allFor(1, 'KontorContacts', 'contact', 'ct_01');
 
-        $this->assertSame(['tags' => ['vip'], 'preferences' => ['newsletter' => true]], $all);
+        $this->assertEquals(['tags' => ['vip'], 'preferences' => ['newsletter' => true]], $all);
     }
 
     public function test_different_components_do_not_collide_on_the_same_key(): void

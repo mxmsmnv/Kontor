@@ -70,7 +70,8 @@ final class Migration0007NoopForTest implements MigrationInterface
 
     public function up(\PDO $pdo): void
     {
-        $pdo->exec('SELECT 1');
+        // Intentionally empty: this fixture exercises migration-ledger
+        // idempotency without leaving an unread result set on PDO drivers.
     }
 
     public function down(\PDO $pdo): void

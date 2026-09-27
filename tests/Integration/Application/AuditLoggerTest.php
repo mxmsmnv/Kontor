@@ -38,7 +38,7 @@ final class AuditLoggerTest extends DatabaseTestCase
         $this->assertNotFalse($row);
         $this->assertSame($organizationId, (int) $row['organization_id']);
         $this->assertSame('issue', $row['action']);
-        $this->assertSame('{"status":"draft"}', $row['previous_json']);
-        $this->assertSame('{"status":"issued"}', $row['current_json']);
+        $this->assertSame(['status' => 'draft'], json_decode($row['previous_json'], true, flags: JSON_THROW_ON_ERROR));
+        $this->assertSame(['status' => 'issued'], json_decode($row['current_json'], true, flags: JSON_THROW_ON_ERROR));
     }
 }
