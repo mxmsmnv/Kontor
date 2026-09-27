@@ -30,7 +30,7 @@ class KontorDashboard extends WireData implements Module
         return [
             'title' => 'Kontor Dashboard',
             'summary' => 'Widget registry, layouts, personal dashboards, role dashboards.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorDashboard',
             'icon' => 'th-large',

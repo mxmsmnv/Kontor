@@ -14,6 +14,7 @@
         "php": ">=8.2",
         "kontor/sdk": "^0.2.1",
         "kontor/core": "^0.1",
+        "kontor/files": "^0.1",
         "dompdf/dompdf": "^3.1"
     },
     "require-dev": {
@@ -27,6 +28,10 @@
         {
             "type": "path",
             "url": "../.."
+        },
+        {
+            "type": "path",
+            "url": "../files"
         }
     ],
     "autoload": {

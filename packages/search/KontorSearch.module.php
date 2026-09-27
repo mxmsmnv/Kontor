@@ -28,7 +28,7 @@ class KontorSearch extends WireData implements Module
         return [
             'title' => 'Kontor Search',
             'summary' => 'Provider registry, federated global search, SQL full-text search and asynchronous indexing.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorSearch',
             'icon' => 'search',

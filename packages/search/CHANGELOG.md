@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Composer now declares Cache as a hard dependency, matching the ProcessWire
+  module metadata and cached federated-search path.
 - Cache federated results as scalar snapshots and rebuild SDK DTOs on read,
   matching WireCache's supported value types.
 

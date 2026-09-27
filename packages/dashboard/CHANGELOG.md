@@ -34,6 +34,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Composer now declares Cache as a hard dependency, matching the ProcessWire
+  module metadata and cached widget rendering path.
 - Widget cache scopes are hashed into WireCache-safe names so long
   organization, layout, and tag identities cannot be truncated in storage.
 - Widget placement and rendering now reject cross-organization dashboards.

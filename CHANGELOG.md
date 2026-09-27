@@ -23,6 +23,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   with UIKit's link-reset utility, including on narrow CRM Intake layouts.
 - CRM Intake exposes its settings-migration action only when the user has both
   intake administration and an applicable settings export or import permission.
+- ProcessWire hard dependencies for Collaboration, Dashboard, Documents and
+  Search are now mirrored in their Composer runtime dependency graphs.
 
 ### Added
 
