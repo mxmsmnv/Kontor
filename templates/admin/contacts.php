@@ -42,13 +42,13 @@ $directoryTitle = $showArchived
     : ($selectedStatus !== '' ? ucfirst($selectedStatus) . ' contacts' : 'Contact directory');
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
-  <header class="uk-grid-small uk-flex-middle uk-margin-medium-bottom" uk-grid>
+  <header class="uk-grid-small uk-flex-middle uk-margin-medium-bottom kontor-contact-listhead" uk-grid>
     <div class="uk-width-1-1 uk-width-expand@m">
       <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Customer directory</p>
       <p class="uk-text-muted uk-margin-small-top uk-margin-remove-bottom">Find people, maintain communication details and open their connected customer history.</p>
     </div>
     <div class="uk-width-1-1 uk-width-auto@m">
-      <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
+      <div class="uk-flex uk-flex-wrap uk-grid-small kontor-directory-actions" uk-grid>
         <div>
           <a class="uk-button uk-button-default kontor-button" href="<?= $e($adminUrl) ?>import/?entity=contact">
             <i class="fa fa-upload"></i> Import

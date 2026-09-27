@@ -8,6 +8,7 @@ use Kontor\Contacts\Domain\Contact;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 use Kontor\Contacts\Migrations\Migration0001CreateContactsTable;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use Kontor\Core\Domain\Organization;
 use Kontor\Core\Migrations\Migration0001CreateOrganizationsTable;
 use Kontor\Core\Testing\DatabaseTestCase;
 use Kontor\Portal\Domain\PortalAccount;
@@ -55,7 +56,19 @@ final class PortalHealthCheckTest extends DatabaseTestCase
 
     public function test_warns_when_an_account_references_a_missing_contact(): void
     {
-        $this->accounts()->save(PortalAccount::create($this->organizationUid, 'missing_contact_uid', 'ghost@example.com', 'hash'));
+        $organizationId = (new OrganizationRepository($this->pdo))->internalIdOf($this->organizationUid);
+        $this->pdo->prepare(
+            'INSERT INTO kontor_portal_accounts
+                (uid, organization_id, contact_uid, email, password_hash, status, created_at, updated_at, version)
+             VALUES (:uid, :organization_id, :contact_uid, :email, :password_hash, :status, NOW(6), NOW(6), 1)'
+        )->execute([
+            'uid' => '01ARZ3NDEKTSV4RRFFQ69G5FAA',
+            'organization_id' => $organizationId,
+            'contact_uid' => 'missing_contact_uid',
+            'email' => 'ghost@example.com',
+            'password_hash' => 'hash',
+            'status' => 'active',
+        ]);
 
         $result = (new PortalHealthCheck($this->accounts(), $this->contacts()))->run();
 
@@ -69,5 +82,33 @@ final class PortalHealthCheckTest extends DatabaseTestCase
 
         $this->assertSame('ok', $result->status);
         $this->assertSame(0, $result->details['activeAccounts']);
+    }
+
+    public function test_warns_about_a_legacy_cross_organization_contact_link(): void
+    {
+        $organizations = new OrganizationRepository($this->pdo);
+        $other = Organization::createDefault('DE', 'de', 'EUR');
+        $organizations->save($other);
+        $contact = Contact::create($other->uid->toString(), 'Other', null, 'Customer', email: 'other@example.com');
+        $this->contacts()->save($contact);
+
+        $organizationId = $organizations->internalIdOf($this->organizationUid);
+        $this->pdo->prepare(
+            'INSERT INTO kontor_portal_accounts
+                (uid, organization_id, contact_uid, email, password_hash, status, created_at, updated_at, version)
+             VALUES (:uid, :organization_id, :contact_uid, :email, :password_hash, :status, NOW(6), NOW(6), 1)'
+        )->execute([
+            'uid' => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+            'organization_id' => $organizationId,
+            'contact_uid' => $contact->uid->toString(),
+            'email' => 'legacy@example.com',
+            'password_hash' => 'hash',
+            'status' => 'active',
+        ]);
+
+        $result = (new PortalHealthCheck($this->accounts(), $this->contacts()))->run();
+
+        $this->assertSame('warning', $result->status);
+        $this->assertSame(1, $result->details['orphanedAccounts']);
     }
 }

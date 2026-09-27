@@ -27,17 +27,27 @@ final class CustomerProfileService
     ) {
     }
 
-    public function view(string $contactUid): Contact
+    public function view(string $organizationId, string $contactUid): Contact
     {
-        return $this->contacts->require($contactUid);
+        $contact = $this->contacts->require($contactUid);
+
+        if ($contact->organizationId !== $organizationId) {
+            throw new InvalidArgumentException('The portal contact does not belong to this organization.');
+        }
+
+        return $contact;
     }
 
     /**
      * @param array<string, mixed> $changes
      */
-    public function update(string $contactUid, array $changes): Contact
+    public function update(string $organizationId, string $contactUid, array $changes): Contact
     {
         $contact = $this->contacts->require($contactUid);
+
+        if ($contact->organizationId !== $organizationId) {
+            throw new InvalidArgumentException('The portal contact does not belong to this organization.');
+        }
 
         foreach ($changes as $field => $value) {
             if (!in_array($field, self::EDITABLE_FIELDS, true)) {

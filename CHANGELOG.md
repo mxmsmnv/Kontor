@@ -5,6 +5,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Core database backups now restore dependent tables in reverse order, insert
+  them in forward order, read associative rows consistently and verify
+  deterministic per-table content hashes so same-row-count corruption is
+  detected before a restore is accepted.
+- Automation execution logs and workflow instance history now require their
+  dedicated view permissions; purchasing supplier records and expense
+  categories are likewise withheld from roles that may view only orders or
+  expenses, including direct create-form access.
+- Contact-directory actions and CRM Intake field target badges now reflow on
+  narrow screens without blank or overlapping controls.
+
 ### Added
 
 - `KontorCRMIntake`, an optional component for portable, organization-specific

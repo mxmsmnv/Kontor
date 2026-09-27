@@ -63,7 +63,9 @@ already use for their own real HTTP entry points.
 
 ## Profile: an explicit safe-field allowlist
 
-`CustomerProfileService::update()` only allows changing
+`CustomerProfileService::view()` and `update()` require the portal account's
+organization UID and reject a linked Contact from another organization before
+returning or mutating it. `update()` only allows changing
 `firstName`/`middleName`/`lastName`/`phone`/`mobile`/`preferredLanguage`
 on the linked Contact — not `status`, `assignedUserId`, `source`, or
 anything else the staff-facing CRM can touch. An unlisted field is a

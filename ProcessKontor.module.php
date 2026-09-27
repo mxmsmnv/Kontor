@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '220',
+            'version' => '221',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -4540,7 +4540,10 @@ class ProcessKontor extends Process
         $this->requirePermission('kontor-purchasing-po-view');
         $this->setPageTitle($this->_('Kontor · Purchasing'));
         $module = $this->purchasingModule();
-        $suppliers = $module->supplierRepository()->forOrganization($this->organizationUid());
+        $canViewSuppliers = $this->can('kontor-purchasing-supplier-view');
+        $suppliers = $canViewSuppliers
+            ? $module->supplierRepository()->forOrganization($this->organizationUid())
+            : [];
         $supplierLabels = array_column(array_map(
             static fn (Supplier $supplier): array => [
                 $supplier->uid->toString(),
@@ -4587,6 +4590,7 @@ class ProcessKontor extends Process
             'query' => $query,
             'selectedStatus' => $selectedStatus,
             'statuses' => array_keys($statuses),
+            'canViewSuppliers' => $canViewSuppliers,
             'canCreateSupplier' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-purchasing-supplier-create'),
             'canCreateOrder' => $this->wire()->user->isSuperuser()
@@ -4694,8 +4698,12 @@ class ProcessKontor extends Process
             $this->requirePermission('kontor-purchasing-po-view');
         } else {
             $this->requirePermission('kontor-purchasing-po-create');
+            $this->requirePermission('kontor-purchasing-supplier-view');
         }
-        $allSuppliers = $module->supplierRepository()->forOrganization($this->organizationUid());
+        $canViewSuppliers = $this->can('kontor-purchasing-supplier-view');
+        $allSuppliers = $canViewSuppliers
+            ? $module->supplierRepository()->forOrganization($this->organizationUid())
+            : [];
         $suppliers = array_values(array_filter(
             $allSuppliers,
             static fn (Supplier $supplier): bool => $supplier->isActive(),
@@ -4831,7 +4839,9 @@ class ProcessKontor extends Process
             'warehouses' => $warehouses,
             'items' => $items,
             'supplierLabel' => $order !== null
-                ? ($supplierLabels[$order->supplierUid] ?? $this->_('Supplier record unavailable'))
+                ? ($supplierLabels[$order->supplierUid] ?? ($canViewSuppliers
+                    ? $this->_('Supplier record unavailable')
+                    : $this->_('Restricted supplier')))
                 : '',
             'warehouseLabel' => $order !== null
                 ? ($warehouseLabels[$order->warehouseUid ?? ''] ?? $this->_('Warehouse record unavailable'))
@@ -4990,7 +5000,10 @@ class ProcessKontor extends Process
             ['draft', 'submitted', 'approved', 'rejected', 'reimbursed', 'cancelled']
         );
         $module = $this->expensesModule();
-        $categories = $module->categoryRepository()->forOrganization($this->organizationUid());
+        $canViewCategories = $this->can('kontor-expenses-category-view');
+        $categories = $canViewCategories
+            ? $module->categoryRepository()->forOrganization($this->organizationUid())
+            : [];
         $categoryLabels = array_column(array_map(
             static fn (ExpenseCategory $category): array => [
                 $category->uid->toString(),
@@ -5035,8 +5048,9 @@ class ProcessKontor extends Process
             'selectedStatus' => $status,
             'selectedCategory' => $selectedCategory,
             'query' => $query,
-            'canCreateExpense' => $this->wire()->user->isSuperuser()
-                || $this->wire()->user->hasPermission('kontor-expenses-expense-create'),
+            'canViewCategories' => $canViewCategories,
+            'canCreateExpense' => $canViewCategories && ($this->wire()->user->isSuperuser()
+                || $this->wire()->user->hasPermission('kontor-expenses-expense-create')),
             'canManageCategories' => $this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-expenses-category-manage'),
         ]);
@@ -5110,12 +5124,18 @@ class ProcessKontor extends Process
             $this->requirePermission('kontor-expenses-expense-view');
         } else {
             $this->requirePermission('kontor-expenses-expense-create');
+            $this->requirePermission('kontor-expenses-category-view');
         }
-        $categories = array_values(array_filter(
-            $module->categoryRepository()->forOrganization($this->organizationUid()),
-            static fn (ExpenseCategory $category): bool => $category->isActive(),
-        ));
-        $suppliers = $this->purchasingReady()
+        $canViewCategories = $this->can('kontor-expenses-category-view');
+        $categories = $canViewCategories
+            ? array_values(array_filter(
+                $module->categoryRepository()->forOrganization($this->organizationUid()),
+                static fn (ExpenseCategory $category): bool => $category->isActive(),
+            ))
+            : [];
+        $canViewSuppliers = $this->purchasingReady()
+            && $this->can('kontor-purchasing-supplier-view');
+        $suppliers = $canViewSuppliers
             ? array_values(array_filter(
                 $this->purchasingModule()->supplierRepository()->forOrganization($this->organizationUid()),
                 static fn (Supplier $supplier): bool => $supplier->isActive(),
@@ -6162,11 +6182,16 @@ class ProcessKontor extends Process
         );
         $this->setPageTitle($this->_('Kontor · Workflow instance'));
 
+        $canViewHistory = $this->can('kontor-workflow-history-view');
+
         return $this->renderTemplate('workflow-instance', [
             'instance' => $instance,
             'definition' => $definition,
             'transitions' => $transitions,
-            'history' => $module->engine()->history($instance->entityType, $instance->entityUid),
+            'history' => $canViewHistory
+                ? $module->engine()->history($instance->entityType, $instance->entityUid)
+                : [],
+            'canViewHistory' => $canViewHistory,
             'canTransition' => $this->can('kontor-workflow-transition'),
         ]);
     }
@@ -6261,7 +6286,10 @@ class ProcessKontor extends Process
         $selectedStatus = $this->wire()->sanitizer->text((string) $this->wire()->input->get('status'));
         $selectedStatus = in_array($selectedStatus, ['active', 'paused'], true) ? $selectedStatus : '';
         $allRules = $module->ruleRepository()->forOrganization($this->organizationUid());
-        $allLogs = $module->executionLogRepository()->forOrganization($this->organizationUid());
+        $canViewLogs = $this->can('kontor-automation-log-view');
+        $allLogs = $canViewLogs
+            ? $module->executionLogRepository()->forOrganization($this->organizationUid())
+            : [];
         $rules = array_values(array_filter(
             $allRules,
             static function ($rule) use ($query, $selectedStatus): bool {
@@ -6306,6 +6334,7 @@ class ProcessKontor extends Process
             'query' => $query,
             'selectedStatus' => $selectedStatus,
             'canManage' => $this->can('kontor-automation-rule-manage'),
+            'canViewLogs' => $canViewLogs,
         ]);
     }
 
@@ -6768,8 +6797,10 @@ class ProcessKontor extends Process
         $quotationRows = [];
         $invoiceRows = [];
         if ($selected !== null) {
-            $contact = $module->profile()->view($selected->contactUid);
-            $this->requireSameOrganization($contact->organizationId);
+            $contact = $module->profile()->view(
+                $selected->organizationId,
+                $selected->contactUid,
+            );
             foreach ($module->quotationRepository()->forContact(
                 $this->organizationUid(),
                 $selected->contactUid,
@@ -6939,8 +6970,11 @@ class ProcessKontor extends Process
                 (string) $this->wire()->input->post($field)
             ));
         }
-        $contact = $this->portalModule()->profile()->update($account->contactUid, $changes);
-        $this->requireSameOrganization($contact->organizationId);
+        $contact = $this->portalModule()->profile()->update(
+            $account->organizationId,
+            $account->contactUid,
+            $changes,
+        );
         $this->audit('portal', 'profile', $contact->uid->toString(), 'updated');
         $this->message($this->_('Customer-safe profile fields updated.'));
         $this->wire()->session->redirect('../portal/?id=' . rawurlencode($uid));

@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Portal account persistence and customer profile updates now reject contacts
+  from another organization before any mutation; health checks also report
+  legacy accounts with missing or cross-organization contacts.
+
 ### Added
 
 - First ProcessKontor admin vertical: account provisioning and lifecycle,

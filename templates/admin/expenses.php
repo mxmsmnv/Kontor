@@ -8,6 +8,7 @@
 /** @var string $selectedCategory */
 /** @var string $query */
 /** @var bool $canCreateExpense */
+/** @var bool $canViewCategories */
 /** @var bool $canManageCategories */
 /** @var string $adminUrl */
 /** @var callable $e */
@@ -93,7 +94,7 @@ $statusClass = static fn (string $status): string => match ($status) {
     </div>
   </header>
 
-  <?php if ($allExpenses === [] && $activeCategories === []): ?>
+  <?php if ($canViewCategories && $allExpenses === [] && $activeCategories === []): ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body">
       <div class="uk-grid-medium uk-flex-middle" uk-grid>
         <div class="uk-width-1-1 uk-width-2-5@m">
@@ -120,7 +121,7 @@ $statusClass = static fn (string $status): string => match ($status) {
     </div>
 
     <div class="uk-grid-medium" uk-grid>
-      <div class="uk-width-1-1 uk-width-3-4@l">
+      <div class="uk-width-1-1<?= $canViewCategories ? ' uk-width-3-4@l' : '' ?>">
         <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
           <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Expense queue</p>
           <h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom">Find the work that needs attention</h3>
@@ -133,7 +134,7 @@ $statusClass = static fn (string $status): string => match ($status) {
             <div class="uk-grid-small uk-flex-bottom" uk-grid>
               <div class="uk-width-1-1 uk-width-expand@m">
                 <label class="uk-form-label" for="expense-search">Search expenses</label>
-                <div class="uk-inline uk-width-1-1 uk-margin-small-top"><span class="uk-form-icon" uk-icon="icon: search"></span><input class="uk-input" id="expense-search" name="q" type="search" value="<?= $e($query) ?>" placeholder="Search purpose or category"></div>
+                <div class="uk-inline uk-width-1-1 uk-margin-small-top"><span class="uk-form-icon" uk-icon="icon: search"></span><input class="uk-input" id="expense-search" name="q" type="search" value="<?= $e($query) ?>" placeholder="<?= $canViewCategories ? 'Search purpose or category' : 'Search purpose' ?>"></div>
                 <div class="uk-text-meta uk-margin-small-top">Search narrows the current queue without changing expense data.</div>
               </div>
               <?php if ($categories !== []): ?><div class="uk-width-1-1 uk-width-1-3@m"><label class="uk-form-label" for="expense-category-filter">Category</label><select class="uk-select uk-margin-small-top" id="expense-category-filter" name="category"><option value="">All categories</option><?php foreach ($categories as $category): ?><option value="<?= $e($category->uid->toString()) ?>"<?= $selectedCategory === $category->uid->toString() ? ' selected' : '' ?>><?= $e($category->name) ?></option><?php endforeach; ?></select></div><?php endif; ?>
@@ -148,7 +149,7 @@ $statusClass = static fn (string $status): string => match ($status) {
             <?php foreach ($expenses as $expense): ?>
               <div><article class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
                 <div class="uk-flex uk-flex-between uk-flex-top uk-grid-small" uk-grid><div class="uk-width-expand"><p class="uk-text-meta uk-margin-remove-bottom"><?= $e($expense->expenseDate->format('M j, Y')) ?></p><h3 class="uk-h4 uk-margin-small-top uk-margin-remove-bottom"><?= $e($expense->description) ?></h3></div><div><span class="uk-label<?= $statusClass($expense->status) ?>"><?= $e($statuses[$expense->status] ?? ucfirst($expense->status)) ?></span></div></div>
-                <div class="uk-grid-small uk-child-width-1-2 uk-margin" uk-grid><div><div class="uk-text-meta">Category</div><strong><?= $e($categoryLabels[$expense->categoryUid] ?? 'Category unavailable') ?></strong></div><div><div class="uk-text-meta">Amount</div><strong><?= $e($money($expense->amount)) ?></strong></div></div>
+                <div class="uk-grid-small uk-child-width-1-2 uk-margin" uk-grid><div><div class="uk-text-meta">Category</div><strong><?= $e($categoryLabels[$expense->categoryUid] ?? ($canViewCategories ? 'Category unavailable' : 'Restricted category')) ?></strong></div><div><div class="uk-text-meta">Amount</div><strong><?= $e($money($expense->amount)) ?></strong></div></div>
                 <a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>expense/?id=<?= $e(rawurlencode($expense->uid->toString())) ?>">Open expense</a>
               </article></div>
             <?php endforeach; ?>
@@ -163,12 +164,12 @@ $statusClass = static fn (string $status): string => match ($status) {
         <?php endif; ?>
       </div>
 
-      <aside class="uk-width-1-1 uk-width-1-4@l">
+      <?php if ($canViewCategories): ?><aside class="uk-width-1-1 uk-width-1-4@l">
         <section class="uk-card uk-card-default uk-card-small uk-card-body">
           <div class="uk-flex uk-flex-between uk-flex-middle uk-grid-small" uk-grid><div><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Classification</p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom">Categories</h3></div><?php if ($canManageCategories): ?><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>expense-category/" aria-label="Create expense category"><i class="fa fa-plus"></i></a></div><?php endif; ?></div>
           <?php if ($categories !== []): ?><ul class="uk-list uk-list-divider uk-margin"><?php foreach ($categories as $category): ?><li><div class="uk-flex uk-flex-between uk-flex-middle"><span><strong><?= $e($category->name) ?></strong><?php if (!$category->isActive()): ?><span class="uk-label uk-margin-small-left">Inactive</span><?php endif; ?></span><span class="uk-badge"><?= $e((string) ($categoryCounts[$category->uid->toString()] ?? 0)) ?></span></div></li><?php endforeach; ?></ul><p class="uk-text-meta uk-margin-remove-bottom">Counts include expenses in every workflow status.</p><?php else: ?><div class="uk-text-center uk-padding-small"><i class="fa fa-tags fa-2x uk-text-muted"></i><p class="uk-text-muted">Create the first category before recording expenses.</p></div><?php endif; ?>
         </section>
-      </aside>
+      </aside><?php endif; ?>
     </div>
   <?php endif; ?>
 </div>

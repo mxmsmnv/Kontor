@@ -70,6 +70,14 @@ final class PortalAccountRepository implements RepositoryInterface
         }
 
         $organizationId = $this->organizations->internalIdOf($entity->organizationId);
+        $contact = $this->pdo->prepare(
+            'SELECT organization_id FROM kontor_contacts WHERE uid = :uid AND deleted_at IS NULL'
+        );
+        $contact->execute(['uid' => $entity->contactUid]);
+        $contactOrganizationId = $contact->fetchColumn();
+        if ($contactOrganizationId === false || (int) $contactOrganizationId !== $organizationId) {
+            throw new InvalidArgumentException('The portal contact does not belong to this organization.');
+        }
 
         $statement = $this->pdo->prepare(
             'INSERT INTO kontor_portal_accounts
@@ -110,14 +118,23 @@ final class PortalAccountRepository implements RepositoryInterface
     }
 
     /**
-     * @return array<int, array{uid: string, contactUid: string}> every active account, for the health check
+     * @return array<int, array{uid: string, organizationUid: string, contactUid: string}> every active account, for the health check
      */
     public function activeAccountsSummary(): array
     {
-        $statement = $this->pdo->query("SELECT uid, contact_uid FROM kontor_portal_accounts WHERE status = 'active' AND archived_at IS NULL");
+        $statement = $this->pdo->query(
+            "SELECT p.uid, o.uid AS organization_uid, p.contact_uid
+             FROM kontor_portal_accounts p
+             JOIN kontor_organizations o ON o.id = p.organization_id
+             WHERE p.status = 'active' AND p.archived_at IS NULL"
+        );
 
         return array_map(
-            static fn (array $row) => ['uid' => $row['uid'], 'contactUid' => $row['contact_uid']],
+            static fn (array $row) => [
+                'uid' => $row['uid'],
+                'organizationUid' => $row['organization_uid'],
+                'contactUid' => $row['contact_uid'],
+            ],
             $statement->fetchAll(\PDO::FETCH_ASSOC),
         );
     }

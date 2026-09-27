@@ -37,7 +37,8 @@ final class PortalHealthCheck implements HealthCheckInterface
             $orphaned = 0;
 
             foreach ($accounts as $account) {
-                if ($this->contacts->find($account['contactUid']) === null) {
+                $contact = $this->contacts->find($account['contactUid']);
+                if ($contact === null || $contact->organizationId !== $account['organizationUid']) {
                     $orphaned++;
                 }
             }
@@ -52,7 +53,7 @@ final class PortalHealthCheck implements HealthCheckInterface
 
             return new HealthCheckResult(
                 'warning',
-                "{$orphaned} portal account(s) reference a missing contact.",
+                "{$orphaned} portal account(s) reference a missing or cross-organization contact.",
                 ['activeAccounts' => count($accounts), 'orphanedAccounts' => $orphaned],
             );
         } catch (\Throwable $e) {

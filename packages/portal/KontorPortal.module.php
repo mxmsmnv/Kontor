@@ -37,7 +37,7 @@ class KontorPortal extends WireData implements Module
         return [
             'title' => 'Kontor Portal',
             'summary' => 'Customer login, quotations, invoices, payments, files, profile.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPortal',
             'icon' => 'user-circle',

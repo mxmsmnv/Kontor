@@ -2376,6 +2376,29 @@
 }
 
 @media (max-width: 850px) {
+  .kontor-directory-actions {
+    width: 100%;
+  }
+
+  .kontor-directory-actions > * {
+    flex: 1 1 9rem;
+    min-width: 0;
+  }
+
+  .kontor-directory-actions .uk-button {
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .kontor-intake-fieldhead > * {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .kontor-intake-fieldhead .uk-flex-right {
+    justify-content: flex-start;
+  }
+
   .kontor-nativeform {
     grid-template-columns: minmax(0, 1fr);
   }
