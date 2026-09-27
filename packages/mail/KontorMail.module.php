@@ -39,7 +39,7 @@ class KontorMail extends WireData implements Module
         return [
             'title' => 'Kontor Mail',
             'summary' => 'Outbound history, inbound adapters, entity linking, shared mailboxes.',
-            'version' => '002',
+            'version' => '003',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorMail',
             'icon' => 'envelope',

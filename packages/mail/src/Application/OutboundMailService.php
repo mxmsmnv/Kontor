@@ -41,12 +41,48 @@ final class OutboundMailService
         $message = MailMessage::outbound($organizationId, $mailboxUid, $fromAddress, $toAddresses, $ccAddresses, $subject, $bodyText, $createdBy);
         $this->messages->save($message);
 
+        return $this->deliver($message);
+    }
+
+    /**
+     * Retries a failed or interrupted outbound delivery on the same history
+     * row. Retrying an already-sent message is an idempotent no-op.
+     */
+    public function retry(string $messageUid): MailMessage
+    {
+        $message = $this->messages->require($messageUid);
+
+        if (!$message->isOutbound()) {
+            throw new \RuntimeException('Only outbound mail can be retried.');
+        }
+
+        if ($message->status === 'sent') {
+            return $message;
+        }
+
+        if (!in_array($message->status, ['queued', 'failed'], true)) {
+            throw new \RuntimeException("Mail message \"{$messageUid}\" cannot be retried from status \"{$message->status}\".");
+        }
+
+        return $this->deliver($message);
+    }
+
+    private function deliver(MailMessage $message): MailMessage
+    {
         try {
-            $this->sender->send($fromAddress, $toAddresses, $ccAddresses, $subject, $bodyText);
+            $this->sender->send(
+                $message->fromAddress,
+                $message->toAddresses,
+                $message->ccAddresses,
+                $message->subject,
+                $message->bodyText,
+            );
             $message->markSent();
             $this->events->emit('mail.sent', $message);
-        } catch (\Throwable $e) {
-            $message->markFailed($e->getMessage());
+        } catch (\Throwable) {
+            // Transport exceptions may contain SMTP credentials, recipients
+            // or the message body. Persist a stable diagnostic instead.
+            $message->markFailed('Mail transport failed.');
             $this->events->emit('mail.delivery_failed', $message);
         }
 

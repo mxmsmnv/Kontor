@@ -9,8 +9,8 @@ browser route smoke as a substitute for package-level coverage.
 
 ## Environment
 
-- Source baseline: `aef9f0e` on `feat/configurable-crm-intake`, plus the fixes
-  listed below
+- Source: `feat/configurable-crm-intake`, including the focused fixes and
+  regression evidence listed below
 - Runtime: PHP 8.5.8, ProcessWire 3.0.259, MariaDB, local PHP development server
 - Site: disposable local installation with its own database
 - Lifecycle site: persistent clone with an independent database for destructive
@@ -24,11 +24,11 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 308 tests, 814 assertions |
+| Core/root PHPUnit | 312 tests, 840 assertions |
 | Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 305 tests, 799 assertions |
 | Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
-| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 410 tests, 861 assertions |
-| Total | 1,228 tests, 2,963 assertions |
+| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 411 tests, 878 assertions |
+| Total | 1,233 tests, 3,006 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
@@ -64,6 +64,15 @@ allocations before any row is written and prove that an AI timeout containing a
 credential and confidential prompt returns only a stable redacted error before
 a deterministic retry succeeds.
 
+A deterministic mail transport regression now proves that a failed delivery
+can be retried on its original history row, that retrying a sent message is an
+idempotent no-op and that recipient, body and credential text from a transport
+exception do not reach persisted errors or failure events. A real-database
+settings-migration journey exports, previews and imports a CRM Intake profile
+between tenants while excluding captured answers, record identifiers and
+credential-like answer content. Template-level failure-path coverage also
+verifies the permission-aware Expenses empty state.
+
 ## ProcessWire and browser evidence
 
 - Fresh ProcessWire installation completed and all 35 Kontor components were
@@ -83,6 +92,15 @@ a deterministic retry succeeds.
   prepare proposal, request approval, approve, start delivery, issue invoice
   and record full payment. The result was completed/settled with 21 linked
   records, a paid invoice, closed task and balanced ledger.
+- A CRM editor completed the critical customer qualification journey in the
+  real ProcessWire UI: created a contact, captured configured intake answers on
+  a linked lead, qualified it and converted it into a deal. The deal retained
+  the contact, source, description and 25,000 EUR value. Navigation exposed
+  only the permitted Contacts, CRM, Dashboard and Quick Access components.
+- A second role with lead edit and deal create but without the declared lead
+  conversion permission could open the same qualified workflow but received no
+  conversion action. The server-side endpoint has the matching fail-closed
+  permission regression.
 - A second demo scenario exercised the rejection path: proposal preparation,
   approval request and rejection with a required reason. The scenario returned
   to an active proposal, displayed the rejection note and offered a new
@@ -106,6 +124,10 @@ a deterministic retry succeeds.
   keyboard focus reached both page actions, light and dark themes retained
   readable contrast, the console contained no warnings/errors, and a captured
   reload produced no failed requests or HTTP responses at or above 400.
+- The qualification workspace also passed a styled 390x844 mobile check. After
+  correcting the local PHP router so static ProcessWire assets were served
+  normally, its reload produced 25 successful responses, no failed requests,
+  no HTTP response at or above 400 and no new console warning or error.
 - A restricted automation/workflow user could see definitions but not the
   seeded execution-log sentinel or workflow history. An administrator could
   see both.
@@ -144,6 +166,13 @@ a deterministic retry succeeds.
   invoice synchronization.
 - The external AI adapter exposed raw client exception messages that could
   contain provider credentials, URLs or prompt content.
+- Lead conversion ignored the declared `kontor-crm-lead-convert` permission in
+  both its UI action state and mutation endpoint.
+- Raw mail transport exceptions could persist recipient, message-body or
+  credential content, and failed deliveries had no same-row retry path.
+- An empty Expenses workspace shown to a user without category access offered
+  misleading zero metrics and an unavailable first-expense action instead of
+  explaining the permission blocker.
 - Test assumptions that depended on MySQL JSON formatting, unordered query
   results or unread PDO result sets.
 
@@ -156,9 +185,10 @@ following remain explicit:
 - commit a repeatable automated browser runner for the critical journeys;
 - run Firefox/WebKit compatibility passes; only the Chromium-based in-app
   browser is currently exposed to the automation surface;
-- exercise Redis with `ext-redis`, plus deterministic mail, payment and
-  object-storage fakes in their full failure/retry paths; webhook timeout/replay
-  and AI timeout/redaction/retry are now covered without network access;
+- exercise Redis with `ext-redis`, plus deterministic payment and
+  object-storage fakes in their full failure/retry paths; webhook timeout/replay,
+  mail timeout/redaction/retry and AI timeout/redaction/retry are now covered
+  without network access;
 - execute historical source-version upgrade fixtures; current-schema upgrade
   hooks and the full preserve-data uninstall/reinstall matrix have passed.
 

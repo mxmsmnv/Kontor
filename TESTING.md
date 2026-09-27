@@ -87,7 +87,8 @@ E2E pass.
 - Expected stored result: one response per entity; fields targeting deals are
   copied, contact-only fields are not; the bound source remains consistent
 - Access/security assertion: a user without CRM Intake administration cannot
-  manage the profile; a user without deal creation cannot convert
+  manage the profile; a user without deal creation or the dedicated lead
+  conversion permission cannot convert
 - Cleanup: remove the `E2E` records or discard the database
 
 ### Journey 2: representative order-to-cash
@@ -119,14 +120,14 @@ E2E pass.
 
 ### Administrator session
 
-- [ ] Install Core and selected components in dependency order
-- [ ] Configure a CRM Intake profile and inspect health/components/settings
-- [ ] Verify uninstall warning and preserved-data policy without using live data
+- [x] Install Core and selected components in dependency order
+- [x] Configure a CRM Intake profile and inspect health/components/settings
+- [x] Verify uninstall warning and preserved-data policy without using live data
 
 ### Member/editor session
 
-- [ ] Complete the qualification-to-deal journey
-- [ ] Confirm permitted navigation excludes unavailable or forbidden components
+- [x] Complete the qualification-to-deal journey
+- [x] Confirm permitted navigation excludes unavailable or forbidden components
 
 ### Anonymous session
 
@@ -134,7 +135,7 @@ E2E pass.
 
 ### Cross-role or multi-user scenario
 
-- [ ] Administrator configures a profile; editor uses it; restricted member
+- [x] Administrator configures a profile; editor uses it; restricted member
   cannot manage it or convert the lead
 
 ### Presentation
@@ -154,9 +155,9 @@ E2E pass.
 - [x] Duplicate submission or webhook replay
 - [x] External timeout/failure
 - [x] Retry and idempotency
-- [ ] Empty state
+- [x] Empty state
 - [x] Large or boundary data state
-- [ ] Logs contain no secrets or unnecessary personal data
+- [x] Logs contain no secrets or unnecessary personal data
 
 ## External services
 
@@ -169,6 +170,10 @@ E2E pass.
 | Private files/object storage | disposable local or S3-compatible store | no production buckets |
 
 ## Cleanup
+
+The reusable ProcessWire sites, their databases and named E2E fixtures are
+intentionally retained between runs. Only transient databases, servers and
+browser sessions are removed after each checkpoint.
 
 - [ ] Test settings restored
 - [ ] `E2E` users/data removed or the disposable database discarded

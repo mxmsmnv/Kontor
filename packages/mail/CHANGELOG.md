@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Failed outbound deliveries can be retried on the original history row, while
+  raw transport exceptions that may contain recipients, content or credentials
+  are replaced with a stable safe diagnostic.
+
 ### Added
 
 - Task reminder workers deliver assigned-user email through outbound history

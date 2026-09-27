@@ -112,6 +112,12 @@ $statusClass = static fn (string $status): string => match ($status) {
         </div>
       </div>
     </section>
+  <?php elseif (!$canViewCategories && $allExpenses === []): ?>
+    <section class="uk-card uk-card-default uk-card-small uk-card-body uk-placeholder uk-text-center">
+      <i class="fa fa-lock fa-2x uk-text-muted"></i>
+      <h3>No expenses available</h3>
+      <p>You can view the expense workspace, but category setup is restricted. Ask an expense administrator to finish category setup or grant category access before recording the first expense.</p>
+    </section>
   <?php else: ?>
     <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-margin-medium-bottom" uk-grid>
       <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-pencil"></i></span><span><strong class="kontor-stat__value"><?= $e((string) ($statusCounts['draft'] ?? 0)) ?></strong><span class="kontor-stat__label">Drafts</span></span></div></div>

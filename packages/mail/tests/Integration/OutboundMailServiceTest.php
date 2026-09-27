@@ -68,7 +68,7 @@ final class OutboundMailServiceTest extends DatabaseTestCase
         $message = $service->send($this->organizationUid, null, 'sender@example.com', ['recipient@example.com'], [], 'Hi', 'Body');
 
         $this->assertSame('failed', $message->status);
-        $this->assertSame('Connection refused', $message->error);
+        $this->assertSame('Mail transport failed.', $message->error);
     }
 
     public function test_a_history_row_exists_even_though_the_send_failed(): void
@@ -119,5 +119,75 @@ final class OutboundMailServiceTest extends DatabaseTestCase
 
         $this->assertCount(1, $dispatcher->events);
         $this->assertSame('mail.delivery_failed', $dispatcher->events[0]->event);
+    }
+
+    public function test_timeout_can_be_retried_without_duplicating_or_leaking_sensitive_data(): void
+    {
+        $recipient = 'private-recipient@example.com';
+        $body = 'Confidential acquisition details';
+        $credential = 'smtp-password-super-secret';
+
+        $sender = new class($credential) implements MailSenderInterface {
+            public int $calls = 0;
+
+            public function __construct(private readonly string $credential)
+            {
+            }
+
+            public function send(string $fromAddress, array $toAddresses, array $ccAddresses, string $subject, string $bodyText): void
+            {
+                $this->calls++;
+
+                if ($this->calls === 1) {
+                    throw new \RuntimeException(
+                        "Timeout for {$toAddresses[0]} while sending {$bodyText} using {$this->credential}",
+                    );
+                }
+            }
+        };
+
+        $dispatcher = new CapturingDispatcher();
+        $repository = $this->repository();
+        $service = new OutboundMailService($sender, $repository, new MailEventEmitter($dispatcher));
+
+        $failed = $service->send(
+            $this->organizationUid,
+            null,
+            'sender@example.com',
+            [$recipient],
+            [],
+            'Delivery test',
+            $body,
+        );
+
+        $storedFailure = $repository->require($failed->uid->toString());
+        $this->assertSame('failed', $storedFailure->status);
+        $this->assertSame('Mail transport failed.', $storedFailure->error);
+        $this->assertStringNotContainsString($recipient, (string) $storedFailure->error);
+        $this->assertStringNotContainsString($body, (string) $storedFailure->error);
+        $this->assertStringNotContainsString($credential, (string) $storedFailure->error);
+
+        $failureEvent = json_encode($dispatcher->events[0]->toArray(), JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString($recipient, $failureEvent);
+        $this->assertStringNotContainsString($body, $failureEvent);
+        $this->assertStringNotContainsString($credential, $failureEvent);
+
+        $retried = $service->retry($failed->uid->toString());
+
+        $this->assertSame($failed->uid->toString(), $retried->uid->toString());
+        $this->assertSame('sent', $retried->status);
+        $this->assertNull($retried->error);
+        $this->assertSame(2, $sender->calls);
+        $this->assertCount(1, $repository->forOrganization($this->organizationUid));
+        $this->assertSame(['mail.delivery_failed', 'mail.sent'], array_map(
+            static fn ($event): string => $event->event,
+            $dispatcher->events,
+        ));
+
+        $service->retry($failed->uid->toString());
+
+        $this->assertSame(2, $sender->calls);
+        $this->assertCount(1, $repository->forOrganization($this->organizationUid));
+        $this->assertCount(2, $dispatcher->events);
     }
 }

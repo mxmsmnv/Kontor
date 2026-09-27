@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Failed outbound mail can be retried without duplicating its history row, and
+  transport exception details are no longer persisted or emitted.
+- Empty expense workspaces without category access now explain the permission
+  blocker instead of showing zero metrics and an unavailable creation action.
+- Lead conversion now requires the declared lead-convert permission in both
+  the UI action state and the conversion endpoint.
 - External AI provider failures no longer expose raw exception messages that
   may contain credentials, provider URLs or prompt content.
 - Payment allocations now reject payment/invoice currency mismatches before

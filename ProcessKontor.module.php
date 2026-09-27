@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '224',
+            'version' => '225',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1489,6 +1489,7 @@ class ProcessKontor extends Process
                 && $lead->isQualifiedForConversion()
                 && $defaultPipeline !== null
                 && $firstDealStage !== null
+                && $this->can('kontor-crm-lead-convert')
                 && $this->can('kontor-crm-deal-create'),
             'canConfigurePipeline' => $this->can('kontor-crm-pipeline-admin'),
             'conversionNeedsCustomer' => $lead !== null
@@ -1506,6 +1507,7 @@ class ProcessKontor extends Process
         $this->requirePost();
         $this->requireCrm();
         $this->requirePermission('kontor-crm-lead-edit');
+        $this->requirePermission('kontor-crm-lead-convert');
         $this->requirePermission('kontor-crm-deal-create');
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
         /** @var KontorCRM $crm */

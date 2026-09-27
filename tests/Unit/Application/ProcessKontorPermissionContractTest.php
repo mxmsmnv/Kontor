@@ -50,4 +50,27 @@ final class ProcessKontorPermissionContractTest extends TestCase
         self::assertLessThan($save, $permissionCheck);
         self::assertLessThan($link, $save);
     }
+
+    public function test_lead_conversion_requires_the_declared_conversion_permission(): void
+    {
+        $controller = file_get_contents(__DIR__ . '/../../../ProcessKontor.module.php');
+
+        self::assertIsString($controller);
+        $methodStart = strpos($controller, 'public function ___executeCrmLeadConvert(): void');
+        $methodEnd = strpos($controller, 'public function ___executeCrmLeadAction(): void', $methodStart ?: 0);
+        self::assertNotFalse($methodStart);
+        self::assertNotFalse($methodEnd);
+        $method = substr($controller, $methodStart, $methodEnd - $methodStart);
+
+        self::assertStringContainsString(
+            "\$this->requirePermission('kontor-crm-lead-convert');",
+            $method,
+        );
+        self::assertMatchesRegularExpression(
+            <<<'REGEX'
+/'canConvertLead'\s*=>.*?\$this->can\('kontor-crm-lead-convert'\).*?\$this->can\('kontor-crm-deal-create'\)/s
+REGEX,
+            $controller,
+        );
+    }
 }
