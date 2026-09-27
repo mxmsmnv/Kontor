@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '222',
+            'version' => '223',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -3538,6 +3538,9 @@ class ProcessKontor extends Process
             }
 
             if ($error === '') {
+                if ($task === null && $contextType !== '' && $contextUid !== '') {
+                    $this->requirePermission('kontor-tasks-relation-manage');
+                }
                 $task ??= Task::create($this->organizationUid(), $values['title']);
                 $task->title = $values['title'];
                 $task->description = $values['description'] !== '' ? $values['description'] : null;

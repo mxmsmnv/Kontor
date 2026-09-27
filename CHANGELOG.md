@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Creating a task with a contact or company relation now requires the dedicated
+  task relation permission before the task is persisted.
 - Core database backups now restore dependent tables in reverse order, insert
   them in forward order, read associative rows consistently and verify
   deterministic per-table content hashes so same-row-count corruption is

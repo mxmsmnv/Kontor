@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Customer file listing and signed-download generation now enforce the current
+  organization boundary and mask cross-organization file identifiers as
+  missing.
 - Portal account persistence and customer profile updates now reject contacts
   from another organization before any mutation; health checks also report
   legacy accounts with missing or cross-organization contacts.

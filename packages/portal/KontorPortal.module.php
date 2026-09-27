@@ -37,7 +37,7 @@ class KontorPortal extends WireData implements Module
         return [
             'title' => 'Kontor Portal',
             'summary' => 'Customer login, quotations, invoices, payments, files, profile.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPortal',
             'icon' => 'user-circle',
@@ -148,7 +148,11 @@ class KontorPortal extends WireData implements Module
         /** @var KontorFiles $filesModule */
         $filesModule = $this->wire()->modules->get('KontorFiles');
 
-        return new CustomerFileService($filesModule->fileRepository(), $this->signer());
+        return new CustomerFileService(
+            $filesModule->fileRepository(),
+            $this->signer(),
+            $this->organizations()->internalIdOf($this->organizationUid()),
+        );
     }
 
     public function fileDownloadHandler(): PortalFileDownloadHandler

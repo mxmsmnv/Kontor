@@ -30,6 +30,7 @@ final class CustomerFileService
     public function __construct(
         private readonly FileRepository $files,
         private readonly SignedUrlSigner $signer,
+        private readonly int $organizationId,
     ) {
     }
 
@@ -38,12 +39,15 @@ final class CustomerFileService
      */
     public function filesForDocument(string $documentType, string $documentUid): array
     {
-        return $this->files->forEntity($documentType, $documentUid);
+        return $this->files->forEntity($documentType, $documentUid, $this->organizationId);
     }
 
     public function downloadUrl(string $fileUid, \DateTimeImmutable $expiresAt): string
     {
         $file = $this->files->find($fileUid) ?? throw new RuntimeException("File \"{$fileUid}\" was not found.");
+        if ((int) $file['organization_id'] !== $this->organizationId) {
+            throw new RuntimeException("File \"{$fileUid}\" was not found.");
+        }
 
         return $this->signer->sign($file['path'], $expiresAt);
     }
