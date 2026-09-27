@@ -1,0 +1,16 @@
+{
+    "contact.display_name.required": "Geben Sie einen Vornamen, Nachnamen oder Anzeigenamen ein.",
+    "contact.email.invalid": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "company.legal_name.required": "Geben Sie den Firmennamen ein.",
+    "company.email.invalid": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "field.first_name": "Vorname",
+    "field.last_name": "Nachname",
+    "field.display_name": "Anzeigename",
+    "field.email": "E-Mail",
+    "field.phone": "Telefon",
+    "field.mobile": "Mobiltelefon",
+    "field.job_title": "Position",
+    "field.legal_name": "Firmenname",
+    "field.trading_name": "Handelsname",
+    "field.tags": "Tags"
+}

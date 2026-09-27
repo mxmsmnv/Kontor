@@ -1,0 +1,102 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorContacts",
+    "title": "Kontor Contacts",
+    "description": "Contacts, companies, addresses, memberships, tags, duplicate detection and import/export.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "contacts",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorContacts",
+    "package": "kontor/contacts",
+    "namespace": "Kontor\\Contacts",
+    "processWireModule": "KontorContacts",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/search": "^1.0"
+    },
+    "suggests": {
+        "kontor/ai": "^1.0",
+        "kontor/crm": "^1.0"
+    },
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-contacts-contact-view",
+        "kontor-contacts-contact-create",
+        "kontor-contacts-contact-edit",
+        "kontor-contacts-contact-archive",
+        "kontor-contacts-contact-delete",
+        "kontor-contacts-company-view",
+        "kontor-contacts-company-create",
+        "kontor-contacts-company-edit",
+        "kontor-contacts-company-archive",
+        "kontor-contacts-company-delete",
+        "kontor-contacts-merge",
+        "kontor-contacts-export"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "contacts",
+                "title": "Contacts",
+                "icon": "address-book",
+                "order": 100
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [
+            "Kontor\\Contacts\\Infrastructure\\Import\\ContactImportProvider",
+            "Kontor\\Contacts\\Infrastructure\\Import\\CompanyImportProvider"
+        ],
+        "export": [
+            "Kontor\\Contacts\\Infrastructure\\Export\\ContactExportProvider",
+            "Kontor\\Contacts\\Infrastructure\\Export\\CompanyExportProvider"
+        ],
+        "search": [
+            "Kontor\\Search\\Infrastructure\\Search\\SqlFullTextSearchProvider"
+        ],
+        "reports": [],
+        "health": [
+            "Kontor\\Contacts\\Health\\ContactsHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_contacts",
+            "kontor_companies",
+            "kontor_addresses",
+            "kontor_contact_company"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["contact.email", "contact.phone", "contact.mobile", "contact.notes", "company.tax_number", "company.vat_number"]
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "field.body": "Mensaje",
+    "field.note": "Nota",
+    "field.comment": "Comentario",
+    "action.reply": "Responder",
+    "action.follow": "Seguir",
+    "action.unfollow": "Dejar de seguir",
+    "action.mark_read": "Marcar como leído",
+    "label.mentioned_you": "te mencionó",
+    "label.new_comments": "Comentarios nuevos"
+}

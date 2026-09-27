@@ -1,0 +1,10 @@
+{
+    "field.capability": "Fähigkeit",
+    "field.status": "Status",
+    "status.pending": "Genehmigung ausstehend",
+    "status.approved": "Genehmigt",
+    "status.rejected": "Abgelehnt",
+    "action.approve": "Genehmigen",
+    "action.reject": "Ablehnen",
+    "error.no_provider": "Für diese Aktion ist kein KI-Anbieter verfügbar."
+}

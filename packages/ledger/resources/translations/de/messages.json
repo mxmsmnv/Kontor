@@ -1,0 +1,14 @@
+{
+    "field.code": "Konto-Nr.",
+    "field.name": "Bezeichnung",
+    "field.type": "Kontenart",
+    "field.balance": "Saldo",
+    "type.asset": "Aktiva",
+    "type.liability": "Verbindlichkeiten",
+    "type.equity": "Eigenkapital",
+    "type.revenue": "Erträge",
+    "type.expense": "Aufwendungen",
+    "action.new_account": "Neues Konto",
+    "action.record_entry": "Buchung erfassen",
+    "error.unbalanced": "Soll und Haben stimmen nicht überein."
+}

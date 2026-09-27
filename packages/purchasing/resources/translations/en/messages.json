@@ -1,0 +1,19 @@
+{
+    "field.code": "Code",
+    "field.legal_name": "Legal name",
+    "field.supplier": "Supplier",
+    "field.number": "Number",
+    "field.issue_date": "Issue date",
+    "field.expected_date": "Expected date",
+    "field.subtotal": "Subtotal",
+    "field.tax": "Tax",
+    "field.total": "Total",
+    "status.draft": "Draft",
+    "status.issued": "Issued",
+    "status.partially_received": "Partially received",
+    "status.received": "Received",
+    "status.cancelled": "Cancelled",
+    "action.issue": "Issue",
+    "action.receive": "Receive goods",
+    "action.cancel": "Cancel"
+}

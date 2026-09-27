@@ -1,0 +1,16 @@
+{
+    "field.code": "Código",
+    "field.name": "Nombre",
+    "field.warehouse": "Almacén",
+    "field.quantity_on_hand": "En existencia",
+    "field.quantity_reserved": "Reservado",
+    "field.quantity_available": "Disponible",
+    "status.active": "Activo",
+    "status.inactive": "Inactivo",
+    "movement.receive": "Recepción",
+    "movement.transfer": "Transferencia",
+    "movement.adjust": "Ajuste",
+    "movement.reserve": "Reserva",
+    "movement.release": "Liberación",
+    "movement.ship": "Envío"
+}

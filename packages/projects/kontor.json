@@ -1,0 +1,88 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorProjects",
+    "title": "Kontor Projects",
+    "description": "Projects, milestones, time tracking, billable items, invoicing integration.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "operations",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorProjects",
+    "package": "kontor/projects",
+    "namespace": "Kontor\\Projects",
+    "processWireModule": "KontorProjects",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/sales": "^1.0",
+        "kontor/invoices": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-projects-project-view",
+        "kontor-projects-project-create",
+        "kontor-projects-project-edit",
+        "kontor-projects-project-archive",
+        "kontor-projects-milestone-manage",
+        "kontor-projects-time-track",
+        "kontor-projects-billable-item-manage",
+        "kontor-projects-invoice-generate"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "projects",
+                "title": "Projects",
+                "icon": "tasks",
+                "order": 530
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Projects\\Health\\ProjectsHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_projects",
+            "kontor_project_milestones",
+            "kontor_project_time_entries",
+            "kontor_project_billable_items"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["project.default_hourly_rate_minor"]
+    }
+}

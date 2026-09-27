@@ -1,0 +1,22 @@
+{
+    "field.number": "Number",
+    "field.customer": "Customer",
+    "field.issue_date": "Issue date",
+    "field.valid_until": "Valid until",
+    "field.expected_delivery_date": "Expected delivery date",
+    "field.subtotal": "Subtotal",
+    "field.discount": "Discount",
+    "field.tax": "Tax",
+    "field.shipping": "Shipping",
+    "field.total": "Total",
+    "status.draft": "Draft",
+    "status.issued": "Issued",
+    "status.sent": "Sent",
+    "status.accepted": "Accepted",
+    "status.rejected": "Rejected",
+    "status.expired": "Expired",
+    "status.cancelled": "Cancelled",
+    "status.pending": "Pending",
+    "status.confirmed": "Confirmed",
+    "status.completed": "Completed"
+}

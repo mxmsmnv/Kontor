@@ -1,0 +1,14 @@
+{
+    "field.code": "Código",
+    "field.name": "Nombre",
+    "field.type": "Tipo",
+    "field.balance": "Saldo",
+    "type.asset": "Activo",
+    "type.liability": "Pasivo",
+    "type.equity": "Patrimonio",
+    "type.revenue": "Ingresos",
+    "type.expense": "Gastos",
+    "action.new_account": "Nueva cuenta",
+    "action.record_entry": "Registrar asiento",
+    "error.unbalanced": "Los débitos y créditos no cuadran."
+}

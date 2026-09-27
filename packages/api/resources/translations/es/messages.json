@@ -1,0 +1,18 @@
+{
+    "field.name": "Nombre",
+    "field.token": "Token",
+    "field.scopes": "Ámbitos",
+    "field.url": "URL",
+    "field.event_pattern": "Evento",
+    "field.status": "Estado",
+    "status.active": "Activo",
+    "status.revoked": "Revocado",
+    "status.disabled": "Deshabilitado",
+    "delivery.status.pending": "Pendiente",
+    "delivery.status.delivered": "Entregado",
+    "delivery.status.exhausted": "Agotado",
+    "action.issue_token": "Emitir token",
+    "action.revoke_token": "Revocar token",
+    "action.add_subscription": "Añadir suscripción webhook",
+    "action.replay_delivery": "Reintentar entrega"
+}

@@ -1,0 +1,83 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorDashboard",
+    "title": "Kontor Dashboard",
+    "description": "Widget registry, layouts, personal dashboards, role dashboards.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "collaboration",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorDashboard",
+    "package": "kontor/dashboard",
+    "namespace": "Kontor\\Dashboard",
+    "processWireModule": "KontorDashboard",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0"
+    },
+    "suggests": {
+        "kontor/cache": "^1.0"
+    },
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-dashboard-view",
+        "kontor-dashboard-create",
+        "kontor-dashboard-edit",
+        "kontor-dashboard-archive",
+        "kontor-dashboard-role-manage"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "dashboard",
+                "title": "Dashboard",
+                "icon": "th-large",
+                "order": 100
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Dashboard\\Health\\DashboardHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_dashboards",
+            "kontor_dashboard_widgets"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

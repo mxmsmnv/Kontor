@@ -1,0 +1,21 @@
+{
+    "field.title": "Title",
+    "field.description": "Description",
+    "field.priority": "Priority",
+    "field.assigned_to": "Assigned to",
+    "field.start_at": "Start",
+    "field.due_at": "Due",
+    "field.recurrence": "Repeats",
+    "status.open": "Open",
+    "status.in_progress": "In progress",
+    "status.done": "Done",
+    "status.cancelled": "Cancelled",
+    "priority.low": "Low",
+    "priority.normal": "Normal",
+    "priority.high": "High",
+    "priority.urgent": "Urgent",
+    "recurrence.daily": "Daily",
+    "recurrence.weekly": "Weekly",
+    "recurrence.monthly": "Monthly",
+    "recurrence.yearly": "Yearly"
+}

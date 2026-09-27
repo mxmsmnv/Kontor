@@ -1,0 +1,18 @@
+{
+    "field.category": "Kategorie",
+    "field.description": "Beschreibung",
+    "field.amount": "Betrag",
+    "field.expense_date": "Ausgabendatum",
+    "field.receipt": "Beleg",
+    "field.rejection_reason": "Ablehnungsgrund",
+    "status.draft": "Entwurf",
+    "status.submitted": "Eingereicht",
+    "status.approved": "Genehmigt",
+    "status.rejected": "Abgelehnt",
+    "status.reimbursed": "Erstattet",
+    "status.cancelled": "Storniert",
+    "action.submit": "Zur Genehmigung einreichen",
+    "action.approve": "Genehmigen",
+    "action.reject": "Ablehnen",
+    "action.reimburse": "Als erstattet markieren"
+}

@@ -1,0 +1,10 @@
+{
+    "field.capability": "Capacidad",
+    "field.status": "Estado",
+    "status.pending": "Pendiente de aprobación",
+    "status.approved": "Aprobado",
+    "status.rejected": "Rechazado",
+    "action.approve": "Aprobar",
+    "action.reject": "Rechazar",
+    "error.no_provider": "No hay ningún proveedor de IA disponible para esta acción."
+}

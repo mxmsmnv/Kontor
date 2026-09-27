@@ -1,0 +1,9 @@
+{
+    "field.tax_id": "USt-IdNr.",
+    "field.document_format": "Dokumentformat",
+    "format.xrechnung": "XRechnung",
+    "format.zugferd": "ZUGFeRD",
+    "action.seed_chart_of_accounts": "Standardkontenrahmen anlegen",
+    "action.export_xrechnung": "Als XRechnung exportieren",
+    "error.invalid_tax_id": "Dies ist keine gültige deutsche USt-IdNr."
+}

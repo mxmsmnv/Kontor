@@ -1,0 +1,117 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "Kontor",
+    "title": "Kontor Core",
+    "description": "Service container, capability/component/backup/import/export-provider registries, migrations, audit, backup and recovery, import/export, and the ProcessKontor admin shell.",
+    "version": "1.0.0",
+    "type": "core",
+    "category": "core",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/Kontor",
+    "package": "kontor/core",
+    "namespace": "Kontor\\Core",
+    "processWireModule": "Kontor",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-access",
+        "kontor-admin",
+        "kontor-components-view",
+        "kontor-components-install",
+        "kontor-components-update",
+        "kontor-components-disable",
+        "kontor-components-remove",
+        "kontor-audit-view",
+        "kontor-health-view",
+        "kontor-backups-view",
+        "kontor-backups-create",
+        "kontor-backups-download",
+        "kontor-backups-restore",
+        "kontor-backups-configure",
+        "kontor-updates-bypass-backup",
+        "kontor-import",
+        "kontor-import-update",
+        "kontor-import-admin",
+        "kontor-export",
+        "kontor-export-personal-data",
+        "kontor-export-financial"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "kontor",
+                "title": "Kontor",
+                "icon": "cubes",
+                "order": 0
+            }
+        ],
+        "routes": [
+            {
+                "path": "components",
+                "controller": "ProcessKontor::executeComponents"
+            }
+        ]
+    },
+    "services": [],
+    "events": {
+        "publishes": [
+            "component.installed",
+            "component.updated",
+            "component.enabled",
+            "component.disabled",
+            "component.uninstalled",
+            "import.progress",
+            "import.previewed",
+            "import.completed",
+            "import.rolled_back"
+        ],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": "Kontor\\Core\\Infrastructure\\Backup\\CoreBackupProvider",
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": []
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_organizations",
+            "kontor_components",
+            "kontor_migrations",
+            "kontor_audit_events",
+            "kontor_sequences",
+            "kontor_extensions",
+            "kontor_relations"
+        ],
+        "directories": [
+            "site/assets/kontor/backups",
+            "site/assets/kontor/state"
+        ]
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

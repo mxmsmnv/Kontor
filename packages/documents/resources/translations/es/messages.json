@@ -1,0 +1,13 @@
+{
+    "field.template_key": "Clave de la plantilla",
+    "field.document_type": "Tipo de documento",
+    "field.language": "Idioma",
+    "field.name": "Nombre",
+    "field.body_html": "Contenido",
+    "field.custom_css": "CSS personalizado",
+    "field.version": "Versión",
+    "action.publish": "Publicar",
+    "action.preview": "Vista previa",
+    "action.render_pdf": "Descargar PDF",
+    "action.archive": "Archivar"
+}

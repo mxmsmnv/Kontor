@@ -1,0 +1,74 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorSearch",
+    "title": "Kontor Search",
+    "description": "Provider registry, federated global search, SQL full-text search and asynchronous indexing.",
+    "version": "1.0.0",
+    "type": "platform",
+    "category": "search",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorSearch",
+    "package": "kontor/search",
+    "namespace": "Kontor\\Search",
+    "processWireModule": "KontorSearch",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/queue": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [
+        {
+            "name": "search",
+            "version": "1.0",
+            "contract": "Kontor\\SDK\\Contracts\\SearchProviderInterface"
+        }
+    ],
+    "permissions": [],
+    "admin": {
+        "sections": [],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [
+            "Kontor\\Search\\Infrastructure\\Search\\ComponentsSearchProvider"
+        ],
+        "reports": [],
+        "health": [
+            "Kontor\\Search\\Health\\SearchHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": null,
+        "supportsRollback": false
+    },
+    "storage": {
+        "tables": [],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

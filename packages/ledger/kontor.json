@@ -1,0 +1,80 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorLedger",
+    "title": "Kontor Ledger",
+    "description": "Double-entry foundations, chart of accounts.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "finance",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorLedger",
+    "package": "kontor/ledger",
+    "namespace": "Kontor\\Ledger",
+    "processWireModule": "KontorLedger",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-ledger-account-manage",
+        "kontor-ledger-entry-view",
+        "kontor-ledger-entry-record"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "ledger",
+                "title": "Ledger",
+                "icon": "balance-scale",
+                "order": 940
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Ledger\\Health\\LedgerHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_ledger_accounts",
+            "kontor_ledger_entries",
+            "kontor_ledger_lines"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

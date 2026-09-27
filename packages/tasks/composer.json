@@ -1,0 +1,71 @@
+{
+    "name": "kontor/tasks",
+    "description": "Kontor Tasks: tasks, reminders, recurrence, calendar, entity relations.",
+    "type": "library",
+    "license": "MIT",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/mail": "^1.0",
+        "kontor/automation": "^1.0",
+        "kontor/queue": "^1.0"
+    },
+    "suggest": {
+        "kontor/dashboard": "Adds the My open tasks widget to personal and role dashboards."
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0",
+        "kontor/dashboard": "^1.0"
+    },
+    "repositories": [
+        {
+            "name": "monorepo",
+            "type": "path",
+            "url": "../*"
+        },
+        {
+            "type": "path",
+            "url": "../sdk"
+        },
+        {
+            "type": "path",
+            "url": "../.."
+        },
+        {
+            "type": "path",
+            "url": "../mail"
+        },
+        {
+            "type": "path",
+            "url": "../automation"
+        },
+        {
+            "type": "path",
+            "url": "../queue"
+        },
+        {
+            "type": "path",
+            "url": "../dashboard"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Tasks\\": "src/",
+            "Kontor\\Tasks\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Tasks\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}

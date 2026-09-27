@@ -1,0 +1,81 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorPortal",
+    "title": "Kontor Portal",
+    "description": "Customer login, quotations, invoices, payments, files, profile.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "customer-experience",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorPortal",
+    "package": "kontor/portal",
+    "namespace": "Kontor\\Portal",
+    "processWireModule": "KontorPortal",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/contacts": "^1.0",
+        "kontor/sales": "^1.0",
+        "kontor/invoices": "^1.0",
+        "kontor/payments": "^1.0",
+        "kontor/files": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-portal-account-manage"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "portal",
+                "title": "Portal",
+                "icon": "user-circle",
+                "order": 920
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Portal\\Health\\PortalHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_portal_accounts"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["portal account password hashes", "customer document contents (quotations, invoices, files)"]
+    }
+}

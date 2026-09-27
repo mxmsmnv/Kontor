@@ -1,0 +1,9 @@
+{
+    "field.type_name": "Type",
+    "field.field": "Field",
+    "field.scope": "Scope",
+    "error.unknown_resource": "Unknown resource",
+    "error.missing_scope": "Missing scope",
+    "error.complexity_exceeded": "Query too complex",
+    "action.view_schema": "View schema"
+}

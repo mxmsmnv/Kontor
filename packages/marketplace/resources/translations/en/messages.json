@@ -1,0 +1,15 @@
+{
+    "field.registry": "Registry",
+    "field.publisher": "Publisher",
+    "field.version": "Version",
+    "field.severity": "Severity",
+    "status.verified": "Verified",
+    "status.unverified": "Unverified",
+    "severity.low": "Low",
+    "severity.medium": "Medium",
+    "severity.high": "High",
+    "severity.critical": "Critical",
+    "action.sync_registry": "Sync registry",
+    "action.add_registry": "Add registry",
+    "action.view_advisories": "View advisories"
+}

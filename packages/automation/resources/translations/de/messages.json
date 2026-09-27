@@ -1,0 +1,16 @@
+{
+    "field.name": "Name",
+    "field.trigger_event": "Auslöseereignis",
+    "field.field": "Feld",
+    "field.operator": "Operator",
+    "field.value": "Wert",
+    "operator.equals": "Gleich",
+    "operator.not_equals": "Ungleich",
+    "operator.greater_than": "Größer als",
+    "operator.less_than": "Kleiner als",
+    "operator.contains": "Enthält",
+    "status.active": "Aktiv",
+    "status.inactive": "Inaktiv",
+    "action.dry_run": "Testlauf",
+    "label.execution_logs": "Ausführungsprotokolle"
+}

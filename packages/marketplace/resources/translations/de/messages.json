@@ -1,0 +1,15 @@
+{
+    "field.registry": "Registry",
+    "field.publisher": "Herausgeber",
+    "field.version": "Version",
+    "field.severity": "Schweregrad",
+    "status.verified": "Verifiziert",
+    "status.unverified": "Nicht verifiziert",
+    "severity.low": "Niedrig",
+    "severity.medium": "Mittel",
+    "severity.high": "Hoch",
+    "severity.critical": "Kritisch",
+    "action.sync_registry": "Registry synchronisieren",
+    "action.add_registry": "Registry hinzufügen",
+    "action.view_advisories": "Sicherheitshinweise anzeigen"
+}

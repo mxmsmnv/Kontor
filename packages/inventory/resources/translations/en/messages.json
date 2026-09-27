@@ -1,0 +1,16 @@
+{
+    "field.code": "Code",
+    "field.name": "Name",
+    "field.warehouse": "Warehouse",
+    "field.quantity_on_hand": "On hand",
+    "field.quantity_reserved": "Reserved",
+    "field.quantity_available": "Available",
+    "status.active": "Active",
+    "status.inactive": "Inactive",
+    "movement.receive": "Receive",
+    "movement.transfer": "Transfer",
+    "movement.adjust": "Adjustment",
+    "movement.reserve": "Reservation",
+    "movement.release": "Release",
+    "movement.ship": "Ship"
+}

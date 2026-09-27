@@ -1,0 +1,13 @@
+{
+    "field.name": "Name",
+    "field.format": "Format",
+    "field.recurrence": "Wiederholung",
+    "field.next_run": "Nächste Ausführung",
+    "field.last_run": "Letzte Ausführung",
+    "format.csv": "CSV",
+    "format.json": "JSON",
+    "format.xlsx": "Excel",
+    "format.pdf": "PDF",
+    "action.run_now": "Jetzt ausführen",
+    "action.export": "Exportieren"
+}

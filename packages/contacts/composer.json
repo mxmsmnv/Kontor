@@ -1,0 +1,65 @@
+{
+    "name": "kontor/contacts",
+    "description": "Kontor Contacts: contacts, companies, addresses, memberships, tags, duplicate detection and import/export.",
+    "type": "library",
+    "license": "MIT",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/search": "^1.0",
+        "kontor/api": "^1.0"
+    },
+    "suggest": {
+        "kontor/ai": "Generates on-demand customer context briefs from contact records."
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        {
+            "name": "monorepo",
+            "type": "path",
+            "url": "../*"
+        },
+        {
+            "type": "path",
+            "url": "../sdk"
+        },
+        {
+            "type": "path",
+            "url": "../.."
+        },
+        {
+            "type": "path",
+            "url": "../search"
+        },
+        {
+            "type": "path",
+            "url": "../queue"
+        },
+        {
+            "type": "path",
+            "url": "../api"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Contacts\\": "src/",
+            "Kontor\\Contacts\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Contacts\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}

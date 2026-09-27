@@ -1,0 +1,10 @@
+{
+    "field.capability": "Capability",
+    "field.status": "Status",
+    "status.pending": "Pending approval",
+    "status.approved": "Approved",
+    "status.rejected": "Rejected",
+    "action.approve": "Approve",
+    "action.reject": "Reject",
+    "error.no_provider": "No AI provider is available for this action."
+}

@@ -1,0 +1,94 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorSettings",
+    "title": "Kontor Settings",
+    "description": "Safe, versioned export, preview and import of portable workspace settings.",
+    "version": "1.0.0",
+    "type": "platform",
+    "category": "settings",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorSettings",
+    "package": "kontor/settings",
+    "namespace": "Kontor\\Settings",
+    "processWireModule": "KontorSettings",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [
+        {
+            "name": "settings-migration",
+            "version": "1.0",
+            "contract": "Kontor\\Settings\\Contracts\\SettingsMigrationInterface"
+        }
+    ],
+    "permissions": [
+        "kontor-settings-export",
+        "kontor-settings-import"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "settings-migration",
+                "title": "Settings migration",
+                "icon": "exchange",
+                "order": 920
+            }
+        ],
+        "routes": []
+    },
+    "services": [
+        "Kontor\\Settings\\Application\\SettingsMigrationService"
+    ],
+    "events": {
+        "publishes": [
+            "settings.exported",
+            "settings.import.previewed",
+            "settings.import.applied"
+        ],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Settings\\Health\\SettingsHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en"]
+    },
+    "migrations": {
+        "path": null,
+        "supportsRollback": false
+    },
+    "storage": {
+        "tables": [],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": [],
+        "excludedFromProfiles": [
+            "passwords",
+            "API keys",
+            "tokens",
+            "private keys",
+            "mail credentials"
+        ]
+    }
+}

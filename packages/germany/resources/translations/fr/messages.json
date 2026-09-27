@@ -1,0 +1,9 @@
+{
+    "field.tax_id": "Numéro de TVA (USt-IdNr.)",
+    "field.document_format": "Format du document",
+    "format.xrechnung": "XRechnung",
+    "format.zugferd": "ZUGFeRD",
+    "action.seed_chart_of_accounts": "Initialiser le plan comptable standard",
+    "action.export_xrechnung": "Exporter en XRechnung",
+    "error.invalid_tax_id": "Ce numéro de TVA allemand n'est pas valide."
+}

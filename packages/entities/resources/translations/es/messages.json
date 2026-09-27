@@ -1,0 +1,16 @@
+{
+    "field.name": "Nombre",
+    "field.entity_key": "Clave",
+    "field.label": "Etiqueta",
+    "field.field_type": "Tipo",
+    "field.required": "Obligatorio",
+    "type.string": "Texto",
+    "type.int": "Número",
+    "type.decimal": "Decimal",
+    "type.bool": "Sí/No",
+    "type.date": "Fecha",
+    "type.datetime": "Fecha y hora",
+    "action.add_field": "Añadir campo",
+    "action.new_record": "Nuevo registro",
+    "action.save_view": "Guardar vista"
+}

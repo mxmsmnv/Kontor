@@ -1,0 +1,18 @@
+{
+    "field.category": "Categoría",
+    "field.description": "Descripción",
+    "field.amount": "Importe",
+    "field.expense_date": "Fecha del gasto",
+    "field.receipt": "Recibo",
+    "field.rejection_reason": "Motivo de rechazo",
+    "status.draft": "Borrador",
+    "status.submitted": "Enviado",
+    "status.approved": "Aprobado",
+    "status.rejected": "Rechazado",
+    "status.reimbursed": "Reembolsado",
+    "status.cancelled": "Cancelado",
+    "action.submit": "Enviar para aprobación",
+    "action.approve": "Aprobar",
+    "action.reject": "Rechazar",
+    "action.reimburse": "Marcar como reembolsado"
+}

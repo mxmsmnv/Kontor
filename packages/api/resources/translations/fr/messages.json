@@ -1,0 +1,18 @@
+{
+    "field.name": "Nom",
+    "field.token": "Jeton",
+    "field.scopes": "Portées",
+    "field.url": "URL",
+    "field.event_pattern": "Événement",
+    "field.status": "Statut",
+    "status.active": "Actif",
+    "status.revoked": "Révoqué",
+    "status.disabled": "Désactivé",
+    "delivery.status.pending": "En attente",
+    "delivery.status.delivered": "Livré",
+    "delivery.status.exhausted": "Épuisé",
+    "action.issue_token": "Émettre un jeton",
+    "action.revoke_token": "Révoquer le jeton",
+    "action.add_subscription": "Ajouter un abonnement webhook",
+    "action.replay_delivery": "Rejouer la livraison"
+}

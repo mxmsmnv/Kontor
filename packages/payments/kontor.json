@@ -1,0 +1,86 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorPayments",
+    "title": "Kontor Payments",
+    "description": "Payments, allocations, partial payments, reversals.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "sales",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorPayments",
+    "package": "kontor/payments",
+    "namespace": "Kontor\\Payments",
+    "processWireModule": "KontorPayments",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/invoices": "^1.0",
+        "kontor/sales": "^1.0"
+    },
+    "suggests": {
+        "kontor/ledger": "^1.0"
+    },
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-payments-payment-view",
+        "kontor-payments-payment-create",
+        "kontor-payments-payment-edit-draft",
+        "kontor-payments-payment-allocate",
+        "kontor-payments-payment-reverse",
+        "kontor-payments-refund-create"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "payments",
+                "title": "Payments",
+                "icon": "money",
+                "order": 330
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Payments\\Health\\PaymentsHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_payments",
+            "kontor_payment_allocations"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["payment.amount_minor", "payment.transaction_reference", "payment.external_id"]
+    }
+}

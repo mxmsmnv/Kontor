@@ -1,0 +1,13 @@
+{
+    "field.template_key": "Template key",
+    "field.document_type": "Document type",
+    "field.language": "Language",
+    "field.name": "Name",
+    "field.body_html": "Content",
+    "field.custom_css": "Custom CSS",
+    "field.version": "Version",
+    "action.publish": "Publish",
+    "action.preview": "Preview",
+    "action.render_pdf": "Download PDF",
+    "action.archive": "Archive"
+}

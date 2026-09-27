@@ -1,0 +1,136 @@
+<?php
+
+/** @var \Kontor\Mail\Domain\Mailbox[] $mailboxes */
+/** @var \Kontor\Mail\Domain\MailMessage[] $messages */
+/** @var \Kontor\Mail\Domain\MailMessage|null $selected */
+/** @var array<int, array{label: string, kind: string, route: ?string, uid: string}> $relationViews */
+/** @var array<int, array{value: string, label: string, kind: string, route: string}> $entityTargets */
+/** @var array<string, \Kontor\Mail\Contracts\InboundMailAdapterInterface> $adapters */
+/** @var string|null $assignedLabel */
+/** @var bool $canManageMailboxes */
+/** @var bool $canSend */
+/** @var string $adminUrl */
+/** @var string $csrfName */
+/** @var string $csrfValue */
+/** @var callable $e */
+
+$mailboxLabels = [];
+foreach ($mailboxes as $mailbox) {
+    $mailboxLabels[$mailbox->uid->toString()] = $mailbox->name;
+}
+$inboundCount = count(array_filter($messages, static fn ($message): bool => !$message->isOutbound()));
+$outboundCount = count($messages) - $inboundCount;
+$failedCount = count(array_filter($messages, static fn ($message): bool => $message->status === 'failed'));
+$activeMailboxCount = count(array_filter($mailboxes, static fn ($mailbox): bool => $mailbox->isActive()));
+$statusLabels = ['sent' => 'Sent', 'received' => 'Received', 'queued' => 'Queued', 'failed' => 'Failed'];
+$statusClasses = ['sent' => ' uk-label-success', 'received' => '', 'queued' => ' uk-label-warning', 'failed' => ' uk-label-danger'];
+$nearbyMessages = $selected === null ? [] : array_slice(array_values(array_filter(
+    $messages,
+    static fn ($message): bool => $message->uid->toString() !== $selected->uid->toString(),
+)), 0, 4);
+?>
+<div class="ProcessKontor pw-module-workspace kontor-shell">
+  <header class="pw-module-head kontor-pagehead">
+    <div>
+      <p class="kontor-eyebrow"><?= $selected !== null ? 'Mail · Message' : 'Communications · Shared inbox' ?></p>
+      <h2><?= $selected !== null ? $e($selected->subject) : 'Mail' ?></h2>
+      <p><?= $selected !== null ? 'Review the conversation, delivery state and connected customer record.' : 'Compose, receive and trace business email from one shared workspace.' ?></p>
+    </div>
+    <?php if ($selected !== null): ?><div class="pw-module-actions kontor-pagehead__actions"><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>mail/"><i class="fa fa-arrow-left"></i> Back to Mail</a></div><?php endif; ?>
+  </header>
+
+  <?php if ($selected === null): ?>
+    <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-margin-medium-bottom" uk-grid>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon<?= $activeMailboxCount > 0 ? ' kontor-stat__icon--success' : ' kontor-stat__icon--warning' ?>"><i class="fa fa-inbox"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $activeMailboxCount) ?></strong><span class="kontor-stat__label">Active mailboxes</span></span></div></div>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-arrow-down"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $inboundCount) ?></strong><span class="kontor-stat__label">Received messages</span></span></div></div>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-paper-plane"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $outboundCount) ?></strong><span class="kontor-stat__label">Outbound messages</span></span></div></div>
+      <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon<?= $failedCount > 0 ? ' kontor-stat__icon--danger' : ' kontor-stat__icon--success' ?>"><i class="fa fa-<?= $failedCount > 0 ? 'exclamation-triangle' : 'check' ?>"></i></span><span><strong class="kontor-stat__value"><?= $e((string) $failedCount) ?></strong><span class="kontor-stat__label">Delivery failures</span></span></div></div>
+    </div>
+
+    <div class="uk-alert-primary uk-margin-medium-bottom" uk-alert><h3 class="uk-h4"><i class="fa fa-info-circle"></i> About this workspace</h3><p>Mail keeps a shared history of customer communication. Simulate a message to test the workflow without sending anything; choose live delivery only when transport is configured and the recipient is ready.</p></div>
+
+    <div class="uk-grid-medium" uk-grid>
+      <div class="uk-width-1-1 uk-width-2-3@l">
+        <section class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+          <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Shared history</p><h3 class="uk-card-title uk-margin-small-top">Messages</h3><p class="uk-text-muted uk-margin-small-top">Open a message to read it and connect it to a contact or company when Contacts is installed.</p></div><div><span class="uk-label"><?= $e((string) count($messages)) ?> messages</span></div></div>
+          <?php if ($messages !== []): ?>
+            <ul class="uk-list uk-list-divider uk-margin-medium-top">
+              <?php foreach ($messages as $message): ?>
+                <?php $messageUid = $message->uid->toString(); $counterparty = $message->isOutbound() ? implode(', ', $message->toAddresses) : $message->fromAddress; ?>
+                <li><div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><a class="uk-link-reset" href="<?= $e($adminUrl) ?>mail/?id=<?= $e(rawurlencode($messageUid)) ?>"><strong><i class="fa fa-<?= $message->isOutbound() ? 'arrow-up' : 'arrow-down' ?> uk-margin-small-right"></i><?= $e($message->subject) ?></strong></a><div class="uk-text-meta uk-margin-small-top"><?= $message->isOutbound() ? 'To' : 'From' ?> <?= $e($counterparty) ?> · <?= $e($message->occurredAt->format('M j, Y · H:i')) ?></div></div><div class="uk-text-right@m"><span class="uk-label<?= $statusClasses[$message->status] ?? '' ?>"><?= $e($statusLabels[$message->status] ?? ucfirst($message->status)) ?></span><div class="uk-margin-small-top"><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>mail/?id=<?= $e(rawurlencode($messageUid)) ?>"><i class="fa fa-eye"></i> Review</a></div></div></div></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php else: ?><div class="uk-placeholder uk-text-center uk-margin-medium-top"><i class="fa fa-envelope-o fa-2x uk-text-muted"></i><h4>No messages yet</h4><p class="uk-text-muted">Compose a simulation or receive a forwarded email to start the shared history.</p></div><?php endif; ?>
+        </section>
+      </div>
+
+      <div class="uk-width-1-1 uk-width-1-3@l">
+        <section class="uk-card uk-card-default uk-card-small uk-card-body uk-height-1-1">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">New conversation</p><h3 class="uk-card-title uk-margin-small-top">Compose message</h3><p class="uk-text-muted">Start with a safe simulation. It creates a history record but does not contact the recipient.</p>
+          <?php if ($canSend): ?>
+            <form class="uk-form-stacked uk-margin-medium-top" method="post" action="<?= $e($adminUrl) ?>mail-outbound/" data-kontor-mail-compose>
+              <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+              <?php if ($mailboxes !== []): ?><div class="uk-margin"><label class="uk-form-label" for="mail-compose-mailbox">Shared mailbox</label><select class="uk-select uk-margin-small-top" id="mail-compose-mailbox" name="mailbox_uid" data-kontor-mailbox-select aria-describedby="mail-compose-mailbox-help"><option value="">Use another sender</option><?php foreach ($mailboxes as $mailbox): ?><option value="<?= $e($mailbox->uid->toString()) ?>" data-address="<?= $e($mailbox->emailAddress) ?>"><?= $e($mailbox->name . ' · ' . $mailbox->emailAddress) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top" id="mail-compose-mailbox-help">Selecting a mailbox fills the sender address.</div></div><?php endif; ?>
+              <div class="uk-margin"><label class="uk-form-label" for="mail-compose-from">From</label><input class="uk-input uk-margin-small-top" id="mail-compose-from" name="from_address" type="email" maxlength="320" placeholder="team@example.com" data-kontor-mail-from aria-describedby="mail-compose-from-help" required><div class="uk-text-meta uk-margin-small-top" id="mail-compose-from-help">The identity recipients will see as the sender.</div></div>
+              <div class="uk-margin"><label class="uk-form-label" for="mail-compose-to">To</label><input class="uk-input uk-margin-small-top" id="mail-compose-to" name="to_addresses" placeholder="customer@example.com" aria-describedby="mail-compose-to-help" required><div class="uk-text-meta uk-margin-small-top" id="mail-compose-to-help">Separate multiple addresses with commas.</div></div>
+              <div class="uk-margin"><label class="uk-form-label" for="mail-compose-subject">Subject</label><input class="uk-input uk-margin-small-top" id="mail-compose-subject" name="subject" maxlength="255" placeholder="A clear reason for writing" aria-describedby="mail-compose-subject-help" required><div class="uk-text-meta uk-margin-small-top" id="mail-compose-subject-help">Keep it specific so the conversation is easy to find later.</div></div>
+              <div class="uk-margin"><label class="uk-form-label" for="mail-compose-body">Message</label><textarea class="uk-textarea uk-margin-small-top" id="mail-compose-body" name="body_text" rows="7" placeholder="Write the message…" aria-describedby="mail-compose-body-help" required></textarea><div class="uk-text-meta uk-margin-small-top" id="mail-compose-body-help">Plain text is stored in the shared history.</div></div>
+              <details class="uk-margin"><summary>Additional recipients</summary><div class="uk-margin-top"><label class="uk-form-label" for="mail-compose-cc">CC</label><input class="uk-input uk-margin-small-top" id="mail-compose-cc" name="cc_addresses" placeholder="colleague@example.com"><div class="uk-text-meta uk-margin-small-top">Optional. Separate multiple addresses with commas.</div></div></details>
+              <div class="uk-grid-small uk-child-width-1-1 uk-child-width-auto@s" uk-grid><div><button class="uk-button uk-button-primary" type="submit" name="delivery_mode" value="simulate"><i class="fa fa-flask"></i> Save simulation</button></div><div><button class="uk-button uk-button-default" type="submit" name="delivery_mode" value="live" data-kontor-mail-live><i class="fa fa-paper-plane"></i> Send live</button></div></div>
+              <div class="uk-text-meta uk-margin-small-top">Live delivery uses the configured transport and may contact real recipients.</div>
+            </form>
+          <?php else: ?><div class="uk-alert-primary uk-margin-top" uk-alert><p><i class="fa fa-lock"></i> Your role can review mail but cannot send messages.</p></div><?php endif; ?>
+        </section>
+      </div>
+    </div>
+
+    <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
+      <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Sending identities</p><h3 class="uk-card-title uk-margin-small-top">Shared mailboxes</h3><p class="uk-text-muted uk-margin-small-top">Give the team recognizable sender addresses for sales, support or billing conversations.</p></div><div><span class="uk-label"><?= $e((string) $activeMailboxCount) ?> active</span></div></div>
+      <?php if ($mailboxes !== []): ?><ul class="uk-list uk-list-divider uk-margin-medium-top"><?php foreach ($mailboxes as $mailbox): ?><li><div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><strong><i class="fa fa-inbox uk-margin-small-right"></i><?= $e($mailbox->name) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $e($mailbox->emailAddress) ?></div></div><div><span class="uk-label<?= $mailbox->isActive() ? ' uk-label-success' : ' uk-label-warning' ?>"><?= $mailbox->isActive() ? 'Active' : 'Inactive' ?></span></div></div></li><?php endforeach; ?></ul><?php else: ?><div class="uk-placeholder uk-text-center uk-margin-medium-top"><i class="fa fa-inbox fa-2x uk-text-muted"></i><h4>No shared mailbox</h4><p class="uk-text-muted">You can still simulate a message with a sender address, or create a reusable team identity below.</p></div><?php endif; ?>
+      <?php if ($canManageMailboxes): ?><details<?= $mailboxes === [] ? ' open' : '' ?> class="uk-margin-medium-top"><summary class="uk-button uk-button-default"><i class="fa fa-plus"></i> Add shared mailbox</summary><form class="uk-form-stacked uk-margin-medium-top" method="post" action="<?= $e($adminUrl) ?>mail-mailbox/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><div class="uk-grid-small" uk-grid><div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="mailbox-name">Mailbox name</label><input class="uk-input uk-margin-small-top" id="mailbox-name" name="name" maxlength="255" placeholder="Customer support" required><div class="uk-text-meta uk-margin-small-top">Use the team or purpose people will recognize.</div></div><div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="mailbox-address">Email address</label><input class="uk-input uk-margin-small-top" id="mailbox-address" name="email_address" type="email" maxlength="320" placeholder="support@example.com" required><div class="uk-text-meta uk-margin-small-top">This becomes a selectable sender identity.</div></div></div><div class="uk-flex uk-flex-right uk-margin-medium-top"><button class="uk-button uk-button-primary" type="submit"><i class="fa fa-plus"></i> Create mailbox</button></div></form></details><?php endif; ?>
+    </section>
+
+    <?php if ($canManageMailboxes && $adapters !== []): ?>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top"><details><summary>Inbound developer tool</summary><div class="uk-margin-top"><h3 class="uk-card-title">Import a forwarded raw email</h3><p class="uk-text-muted">Use this integration test when a provider forwards complete email content. Normal users do not need this tool.</p><form class="uk-form-stacked" method="post" action="<?= $e($adminUrl) ?>mail-inbound/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><div class="uk-grid-small" uk-grid><div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="mail-inbound-mailbox">Destination mailbox</label><select class="uk-select uk-margin-small-top" id="mail-inbound-mailbox" name="mailbox_uid"><option value="">Unassigned</option><?php foreach ($mailboxes as $mailbox): ?><option value="<?= $e($mailbox->uid->toString()) ?>"><?= $e($mailbox->name) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Optional. Assign the imported message to a shared inbox.</div></div><div class="uk-width-1-1 uk-width-1-2@s"><label class="uk-form-label" for="mail-inbound-adapter">Import method</label><select class="uk-select uk-margin-small-top" id="mail-inbound-adapter" name="adapter"><?php foreach ($adapters as $key => $adapter): ?><option value="<?= $e($key) ?>">Forwarded raw email</option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">The available method is provided by the installed Mail component.</div></div><div class="uk-width-1-1"><label class="uk-form-label" for="mail-inbound-raw">Raw email</label><textarea class="uk-textarea uk-margin-small-top" id="mail-inbound-raw" name="raw_email" rows="9" placeholder="From: sender@example.com&#10;To: support@example.com&#10;Subject: Hello&#10;&#10;Message body" aria-describedby="mail-inbound-raw-help" required></textarea><div class="uk-text-meta uk-margin-small-top" id="mail-inbound-raw-help">Paste the full headers and body. Maximum size: 1 MB.</div></div></div><div class="uk-flex uk-flex-right uk-margin-medium-top"><button class="uk-button uk-button-primary" type="submit"><i class="fa fa-download"></i> Import message</button></div></form></div></details></section>
+    <?php endif; ?>
+  <?php else: ?>
+    <div class="<?= $selected->status === 'failed' ? 'uk-alert-danger' : 'uk-alert-primary' ?> uk-margin-medium-bottom" uk-alert>
+      <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid>
+        <div class="uk-width-expand@m"><h3 class="uk-h4"><i class="fa fa-<?= $selected->status === 'failed' ? 'exclamation-triangle' : ($selected->isOutbound() ? 'paper-plane' : 'inbox') ?>"></i> <?= $selected->status === 'failed' ? 'Delivery failed' : ($selected->isOutbound() ? 'Message sent' : 'Message received') ?></h3><p><?= $selected->status === 'failed' ? $e($selected->error ?? 'The mail transport did not accept this message.') : ($selected->isOutbound() ? 'This outbound message is part of the permanent shared communication history.' : 'This inbound message is ready for review and customer follow-up.') ?></p></div>
+        <div><span class="uk-label<?= $statusClasses[$selected->status] ?? '' ?>"><?= $e($statusLabels[$selected->status] ?? ucfirst($selected->status)) ?></span></div>
+      </div>
+    </div>
+
+    <div class="uk-grid-medium" uk-grid>
+      <div class="uk-width-1-1 uk-width-2-3@l">
+        <article class="uk-card uk-card-default uk-card-small uk-card-body">
+          <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid>
+            <div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom"><?= $selected->isOutbound() ? 'Outbound message' : 'Inbound message' ?></p><h3 class="uk-card-title uk-margin-small-top"><?= $e($selected->subject) ?></h3></div>
+            <div class="uk-text-right@m"><strong><?= $e($selected->occurredAt->format('M j, Y')) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $e($selected->occurredAt->format('H:i')) ?> local time</div></div>
+          </div>
+          <div class="uk-grid-small uk-grid-divider uk-child-width-1-1 uk-child-width-1-2@s uk-margin-medium-top" uk-grid>
+            <div><span class="uk-text-meta">From</span><div class="uk-margin-small-top"><i class="fa fa-user-circle uk-margin-small-right"></i><strong><?= $e($selected->fromAddress) ?></strong></div></div>
+            <div><span class="uk-text-meta">To</span><div class="uk-margin-small-top"><i class="fa fa-envelope-o uk-margin-small-right"></i><strong><?= $e(implode(', ', $selected->toAddresses)) ?></strong></div></div>
+            <?php if ($selected->ccAddresses !== []): ?><div><span class="uk-text-meta">CC</span><div class="uk-margin-small-top"><?= $e(implode(', ', $selected->ccAddresses)) ?></div></div><?php endif; ?>
+          </div>
+          <hr class="uk-margin-medium">
+          <div class="uk-text-break uk-margin-medium-bottom"><?= nl2br($e($selected->bodyText)) ?></div>
+        </article>
+      </div>
+      <div class="uk-width-1-1 uk-width-1-3@l">
+        <section class="uk-card uk-card-default uk-card-small uk-card-body">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Workflow</p><h3 class="uk-card-title uk-margin-small-top">Conversation context</h3>
+          <ul class="uk-list uk-list-divider uk-margin-medium-top"><li><span class="uk-text-meta">Direction</span><div class="uk-margin-small-top"><i class="fa fa-<?= $selected->isOutbound() ? 'arrow-up' : 'arrow-down' ?> uk-margin-small-right"></i><?= $selected->isOutbound() ? 'Outbound' : 'Inbound' ?></div></li><li><span class="uk-text-meta">Shared mailbox</span><div class="uk-margin-small-top"><?= $selected->mailboxUid !== null ? $e($mailboxLabels[$selected->mailboxUid] ?? 'Unavailable mailbox') : 'Not assigned' ?></div></li><li><span class="uk-text-meta">Owner</span><div class="uk-margin-small-top"><?= $e($assignedLabel ?? 'Unassigned') ?></div></li></ul>
+        </section>
+        <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
+          <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Related work</p><h3 class="uk-card-title uk-margin-small-top">Connected records</h3><p class="uk-text-muted">Follow this message into the customer or commercial workflow it belongs to.</p>
+          <?php if ($relationViews !== []): ?><ul class="uk-list uk-list-divider uk-margin-top"><?php foreach ($relationViews as $relation): ?><li><div class="uk-flex uk-flex-between uk-flex-middle uk-grid-small" uk-grid><div class="uk-width-expand"><strong><?= $e($relation['label']) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $e($relation['kind']) ?></div></div><?php if ($relation['route'] !== null): ?><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl . $relation['route']) ?>"><i class="fa fa-arrow-right"></i> Open</a></div><?php endif; ?></div></li><?php endforeach; ?></ul><?php else: ?><p class="uk-text-muted">No related record is connected yet.</p><?php endif; ?>
+          <?php if ($entityTargets !== []): ?><details class="uk-margin-top"><summary>Connect a customer record</summary><form class="uk-form-stacked uk-margin-top" method="post" action="<?= $e($adminUrl) ?>mail-link/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="message_uid" value="<?= $e($selected->uid->toString()) ?>"><label class="uk-form-label" for="mail-entity-target">Contact or company</label><select class="uk-select uk-margin-small-top" id="mail-entity-target" name="entity_target" required><option value="" selected disabled>Choose a record</option><?php foreach ($entityTargets as $target): ?><option value="<?= $e($target['value']) ?>"><?= $e($target['kind'] . ' · ' . $target['label']) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">The conversation will become accessible from the selected customer record.</div><button class="uk-button uk-button-primary uk-margin-top" type="submit"><i class="fa fa-link"></i> Connect record</button></form></details><?php elseif ($relationViews === []): ?><div class="uk-alert-primary uk-margin-top" uk-alert><p><i class="fa fa-info-circle"></i> Install Contacts and grant access to connect customer records.</p></div><?php endif; ?>
+          <details class="uk-margin-top"><summary>Technical reference</summary><div class="uk-text-meta uk-margin-small-top">Message <?= $e($selected->uid->toString()) ?></div></details>
+        </section>
+      </div>
+    </div>
+
+    <?php if ($nearbyMessages !== []): ?><section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top"><div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Shared history</p><h3 class="uk-card-title uk-margin-small-top">Nearby messages</h3><p class="uk-text-muted uk-margin-small-top">Continue reviewing recent communication without returning to the full list.</p></div><div><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>mail/"><i class="fa fa-list"></i> All messages</a></div></div><ul class="uk-list uk-list-divider uk-margin-medium-top"><?php foreach ($nearbyMessages as $message): ?><?php $uid = $message->uid->toString(); ?><li><div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><strong><?= $e($message->subject) ?></strong><div class="uk-text-meta uk-margin-small-top"><?= $message->isOutbound() ? 'To ' . $e(implode(', ', $message->toAddresses)) : 'From ' . $e($message->fromAddress) ?> · <?= $e($message->occurredAt->format('M j · H:i')) ?></div></div><div><a class="uk-button uk-button-default uk-button-small uk-link-reset" href="<?= $e($adminUrl) ?>mail/?id=<?= $e(rawurlencode($uid)) ?>"><i class="fa fa-eye"></i> Review</a></div></div></li><?php endforeach; ?></ul></section><?php endif; ?>
+  <?php endif; ?>
+</div>

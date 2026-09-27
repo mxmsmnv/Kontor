@@ -1,0 +1,18 @@
+{
+    "field.name": "Name",
+    "field.token": "Token",
+    "field.scopes": "Berechtigungen",
+    "field.url": "URL",
+    "field.event_pattern": "Ereignis",
+    "field.status": "Status",
+    "status.active": "Aktiv",
+    "status.revoked": "Widerrufen",
+    "status.disabled": "Deaktiviert",
+    "delivery.status.pending": "Ausstehend",
+    "delivery.status.delivered": "Zugestellt",
+    "delivery.status.exhausted": "Erschöpft",
+    "action.issue_token": "Token ausstellen",
+    "action.revoke_token": "Token widerrufen",
+    "action.add_subscription": "Webhook-Abonnement hinzufügen",
+    "action.replay_delivery": "Zustellung wiederholen"
+}

@@ -1,0 +1,15 @@
+{
+    "field.number": "Numéro",
+    "field.payer": "Payeur",
+    "field.payment_date": "Date de paiement",
+    "field.amount": "Montant",
+    "field.method": "Méthode",
+    "field.transaction_reference": "Référence de transaction",
+    "status.draft": "Brouillon",
+    "status.confirmed": "Confirmé",
+    "status.reversed": "Annulé",
+    "method.bank_transfer": "Virement bancaire",
+    "method.card": "Carte",
+    "method.cash": "Espèces",
+    "method.other": "Autre"
+}

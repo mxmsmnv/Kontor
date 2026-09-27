@@ -1,0 +1,90 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorPurchasing",
+    "title": "Kontor Purchasing",
+    "description": "Suppliers, purchase orders, goods receipt, inventory integration.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "operations",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorPurchasing",
+    "package": "kontor/purchasing",
+    "namespace": "Kontor\\Purchasing",
+    "processWireModule": "KontorPurchasing",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/sales": "^1.0",
+        "kontor/inventory": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-purchasing-supplier-view",
+        "kontor-purchasing-supplier-create",
+        "kontor-purchasing-supplier-edit",
+        "kontor-purchasing-supplier-archive",
+        "kontor-purchasing-po-view",
+        "kontor-purchasing-po-create",
+        "kontor-purchasing-po-edit-draft",
+        "kontor-purchasing-po-issue",
+        "kontor-purchasing-po-cancel",
+        "kontor-purchasing-receipt-create"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "purchasing",
+                "title": "Purchasing",
+                "icon": "truck",
+                "order": 510
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Purchasing\\Health\\PurchasingHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_purchasing_suppliers",
+            "kontor_purchasing_orders",
+            "kontor_purchasing_receipts",
+            "kontor_purchasing_receipt_lines"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["purchase_order.total_minor"]
+    }
+}

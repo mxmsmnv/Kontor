@@ -1,0 +1,13 @@
+{
+    "field.email": "Correo electrónico",
+    "field.password": "Contraseña",
+    "field.first_name": "Nombre",
+    "field.last_name": "Apellido",
+    "field.phone": "Teléfono",
+    "action.login": "Iniciar sesión",
+    "action.view_quotation": "Ver presupuesto",
+    "action.view_invoice": "Ver factura",
+    "action.download_file": "Descargar",
+    "action.update_profile": "Actualizar perfil",
+    "error.invalid_credentials": "Correo electrónico o contraseña no válidos."
+}

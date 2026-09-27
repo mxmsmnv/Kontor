@@ -1,0 +1,85 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorEntities",
+    "title": "Kontor Custom Entities",
+    "description": "Entity builder, fields, relations, views, permissions, API exposure.",
+    "version": "1.0.0",
+    "type": "platform",
+    "category": "extensibility",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorEntities",
+    "package": "kontor/entities",
+    "namespace": "Kontor\\Entities",
+    "processWireModule": "KontorEntities",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0"
+    },
+    "suggests": {
+        "kontor/api": "^1.0",
+        "kontor/graphql": "^1.0"
+    },
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-entities-definition-manage",
+        "kontor-entities-record-view",
+        "kontor-entities-record-manage",
+        "kontor-entities-view-manage"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "entities",
+                "title": "Custom Entities",
+                "icon": "cube",
+                "order": 620
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Entities\\Health\\EntitiesHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_entity_definitions",
+            "kontor_entity_fields",
+            "kontor_entity_records",
+            "kontor_entity_views"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

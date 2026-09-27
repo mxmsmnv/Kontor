@@ -1,0 +1,54 @@
+{
+    "name": "kontor/demo",
+    "description": "Kontor Demo: connected order-to-cash scenario across business components.",
+    "type": "library",
+    "license": "MIT",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Maxim Semenov",
+            "homepage": "https://github.com/mxmsmnv"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kontor/core": "^1.0",
+        "kontor/contacts": "^1.0",
+        "kontor/crm": "^1.0",
+        "kontor/catalog": "^1.0",
+        "kontor/sales": "^1.0",
+        "kontor/workflow": "^1.0",
+        "kontor/tasks": "^1.0",
+        "kontor/collaboration": "^1.0",
+        "kontor/projects": "^1.0",
+        "kontor/invoices": "^1.0",
+        "kontor/payments": "^1.0",
+        "kontor/files": "^1.0",
+        "kontor/mail": "^1.0",
+        "kontor/ledger": "^1.0",
+        "kontor/germany": "^1.0"
+    },
+    "repositories": [
+        {
+            "name": "monorepo",
+            "type": "path",
+            "url": "../*"
+        },
+        {
+            "type": "path",
+            "url": "../*"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kontor\\Demo\\": "src/",
+            "Kontor\\Demo\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontor\\Demo\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}

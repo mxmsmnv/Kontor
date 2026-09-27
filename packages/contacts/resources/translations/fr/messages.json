@@ -1,0 +1,16 @@
+{
+    "contact.display_name.required": "Saisissez un prénom, un nom ou un nom d'affichage.",
+    "contact.email.invalid": "Saisissez une adresse e-mail valide.",
+    "company.legal_name.required": "Saisissez la raison sociale de l'entreprise.",
+    "company.email.invalid": "Saisissez une adresse e-mail valide.",
+    "field.first_name": "Prénom",
+    "field.last_name": "Nom",
+    "field.display_name": "Nom d'affichage",
+    "field.email": "E-mail",
+    "field.phone": "Téléphone",
+    "field.mobile": "Mobile",
+    "field.job_title": "Fonction",
+    "field.legal_name": "Raison sociale",
+    "field.trading_name": "Nom commercial",
+    "field.tags": "Étiquettes"
+}

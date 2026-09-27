@@ -1,0 +1,104 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Kontor\Contacts\Tests\Integration;
+
+use Kontor\Contacts\Domain\Company;
+use Kontor\Contacts\Infrastructure\Persistence\CompanyRepository;
+use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+
+final class CompanyRepositoryTest extends DatabaseTestCase
+{
+    private function repository(): CompanyRepository
+    {
+        return new CompanyRepository($this->pdo, new OrganizationRepository($this->pdo));
+    }
+
+    public function test_save_then_find_round_trips(): void
+    {
+        $repository = $this->repository();
+        $company = Company::create($this->organizationUid, 'Acme GmbH', vatNumber: 'DE123456789');
+
+        $repository->save($company);
+        $found = $repository->find($company->uid->toString());
+
+        $this->assertSame('Acme GmbH', $found->legalName);
+        $this->assertSame('DE123456789', $found->vatNumber);
+    }
+
+    public function test_find_by_vat_number_and_email(): void
+    {
+        $repository = $this->repository();
+        $company = Company::create($this->organizationUid, 'Acme GmbH', vatNumber: 'DE123456789', email: 'billing@acme.test');
+        $repository->save($company);
+
+        $this->assertSame($company->uid->toString(), $repository->findByVatNumber($this->organizationUid, 'DE123456789')->uid->toString());
+        $this->assertSame($company->uid->toString(), $repository->findByEmail($this->organizationUid, 'billing@acme.test')->uid->toString());
+    }
+
+    public function test_archive_then_restore(): void
+    {
+        $repository = $this->repository();
+        $company = Company::create($this->organizationUid, 'Acme GmbH');
+        $repository->save($company);
+
+        $repository->archive($company->uid->toString());
+        $row = $this->pdo->query('SELECT archived_at FROM kontor_companies')->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNotNull($row['archived_at']);
+
+        $repository->restore($company->uid->toString());
+        $row = $this->pdo->query('SELECT archived_at FROM kontor_companies')->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNull($row['archived_at']);
+    }
+
+    public function test_find_all_searches_active_companies_and_count_excludes_archived(): void
+    {
+        $repository = $this->repository();
+        $acme = Company::create(
+            $this->organizationUid,
+            'Acme GmbH',
+            registrationNumber: 'HRB-123',
+            email: 'hello@acme.test'
+        );
+        $globex = Company::create(
+            $this->organizationUid,
+            'Globex LLC',
+            email: 'hello@globex.test',
+            status: 'inactive'
+        );
+        $repository->save($acme);
+        $repository->save($globex);
+
+        $matches = $repository->findAll($this->organizationUid, 'HRB-123');
+        $this->assertCount(1, $matches);
+        $this->assertSame('Acme GmbH', $matches[0]->legalName);
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, 'HRB-123'));
+        $this->assertSame(
+            ['Globex LLC'],
+            array_map(
+                static fn (Company $company): string => $company->legalName,
+                $repository->findAll($this->organizationUid, status: 'inactive')
+            )
+        );
+        $this->assertSame(1, $repository->countMatching($this->organizationUid, status: 'inactive'));
+        $firstPage = $repository->findAll($this->organizationUid, limit: 1);
+        $secondPage = $repository->findAll($this->organizationUid, limit: 1, offset: 1);
+        $this->assertNotSame($firstPage[0]->uid->toString(), $secondPage[0]->uid->toString());
+        $this->assertSame(2, $repository->countActive($this->organizationUid));
+
+        $repository->archive($globex->uid->toString());
+        $this->assertSame(1, $repository->countActive($this->organizationUid));
+        $this->assertSame(
+            ['Globex LLC'],
+            array_map(static fn (Company $company): string => $company->legalName, $repository->findArchived($this->organizationUid))
+        );
+    }
+
+    public function test_require_throws_for_unknown_uid(): void
+    {
+        $this->expectException(\RuntimeException::class);
+
+        $this->repository()->require(\Kontor\SDK\ValueObjects\Uid::generate()->toString());
+    }
+}

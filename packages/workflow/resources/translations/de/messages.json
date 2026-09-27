@@ -1,0 +1,11 @@
+{
+    "field.name": "Name",
+    "field.state": "Status",
+    "field.action": "Aktion",
+    "status.pending": "Ausstehend",
+    "status.approved": "Genehmigt",
+    "status.rejected": "Abgelehnt",
+    "action.approve": "Genehmigen",
+    "action.reject": "Ablehnen",
+    "label.history": "Verlauf"
+}

@@ -1,0 +1,13 @@
+{
+    "field.email": "E-mail",
+    "field.password": "Mot de passe",
+    "field.first_name": "Prénom",
+    "field.last_name": "Nom",
+    "field.phone": "Téléphone",
+    "action.login": "Se connecter",
+    "action.view_quotation": "Voir le devis",
+    "action.view_invoice": "Voir la facture",
+    "action.download_file": "Télécharger",
+    "action.update_profile": "Mettre à jour le profil",
+    "error.invalid_credentials": "E-mail ou mot de passe invalide."
+}

@@ -1,0 +1,81 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorReports",
+    "title": "Kontor Reports",
+    "description": "Report builder, charts, exports, scheduled reports.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "collaboration",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorReports",
+    "package": "kontor/reports",
+    "namespace": "Kontor\\Reports",
+    "processWireModule": "KontorReports",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/documents": "^1.0",
+        "kontor/files": "^1.0",
+        "kontor/queue": "^1.0"
+    },
+    "suggests": {},
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-reports-report-view",
+        "kontor-reports-report-export",
+        "kontor-reports-schedule-manage"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "reports",
+                "title": "Reports",
+                "icon": "bar-chart",
+                "order": 420
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Reports\\Health\\ReportsHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_scheduled_reports"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": []
+    }
+}

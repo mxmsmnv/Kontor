@@ -1,0 +1,18 @@
+{
+    "field.category": "Category",
+    "field.description": "Description",
+    "field.amount": "Amount",
+    "field.expense_date": "Expense date",
+    "field.receipt": "Receipt",
+    "field.rejection_reason": "Rejection reason",
+    "status.draft": "Draft",
+    "status.submitted": "Submitted",
+    "status.approved": "Approved",
+    "status.rejected": "Rejected",
+    "status.reimbursed": "Reimbursed",
+    "status.cancelled": "Cancelled",
+    "action.submit": "Submit for approval",
+    "action.approve": "Approve",
+    "action.reject": "Reject",
+    "action.reimburse": "Mark reimbursed"
+}

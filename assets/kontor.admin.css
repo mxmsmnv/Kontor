@@ -1,0 +1,2583 @@
+.kontor-shell {
+  color: var(--pw-text-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: -0.25rem 0 2rem;
+  min-width: 0;
+}
+
+.kontor-shell > * {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  min-width: 0;
+}
+
+.kontor-shell code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.kontor-shell :not(pre) > code {
+  white-space: normal;
+}
+
+.kontor-shell *,
+.kontor-shell *::before,
+.kontor-shell *::after {
+  box-sizing: border-box;
+}
+
+.kontor-eyebrow {
+  color: var(--pw-muted-color);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+}
+
+.kontor-pagehead h2 {
+  color: inherit;
+  font-size: clamp(1.65rem, 3vw, 2.4rem);
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0 0 0.65rem;
+}
+
+.kontor-pagehead__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.kontor-pagehead__actions .uk-button-primary {
+  color: #fff !important;
+}
+
+.kontor-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+  justify-content: center;
+  text-decoration: none !important;
+}
+
+.kontor-button--ghost {
+  background: var(--pw-button-muted-background) !important;
+  border-color: var(--pw-button-muted-border) !important;
+  color: var(--pw-button-muted-color) !important;
+}
+
+.kontor-button--ghost:hover {
+  background: var(--pw-button-hover-background) !important;
+  color: var(--pw-button-hover-color) !important;
+}
+
+.kontor-card {
+  color: var(--pw-text-color);
+}
+
+.kontor-shell .uk-label:not(.uk-label-success):not(.uk-label-warning) {
+  background: #4b5563;
+  color: #fff;
+}
+
+.kontor-stat {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  padding: 1.2rem;
+}
+
+.kontor-stat__icon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: flex;
+  flex: 0 0 46px;
+  font-size: 1.1rem;
+  height: 46px;
+  justify-content: center;
+}
+
+.kontor-stat__value {
+  display: block;
+  font-size: 1.65rem;
+  font-weight: 760;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.kontor-stat__label {
+  color: var(--pw-muted-color);
+  font-size: 0.82rem;
+}
+
+.kontor-dashboardwidgets {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-auto-flow: row dense;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.kontor-dashboardwidget {
+  box-shadow: none;
+  grid-column: var(--kontor-widget-column) / span var(--kontor-widget-span);
+  min-width: 0;
+}
+
+.kontor-dashboardwidget .kontor-panel__head {
+  border-bottom: 1px solid var(--pw-border-color);
+  padding-bottom: 0.75rem;
+}
+
+.kontor-dashboardwidget__status {
+  align-items: center;
+  color: var(--pw-muted-color);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  gap: 0.35rem;
+}
+
+.kontor-dashboardwidget__welcome {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.kontor-dashboardwidget__welcome p {
+  color: var(--pw-muted-color);
+  margin: 0.25rem 0 0;
+}
+
+.kontor-dashboardwidget__heroicon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: inline-flex;
+  flex: 0 0 2.5rem;
+  height: 2.5rem;
+  justify-content: center;
+}
+
+.kontor-dashboardwidget__metrics {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0.75rem;
+}
+
+.kontor-dashboardwidget__metrics span {
+  background: var(--pw-main-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-muted-color);
+  padding: 0.7rem;
+}
+
+.kontor-dashboardwidget__metrics strong {
+  color: var(--pw-text-color);
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.kontor-dashboardwidget pre {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.kontor-dashboardwidget__controls {
+  align-items: center;
+  border-top: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+
+.kontor-dashboardwidget__controls > span {
+  color: var(--pw-muted-color);
+  font-size: 0.7rem;
+  margin-right: auto;
+}
+
+.kontor-dashboardwidget__controls .uk-button {
+  align-items: center;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0 0.55rem;
+}
+
+.kontor-dashboardwidget__remove {
+  color: var(--pw-error-inline-text-color) !important;
+}
+
+.kontor-panel {
+  padding: 1.25rem;
+}
+
+.kontor-panel__head {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.kontor-panel__head h3 {
+  color: var(--pw-text-color);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.kontor-panel__head a {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.kontor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.kontor-list li {
+  align-items: center;
+  border-top: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.85rem 0;
+}
+
+.kontor-list li:first-child {
+  border-top: 0;
+}
+
+.kontor-avatar {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: inline-flex;
+  flex: 0 0 38px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  height: 38px;
+  justify-content: center;
+  text-transform: uppercase;
+}
+
+.kontor-list__body {
+  min-width: 0;
+}
+
+.kontor-list__body strong,
+.kontor-list__body a {
+  color: var(--pw-text-color);
+  display: block;
+  font-weight: 720;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kontor-list__body small {
+  color: var(--pw-muted-color);
+}
+
+.kontor-quicklinks {
+  display: grid;
+  gap: 0;
+}
+
+.kontor-quicklink {
+  align-items: center;
+  border-top: 1px solid var(--pw-border-color);
+  color: var(--pw-text-color) !important;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  text-decoration: none !important;
+}
+
+.kontor-quicklink:first-child {
+  border-top: 0;
+}
+
+.kontor-quicklink:hover {
+  color: var(--pw-main-color) !important;
+}
+
+.kontor-quicklink i {
+  color: var(--pw-main-color);
+  width: 1.25rem;
+}
+
+.kontor-pagehead {
+  align-items: flex-end;
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.kontor-pagehead p {
+  color: var(--pw-muted-color);
+  margin: 0;
+}
+
+.kontor-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.kontor-toolbar__meta {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+}
+
+.kontor-viewtoggle {
+  color: var(--pw-main-color);
+  font-size: 0.8rem;
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.kontor-search {
+  display: flex;
+  flex: 1;
+  gap: 0.55rem;
+  max-width: 510px;
+}
+
+.kontor-search input {
+  width: 100%;
+}
+
+.kontor-tablewrap {
+  overflow-x: auto;
+}
+
+.kontor-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.kontor-table th {
+  color: var(--pw-muted-color);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.kontor-table td {
+  border-top: 1px solid var(--pw-border-color);
+  padding: 0.9rem 1rem;
+  vertical-align: middle;
+}
+
+.kontor-table tbody tr:hover {
+  background: var(--pw-main-background);
+}
+
+.kontor-bulkactions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin: -0.25rem 0 0.75rem;
+}
+
+.kontor-selectcell {
+  text-align: center !important;
+  width: 28px;
+}
+
+.kontor-selectcell input {
+  cursor: pointer;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
+.kontor-rowaction {
+  text-align: right;
+  width: 44px;
+}
+
+.kontor-rowaction form {
+  margin: 0;
+}
+
+.kontor-rowaction button,
+.kontor-inline-action button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-muted-color);
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.kontor-rowaction button:hover,
+.kontor-inline-action button:hover {
+  background: var(--pw-main-background);
+  color: var(--pw-main-color);
+}
+
+.kontor-visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.kontor-identity {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 220px;
+}
+
+.kontor-identity__body {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.kontor-identity a {
+  color: var(--pw-text-color);
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.ProcessKontor .uk-dropdown-nav a,
+.ProcessKontor .uk-dropdown-nav .uk-button-text {
+  text-decoration: none;
+}
+
+.ProcessKontor .uk-dropdown-nav .uk-button-text {
+  justify-content: flex-start;
+  text-transform: none;
+  width: 100%;
+}
+
+.kontor-secondary {
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+}
+
+.kontor-filtercount {
+  margin-left: auto;
+}
+
+.kontor-pill {
+  background: var(--pw-alert-success);
+  border-radius: 999px;
+  color: var(--pw-text-color);
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 750;
+  padding: 0.28rem 0.55rem;
+  text-transform: capitalize;
+}
+
+.kontor-pill--inactive {
+  background: var(--pw-main-background);
+  color: var(--pw-muted-color);
+}
+
+.kontor-pill--warning {
+  background: var(--pw-alert-warning);
+  color: var(--pw-text-color);
+}
+
+.kontor-pill--critical,
+.kontor-pill--danger {
+  background: var(--pw-alert-danger);
+  color: var(--pw-error-inline-text-color);
+}
+
+.kontor-empty {
+  color: var(--pw-muted-color);
+  padding: 3.25rem 1.5rem;
+  text-align: center;
+}
+
+.kontor-empty i {
+  color: var(--pw-muted-color);
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 0.8rem;
+}
+
+.kontor-empty h3 {
+  color: var(--pw-text-color);
+  margin: 0 0 0.4rem;
+}
+
+.kontor-formhead {
+  color: var(--pw-text-color);
+}
+
+.kontor-formhead__back {
+  color: var(--pw-main-color);
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-decoration: none;
+}
+
+.kontor-formhead__toolbar {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kontor-formhead__toolbar form {
+  margin: 0;
+}
+
+.kontor-formhead__toolbar .kontor-formhead__back {
+  margin-bottom: 1rem;
+}
+
+.kontor-formhead h2 {
+  color: var(--pw-text-color);
+  margin: 0 0 0.35rem;
+}
+
+.kontor-detailgrid {
+  display: grid;
+  gap: var(--pw-space-m, 1.25rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  margin-block: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-detailgrid > div {
+  min-width: 0;
+}
+
+.kontor-detailgrid span,
+.kontor-detailgrid strong {
+  display: block;
+}
+
+.kontor-detailgrid span {
+  color: var(--pw-muted-color);
+  font-size: 0.875rem;
+  margin-bottom: var(--pw-space-2xs, 0.25rem);
+}
+
+.kontor-detailgrid strong {
+  overflow-wrap: anywhere;
+}
+
+.kontor-priceactions,
+.kontor-priceactions form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.kontor-priceactions form {
+  margin: 0;
+}
+
+.kontor-priceactions select {
+  min-height: 40px;
+}
+
+.kontor-formhead p:last-child {
+  color: var(--pw-muted-color);
+  margin: 0;
+}
+
+.kontor-entity-form {
+  min-width: 0;
+}
+
+.ProcessKontor .kontor-entity-form .notes {
+  background: transparent !important;
+  color: var(--pw-muted-color) !important;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.kontor-nativeform {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  padding: 1.2rem;
+}
+
+.kontor-nativefield {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.kontor-nativefield > span {
+  color: var(--pw-text-color);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.kontor-field-guidance {
+  display: grid;
+  gap: 0.15rem;
+  line-height: 1.45;
+}
+
+.kontor-field-description,
+.kontor-field-note {
+  color: var(--pw-muted-color);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.kontor-field-note {
+  color: var(--pw-text-color);
+}
+
+.kontor-field-note strong {
+  color: inherit;
+  font-weight: 650;
+}
+
+.kontor-nativefield input,
+.kontor-nativefield select,
+.kontor-nativefield textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.kontor-nativefield--wide,
+.kontor-nativeform__actions {
+  grid-column: 1 / -1;
+}
+
+.kontor-nativeform__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.kontor-nativeform--embedded {
+  margin-top: var(--pw-space-m, 1.25rem);
+  padding: 0;
+}
+
+.kontor-contact-hero {
+  margin-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-contact-workspace .uk-button {
+  text-decoration: none !important;
+}
+
+.kontor-crm-workspace .uk-button {
+  text-decoration: none !important;
+}
+
+.kontor-crm-workspace .uk-button-primary {
+  color: #fff !important;
+}
+
+.kontor-lead-workspace .uk-button {
+  text-decoration: none !important;
+}
+
+.kontor-lead-workspace .uk-button-primary {
+  color: #fff !important;
+}
+
+.kontor-lead-summary {
+  margin-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-lead-icon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: 50%;
+  color: var(--pw-main-color);
+  display: inline-flex;
+  font-size: 1.15rem;
+  height: 3rem;
+  justify-content: center;
+  width: 3rem;
+}
+
+.kontor-lead-summary__title {
+  color: var(--pw-text-color);
+  display: block;
+  font-size: 1rem;
+}
+
+.kontor-lead-steps {
+  display: grid;
+  gap: var(--pw-space-s, 0.75rem);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin: var(--pw-space-m, 1.25rem) 0;
+  padding: 0;
+}
+
+.kontor-lead-steps li {
+  align-items: center;
+  background: var(--pw-blocks-background);
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+  min-width: 0;
+  padding: var(--pw-space-s, 0.75rem);
+}
+
+.kontor-lead-steps li > span {
+  align-items: center;
+  background: var(--pw-main-background);
+  border-radius: 50%;
+  color: var(--pw-muted-color);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 750;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.kontor-lead-steps li.is-current > span,
+.kontor-lead-steps li.is-complete > span {
+  background: var(--pw-main-color);
+  color: #fff;
+}
+
+.kontor-lead-steps li.is-current {
+  box-shadow: inset 0 -3px 0 var(--pw-main-color);
+}
+
+.kontor-lead-steps strong,
+.kontor-lead-steps small {
+  display: block;
+}
+
+.kontor-lead-steps small {
+  color: var(--pw-muted-color);
+  font-size: 0.72rem;
+  margin-top: 0.1rem;
+}
+
+.kontor-lead-savecard {
+  position: sticky;
+  top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-lead-savecard h3 {
+  margin-top: 0;
+}
+
+.kontor-lead-conversion form {
+  margin: var(--pw-space-m, 1.25rem) 0 0;
+}
+
+.kontor-contact-avatar {
+  align-items: center;
+  background: var(--pw-main-color);
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 750;
+  height: 3.25rem;
+  justify-content: center;
+  letter-spacing: 0.04em;
+  width: 3.25rem;
+}
+
+.kontor-contact-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pw-space-s, 0.75rem);
+  margin-top: var(--pw-space-xs, 0.5rem);
+}
+
+.kontor-contact-overview {
+  color: var(--pw-text-color);
+  font-size: 1rem;
+}
+
+.kontor-contact-channels a {
+  color: var(--pw-muted-color);
+  font-size: 0.875rem;
+}
+
+.kontor-contact-channels i {
+  color: var(--pw-main-color);
+  margin-right: var(--pw-space-2xs, 0.25rem);
+}
+
+.kontor-section-intro {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--pw-space-s, 0.75rem);
+  padding: var(--pw-space-s, 0.75rem) 0;
+}
+
+.kontor-section-intro > i {
+  color: var(--pw-main-color);
+  margin-top: 0.2rem;
+}
+
+.kontor-section-intro strong,
+.kontor-section-intro p {
+  display: block;
+}
+
+.kontor-section-intro p {
+  color: var(--pw-muted-color);
+  margin: var(--pw-space-2xs, 0.25rem) 0 0;
+}
+
+.kontor-contact-savecard {
+  position: sticky;
+  top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-contact-savecard h3 {
+  margin-top: 0;
+}
+
+.kontor-checklist li {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+}
+
+.kontor-checklist i {
+  color: var(--pw-main-color);
+  margin-top: 0.2rem;
+}
+
+.kontor-confirm-duplicate {
+  align-items: center;
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+}
+
+.kontor-contact-workgroup {
+  background: var(--pw-main-background);
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--pw-space-s, 0.75rem);
+}
+
+.kontor-contact-workgroup h4 {
+  margin: 0;
+}
+
+.kontor-contact-workgroup h4 i {
+  color: var(--pw-main-color);
+  margin-right: var(--pw-space-2xs, 0.25rem);
+}
+
+.kontor-contact-workgroup li {
+  align-items: center;
+  display: flex;
+  gap: var(--pw-space-s, 0.75rem);
+  justify-content: space-between;
+}
+
+.kontor-contact-workgroup li > div {
+  min-width: 0;
+}
+
+.kontor-contact-workgroup li strong,
+.kontor-contact-workgroup li span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.kontor-related-form {
+  border-top: 1px solid var(--pw-border-color);
+  margin-top: var(--pw-space-m, 1.25rem);
+  padding-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-taglist--left {
+  justify-content: flex-start;
+  margin-top: var(--pw-space-m, 1.25rem);
+}
+
+.kontor-contact-checkbox {
+  align-items: center;
+  align-self: end;
+  display: flex;
+  gap: var(--pw-space-xs, 0.5rem);
+  min-height: 40px;
+}
+
+.kontor-warning {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.kontor-warning > i {
+  margin-top: 0.18rem;
+}
+
+.kontor-warning strong {
+  color: var(--pw-text-color);
+}
+
+.kontor-warning p {
+  margin: 0.2rem 0 0;
+}
+
+.kontor-tags {
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-taglist {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.kontor-tag {
+  background: var(--pw-inputs-background);
+  border-radius: 999px;
+  color: var(--pw-main-color);
+  font-size: 0.72rem;
+  font-weight: 720;
+  padding: 0.28rem 0.55rem;
+}
+
+.kontor-tagform {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.kontor-tagform input {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  box-sizing: border-box;
+  color: var(--pw-text-color);
+  flex: 1;
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+}
+
+.kontor-relations {
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-sectionhead {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kontor-sectionhead h3 {
+  color: var(--pw-text-color);
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.kontor-relationlist {
+  border-top: 1px solid var(--pw-border-color);
+  margin-top: 1rem;
+}
+
+.kontor-relation {
+  align-items: center;
+  border-bottom: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.85rem 0;
+}
+
+.kontor-relation__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kontor-relation__body a {
+  color: var(--pw-text-color);
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.kontor-inline-action {
+  margin: 0;
+}
+
+.kontor-relations__empty {
+  color: var(--pw-muted-color);
+  font-size: 0.85rem;
+  margin: 1rem 0 0;
+}
+
+.kontor-relationform {
+  align-items: end;
+  background: var(--pw-main-background);
+  border-radius: var(--pw-input-radius);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  margin-top: 1rem;
+  padding: 0.85rem;
+}
+
+.kontor-relationform label {
+  margin: 0;
+}
+
+.kontor-relationform label > span {
+  color: var(--pw-muted-color);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 750;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+.kontor-relationform input,
+.kontor-relationform select {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  box-sizing: border-box;
+  color: var(--pw-text-color);
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.kontor-addresses {
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.kontor-addressgrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.kontor-address {
+  background: var(--pw-main-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  padding: 0.8rem;
+}
+
+.kontor-address__top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kontor-address address {
+  color: var(--pw-muted-color);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  font-style: normal;
+  gap: 0.15rem;
+  margin-top: 0.65rem;
+}
+
+.kontor-address address strong {
+  color: var(--pw-text-color);
+}
+
+.kontor-addressform {
+  align-items: end;
+  background: var(--pw-main-background);
+  border-radius: var(--pw-input-radius);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  padding: 0.85rem;
+}
+
+.kontor-addressform label {
+  margin: 0;
+}
+
+.kontor-addressform label > span {
+  color: var(--pw-muted-color);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 750;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+.kontor-addressform input,
+.kontor-addressform select {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  box-sizing: border-box;
+  color: var(--pw-text-color);
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.kontor-addressform__wide {
+  grid-column: span 2;
+}
+
+.kontor-addressform .kontor-check {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+  min-height: 40px;
+}
+
+.kontor-addressform .kontor-check input {
+  min-height: 0;
+  width: auto;
+}
+
+.kontor-addressform .kontor-check > span {
+  margin: 0;
+  text-transform: none;
+}
+
+.kontor-import {
+  padding: 1.15rem;
+}
+
+.kontor-import > form {
+  align-items: end;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(280px, 1.7fr) auto;
+}
+
+.kontor-import label {
+  margin: 0;
+}
+
+.kontor-import label > span {
+  color: var(--pw-muted-color);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 750;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+.kontor-import input,
+.kontor-import select {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  box-sizing: border-box;
+  color: var(--pw-text-color);
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.kontor-import__file small {
+  color: var(--pw-muted-color);
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.3rem;
+}
+
+.kontor-import__notice {
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.8rem;
+}
+
+.kontor-import__notice i {
+  color: var(--pw-main-color);
+  margin-right: 0.35rem;
+}
+
+.kontor-import-result {
+  margin-top: 1.25rem;
+}
+
+.kontor-previewstats {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 1rem 0;
+}
+
+.kontor-previewstats article {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  flex-direction: column;
+  padding: 0.9rem;
+}
+
+.kontor-previewstats strong {
+  color: var(--pw-text-color);
+  font-size: 1.5rem;
+}
+
+.kontor-previewstats span {
+  color: var(--pw-muted-color);
+  font-size: 0.75rem;
+}
+
+.kontor-import-confirm {
+  align-items: center;
+  background: var(--pw-alert-success);
+  border: 1px solid var(--pw-alert-success);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.kontor-import-confirm > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.kontor-import-confirm strong {
+  color: var(--pw-text-color);
+}
+
+.kontor-import-confirm span {
+  color: var(--pw-text-color);
+  font-size: 0.8rem;
+}
+
+.kontor-import-success {
+  background: var(--pw-alert-success);
+  border: 1px solid var(--pw-alert-success);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-text-color);
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.kontor-searchhero {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-text-color);
+  padding: 2rem;
+}
+
+.kontor-searchhero .kontor-eyebrow,
+.kontor-searchhero p {
+  color: var(--pw-muted-color);
+}
+
+.kontor-searchhero h2 {
+  color: var(--pw-text-color);
+  font-size: clamp(1.6rem, 4vw, 2.35rem);
+  margin: 0.25rem 0;
+}
+
+.kontor-searchhero > p {
+  margin: 0 0 1.2rem;
+}
+
+.kontor-searchhero form {
+  align-items: center;
+  background: var(--pw-blocks-background);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  gap: 0.65rem;
+  max-width: 760px;
+  padding: 0.45rem;
+}
+
+.kontor-searchhero form > i {
+  color: var(--pw-muted-color);
+  margin-left: 0.55rem;
+}
+
+.kontor-searchhero input {
+  border: 0;
+  color: var(--pw-text-color);
+  flex: 1;
+  font-size: 1rem;
+  min-width: 0;
+  outline: none;
+  padding: 0.6rem 0;
+}
+
+.kontor-searchhero select {
+  background: var(--pw-blocks-background);
+  border: 0;
+  border-left: 1px solid var(--pw-border-color);
+  min-width: 190px;
+  padding: 0.7rem 2rem 0.7rem 0.8rem;
+}
+
+.kontor-searchresults {
+  margin-top: 1.25rem;
+}
+
+.kontor-resultlist {
+  margin-top: 0.85rem;
+}
+
+.kontor-result {
+  align-items: center;
+  border-bottom: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+}
+
+.kontor-result:last-child {
+  border-bottom: 0;
+}
+
+.kontor-result:hover {
+  background: var(--pw-main-background);
+}
+
+.kontor-result__main {
+  align-items: center;
+  color: var(--pw-text-color);
+  display: flex;
+  flex: 1;
+  gap: 0.8rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.kontor-result > .kontor-pill {
+  flex: none;
+  text-decoration: none;
+}
+
+.kontor-result > .kontor-pill:hover {
+  color: var(--pw-main-color);
+  text-decoration: underline;
+}
+
+.kontor-result__icon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+}
+
+.kontor-result__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.kontor-result__body span {
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+}
+
+.kontor-setup {
+  background: var(--pw-alert-warning);
+  border: 1px solid var(--pw-alert-warning);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-text-color);
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.kontor-activity,
+.kontor-backuplist {
+  overflow: hidden;
+}
+
+.kontor-activityfilters {
+  justify-content: flex-start;
+}
+
+.kontor-searchfield {
+  align-items: center;
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  flex: 1 1 260px;
+  max-width: 440px;
+  min-height: 40px;
+  padding: 0 0.75rem;
+}
+
+.kontor-searchfield i {
+  color: var(--pw-muted-color);
+  margin-right: 0.55rem;
+}
+
+.kontor-searchfield input {
+  border: 0;
+  min-width: 0;
+  outline: 0;
+  width: 100%;
+}
+
+.kontor-activityfilters select {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  min-height: 40px;
+  min-width: 145px;
+  padding: 0.55rem 2rem 0.55rem 0.7rem;
+}
+
+.kontor-pagination {
+  align-items: center;
+  color: var(--pw-muted-color);
+  display: flex;
+  font-size: 0.86rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.kontor-pagination > div {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.kontor-activity__event,
+.kontor-backup {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+}
+
+.kontor-activity__event {
+  border-bottom: 1px solid var(--pw-border-color);
+}
+
+.kontor-activity__event:last-child {
+  border-bottom: 0;
+}
+
+.kontor-activity__icon,
+.kontor-backup__icon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: flex;
+  flex: 0 0 auto;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.kontor-activity__body,
+.kontor-backup__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.kontor-activity__title,
+.kontor-backup__body > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.kontor-activity__title .kontor-pill {
+  text-decoration: none;
+}
+
+.kontor-activity__facet,
+.kontor-backup__facet,
+.kontor-backup__body .kontor-pill,
+.kontor-dashboardactivity__list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-activity__facet:hover,
+.kontor-backup__facet:hover,
+.kontor-backup__body .kontor-pill:hover,
+.kontor-dashboardactivity__list a:hover {
+  color: var(--pw-main-color);
+  text-decoration: underline;
+}
+
+.kontor-activity__body p,
+.kontor-backup__body p {
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+  margin: 0.35rem 0 0;
+}
+
+.kontor-activity__body code,
+.kontor-backup__body code {
+  color: var(--pw-muted-color);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.kontor-activity__event > time,
+.kontor-backup > time {
+  color: var(--pw-muted-color);
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.kontor-activity__event > time span,
+.kontor-backup > time span {
+  display: block;
+}
+
+.kontor-activity__details {
+  margin-top: 0.6rem;
+}
+
+.kontor-activity__details summary {
+  color: var(--pw-main-color);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.kontor-activity__details pre {
+  background: var(--pw-main-background);
+  border-radius: var(--pw-input-radius);
+  font-size: 0.72rem;
+  margin: 0.55rem 0 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.kontor-activity__details h4 {
+  color: var(--pw-muted-color);
+  font-size: 0.72rem;
+  margin: 0.8rem 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.kontor-audit-event {
+  margin: 0;
+}
+
+.kontor-audit-event details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.kontor-audit-event details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.kontor-audit-value {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.kontor-audit-value--before {
+  color: var(--pw-muted-color);
+}
+
+.kontor-audit-value--after {
+  color: var(--pw-text-color);
+  font-weight: 600;
+}
+
+.kontor-audit-technical pre {
+  background: var(--pw-main-background);
+  font-size: 0.75rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.kontor-changes {
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  margin-top: 0.55rem;
+  overflow: hidden;
+}
+
+.kontor-changes__head,
+.kontor-changes__row {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(110px, 0.7fr) repeat(2, minmax(0, 1fr));
+  padding: 0.6rem 0.7rem;
+}
+
+.kontor-changes__head {
+  background: var(--pw-main-background);
+  color: var(--pw-muted-color);
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.kontor-changes__row {
+  border-top: 1px solid var(--pw-border-color);
+  font-size: 0.75rem;
+}
+
+.kontor-changes__row span {
+  overflow-wrap: anywhere;
+}
+
+.kontor-backupactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.kontor-backupactions form {
+  margin: 0;
+}
+
+.kontor-backuplist {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.kontor-backup {
+  border: 1px solid var(--pw-border-color);
+}
+
+.kontor-backup__download {
+  margin: 0;
+}
+
+.kontor-backup__download button {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border: 0;
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  cursor: pointer;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.kontor-backup__download button:hover {
+  background: var(--pw-inputs-background);
+}
+
+.kontor-healthsummary {
+  align-items: center;
+  background: var(--pw-alert-success);
+  border: 1px solid var(--pw-alert-success);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.kontor-healthsummary > span {
+  color: var(--pw-text-color);
+  font-size: 1.65rem;
+}
+
+.kontor-healthsummary strong {
+  color: var(--pw-text-color);
+}
+
+.kontor-healthsummary p {
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0;
+}
+
+.kontor-healthsummary__filter {
+  border-radius: 999px;
+  color: inherit;
+  padding: 0.12rem 0.35rem;
+  text-decoration: none;
+}
+
+.kontor-healthsummary__filter:hover {
+  background: var(--pw-inputs-background);
+}
+
+.kontor-healthsummary__filter--selected {
+  background: var(--pw-blocks-background);
+  font-weight: 700;
+}
+
+.kontor-healthsummary time {
+  color: var(--pw-muted-color);
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.kontor-healthsummary--warning {
+  background: var(--pw-alert-warning);
+  border-color: var(--pw-text-color);
+}
+
+.kontor-healthsummary--warning > span {
+  color: var(--pw-text-color);
+}
+
+.kontor-healthsummary--critical {
+  background: var(--pw-alert-danger);
+  border-color: var(--pw-alert-danger);
+}
+
+.kontor-healthsummary--critical > span {
+  color: var(--pw-error-inline-text-color);
+}
+
+.kontor-healthgrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kontor-healthfilters {
+  justify-content: flex-start;
+}
+
+.kontor-healthfilters select {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  min-height: 40px;
+  min-width: 160px;
+  padding: 0.55rem 2rem 0.55rem 0.7rem;
+}
+
+.kontor-healthcheck {
+  border-top: 3px solid var(--pw-alert-success);
+  padding: 1.15rem;
+}
+
+.kontor-healthcheck--warning {
+  border-top-color: var(--pw-text-color);
+}
+
+.kontor-healthcheck--critical {
+  border-top-color: var(--pw-error-inline-text-color);
+}
+
+.kontor-healthcheck header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.kontor-healthcheck header .kontor-pill {
+  margin-left: auto;
+}
+
+.kontor-healthcheck h3 {
+  color: var(--pw-text-color);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.kontor-healthcheck h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-healthcheck h3 a:hover {
+  color: var(--pw-main-color);
+  text-decoration: underline;
+}
+
+.kontor-healthcheck header .kontor-eyebrow {
+  font-size: 0.62rem;
+  margin-bottom: 0.15rem;
+}
+
+.kontor-healthcheck__icon {
+  align-items: center;
+  background: var(--pw-alert-success);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-text-color);
+  display: flex;
+  flex: 0 0 auto;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.kontor-healthcheck--warning .kontor-healthcheck__icon {
+  background: var(--pw-alert-warning);
+  color: var(--pw-text-color);
+}
+
+.kontor-healthcheck--critical .kontor-healthcheck__icon {
+  background: var(--pw-alert-danger);
+  color: var(--pw-error-inline-text-color);
+}
+
+.kontor-healthcheck__message {
+  color: var(--pw-muted-color);
+  min-height: 2.7em;
+}
+
+.kontor-healthcheck dl {
+  border-top: 1px solid var(--pw-border-color);
+  margin: 1rem 0 0;
+  padding-top: 0.7rem;
+}
+
+.kontor-healthcheck dl div {
+  display: flex;
+  font-size: 0.75rem;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+}
+
+.kontor-healthcheck dt {
+  color: var(--pw-muted-color);
+}
+
+.kontor-healthcheck dd {
+  color: var(--pw-text-color);
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.kontor-organization-meta {
+  align-items: center;
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-text-color);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+}
+
+.kontor-organization-meta > div {
+  align-items: center;
+  display: flex;
+  gap: 0.85rem;
+}
+
+.kontor-organization-meta__icon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.kontor-organization-meta strong,
+.kontor-organization-meta small {
+  display: block;
+}
+
+.kontor-organization-meta small {
+  color: var(--pw-main-color);
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+}
+
+.kontor-organization-form {
+  max-width: none;
+}
+
+.kontor-queuestats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.kontor-queuestats .kontor-card {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-queuestats .kontor-card:hover {
+  border-color: var(--pw-main-color);
+}
+
+.kontor-queuestats .kontor-card--selected {
+  border-color: var(--pw-main-color);
+}
+
+.kontor-stat__icon--warning {
+  background: var(--pw-alert-warning);
+  color: var(--pw-text-color);
+}
+
+.kontor-stat__icon--success {
+  background: var(--pw-alert-success);
+  color: var(--pw-text-color);
+}
+
+.kontor-stat__icon--danger {
+  background: var(--pw-alert-danger);
+  color: var(--pw-error-inline-text-color);
+}
+
+.kontor-queuefilters > div {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.kontor-queuefilters select {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  min-height: 40px;
+  min-width: 155px;
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+}
+
+.kontor-queuetable td:first-child strong,
+.kontor-queuetable td:first-child code {
+  display: block;
+}
+
+.kontor-queuetable td:first-child code {
+  color: var(--pw-muted-color);
+  font-size: 0.7rem;
+  margin-top: 0.2rem;
+}
+
+.kontor-queuefacet,
+.kontor-queuetable .kontor-pill {
+  text-decoration: none;
+}
+
+.kontor-queuefacet {
+  color: var(--pw-main-color);
+  font-weight: 700;
+}
+
+.kontor-queuefacet:hover,
+.kontor-queuetable .kontor-pill:hover {
+  text-decoration: underline;
+}
+
+.kontor-catalogfacet,
+.kontor-catalogtable .kontor-pill {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-catalogfacet:hover,
+.kontor-catalogtable .kontor-pill:hover {
+  color: var(--pw-main-color);
+  text-decoration: underline;
+}
+
+.kontor-directorytable .kontor-pill {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kontor-directorytable .kontor-pill:hover {
+  color: var(--pw-main-color);
+  text-decoration: underline;
+}
+
+.kontor-queuetable time,
+.kontor-queuetable small {
+  color: var(--pw-muted-color);
+  font-size: 0.72rem;
+}
+
+.kontor-progress {
+  background: var(--pw-border-color);
+  border-radius: 999px;
+  height: 6px;
+  min-width: 90px;
+  overflow: hidden;
+}
+
+.kontor-progress span {
+  background: var(--pw-main-color);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.kontor-queueerror {
+  margin-top: 0.4rem;
+}
+
+.kontor-queueerror summary {
+  color: var(--pw-error-inline-text-color);
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.kontor-queueerror p {
+  color: var(--pw-error-inline-text-color);
+  font-size: 0.72rem;
+  margin: 0.35rem 0 0;
+  max-width: 420px;
+  white-space: pre-wrap;
+}
+
+.kontor-queueactions {
+  text-align: right;
+  width: 48px;
+}
+
+.kontor-queueactions form {
+  margin: 0;
+}
+
+.kontor-queueactions button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-muted-color);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.kontor-queueactions button:hover {
+  background: var(--pw-alert-danger);
+  color: var(--pw-error-inline-text-color);
+}
+
+.kontor-dashboardactivity__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kontor-dashboardactivity__list article {
+  align-items: center;
+  border-top: 1px solid var(--pw-border-color);
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.8rem 0;
+}
+
+.kontor-dashboardactivity__list article:nth-child(odd) {
+  padding-right: 1rem;
+}
+
+.kontor-dashboardactivity__list article:nth-child(even) {
+  border-left: 1px solid var(--pw-border-color);
+  padding-left: 1rem;
+}
+
+.kontor-dashboardactivity__icon {
+  align-items: center;
+  background: var(--pw-inputs-background);
+  border-radius: var(--pw-input-radius);
+  color: var(--pw-main-color);
+  display: flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.kontor-dashboardactivity__list article > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.kontor-dashboardactivity__list strong {
+  color: var(--pw-text-color);
+  display: block;
+  font-size: 0.82rem;
+}
+
+.kontor-dashboardactivity__list p,
+.kontor-dashboardactivity__list time {
+  color: var(--pw-muted-color);
+  font-size: 0.7rem;
+}
+
+.kontor-dashboardactivity__list p {
+  margin: 0.15rem 0 0;
+}
+
+.kontor-dashboardactivity__list time {
+  flex: 0 0 auto;
+}
+
+.kontor-dashboardactivity__empty {
+  align-items: center;
+  border-top: 1px solid var(--pw-border-color);
+  color: var(--pw-muted-color);
+  display: flex;
+  gap: 0.6rem;
+  padding: 1rem 0 0.2rem;
+}
+
+.kontor-nativecheck {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.kontor-nativecheck input {
+  height: 18px;
+  width: 18px;
+}
+
+.kontor-pipelinenav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kontor-pipelinenav a {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: 999px;
+  color: var(--pw-muted-color);
+  padding: 0.55rem 0.85rem;
+  text-decoration: none;
+}
+
+.kontor-pipelinenav a[aria-current="page"] {
+  background: var(--pw-text-color);
+  border-color: var(--pw-text-color);
+  color: var(--pw-blocks-background);
+}
+
+.kontor-kanban {
+  display: grid;
+  gap: 0.8rem;
+  grid-auto-columns: minmax(240px, 1fr);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding-bottom: 0.8rem;
+}
+
+.kontor-kanban__column {
+  background: var(--pw-main-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  min-height: 260px;
+}
+
+.kontor-kanban__column > header {
+  align-items: center;
+  border-top: 4px solid var(--pw-main-color);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem;
+}
+
+.kontor-kanban__column > header span {
+  background: var(--pw-border-color);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.kontor-kanban__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0 0.65rem 0.65rem;
+}
+
+.kontor-dealcard {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+}
+
+.kontor-dealcard > span {
+  color: var(--pw-muted-color);
+  font-size: 0.78rem;
+}
+
+.kontor-dealcard form {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.kontor-dealcard select {
+  min-width: 0;
+  width: 100%;
+}
+
+.kontor-dealcard button {
+  border-radius: var(--pw-input-radius);
+  cursor: pointer;
+  min-height: 34px;
+}
+
+.kontor-dealcard__actions,
+.kontor-dealcard__actions form {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.kontor-kanban__empty {
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.kontor-documenthead {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.kontor-documenthead > div {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kontor-documenthead > div > span:last-child {
+  color: var(--pw-muted-color);
+  font-size: 0.8rem;
+}
+
+.kontor-documenthead > strong {
+  font-size: 1.3rem;
+}
+
+.kontor-documentactions,
+.kontor-documentactions form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.kontor-document-preview {
+  background: var(--pw-blocks-background);
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  min-height: 360px;
+  width: 100%;
+}
+
+.kontor-demo-flow {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.kontor-demo-stage {
+  border: 1px solid var(--pw-border-color);
+  border-radius: var(--pw-input-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.kontor-demo-stage--current {
+  border-color: var(--pw-main-color);
+}
+
+.kontor-demo-stage--done .kontor-demo-stage__marker,
+.kontor-demo-stage--current .kontor-demo-stage__marker {
+  color: var(--pw-main-color);
+}
+
+.kontor-demo-stage strong {
+  color: var(--pw-text-color);
+}
+
+.kontor-demo-stage small {
+  color: var(--pw-muted-color);
+}
+
+/*
+ * ProcessWire owns the page H1. The first workspace header supplies context
+ * and actions, so its legacy H2 must not repeat the same title visually or in
+ * the document outline. Section headers deeper in a workspace remain visible.
+ */
+.kontor-shell > .kontor-pagehead:first-child h2,
+.kontor-shell > .kontor-formhead:first-child h2 {
+  display: none;
+}
+
+@media (max-width: 850px) {
+  .kontor-directory-actions {
+    width: 100%;
+  }
+
+  .kontor-directory-actions > * {
+    flex: 1 1 9rem;
+    min-width: 0;
+  }
+
+  .kontor-directory-actions .uk-button {
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .kontor-intake-fieldhead > * {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .kontor-intake-fieldhead .uk-flex-right {
+    justify-content: flex-start;
+  }
+
+  .kontor-nativeform {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kontor-nativefield--wide,
+  .kontor-nativeform__actions {
+    grid-column: auto;
+  }
+
+  .kontor-contact-savecard {
+    position: static;
+  }
+
+  .kontor-lead-savecard {
+    position: static;
+  }
+
+  .kontor-lead-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kontor-contact-workgroup li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .kontor-dashboardwidgets {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-dashboardwidget {
+    grid-column: 1 !important;
+  }
+
+  .kontor-pagehead,
+  .kontor-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kontor-relationform {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-demo-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-addressgrid,
+  .kontor-addressform,
+  .kontor-import > form,
+  .kontor-previewstats {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-healthgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-queuestats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kontor-queuefilters,
+  .kontor-queuefilters > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kontor-dashboardactivity__list {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-dashboardactivity__list article:nth-child(odd),
+  .kontor-dashboardactivity__list article:nth-child(even) {
+    border-left: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .kontor-healthsummary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .kontor-healthsummary time {
+    margin-left: 2.65rem;
+  }
+
+  .kontor-addressform__wide {
+    grid-column: auto;
+  }
+
+  .kontor-import-confirm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kontor-tagform,
+  .kontor-searchhero form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kontor-searchhero form > i {
+    display: none;
+  }
+
+  .kontor-searchhero select {
+    border-left: 0;
+    border-top: 1px solid var(--pw-border-color);
+    min-height: 42px;
+    width: 100%;
+  }
+
+  .kontor-activity__event,
+  .kontor-backup {
+    flex-wrap: wrap;
+  }
+
+  .kontor-activityfilters {
+    align-items: stretch;
+  }
+
+  .kontor-healthfilters {
+    align-items: stretch;
+  }
+
+  .kontor-filtercount {
+    margin-left: 0;
+  }
+
+  .kontor-activityfilters .kontor-searchfield {
+    flex-basis: auto;
+    max-width: none;
+  }
+
+  .kontor-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .kontor-changes__head {
+    display: none;
+  }
+
+  .kontor-changes__row {
+    grid-template-columns: 1fr;
+  }
+
+  .kontor-changes__row span::before {
+    color: var(--pw-muted-color);
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+
+  .kontor-changes__row span:nth-child(2)::before {
+    content: "Before";
+  }
+
+  .kontor-changes__row span:nth-child(3)::before {
+    content: "After";
+  }
+
+  .kontor-activity__event > time,
+  .kontor-backup > time {
+    margin-left: 56px;
+    text-align: left;
+  }
+}

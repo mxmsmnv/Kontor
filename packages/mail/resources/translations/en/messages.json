@@ -1,0 +1,15 @@
+{
+    "field.mailbox": "Mailbox",
+    "field.from": "From",
+    "field.to": "To",
+    "field.cc": "Cc",
+    "field.subject": "Subject",
+    "field.assigned_to": "Assigned to",
+    "status.queued": "Queued",
+    "status.sent": "Sent",
+    "status.failed": "Failed",
+    "status.received": "Received",
+    "action.compose": "Compose",
+    "action.assign": "Assign",
+    "action.link_to_entity": "Link to record"
+}

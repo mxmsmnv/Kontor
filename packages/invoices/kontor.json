@@ -1,0 +1,90 @@
+{
+    "$schema": "https://kontor.dev/schema/component.v1.json",
+    "schemaVersion": 1,
+    "name": "KontorInvoices",
+    "title": "Kontor Invoices",
+    "description": "Invoices, issue workflow, numbering, overdue state, credit notes.",
+    "version": "1.0.0",
+    "type": "business",
+    "category": "sales",
+    "license": "MIT",
+    "author": {
+        "name": "Maxim Semenov",
+        "url": "https://github.com/mxmsmnv"
+    },
+    "repository": "https://github.com/mxmsmnv/KontorInvoices",
+    "package": "kontor/invoices",
+    "namespace": "Kontor\\Invoices",
+    "processWireModule": "KontorInvoices",
+    "requires": {
+        "php": ">=8.2",
+        "processwire": ">=3.0.240",
+        "kontor/sdk": "^1.0",
+        "kontor/core": "^1.0",
+        "kontor/sales": "^1.0"
+    },
+    "suggests": {
+        "kontor/documents": "^1.0",
+        "kontor/ledger": "^1.0",
+        "kontor/mail": "^1.0",
+        "kontor/payments": "^1.0"
+    },
+    "conflicts": {},
+    "capabilities": [],
+    "permissions": [
+        "kontor-invoices-invoice-view",
+        "kontor-invoices-invoice-create",
+        "kontor-invoices-invoice-edit-draft",
+        "kontor-invoices-invoice-issue",
+        "kontor-invoices-invoice-send",
+        "kontor-invoices-invoice-cancel",
+        "kontor-invoices-credit-note-create",
+        "kontor-invoices-credit-note-issue",
+        "kontor-invoices-numbering-admin"
+    ],
+    "admin": {
+        "sections": [
+            {
+                "key": "invoices",
+                "title": "Invoices",
+                "icon": "file-text",
+                "order": 320
+            }
+        ],
+        "routes": []
+    },
+    "services": [],
+    "events": {
+        "publishes": [],
+        "subscribes": []
+    },
+    "providers": {
+        "backup": null,
+        "import": [],
+        "export": [],
+        "search": [],
+        "reports": [],
+        "health": [
+            "Kontor\\Invoices\\Health\\InvoicesHealthCheck"
+        ]
+    },
+    "translations": {
+        "source": "en",
+        "languages": ["en", "fr", "de", "es"]
+    },
+    "migrations": {
+        "path": "migrations",
+        "supportsRollback": true
+    },
+    "storage": {
+        "tables": [
+            "kontor_invoices"
+        ],
+        "directories": []
+    },
+    "cli": [],
+    "security": {
+        "externalConnections": [],
+        "sensitiveData": ["invoice.total_minor", "invoice.paid_minor"]
+    }
+}

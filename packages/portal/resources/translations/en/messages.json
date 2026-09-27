@@ -1,0 +1,13 @@
+{
+    "field.email": "Email",
+    "field.password": "Password",
+    "field.first_name": "First name",
+    "field.last_name": "Last name",
+    "field.phone": "Phone",
+    "action.login": "Log in",
+    "action.view_quotation": "View quotation",
+    "action.view_invoice": "View invoice",
+    "action.download_file": "Download",
+    "action.update_profile": "Update profile",
+    "error.invalid_credentials": "Invalid email or password."
+}

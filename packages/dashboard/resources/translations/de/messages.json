@@ -1,0 +1,9 @@
+{
+    "field.name": "Name",
+    "field.widget": "Widget",
+    "scope.personal": "Persönlich",
+    "scope.role": "Rolle",
+    "action.add_widget": "Widget hinzufügen",
+    "action.set_default": "Als Standard festlegen",
+    "widget.welcome.title": "Willkommen"
+}
