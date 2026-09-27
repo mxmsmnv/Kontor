@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Module upgrades now synchronize and enable the Catalog component registry
+  entry.
+
 ### Added
 
 - Dashboard summary count for active uncategorized Catalog items.

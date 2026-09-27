@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Module upgrades now synchronize and enable the Queue component registry
+  entry.
+
 ### Added
 
 - Task email reminders use delayed, idempotent jobs in the `notifications`

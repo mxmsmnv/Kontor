@@ -29,7 +29,7 @@ class KontorPayments extends WireData implements Module
         return [
             'title' => 'Kontor Payments',
             'summary' => 'Payments, allocations, partial payments, reversals.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorPayments',
             'icon' => 'money',

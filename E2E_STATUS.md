@@ -24,15 +24,15 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 312 tests, 840 assertions |
-| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 305 tests, 799 assertions |
+| Core/root PHPUnit | 315 tests, 2,505 assertions |
+| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 306 tests, 821 assertions |
 | Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
-| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 411 tests, 878 assertions |
-| Total | 1,233 tests, 3,006 assertions |
+| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 413 tests, 899 assertions |
+| Total | 1,239 tests, 4,714 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
-the cache package passed. A final syntax pass checked 1,021 PHP source and test
+the cache package passed. A final syntax pass checked 1,036 PHP source and test
 files; all 35 Kontor manifests and all 36 Composer manifests parsed
 successfully.
 
@@ -53,6 +53,19 @@ settings remain owned by Kontor Settings and its separate migration journey.
 A deterministic webhook transport fake now covers timeout persistence, retry
 state, replay with the same delivery identifier and successful recovery without
 creating a duplicate delivery. No network endpoint was contacted.
+
+A deterministic payment-provider fake now covers an ambiguous timeout,
+redacted failure persistence, rejection of idempotency-key drift, same-key
+recovery and replay after success without another provider call. An object
+storage fake likewise covers write-then-timeout cleanup, metadata-persistence
+failure cleanup and corrected retry without duplicate objects or leaked
+credentials/content.
+
+A historical v001 fixture now covers all 36 ProcessWire modules, 76 current
+migrations and 77 package-declared storage tables. It restores the historical
+schema, preserves a business record while applying the one post-v001 migration,
+and verifies every current migration is idempotent. The inventory exposed and
+closed missing Catalog and Queue upgrade hooks.
 
 A tokenizer-backed CSRF contract now inventories all 168 ProcessKontor execute
 handlers: 50 are explicitly read-only and all 118 mutation-capable handlers
@@ -135,6 +148,11 @@ verifies the permission-aware Expenses empty state.
   not a seeded supplier or expense category. Giving create permissions without
   the corresponding supplier/category view permission still denied direct
   create-form access at the missing reference-data permission.
+- The committed Playwright runner passed the full qualification/conversion and
+  restricted-role journeys in desktop Chromium. The restricted journey also
+  passed Pixel 7 Chromium and iPhone 15 WebKit profiles, including horizontal
+  overflow and serious/critical axe checks. These checks exposed and closed
+  insufficient contrast for default labels and field notes.
 
 ## Defects fixed in this run
 
@@ -175,6 +193,14 @@ verifies the permission-aware Expenses empty state.
   explaining the permission blocker.
 - Test assumptions that depended on MySQL JSON formatting, unordered query
   results or unread PDO result sets.
+- Object storage could write bytes and then time out, leaving an orphan while
+  exposing provider exception details; compensation and redaction now cover
+  both the storage and metadata failure boundaries.
+- Payment provider retries had no provider-neutral idempotent capture contract.
+- Catalog and Queue lacked upgrade hooks to synchronize their component
+  registry versions.
+- Default UIKit labels and field notes did not meet serious axe contrast checks
+  in the Kontor shell.
 
 ## Remaining release-matrix work
 
@@ -182,15 +208,12 @@ The current disposable run is a strong release-candidate pass, not a claim that
 every supported environment and real provider has been exercised. The
 following remain explicit:
 
-- commit a repeatable automated browser runner for the critical journeys;
-- run Firefox/WebKit compatibility passes; only the Chromium-based in-app
-  browser is currently exposed to the automation surface;
-- exercise Redis with `ext-redis`, plus deterministic payment and
-  object-storage fakes in their full failure/retry paths; webhook timeout/replay,
-  mail timeout/redaction/retry and AI timeout/redaction/retry are now covered
-  without network access;
-- execute historical source-version upgrade fixtures; current-schema upgrade
-  hooks and the full preserve-data uninstall/reinstall matrix have passed.
+- run the Firefox profile on a compatible host: Playwright Firefox Nightly exits
+  before navigation on this macOS host with `Could not find profile folder`;
+  desktop/mobile Chromium and mobile WebKit pass;
+- exercise the Redis adapter on a host with optional `ext-redis`; its four
+  adapter-specific tests are the only skipped PHP checks, while the in-memory
+  implementation passes.
 
 Portal file access is now organization-scoped in the service itself. Within one
 organization, customer/contact ownership remains deliberately enforced by the

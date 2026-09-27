@@ -27,7 +27,7 @@ class KontorQueue extends WireData implements Module
         return [
             'title' => 'Kontor Queue',
             'summary' => 'Asynchronous and delayed jobs, retries, dead-letter queue, priorities and progress.',
-            'version' => '005',
+            'version' => '006',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorQueue',
             'icon' => 'tasks',
@@ -110,6 +110,13 @@ class KontorQueue extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('queue', self::getModuleInfo()['version'], 'queue');
+        $components->enable('queue');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('queue', self::getModuleInfo()['version'], 'queue');
         $components->enable('queue');
     }

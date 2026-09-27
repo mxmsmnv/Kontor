@@ -1,0 +1,12 @@
+{
+  "name": "kontor-release-acceptance",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test --config tests/e2e/playwright.config.js",
+    "test:e2e:available": "playwright test --config tests/e2e/playwright.config.js --project=chromium-desktop --project=chromium-mobile --project=webkit-mobile"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.0"
+  }
+}

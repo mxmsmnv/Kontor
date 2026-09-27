@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Default admin labels and field notes now retain accessible contrast in the
+  Kontor shell across desktop and mobile themes.
+- Ambiguous object-storage writes are cleaned up and redacted before retry;
+  payment-provider retries now preserve idempotency without leaking provider
+  exception details.
+- Catalog and Queue upgrades now synchronize their component registry entries.
 - Failed outbound mail can be retried without duplicating its history row, and
   transport exception details are no longer persisted or emitted.
 - Empty expense workspaces without category access now explain the permission
@@ -40,6 +46,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- A committed Playwright release runner covers the critical CRM qualification
+  journey, permission boundary, responsive layouts and serious/critical axe
+  findings across Chromium and WebKit profiles.
+- A historical v001 upgrade matrix inventories all ProcessWire modules,
+  declared migrations and package storage tables, including data preservation
+  and idempotent reruns.
 - `KontorCRMIntake`, an optional component for portable, organization-specific
   qualification forms on contacts, leads and deals. Captured answers remain
   outside settings exports and carry forward when a lead becomes a deal.

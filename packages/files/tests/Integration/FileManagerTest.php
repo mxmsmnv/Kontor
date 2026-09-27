@@ -11,6 +11,8 @@ use Kontor\Files\Infrastructure\Persistence\FileRepository;
 use Kontor\Files\Infrastructure\Storage\LocalPrivateStorage;
 use Kontor\Files\Infrastructure\Storage\SignedUrlSigner;
 use Kontor\Files\Tests\Support\RecordingEventDispatcher;
+use Kontor\SDK\Contracts\StorageInterface;
+use Kontor\SDK\DTO\StoredFile;
 
 final class FileManagerTest extends DatabaseTestCase
 {
@@ -172,6 +174,85 @@ final class FileManagerTest extends DatabaseTestCase
         $this->assertNull($manager->find($first['uid'])['archived_at']);
     }
 
+    public function test_ambiguous_storage_timeout_is_redacted_cleaned_and_retryable_without_duplicates(): void
+    {
+        $body = 'Confidential acquisition attachment';
+        $credential = 'object-store-secret-key';
+        $storage = new FailOnceAfterWriteStorage($credential);
+        $events = new RecordingEventDispatcher();
+        $manager = new FileManager(
+            $storage,
+            new FileRepository($this->pdo),
+            new OrganizationRepository($this->pdo),
+            $events,
+        );
+
+        try {
+            $manager->upload($this->organizationUid, 'confidential.txt', $body);
+            $this->fail('Expected the first storage attempt to time out.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('File storage write failed.', $error->getMessage());
+            $this->assertStringNotContainsString($body, $error->getMessage());
+            $this->assertStringNotContainsString($credential, $error->getMessage());
+            $this->assertNull($error->getPrevious());
+        }
+
+        $this->assertSame(1, $storage->putCalls);
+        $this->assertCount(1, $storage->deletedPaths);
+        $this->assertSame([], $storage->objects);
+        $this->assertSame(0, (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_files')->fetchColumn());
+        $this->assertSame([], $events->dispatched);
+
+        $uploaded = $manager->upload($this->organizationUid, 'confidential.txt', $body);
+
+        $this->assertSame(2, $storage->putCalls);
+        $this->assertCount(1, $storage->objects);
+        $this->assertSame(1, (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_files')->fetchColumn());
+        $this->assertSame($uploaded['uid'], $manager->find($uploaded['uid'])['uid']);
+        $this->assertCount(1, $events->eventsNamed('file.uploaded'));
+    }
+
+    public function test_metadata_failure_removes_the_object_and_a_corrected_retry_creates_one_file(): void
+    {
+        $storage = new RecordingStorage();
+        $manager = new FileManager(
+            $storage,
+            new FileRepository($this->pdo),
+            new OrganizationRepository($this->pdo),
+        );
+        $unsupportedMetadataValue = fopen('php://memory', 'rb');
+        $this->assertIsResource($unsupportedMetadataValue);
+
+        try {
+            $manager->upload(
+                $this->organizationUid,
+                'report.txt',
+                'report-body',
+                metadata: ['unsupported' => $unsupportedMetadataValue],
+            );
+            $this->fail('Expected metadata serialization to fail.');
+        } catch (\JsonException) {
+            // Expected: the storage object must still be compensated below.
+        } finally {
+            fclose($unsupportedMetadataValue);
+        }
+
+        $this->assertCount(1, $storage->deletedPaths);
+        $this->assertSame([], $storage->objects);
+        $this->assertSame(0, (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_files')->fetchColumn());
+
+        $manager->upload(
+            $this->organizationUid,
+            'report.txt',
+            'report-body',
+            metadata: ['source' => 'retry'],
+        );
+
+        $this->assertSame(2, $storage->putCalls);
+        $this->assertCount(1, $storage->objects);
+        $this->assertSame(1, (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_files')->fetchColumn());
+    }
+
     private function removeDirectory(string $directory): void
     {
         if (!is_dir($directory)) {
@@ -189,5 +270,80 @@ final class FileManagerTest extends DatabaseTestCase
         }
 
         rmdir($directory);
+    }
+}
+
+class RecordingStorage implements StorageInterface
+{
+    public int $putCalls = 0;
+
+    /** @var array<string, string> */
+    public array $objects = [];
+
+    /** @var string[] */
+    public array $deletedPaths = [];
+
+    public function put(string $path, mixed $contents, array $options = []): StoredFile
+    {
+        $this->putCalls++;
+        $body = is_resource($contents) ? (string) stream_get_contents($contents) : (string) $contents;
+        $this->objects[$path] = $body;
+
+        return new StoredFile(
+            path: $path,
+            storage: 'fake-object-store',
+            sizeBytes: strlen($body),
+            checksum: hash('sha256', $body),
+            mimeType: 'application/octet-stream',
+        );
+    }
+
+    public function read(string $path)
+    {
+        if (!array_key_exists($path, $this->objects)) {
+            throw new \RuntimeException('Object not found.');
+        }
+
+        $handle = fopen('php://memory', 'w+b');
+        fwrite($handle, $this->objects[$path]);
+        rewind($handle);
+
+        return $handle;
+    }
+
+    public function delete(string $path): void
+    {
+        $this->deletedPaths[] = $path;
+        unset($this->objects[$path]);
+    }
+
+    public function exists(string $path): bool
+    {
+        return array_key_exists($path, $this->objects);
+    }
+
+    public function temporaryUrl(string $path, \DateTimeImmutable $expiresAt): string
+    {
+        return 'https://storage.invalid/' . rawurlencode($path);
+    }
+}
+
+final class FailOnceAfterWriteStorage extends RecordingStorage
+{
+    public function __construct(private readonly string $credential)
+    {
+    }
+
+    public function put(string $path, mixed $contents, array $options = []): StoredFile
+    {
+        $stored = parent::put($path, $contents, $options);
+
+        if ($this->putCalls === 1) {
+            throw new \RuntimeException(
+                "Timeout after writing {$this->objects[$path]} to {$path} with {$this->credential}",
+            );
+        }
+
+        return $stored;
     }
 }

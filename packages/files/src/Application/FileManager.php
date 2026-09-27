@@ -54,7 +54,25 @@ final class FileManager
             : null;
 
         $path = $this->pathFor($organizationId, $originalName);
-        $stored = $this->storage->put($path, $contents);
+
+        try {
+            $stored = $this->storage->put($path, $contents);
+        } catch (\Throwable) {
+            // An object store can persist the bytes and still time out before
+            // acknowledging the write. Best-effort cleanup keeps a retry from
+            // leaving an orphan at this attempt's unique path. Never expose a
+            // provider exception that may contain credentials or file data.
+            try {
+                $this->storage->delete($path);
+            } catch (\Throwable) {
+                // Preserve the safe public failure contract even when cleanup
+                // cannot be confirmed. A later storage reconciliation can
+                // remove an unreferenced object.
+            }
+
+            throw new RuntimeException('File storage write failed.');
+        }
+
         $versionNumber = $existing !== null ? ((int) $existing['version_number']) + 1 : 1;
 
         try {

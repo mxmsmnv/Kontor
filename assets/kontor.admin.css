@@ -78,6 +78,11 @@
   color: var(--pw-text-color);
 }
 
+.kontor-shell .uk-label:not(.uk-label-success):not(.uk-label-warning) {
+  background: #4b5563;
+  color: #fff;
+}
+
 .kontor-stat {
   align-items: center;
   display: flex;
@@ -661,7 +666,7 @@
 }
 
 .kontor-field-note {
-  opacity: 0.85;
+  color: var(--pw-text-color);
 }
 
 .kontor-field-note strong {

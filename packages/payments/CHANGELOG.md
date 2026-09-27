@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- A provider-neutral capture service with deterministic idempotency, redacted
+  failure persistence and safe same-key retry semantics.
 - Invoice allocations now keep the linked Sales order's payment status in sync
   as unpaid, partially paid, or paid; reversals recompute it too.
 - Optional Ledger bridge: invoice-payment allocations now post debit Bank /
@@ -29,6 +31,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Provider timeouts can now be retried with the original idempotency key while
+  rejecting key/provider drift and preventing duplicate capture after success.
 - Reject cross-currency allocations before persisting an allocation, leaving
   the payment and invoice state unchanged.
 - Reject allocations between payments and invoices owned by different

@@ -40,12 +40,33 @@ vendor/bin/phpunit --testsuite integration,migration
 KONTOR_TEST_DB_DSN='mysql:host=127.0.0.1;port=3306;dbname=kontor_test' \
 KONTOR_TEST_DB_USER='kontor' KONTOR_TEST_DB_PASS='kontor' \
 vendor/bin/phpunit tests/Integration/CRMIntakeJourneyTest.php
+
+# Install the browser runner and its local browser binaries once
+npm ci
+npx playwright install chromium firefox webkit
+
+# Prepare persistent, named fixtures in a dedicated local ProcessWire site
+KONTOR_E2E_SITE='/absolute/path/to/local-processwire' \
+KONTOR_E2E_STATE='/tmp/kontor-e2e-state.json' \
+KONTOR_E2E_EDITOR_PASS='<local-test-password>' \
+KONTOR_E2E_RESTRICTED_PASS='<local-test-password>' \
+php tests/e2e/fixtures.php
+
+# Run the complete matrix, or the engines available on this macOS host
+KONTOR_E2E_STATE='/tmp/kontor-e2e-state.json' \
+KONTOR_E2E_EDITOR_PASS='<local-test-password>' \
+KONTOR_E2E_RESTRICTED_PASS='<local-test-password>' npm run test:e2e
+KONTOR_E2E_STATE='/tmp/kontor-e2e-state.json' \
+KONTOR_E2E_EDITOR_PASS='<local-test-password>' \
+KONTOR_E2E_RESTRICTED_PASS='<local-test-password>' npm run test:e2e:available
 ```
 
-There is not yet a committed automated browser runner. Until one is added, the
-critical journeys below are release-gating agent-led scenarios and their exact
-environment and evidence must be recorded. A successful PHPUnit run is not an
-E2E pass.
+The Playwright runner intentionally mutates the qualification journey only in
+the desktop Chromium project, then repeats the permission, responsive and axe
+checks in the remaining browser/device profiles. It retains the local site and
+named fixture records between runs; generated traces, videos and reports live
+under ignored `artifacts/e2e`. A successful PHPUnit run alone is not an E2E
+pass.
 
 ## Test environment
 
@@ -69,7 +90,8 @@ E2E pass.
 - [ ] Public APIs and documented hooks
 - [x] Permissions and organization isolation
 - [x] Data save and reload
-- [ ] Upgrade from every supported prior release
+- [x] Historical v001 schema/data upgrade through every declared current
+  migration and component upgrade hook
 - [x] Uninstall preserves business data
 - [x] Reinstall reconnects preserved data
 
@@ -89,7 +111,7 @@ E2E pass.
 - Access/security assertion: a user without CRM Intake administration cannot
   manage the profile; a user without deal creation or the dedicated lead
   conversion permission cannot convert
-- Cleanup: remove the `E2E` records or discard the database
+- Cleanup: retain the named fixture records in the persistent acceptance site
 
 ### Journey 2: representative order-to-cash
 

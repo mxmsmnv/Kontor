@@ -38,7 +38,7 @@ class KontorCatalog extends WireData implements Module
         return [
             'title' => 'Kontor Catalog',
             'summary' => 'Items (products and services), categories, price lists, units and tax code references.',
-            'version' => '030',
+            'version' => '031',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCatalog',
             'icon' => 'cubes',
@@ -170,6 +170,13 @@ class KontorCatalog extends WireData implements Module
         ]);
 
         $components = new ComponentRegistry($pdo);
+        $components->markInstalled('catalog', self::getModuleInfo()['version'], 'catalog');
+        $components->enable('catalog');
+    }
+
+    public function ___upgrade($fromVersion, $toVersion): void
+    {
+        $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('catalog', self::getModuleInfo()['version'], 'catalog');
         $components->enable('catalog');
     }

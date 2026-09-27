@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Ambiguous object-store writes are compensated with a best-effort delete and
+  return a stable redacted error, so a retry does not leave duplicate or
+  credential-bearing failure state.
 - Entity file lookups can now be organization-scoped, preventing unrelated
   tenant rows from appearing in embedded business-document views.
 - Scope version families, signed links, reads, archives, and restores to the

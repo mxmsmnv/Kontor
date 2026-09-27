@@ -4,5 +4,6 @@
 composer.lock
 .phpunit.result.cache
 /build/
+/artifacts/
 *.log
 .DS_Store
