@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- External AI provider failures no longer expose raw exception messages that
+  may contain credentials, provider URLs or prompt content.
 - Payment allocations now reject payment/invoice currency mismatches before
   writing allocation state.
 - Inline Contact and Company saves now enforce the shared POST and ProcessWire

@@ -73,7 +73,54 @@ final class SquadAdapterTest extends TestCase
         $response = (new SquadAdapter($client))->execute(new AIRequest('summarize', 'org_1', []));
 
         $this->assertFalse($response->success);
-        $this->assertSame('Squad is unreachable.', $response->errorMessage);
+        $this->assertSame('AI provider request failed.', $response->errorMessage);
+    }
+
+    public function test_timeout_is_redacted_and_the_same_adapter_can_retry_successfully(): void
+    {
+        $secret = 'squad-token-super-secret';
+        $body = 'Confidential acquisition details';
+
+        $client = new class($secret) implements SquadClientInterface {
+            public int $calls = 0;
+
+            public function __construct(private readonly string $secret)
+            {
+            }
+
+            public function complete(string $capability, array $input): array
+            {
+                $this->calls++;
+
+                if ($this->calls === 1) {
+                    throw new RuntimeException(
+                        "Timeout while sending {$input['text']} with bearer {$this->secret}",
+                    );
+                }
+
+                return [
+                    'output' => ['summary' => 'Safe retry result'],
+                    'requiresConfirmation' => false,
+                ];
+            }
+        };
+
+        $adapter = new SquadAdapter($client);
+        $request = new AIRequest('summarize', 'org_1', ['text' => $body], requiresConfirmation: false);
+
+        $failed = $adapter->execute($request);
+
+        $this->assertFalse($failed->success);
+        $this->assertSame('AI provider request failed.', $failed->errorMessage);
+        $this->assertStringNotContainsString($secret, (string) $failed->errorMessage);
+        $this->assertStringNotContainsString($body, (string) $failed->errorMessage);
+
+        $retried = $adapter->execute($request);
+
+        $this->assertTrue($retried->success);
+        $this->assertSame(['summary' => 'Safe retry result'], $retried->output);
+        $this->assertNull($retried->errorMessage);
+        $this->assertSame(2, $client->calls);
     }
 
     public function test_null_squad_client_throws_a_clear_error(): void

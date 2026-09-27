@@ -37,7 +37,7 @@ class KontorAI extends WireData implements Module
         return [
             'title' => 'Kontor AI',
             'summary' => 'Provider contract, Squad adapter, summaries, drafting, extraction, approval workflow.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorAI',
             'icon' => 'magic',

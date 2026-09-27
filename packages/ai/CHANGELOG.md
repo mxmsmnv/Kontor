@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- External AI provider failures now return a stable redacted message instead
+  of exposing exception text that may contain credentials, provider URLs or
+  prompt content; retrying the same request remains supported.
+
 ### Added
 
 - Added an idempotent external-approval service and mapping migration. Mailbox proposals retain their authoritative permission and separation-of-duties checks when reviewed from Kontor, and only bounded redacted metadata enters the AI approval queue.

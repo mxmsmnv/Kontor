@@ -36,8 +36,11 @@ final class SquadAdapter implements KontorAIProviderInterface
     {
         try {
             $result = $this->client->complete($request->capability, $request->input);
-        } catch (\Throwable $e) {
-            return new AIResponse(success: false, errorMessage: $e->getMessage());
+        } catch (\Throwable) {
+            // External clients may include request bodies, credentials or
+            // provider URLs in exception messages. Do not let those details
+            // escape through the business-facing response.
+            return new AIResponse(success: false, errorMessage: 'AI provider request failed.');
         }
 
         return new AIResponse(
