@@ -14,6 +14,13 @@ use Kontor\API\DTO\StoredIdempotentResponse;
 use Kontor\API\Infrastructure\Registry\ApiResourceRegistry;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistryInterface;
 use Kontor\MCP\Application\KontorMcpBridge;
+use Kontor\SDK\Contracts\SearchProviderInterface;
+use Kontor\SDK\DTO\SearchHit;
+use Kontor\SDK\DTO\SearchQuery;
+use Kontor\SDK\DTO\SearchResult;
+use Kontor\Settings\Contracts\SettingsMigrationInterface;
+use Kontor\Settings\DTO\ProviderMigrationResult;
+use Kontor\Settings\DTO\SettingsMigrationReport;
 use PHPUnit\Framework\TestCase;
 
 final class KontorMcpBridgeTest extends TestCase
@@ -93,8 +100,86 @@ final class KontorMcpBridgeTest extends TestCase
         }
     }
 
+    public function testSearchForwardsABoundedScopedQueryAndMapsHits(): void
+    {
+        $search = new FakeSearchProvider();
+        [$bridge] = $this->bridge($search);
+
+        $result = $bridge->search('  ada  ', '["contact","contact"]', 500, -10);
+
+        self::assertNotNull($search->query);
+        self::assertSame('01KYG385JXNQQ8H16SH37VNG3V', $search->query->organizationId);
+        self::assertSame('ada', $search->query->term);
+        self::assertSame(['contact'], $search->query->entityTypes);
+        self::assertSame(50, $search->query->limit);
+        self::assertSame(0, $search->query->offset);
+        self::assertSame(1, $result['total']);
+        self::assertSame([
+            'entity_type' => 'contact',
+            'uid' => self::UID,
+            'title' => 'Ada Lovelace',
+            'subtitle' => 'Customer',
+            'admin_url' => '/kontor/contacts/' . self::UID,
+            'score' => 0.95,
+        ], $result['items'][0]);
+    }
+
+    public function testGetProjectsFieldsAndUpdateIsReplaySafe(): void
+    {
+        [$bridge, $resource] = $this->bridge();
+
+        $found = $bridge->getRecord('contacts', self::UID, '["uid","name"]');
+        $first = $bridge->updateRecord('contacts', self::UID, '{"name":"Grace"}', 'update-0001');
+        $second = $bridge->updateRecord('contacts', self::UID, '{"name":"Grace"}', 'update-0001');
+
+        self::assertSame(['uid' => self::UID, 'name' => 'Ada'], $found['record']);
+        self::assertArrayNotHasKey('apiToken', $found['record']);
+        self::assertSame($first, $second);
+        self::assertSame(['uid' => self::UID, 'name' => 'Grace'], $first['record']);
+        self::assertSame(1, $resource->updateCalls);
+    }
+
+    public function testSettingsExportPreviewAndConfirmedApplyAreReplaySafe(): void
+    {
+        $settings = new FakeSettingsMigration();
+        [$bridge] = $this->bridge(settings: $settings);
+        $document = json_encode($settings->profile, JSON_THROW_ON_ERROR);
+
+        self::assertSame($settings->profile, $bridge->exportSettings(['transport' => 'mcp']));
+        $preview = $bridge->previewSettings($document);
+        self::assertTrue($preview['successful']);
+        self::assertFalse($preview['applied']);
+
+        try {
+            $bridge->applySettings($document, 'settings-0001', 'NO');
+            self::fail('Settings apply without confirmation was accepted.');
+        } catch (\InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
+
+        $first = $bridge->applySettings(
+            $document,
+            'settings-0001',
+            'APPLY_REVIEWED_KONTOR_SETTINGS',
+        );
+        $second = $bridge->applySettings(
+            $document,
+            'settings-0001',
+            'APPLY_REVIEWED_KONTOR_SETTINGS',
+        );
+
+        self::assertSame($first, $second);
+        self::assertTrue($first['applied']);
+        self::assertTrue($first['replay_safe']);
+        self::assertSame(1, $settings->exportCalls);
+        self::assertSame(1, $settings->applyCalls);
+    }
+
     /** @return array{0: KontorMcpBridge, 1: FakeContactResource} */
-    private function bridge(): array
+    private function bridge(
+        ?SearchProviderInterface $search = null,
+        ?SettingsMigrationInterface $settings = null,
+    ): array
     {
         $resource = new FakeContactResource();
         $resources = new ApiResourceRegistry();
@@ -106,6 +191,8 @@ final class KontorMcpBridgeTest extends TestCase
                 resources: $resources,
                 components: new InMemoryComponentRegistry(),
                 idempotency: new IdempotencyService(new InMemoryIdempotencyStore()),
+                search: $search,
+                settings: $settings,
             ),
             $resource,
         ];
@@ -115,6 +202,7 @@ final class KontorMcpBridgeTest extends TestCase
 final class FakeContactResource implements ApiResourceInterface
 {
     public int $createCalls = 0;
+    public int $updateCalls = 0;
     public int $deleteCalls = 0;
 
     public function key(): string
@@ -152,12 +240,107 @@ final class FakeContactResource implements ApiResourceInterface
 
     public function update(string $organizationId, string $uid, array $attributes): array
     {
-        return ['uid' => $uid, ...$attributes];
+        $this->updateCalls++;
+
+        return ['uid' => $uid, ...$attributes, 'apiToken' => 'hidden'];
     }
 
     public function delete(string $organizationId, string $uid): void
     {
         $this->deleteCalls++;
+    }
+}
+
+final class FakeSearchProvider implements SearchProviderInterface
+{
+    public ?SearchQuery $query = null;
+
+    public function name(): string
+    {
+        return 'fake-search';
+    }
+
+    public function supports(string $entityType): bool
+    {
+        return $entityType === 'contact';
+    }
+
+    public function search(SearchQuery $query): SearchResult
+    {
+        $this->query = $query;
+
+        return new SearchResult([
+            new SearchHit(
+                entityType: 'contact',
+                entityUid: KontorMcpBridgeTest::UID,
+                title: 'Ada Lovelace',
+                subtitle: 'Customer',
+                url: '/kontor/contacts/' . KontorMcpBridgeTest::UID,
+                score: 0.95,
+            ),
+        ], 1);
+    }
+}
+
+final class FakeSettingsMigration implements SettingsMigrationInterface
+{
+    public int $exportCalls = 0;
+    public int $applyCalls = 0;
+
+    /** @var array<string, mixed> */
+    public array $profile = [
+        '$schema' => 'https://kontor.dev/schema/settings-profile.v1.json',
+        'schemaVersion' => 1,
+        'product' => 'Kontor',
+        'providers' => [
+            'organization' => [
+                'schemaVersion' => 1,
+                'data' => ['timezone' => 'UTC'],
+            ],
+        ],
+    ];
+
+    public function exportProfile(array $source = []): array
+    {
+        $this->exportCalls++;
+
+        return $this->profile;
+    }
+
+    public function decode(string $json): array
+    {
+        return json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    public function preview(array $profile): SettingsMigrationReport
+    {
+        return $this->report(applied: false);
+    }
+
+    public function apply(array $profile): SettingsMigrationReport
+    {
+        $this->applyCalls++;
+
+        return $this->report(applied: true);
+    }
+
+    private function report(bool $applied): SettingsMigrationReport
+    {
+        return new SettingsMigrationReport(
+            fingerprint: hash('sha256', json_encode($this->profile, JSON_THROW_ON_ERROR)),
+            applied: $applied,
+            providers: [new ProviderMigrationResult(
+                key: 'organization',
+                label: 'Organization',
+                status: $applied ? 'applied' : 'ready',
+                changes: [[
+                    'field' => 'timezone',
+                    'label' => 'Timezone',
+                    'from' => 'America/New_York',
+                    'to' => 'UTC',
+                ]],
+            )],
+        );
     }
 }
 

@@ -5,6 +5,32 @@ function fixture() {
   return JSON.parse(fs.readFileSync(process.env.KONTOR_E2E_STATE, 'utf8'));
 }
 
+function monitorBrowser(page) {
+  const failures = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      failures.push(`console: ${message.text()}`);
+    }
+  });
+  page.on('pageerror', (error) => failures.push(`page: ${error.message}`));
+  page.on('requestfailed', (request) => {
+    failures.push(`request: ${request.method()} ${request.url()} (${request.failure()?.errorText || 'failed'})`);
+  });
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      failures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
+    }
+  });
+
+  return {
+    assertClean(label) {
+      if (failures.length > 0) {
+        throw new Error(`${label}: browser diagnostics failed:\n${failures.join('\n')}`);
+      }
+    },
+  };
+}
+
 async function login(page, user, password) {
   await page.goto('./');
   await page.getByLabel('Username').fill(user);
@@ -34,4 +60,4 @@ async function assertResponsive(page, label) {
   }
 }
 
-module.exports = { fixture, login, assertAccessible, assertResponsive };
+module.exports = { fixture, login, monitorBrowser, assertAccessible, assertResponsive };

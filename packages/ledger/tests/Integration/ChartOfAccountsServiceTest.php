@@ -41,6 +41,18 @@ final class ChartOfAccountsServiceTest extends DatabaseTestCase
         $this->assertSame('Cash', $this->accounts()->require($account->uid->toString())->name);
     }
 
+    public function test_find_by_code_returns_the_matching_account_or_null(): void
+    {
+        $service = new ChartOfAccountsService($this->accounts());
+        $created = $service->createAccount($this->organizationUid, '1000', 'Cash', 'asset', 'EUR');
+
+        $this->assertSame(
+            $created->uid->toString(),
+            $service->findByCode($this->organizationUid, '1000')?->uid->toString(),
+        );
+        $this->assertNull($service->findByCode($this->organizationUid, '9999'));
+    }
+
     public function test_a_duplicate_code_is_rejected(): void
     {
         $service = new ChartOfAccountsService($this->accounts());

@@ -52,6 +52,30 @@ final class SettingsMigrationServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         (new SettingsMigrationService($registry))->exportProfile();
     }
+
+    public function testDocumentedDecodeAndFingerprintRoundTripAnExportedProfile(): void
+    {
+        $registry = new SettingsProviderRegistry();
+        $registry->register(new TestSettingsProvider(['timezone' => 'UTC']));
+        $service = new SettingsMigrationService($registry);
+        $profile = $service->exportProfile(['transport' => 'test']);
+
+        $decoded = $service->decode(json_encode($profile, JSON_THROW_ON_ERROR));
+
+        self::assertSame($profile, $decoded);
+        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $service->fingerprint($decoded));
+        self::assertSame($service->fingerprint($profile), $service->fingerprint($decoded));
+    }
+
+    public function testDocumentedDecodeLimitRejectsProfilesLargerThanOneMegabyte(): void
+    {
+        $service = new SettingsMigrationService(new SettingsProviderRegistry());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('smaller than 1 MB');
+
+        $service->decode(str_repeat('x', SettingsMigrationService::MAX_JSON_BYTES + 1));
+    }
 }
 
 final class TestSettingsProvider implements SettingsProviderInterface

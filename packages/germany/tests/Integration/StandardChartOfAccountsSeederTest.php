@@ -32,6 +32,19 @@ final class StandardChartOfAccountsSeederTest extends DatabaseTestCase
         return ['kontor_ledger_accounts', 'kontor_organizations', 'kontor_migrations'];
     }
 
+    public function test_definitions_expose_the_standard_chart_without_mutating_storage(): void
+    {
+        $accounts = new AccountRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $seeder = new StandardChartOfAccountsSeeder(new ChartOfAccountsService($accounts));
+
+        $definitions = $seeder->definitions();
+
+        $this->assertNotEmpty($definitions);
+        $this->assertSame(['code', 'name', 'type'], array_keys($definitions[0]));
+        $this->assertSame('1000', $definitions[0]['code']);
+        $this->assertSame([], $accounts->forOrganization($this->organizationUid));
+    }
+
     public function test_seed_creates_every_standard_account(): void
     {
         $accounts = new AccountRepository($this->pdo, new OrganizationRepository($this->pdo));

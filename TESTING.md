@@ -65,8 +65,9 @@ The Playwright runner intentionally mutates the qualification journey only in
 the desktop Chromium project, then repeats the permission, responsive and axe
 checks in the remaining browser/device profiles. It retains the local site and
 named fixture records between runs; generated traces, videos and reports live
-under ignored `artifacts/e2e`. A successful PHPUnit run alone is not an E2E
-pass.
+under ignored `artifacts/e2e`. Every journey fails on console errors, uncaught
+page errors, failed requests or HTTP responses at or above 400. A successful
+PHPUnit run alone is not an E2E pass.
 
 ## Test environment
 
@@ -87,7 +88,10 @@ pass.
 - [x] Configuration defaults and save (no module implements configurable
   module state; Kontor Settings migration is tested separately)
 - [x] Missing and incompatible dependencies
-- [ ] Public APIs and documented hooks
+- [x] Documented public APIs and hooks: exact documented method references,
+  Contacts REST request pipeline, SDK/event envelopes, Settings/MCP contracts
+  and operational boot registrations are locked by deterministic tests;
+  ProcessWire-only wrappers are covered by the live-site boundary
 - [x] Permissions and organization isolation
 - [x] Data save and reload
 - [x] Historical v001 schema/data upgrade through every declared current
@@ -197,11 +201,11 @@ The reusable ProcessWire sites, their databases and named E2E fixtures are
 intentionally retained between runs. Only transient databases, servers and
 browser sessions are removed after each checkpoint.
 
-- [ ] Test settings restored
-- [ ] `E2E` users/data removed or the disposable database discarded
-- [ ] Queue jobs completed or removed safely
-- [ ] Browser workers, servers and watchers stopped
-- [ ] No real external side effects occurred
+- [x] Dedicated test settings and named fixtures intentionally retained
+- [x] Persistent `E2E` users/data retained in the dedicated databases
+- [x] Queue jobs completed or removed safely
+- [x] Browser workers, servers and watchers stopped
+- [x] No real external side effects occurred
 
 ## Release evidence
 

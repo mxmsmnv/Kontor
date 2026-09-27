@@ -24,15 +24,15 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 315 tests, 2,505 assertions |
-| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 306 tests, 821 assertions |
-| Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
-| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 413 tests, 899 assertions |
-| Total | 1,239 tests, 4,714 assertions |
+| Core/root PHPUnit | 330 tests, 2,559 assertions |
+| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 308 tests, 850 assertions |
+| Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 208 tests, 499 assertions |
+| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 421 tests, 954 assertions |
+| Total | 1,267 tests, 4,862 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
-the cache package passed. A final syntax pass checked 1,036 PHP source and test
+the cache package passed. A final syntax pass checked 1,040 PHP source and test
 files; all 35 Kontor manifests and all 36 Composer manifests parsed
 successfully.
 
@@ -66,6 +66,15 @@ migrations and 77 package-declared storage tables. It restores the historical
 schema, preserves a business record while applying the one post-v001 migration,
 and verifies every current migration is idempotent. The inventory exposed and
 closed missing Catalog and Queue upgrade hooks.
+
+A repository-wide public-contract audit checked every exact documented
+`Class::method()` reference against a public implementation. New deterministic
+coverage exercises the Contacts REST request pipeline with auth, idempotency,
+projection and tenant isolation; canonical SDK value/event envelopes; every
+Settings service method; all 13 MCP declarations plus search, record and
+settings bridge behavior; documented operational methods and the Automation
+and Germany boot registrations. CRM lifecycle event names, ordering, actors and
+payloads are also locked. No broken documented method name was found.
 
 A tokenizer-backed CSRF contract now inventories all 168 ProcessKontor execute
 handlers: 50 are explicitly read-only and all 118 mutation-capable handlers
@@ -151,8 +160,10 @@ verifies the permission-aware Expenses empty state.
 - The committed Playwright runner passed the full qualification/conversion and
   restricted-role journeys in desktop Chromium. The restricted journey also
   passed Pixel 7 Chromium and iPhone 15 WebKit profiles, including horizontal
-  overflow and serious/critical axe checks. These checks exposed and closed
-  insufficient contrast for default labels and field notes.
+  overflow and serious/critical axe checks. The committed runner now also fails
+  every journey on console errors, uncaught page errors, failed requests or
+  HTTP responses at or above 400. These checks exposed and closed insufficient
+  contrast for default labels and field notes.
 
 ## Defects fixed in this run
 
@@ -213,7 +224,19 @@ following remain explicit:
   desktop/mobile Chromium and mobile WebKit pass;
 - exercise the Redis adapter on a host with optional `ext-redis`; its four
   adapter-specific tests are the only skipped PHP checks, while the in-memory
-  implementation passes.
+  implementation passes;
+- 32 of the 35 component packages still lack a formal `API.md`, and none has an
+  `EXAMPLES.md`; their README references were verified, but undocumented module
+  façade methods cannot be claimed as a stable public API until maintainers
+  define that contract;
+- thin ProcessWire HTTP/LazyCron hook wrappers and module factory accessors are
+  evidenced by the live all-components site rather than isolated package
+  tests. The Contacts resource-to-GraphQL composition remains a cross-package
+  contract gap; generic GraphQL execution and the resource itself both pass;
+- the specification manifest mentions `crm.lead.created`, while the current
+  CRM architecture has no lead-creation application service/event boundary.
+  The implemented and README-documented deal/lead-conversion events are covered;
+  an event was not invented at repository persistence level.
 
 Portal file access is now organization-scoped in the service itself. Within one
 organization, customer/contact ownership remains deliberately enforced by the
@@ -223,9 +246,10 @@ their files. Moving that customer concept into the generic file-signing service
 would require a public API redesign and is recorded as an explicit architectural
 boundary rather than silently duplicating Sales and Invoices ownership rules.
 
-The recurring thread heartbeat named **Kontor full E2E program** continues from
-this checkpoint and reports only meaningful progress, failures or required
-user action.
+Every package now has automated evidence plus live ProcessWire boundary
+evidence, or a precise justified host/documentation gap above. This completes
+the current release-candidate programme; the persistent environments remain
+available for the next compatibility or release run.
 
 ## Cleanup
 

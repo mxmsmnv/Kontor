@@ -177,7 +177,8 @@ final class ScheduledReportQueueVerticalTest extends DatabaseTestCase
             $job->handle($payload, $progress);
             $this->fail('Expected the failing Files delivery to throw.');
         } catch (\RuntimeException $exception) {
-            $this->assertSame('Storage unavailable.', $exception->getMessage());
+            $this->assertSame('File storage write failed.', $exception->getMessage());
+            $this->assertStringNotContainsString('Storage unavailable.', $exception->getMessage());
         }
 
         $unchanged = $repository->require($schedule->uid->toString());

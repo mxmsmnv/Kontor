@@ -59,6 +59,23 @@ final class InventoryMovementServiceTest extends DatabaseTestCase
         $this->assertSame(0.0, $balance->quantityReserved);
     }
 
+    public function test_adjust_increase_adds_unreserved_stock(): void
+    {
+        $movement = $this->movements->adjustIncrease(
+            $this->organizationUid,
+            $this->warehouseA,
+            self::ITEM,
+            3.5,
+            'stock count correction',
+        );
+
+        $balance = $this->balances->find($this->organizationUid, $this->warehouseA, self::ITEM);
+        $this->assertSame('adjust', $movement->movementType);
+        $this->assertSame(3.5, $balance->quantityOnHand);
+        $this->assertSame(3.5, $balance->quantityAvailable);
+        $this->assertSame(0.0, $balance->quantityReserved);
+    }
+
     public function test_movement_event_uses_the_sdk_string_actor_id(): void
     {
         $events = new class implements EventDispatcherInterface {
