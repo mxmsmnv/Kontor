@@ -9,10 +9,12 @@ browser route smoke as a substitute for package-level coverage.
 
 ## Environment
 
-- Source baseline: `2d92c41` on `feat/configurable-crm-intake`, plus the fixes
+- Source baseline: `f87f065` on `feat/configurable-crm-intake`, plus the fixes
   listed below
 - Runtime: PHP 8.5.8, ProcessWire 3.0.259, MariaDB, local PHP development server
 - Site: disposable local installation with its own database
+- Lifecycle site: persistent clone with an independent database for destructive
+  install/upgrade/uninstall verification; the primary test site was not mutated
 - Components: all 35 Kontor components installed and enabled; MCP Server was
   installed as the explicit external dependency of Kontor MCP
 - External side effects: none; no production mail, payment, AI, webhook or
@@ -63,6 +65,10 @@ successfully.
 - Six real-database CRM Intake validation tests cover invalid profile schemas,
   required and typed answers, normalization, unsupported entity types, missing
   profiles and same-entity tenant isolation.
+- The lifecycle matrix uninstalled all 36 Kontor/ProcessWire modules in reverse
+  dependency order, verified identical row counts, checksums and normalized DDL
+  for all 84 `kontor_*` tables, reinstalled every module, ran every available
+  upgrade hook and confirmed preserved data remained connected.
 - A restricted automation/workflow user could see definitions but not the
   seeded execution-log sentinel or workflow history. An administrator could
   see both.
@@ -100,8 +106,8 @@ following remain explicit:
 - run Firefox/WebKit, keyboard-only and light/dark-theme compatibility passes;
 - exercise Redis with `ext-redis`, plus deterministic mail, webhook, payment,
   AI and object-storage fakes in their full HTTP failure/retry paths;
-- execute supported-version upgrade fixtures and the preserve-data
-  uninstall/reinstall matrix on disposable databases;
+- execute historical source-version upgrade fixtures; current-schema upgrade
+  hooks and the full preserve-data uninstall/reinstall matrix have passed;
 - finish the browser-level CRM Intake permission matrix.
 
 The recurring thread heartbeat named **Kontor full E2E program** continues from
@@ -116,4 +122,7 @@ run; no test worker or watcher was left running. At the owner's request, the
 database are now a persistent reusable test environment. It currently has one
 organization and all 35 Kontor components installed. Future runs must preserve
 its files and database while continuing to remove only short-lived per-suite
-verification databases and stop idle processes.
+verification databases and stop idle processes. The independent lifecycle
+clone at `/Users/mas/dev/processwire/e2e/kontor-lifecycle` and database
+`kontor_e2e_lifecycle` are also retained for repeatable destructive module
+matrix runs; its final state is fully reinstalled.

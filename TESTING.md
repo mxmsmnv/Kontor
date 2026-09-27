@@ -61,16 +61,16 @@ E2E pass.
 
 ## ProcessWire boundary coverage
 
-- [ ] Module discovery and metadata
-- [ ] Fresh Core install followed by dependency-ordered component install
+- [x] Module discovery and metadata
+- [x] Fresh Core install followed by dependency-ordered component install
 - [ ] Configuration defaults and save
 - [ ] Missing and incompatible dependencies
 - [ ] Public APIs and documented hooks
-- [ ] Permissions and organization isolation
-- [ ] Data save and reload
+- [x] Permissions and organization isolation
+- [x] Data save and reload
 - [ ] Upgrade from every supported prior release
-- [ ] Uninstall preserves business data
-- [ ] Reinstall reconnects preserved data
+- [x] Uninstall preserves business data
+- [x] Reinstall reconnects preserved data
 
 ## Critical automated journeys
 
@@ -146,7 +146,7 @@ E2E pass.
 
 ## Failure paths
 
-- [ ] Invalid and missing intake values
+- [x] Invalid and missing intake values
 - [ ] Unauthenticated access
 - [ ] Unauthorized role and cross-organization identifiers
 - [ ] CSRF failure on every mutation
