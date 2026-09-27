@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   expenses, including direct create-form access.
 - Contact-directory actions and CRM Intake field target badges now reflow on
   narrow screens without blank or overlapping controls.
+- Primary page-header actions retain readable foreground contrast when combined
+  with UIKit's link-reset utility, including on narrow CRM Intake layouts.
+- CRM Intake exposes its settings-migration action only when the user has both
+  intake administration and an applicable settings export or import permission.
 
 ### Added
 

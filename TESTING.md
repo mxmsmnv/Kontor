@@ -129,7 +129,7 @@ E2E pass.
 
 ### Anonymous session
 
-- [ ] Kontor admin and API routes deny access without leaking record data
+- [x] Kontor admin and API routes deny access without leaking record data
 
 ### Cross-role or multi-user scenario
 
@@ -138,17 +138,17 @@ E2E pass.
 
 ### Presentation
 
-- [ ] Representative desktop viewport
-- [ ] Representative mobile viewport
-- [ ] Keyboard/accessibility smoke
-- [ ] Light and dark admin themes
-- [ ] Browser console and failed network requests inspected
+- [x] Representative desktop viewport
+- [x] Representative mobile viewport
+- [x] Keyboard/accessibility smoke
+- [x] Light and dark admin themes
+- [x] Browser console and failed network requests inspected
 
 ## Failure paths
 
 - [x] Invalid and missing intake values
-- [ ] Unauthenticated access
-- [ ] Unauthorized role and cross-organization identifiers
+- [x] Unauthenticated access
+- [x] Unauthorized role and cross-organization identifiers
 - [ ] CSRF failure on every mutation
 - [ ] Duplicate submission or webhook replay
 - [ ] External timeout/failure

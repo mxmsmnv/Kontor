@@ -9,7 +9,7 @@ browser route smoke as a substitute for package-level coverage.
 
 ## Environment
 
-- Source baseline: `f87f065` on `feat/configurable-crm-intake`, plus the fixes
+- Source baseline: `87d4a81` on `feat/configurable-crm-intake`, plus the fixes
   listed below
 - Runtime: PHP 8.5.8, ProcessWire 3.0.259, MariaDB, local PHP development server
 - Site: disposable local installation with its own database
@@ -24,11 +24,11 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 181 tests, 427 assertions |
+| Core/root PHPUnit | 183 tests, 431 assertions |
 | Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 302 tests, 793 assertions |
 | Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
 | SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 408 tests, 838 assertions |
-| Total | 1,096 tests, 2,547 assertions |
+| Total | 1,098 tests, 2,551 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
@@ -69,6 +69,15 @@ successfully.
   dependency order, verified identical row counts, checksums and normalized DDL
   for all 84 `kontor_*` tables, reinstalled every module, ran every available
   upgrade hook and confirmed preserved data remained connected.
+- The CRM Intake browser permission matrix passed: anonymous access returned
+  the login boundary; a lead viewer could inspect the active profile but saw no
+  management action; a user with intake administration but no Settings grant
+  was denied the Settings route and no longer sees a dead-end action; a fully
+  authorized administrator could open Settings migration.
+- CRM Intake passed a 375x812 responsive pass without horizontal overflow,
+  keyboard focus reached both page actions, light and dark themes retained
+  readable contrast, the console contained no warnings/errors, and a captured
+  reload produced no failed requests or HTTP responses at or above 400.
 - A restricted automation/workflow user could see definitions but not the
   seeded execution-log sentinel or workflow history. An administrator could
   see both.
@@ -91,6 +100,10 @@ successfully.
 - Demo transition effects running before the workflow permission check.
 - CRM Intake profiles accepted blank or storage-overflowing names when callers
   used the public service directly instead of the settings adapter.
+- Primary page-header links could inherit UIKit link-reset text color over a
+  dark primary background, making the CRM Intake action label invisible.
+- CRM Intake showed Settings migration to intake administrators who lacked
+  both Settings export and import permissions, leading to a guaranteed denial.
 - Test assumptions that depended on MySQL JSON formatting, unordered query
   results or unread PDO result sets.
 
@@ -101,14 +114,12 @@ every supported environment and real provider has been exercised. The
 following remain explicit:
 
 - commit a repeatable automated browser runner for the critical journeys;
-- run a dedicated narrow-viewport visual pass after the responsive fixes (the
-  current browser automation surface could not change viewport size);
-- run Firefox/WebKit, keyboard-only and light/dark-theme compatibility passes;
+- run Firefox/WebKit compatibility passes; only the Chromium-based in-app
+  browser is currently exposed to the automation surface;
 - exercise Redis with `ext-redis`, plus deterministic mail, webhook, payment,
   AI and object-storage fakes in their full HTTP failure/retry paths;
 - execute historical source-version upgrade fixtures; current-schema upgrade
-  hooks and the full preserve-data uninstall/reinstall matrix have passed;
-- finish the browser-level CRM Intake permission matrix.
+  hooks and the full preserve-data uninstall/reinstall matrix have passed.
 
 The recurring thread heartbeat named **Kontor full E2E program** continues from
 this checkpoint and reports only meaningful progress, failures or required

@@ -51,6 +51,10 @@
   gap: 0.65rem;
 }
 
+.kontor-pagehead__actions .uk-button-primary {
+  color: #fff !important;
+}
+
 .kontor-button {
   align-items: center;
   display: inline-flex;

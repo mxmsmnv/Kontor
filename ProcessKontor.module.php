@@ -108,7 +108,7 @@ class ProcessKontor extends Process
         return [
             'title' => 'Kontor',
             'summary' => 'Kontor ERP, CRM and business operations admin.',
-            'version' => '221',
+            'version' => '222',
             'author' => 'Maxim Semenov',
             'icon' => 'cubes',
             'permission' => 'kontor-access',
@@ -1291,7 +1291,8 @@ class ProcessKontor extends Process
         return $this->renderTemplate('crm-intake', [
             'profile' => $profile,
             'settingsReady' => $this->wire()->modules->isInstalled('KontorSettings'),
-            'canManage' => $this->can('kontor-crm-intake-admin'),
+            'canManage' => $this->can('kontor-crm-intake-admin')
+                && ($this->can('kontor-settings-export') || $this->can('kontor-settings-import')),
         ]);
     }
 
