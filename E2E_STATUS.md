@@ -104,5 +104,9 @@ user action.
 ## Cleanup
 
 The agent-controlled browser tab and local PHP server were stopped after the
-run. The disposable `kontor_e2e_full` database and all short-lived verification
-databases were dropped; no test worker or watcher was left running.
+run; no test worker or watcher was left running. At the owner's request, the
+`/Users/mas/dev/processwire/e2e/kontor-full` site and its `kontor_e2e_full`
+database are now a persistent reusable test environment. It currently has one
+organization and all 35 Kontor components installed. Future runs must preserve
+its files and database while continuing to remove only short-lived per-suite
+verification databases and stop idle processes.
