@@ -24,11 +24,11 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 185 tests, 510 assertions |
-| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 304 tests, 796 assertions |
+| Core/root PHPUnit | 308 tests, 814 assertions |
+| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 305 tests, 799 assertions |
 | Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
-| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 409 tests, 853 assertions |
-| Total | 1,103 tests, 2,648 assertions |
+| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 410 tests, 861 assertions |
+| Total | 1,228 tests, 2,963 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
@@ -40,10 +40,29 @@ A repository-wide dependency contract now verifies that every ProcessWire hard
 dependency is also present in the owning package's Composer runtime graph. It
 found and closed missing Queue, Files and Cache requirements in Collaboration,
 Documents, Dashboard and Search respectively; all Composer manifests validate.
+Missing, incompatible package and incompatible ProcessWire versions are covered
+by fail-closed dependency tests. The persistent lifecycle site also refused to
+uninstall Cache while Dashboard and Search depended on it, then remained at
+35/35 installed components.
+
+A source inventory confirmed that none of the 36 ProcessWire modules implements
+`ConfigurableModule` or module-owned configuration fields, so there is no
+module configuration-default/save boundary to exercise. Portable workspace
+settings remain owned by Kontor Settings and its separate migration journey.
 
 A deterministic webhook transport fake now covers timeout persistence, retry
 state, replay with the same delivery identifier and successful recovery without
 creating a duplicate delivery. No network endpoint was contacted.
+
+A tokenizer-backed CSRF contract now inventories all 168 ProcessKontor execute
+handlers: 50 are explicitly read-only and all 118 mutation-capable handlers
+must call the shared POST/ProcessWire CSRF guard. It exposed and closed missing
+guards in the inline Contact and Company save branches.
+
+Boundary and provider-failure regressions now reject cross-currency payment
+allocations before any row is written and prove that an AI timeout containing a
+credential and confidential prompt returns only a stable redacted error before
+a deterministic retry succeeds.
 
 ## ProcessWire and browser evidence
 
@@ -119,6 +138,12 @@ creating a duplicate delivery. No network endpoint was contacted.
   enforce the current organization when used through the Portal service.
 - Four package Composer manifests omitted ProcessWire-declared runtime
   dependencies, allowing incomplete standalone dependency resolution.
+- Inline Contact and Company saves processed submitted fields without the
+  shared POST and CSRF guard used by the other mutation handlers.
+- Cross-currency payment allocation reached persistence before failing during
+  invoice synchronization.
+- The external AI adapter exposed raw client exception messages that could
+  contain provider credentials, URLs or prompt content.
 - Test assumptions that depended on MySQL JSON formatting, unordered query
   results or unread PDO result sets.
 
@@ -131,8 +156,9 @@ following remain explicit:
 - commit a repeatable automated browser runner for the critical journeys;
 - run Firefox/WebKit compatibility passes; only the Chromium-based in-app
   browser is currently exposed to the automation surface;
-- exercise Redis with `ext-redis`, plus deterministic mail, webhook, payment,
-  AI and object-storage fakes in their full HTTP failure/retry paths;
+- exercise Redis with `ext-redis`, plus deterministic mail, payment and
+  object-storage fakes in their full failure/retry paths; webhook timeout/replay
+  and AI timeout/redaction/retry are now covered without network access;
 - execute historical source-version upgrade fixtures; current-schema upgrade
   hooks and the full preserve-data uninstall/reinstall matrix have passed.
 

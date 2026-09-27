@@ -63,8 +63,9 @@ E2E pass.
 
 - [x] Module discovery and metadata
 - [x] Fresh Core install followed by dependency-ordered component install
-- [ ] Configuration defaults and save
-- [ ] Missing and incompatible dependencies
+- [x] Configuration defaults and save (no module implements configurable
+  module state; Kontor Settings migration is tested separately)
+- [x] Missing and incompatible dependencies
 - [ ] Public APIs and documented hooks
 - [x] Permissions and organization isolation
 - [x] Data save and reload
@@ -149,12 +150,12 @@ E2E pass.
 - [x] Invalid and missing intake values
 - [x] Unauthenticated access
 - [x] Unauthorized role and cross-organization identifiers
-- [ ] CSRF failure on every mutation
+- [x] CSRF failure on every mutation
 - [x] Duplicate submission or webhook replay
 - [x] External timeout/failure
 - [x] Retry and idempotency
 - [ ] Empty state
-- [ ] Large or boundary data state
+- [x] Large or boundary data state
 - [ ] Logs contain no secrets or unnecessary personal data
 
 ## External services
