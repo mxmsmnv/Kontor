@@ -4,7 +4,7 @@
     "name": "KontorCRMIntake",
     "title": "Kontor CRM Intake",
     "description": "Configurable qualification forms shared by contacts, leads and deals.",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "business",
     "category": "crm",
     "license": "MIT",

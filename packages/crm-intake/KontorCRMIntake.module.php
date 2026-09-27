@@ -23,7 +23,7 @@ class KontorCRMIntake extends WireData implements Module
         return [
             'title' => 'Kontor CRM Intake',
             'summary' => 'Configurable qualification forms shared by contacts, leads and deals.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'list-alt',

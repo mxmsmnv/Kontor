@@ -30,16 +30,20 @@ final class CRMIntakeService
         array $fields,
         ?int $createdBy = null,
     ): IntakeProfile {
+        $name = trim($name);
+        if ($name === '' || mb_strlen($name) > 191) {
+            throw new InvalidArgumentException('CRM intake profile name is required and must not exceed 191 characters.');
+        }
         $fields = $this->validateProfile($fields);
         $existing = $this->profiles->defaultForOrganization($organizationUid);
         $profile = $existing ?? IntakeProfile::create(
             $organizationUid,
-            trim($name),
+            $name,
             $fields,
             true,
             $createdBy,
         );
-        $profile->name = trim($name);
+        $profile->name = $name;
         $profile->fields = $fields;
         $profile->isDefault = true;
         $profile->status = 'active';

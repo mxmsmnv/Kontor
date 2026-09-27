@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Reject blank and overlong profile names through the public intake service,
+  not only through the settings adapter.
+
 ## [0.1.0] - 2026-08-27
 
 ### Added
