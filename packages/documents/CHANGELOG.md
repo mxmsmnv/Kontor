@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- The component manifest now declares Files as a hard dependency, matching the
+  ProcessWire module metadata and PDF persistence path.
 - Publishing a language for the first time no longer increments or archives
   the English fallback family.
 - Restoring an older template version archives the currently active sibling,

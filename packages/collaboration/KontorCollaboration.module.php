@@ -36,7 +36,7 @@ class KontorCollaboration extends WireData implements Module
         return [
             'title' => 'Kontor Collaboration',
             'summary' => 'Notes, comments, mentions, followers, unread states.',
-            'version' => '003',
+            'version' => '004',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorCollaboration',
             'icon' => 'comments-o',

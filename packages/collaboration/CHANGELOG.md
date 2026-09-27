@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The component manifest now declares Queue and Mail as hard dependencies,
+  matching the ProcessWire module metadata and runtime bootstrap behavior.
+
 ### Added
 
 - Comment posting now dispatches idempotent Queue jobs for mentioned users and

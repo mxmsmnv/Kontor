@@ -94,9 +94,8 @@ MySQL (see `../../docker-compose.test.yml`) and is skipped otherwise, same
 
 ## Not in scope for this substage
 
-No order→invoice conversion service (unlike Sales' quotation→order
-conversion) — not a listed Substage 4.3 milestone; `Invoice::create()`
-accepts an optional `orderUid` for a caller to link one manually.
+Order→invoice conversion is available through `OrderToInvoiceService`, which
+copies the order lines and links the resulting invoice to its source order.
 Partial credit notes aren't built — only full credits, since partial
 credit notes aren't a listed milestone either. No scheduler/cron wiring for
 `sweepOverdue()` — that arrives with Stage 7's automation component; until
