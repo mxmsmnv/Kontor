@@ -84,6 +84,10 @@ final class PaymentAllocationService
             throw new RuntimeException('Payment and invoice must belong to the same organization.');
         }
 
+        if ($payment->amount->currencyCode() !== $invoice->currencyCode) {
+            throw new InvalidArgumentException('Payment currency must match invoice currency.');
+        }
+
         if (!in_array($invoice->status, ['issued', 'sent', 'overdue', 'partially_paid'], true)) {
             throw new RuntimeException("Invoice \"{$documentUid}\" cannot be allocated against from status \"{$invoice->status}\".");
         }

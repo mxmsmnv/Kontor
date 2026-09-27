@@ -29,5 +29,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Reject cross-currency allocations before persisting an allocation, leaving
+  the payment and invoice state unchanged.
 - Reject allocations between payments and invoices owned by different
   organizations.

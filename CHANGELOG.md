@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+- Payment allocations now reject payment/invoice currency mismatches before
+  writing allocation state.
 - Inline Contact and Company saves now enforce the shared POST and ProcessWire
   CSRF guard before processing submitted fields.
 - Creating a task with a contact or company relation now requires the dedicated

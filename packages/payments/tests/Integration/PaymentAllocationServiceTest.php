@@ -154,6 +154,33 @@ final class PaymentAllocationServiceTest extends DatabaseTestCase
         $this->allocationService->allocate($payment->uid->toString(), 'invoice', $invoiceB->uid->toString(), Money::ofMinor(1, 'EUR'));
     }
 
+    public function test_cannot_allocate_a_payment_in_a_different_currency_from_the_invoice(): void
+    {
+        $invoice = $this->sentInvoice();
+        $payment = Payment::create(
+            $this->organizationUid,
+            'contact',
+            'ct_01',
+            Money::ofMinor(10000, 'USD'),
+        );
+        $this->payments->save($payment);
+        $this->paymentWorkflow->confirm($payment->uid->toString());
+
+        try {
+            $this->allocationService->allocate(
+                $payment->uid->toString(),
+                'invoice',
+                $invoice->uid->toString(),
+                Money::ofMinor(10000, 'USD'),
+            );
+            $this->fail('Expected a cross-currency allocation to be rejected.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContainsString('invoice currency', $exception->getMessage());
+            $this->assertSame([], $this->allocations->forPayment($payment->uid->toString()));
+            $this->assertSame('sent', $this->invoices->require($invoice->uid->toString())->status);
+        }
+    }
+
     public function test_cannot_allocate_a_draft_payment(): void
     {
         $invoice = $this->sentInvoice();
