@@ -48,7 +48,7 @@ final class CoreBackupProviderTest extends DatabaseTestCase
 
         $result = $manager->restore($record->path, 'core', 'org_01');
 
-        $this->assertTrue($result->success);
+        $this->assertTrue($result->success, implode('; ', $result->errors));
         $this->assertSame(
             1,
             (int) $this->pdo->query('SELECT COUNT(*) FROM kontor_organizations')->fetchColumn()
@@ -77,6 +77,27 @@ final class CoreBackupProviderTest extends DatabaseTestCase
         $stillVerified = $manager->verify($record->path, 'core', 'org_01');
 
         $this->assertFalse($stillVerified);
+    }
+
+    public function test_verify_accepts_legacy_metadata_without_table_hashes(): void
+    {
+        (new OrganizationRepository($this->pdo))->defaultOrganization('DE', 'de', 'EUR');
+
+        $registry = new BackupProviderRegistry();
+        $registry->register('core', new CoreBackupProvider($this->pdo));
+        $manager = new BackupManager($registry, $this->backupDir);
+        $record = $manager->create('core', 'full', 'org_01');
+
+        $metadataPath = $record->path . '/metadata.json';
+        $metadata = json_decode(
+            (string) file_get_contents($metadataPath),
+            associative: true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+        unset($metadata['tableHashes']);
+        file_put_contents($metadataPath, json_encode($metadata, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        $this->assertTrue($manager->verify($record->path, 'core', 'org_01'));
     }
 
     public function test_dry_run_restore_does_not_modify_the_database(): void

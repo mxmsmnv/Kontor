@@ -57,10 +57,11 @@ final class CoreBackupProvider implements BackupProviderInterface
     public function export(BackupWriter $writer, BackupContext $context): void
     {
         $rowCounts = [];
+        $tableHashes = [];
 
         foreach (self::TABLES as $table) {
             $rowCounts[$table] = 0;
-            $writer->writeTable($table, $this->streamTable($table, $rowCounts));
+            $writer->writeTable($table, $this->streamTable($table, $rowCounts, $tableHashes));
         }
 
         $writer->writeMetadata([
@@ -69,6 +70,7 @@ final class CoreBackupProvider implements BackupProviderInterface
             'exportedAt' => (new \DateTimeImmutable())->format(DATE_ATOM),
             'tables' => self::TABLES,
             'rowCounts' => $rowCounts,
+            'tableHashes' => $tableHashes,
         ]);
     }
 
@@ -82,6 +84,8 @@ final class CoreBackupProvider implements BackupProviderInterface
         }
 
         $expectedCounts = $metadata['rowCounts'] ?? [];
+        $expectedHashes = $metadata['tableHashes'] ?? [];
+        $hasHashMetadata = array_key_exists('tableHashes', $metadata);
         $tableHashes = [];
 
         foreach (self::TABLES as $table) {
@@ -98,6 +102,13 @@ final class CoreBackupProvider implements BackupProviderInterface
 
             if ($expected !== null && (int) $expected !== $actualCount) {
                 $errors[] = "Table \"{$table}\" expected {$expected} rows, found {$actualCount}.";
+            }
+
+            $expectedHash = $expectedHashes[$table] ?? null;
+
+            if ($hasHashMetadata
+                && ($expectedHash === null || !hash_equals((string) $expectedHash, $hash))) {
+                $errors[] = "Table \"{$table}\" failed checksum verification.";
             }
         }
 
@@ -126,9 +137,11 @@ final class CoreBackupProvider implements BackupProviderInterface
         $this->pdo->beginTransaction();
 
         try {
-            foreach (self::TABLES as $table) {
+            foreach (array_reverse(self::TABLES) as $table) {
                 $this->pdo->exec("DELETE FROM {$table}");
+            }
 
+            foreach (self::TABLES as $table) {
                 foreach ($reader->readTable($table) as $row) {
                     $this->insertRow($table, $row);
                     $restoredCount++;
@@ -149,17 +162,22 @@ final class CoreBackupProvider implements BackupProviderInterface
 
     /**
      * @param array<string, int> $rowCounts
+     * @param array<string, string> $tableHashes
      * @return iterable<array<string, mixed>>
      */
-    private function streamTable(string $table, array &$rowCounts): iterable
+    private function streamTable(string $table, array &$rowCounts, array &$tableHashes): iterable
     {
         $statement = $this->pdo->query("SELECT * FROM {$table}");
+        $context = hash_init('sha256');
 
-        foreach ($statement as $row) {
+        while (($row = $statement->fetch(\PDO::FETCH_ASSOC)) !== false) {
             $rowCounts[$table]++;
+            hash_update($context, json_encode($row, JSON_THROW_ON_ERROR));
 
             yield $row;
         }
+
+        $tableHashes[$table] = hash_final($context);
     }
 
     /**
