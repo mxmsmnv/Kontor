@@ -156,6 +156,75 @@ final class WebhookDeliveryServiceTest extends DatabaseTestCase
         $this->assertSame('delivered', $deliveries->require($delivery->uid->toString())->status);
     }
 
+    public function test_transport_timeout_is_retried_on_the_same_delivery_and_then_succeeds(): void
+    {
+        $subscriptions = new WebhookSubscriptionRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $deliveries = new WebhookDeliveryRepository($this->pdo, new OrganizationRepository($this->pdo));
+
+        $subscription = WebhookSubscription::create(
+            $this->organizationUid,
+            'https://example.com/hook',
+            'invoice.issued',
+            'shh-secret',
+        );
+        $subscriptions->save($subscription);
+
+        $delivery = WebhookDelivery::create(
+            $this->organizationUid,
+            $subscription->uid->toString(),
+            'evt_timeout_then_success',
+            'invoice.issued',
+            ['invoice_uid' => 'inv_01'],
+        );
+        $deliveries->save($delivery);
+
+        $http = new class implements HttpClientInterface {
+            public int $calls = 0;
+
+            /** @var string[] */
+            public array $deliveryHeaders = [];
+
+            public function post(string $url, string $body, array $headers): array
+            {
+                $this->calls++;
+                $this->deliveryHeaders[] = $headers['X-Kontor-Delivery'];
+
+                if ($this->calls === 1) {
+                    throw new \RuntimeException('connection timed out');
+                }
+
+                return ['status' => 204, 'body' => ''];
+            }
+        };
+
+        $service = new WebhookDeliveryService($http, $deliveries, $subscriptions);
+        $service->attempt($delivery, $subscription);
+
+        $afterTimeout = $deliveries->require($delivery->uid->toString());
+        $this->assertSame('pending', $afterTimeout->status);
+        $this->assertSame(1, $afterTimeout->attemptCount);
+        $this->assertNull($afterTimeout->responseCode);
+        $this->assertSame('connection timed out', $afterTimeout->lastError);
+        $this->assertNotNull($afterTimeout->nextAttemptAt);
+        $this->assertSame(1, $subscriptions->require($subscription->uid->toString())->consecutiveFailures);
+
+        $service->replay($delivery->uid->toString());
+
+        $afterRetry = $deliveries->require($delivery->uid->toString());
+        $this->assertSame('delivered', $afterRetry->status);
+        $this->assertSame(204, $afterRetry->responseCode);
+        $this->assertNull($afterRetry->lastError);
+        $this->assertNull($afterRetry->nextAttemptAt);
+        $this->assertNotNull($afterRetry->deliveredAt);
+        $this->assertSame(0, $subscriptions->require($subscription->uid->toString())->consecutiveFailures);
+        $this->assertSame(2, $http->calls);
+        $this->assertSame(
+            [$delivery->uid->toString(), $delivery->uid->toString()],
+            $http->deliveryHeaders,
+        );
+        $this->assertCount(1, $deliveries->forSubscription($subscription->uid->toString()));
+    }
+
     public function test_archived_subscriptions_are_omitted_from_organization_listing(): void
     {
         $subscriptions = new WebhookSubscriptionRepository($this->pdo, new OrganizationRepository($this->pdo));

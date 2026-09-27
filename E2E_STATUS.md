@@ -9,7 +9,7 @@ browser route smoke as a substitute for package-level coverage.
 
 ## Environment
 
-- Source baseline: `87d4a81` on `feat/configurable-crm-intake`, plus the fixes
+- Source baseline: `aef9f0e` on `feat/configurable-crm-intake`, plus the fixes
   listed below
 - Runtime: PHP 8.5.8, ProcessWire 3.0.259, MariaDB, local PHP development server
 - Site: disposable local installation with its own database
@@ -24,17 +24,26 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 183 tests, 431 assertions |
-| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 302 tests, 793 assertions |
+| Core/root PHPUnit | 185 tests, 510 assertions |
+| Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 304 tests, 796 assertions |
 | Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
-| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 408 tests, 838 assertions |
-| Total | 1,098 tests, 2,551 assertions |
+| SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 409 tests, 853 assertions |
+| Total | 1,103 tests, 2,648 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
 the cache package passed. A final syntax pass checked 1,021 PHP source and test
 files; all 35 Kontor manifests and all 36 Composer manifests parsed
 successfully.
+
+A repository-wide dependency contract now verifies that every ProcessWire hard
+dependency is also present in the owning package's Composer runtime graph. It
+found and closed missing Queue, Files and Cache requirements in Collaboration,
+Documents, Dashboard and Search respectively; all Composer manifests validate.
+
+A deterministic webhook transport fake now covers timeout persistence, retry
+state, replay with the same delivery identifier and successful recovery without
+creating a duplicate delivery. No network endpoint was contacted.
 
 ## ProcessWire and browser evidence
 
@@ -104,6 +113,12 @@ successfully.
   dark primary background, making the CRM Intake action label invisible.
 - CRM Intake showed Settings migration to intake administrators who lacked
   both Settings export and import permissions, leading to a guaranteed denial.
+- Creating a task with a contact or company relation did not enforce the
+  declared relation-management permission before persisting the task.
+- Customer file listing and signed-download generation did not independently
+  enforce the current organization when used through the Portal service.
+- Four package Composer manifests omitted ProcessWire-declared runtime
+  dependencies, allowing incomplete standalone dependency resolution.
 - Test assumptions that depended on MySQL JSON formatting, unordered query
   results or unread PDO result sets.
 
@@ -120,6 +135,14 @@ following remain explicit:
   AI and object-storage fakes in their full HTTP failure/retry paths;
 - execute historical source-version upgrade fixtures; current-schema upgrade
   hooks and the full preserve-data uninstall/reinstall matrix have passed.
+
+Portal file access is now organization-scoped in the service itself. Within one
+organization, customer/contact ownership remains deliberately enforced by the
+Portal composition boundary: `ProcessKontor` first resolves quotations and
+invoices through contact-scoped repositories and only then lists and signs
+their files. Moving that customer concept into the generic file-signing service
+would require a public API redesign and is recorded as an explicit architectural
+boundary rather than silently duplicating Sales and Invoices ownership rules.
 
 The recurring thread heartbeat named **Kontor full E2E program** continues from
 this checkpoint and reports only meaningful progress, failures or required

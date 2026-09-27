@@ -150,9 +150,9 @@ E2E pass.
 - [x] Unauthenticated access
 - [x] Unauthorized role and cross-organization identifiers
 - [ ] CSRF failure on every mutation
-- [ ] Duplicate submission or webhook replay
-- [ ] External timeout/failure
-- [ ] Retry and idempotency
+- [x] Duplicate submission or webhook replay
+- [x] External timeout/failure
+- [x] Retry and idempotency
 - [ ] Empty state
 - [ ] Large or boundary data state
 - [ ] Logs contain no secrets or unnecessary personal data
