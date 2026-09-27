@@ -9,7 +9,7 @@ browser route smoke as a substitute for package-level coverage.
 
 ## Environment
 
-- Source baseline: `09430bd` on `feat/configurable-crm-intake`, plus the fixes
+- Source baseline: `b1456f8` on `feat/configurable-crm-intake`, plus the fixes
   listed below
 - Runtime: PHP 8.5.8, ProcessWire 3.0.259, MariaDB, local PHP development server
 - Site: disposable local installation with its own database
@@ -22,11 +22,11 @@ browser route smoke as a substitute for package-level coverage.
 
 | Area | Result |
 |---|---:|
-| Core/root PHPUnit | 170 tests, 356 assertions |
+| Core/root PHPUnit | 175 tests, 395 assertions |
 | Contacts, CRM, intake, catalog, sales, invoices, payments, portal | 302 tests, 793 assertions |
 | Inventory, purchasing, expenses, projects, tasks, collaboration, workflow, automation, documents, ledger, Germany | 205 tests, 489 assertions |
 | SDK, API, GraphQL, files, mail, queue, cache, settings, MCP, marketplace, dashboard, reports, search, entities, AI | 408 tests, 838 assertions |
-| Total | 1,085 tests, 2,476 assertions |
+| Total | 1,090 tests, 2,515 assertions |
 
 Four Redis-specific cache tests were skipped because the optional `ext-redis`
 extension is not installed. The in-memory cache implementation and the rest of
@@ -57,6 +57,9 @@ successfully.
   approval request and rejection with a required reason. The scenario returned
   to an active proposal, displayed the rejection note and offered a new
   approval request without creating delivery, invoice or payment records.
+- Five real-database integration tests now cover the demo service's complete
+  order-to-cash lifecycle, approval rejection/retry, denied transitions and
+  transaction rollback for failed intake and transition effects.
 - A restricted automation/workflow user could see definitions but not the
   seeded execution-log sentinel or workflow history. An administrator could
   see both.
@@ -76,6 +79,7 @@ successfully.
 - Collaboration and Documents dependency manifest drift.
 - Stale Invoices documentation for order-to-invoice conversion.
 - Narrow-screen contact action wrapping and CRM Intake badge/title overlap.
+- Demo transition effects running before the workflow permission check.
 - Test assumptions that depended on MySQL JSON formatting, unordered query
   results or unread PDO result sets.
 
@@ -93,9 +97,7 @@ following remain explicit:
   AI and object-storage fakes in their full HTTP failure/retry paths;
 - execute supported-version upgrade fixtures and the preserve-data
   uninstall/reinstall matrix on disposable databases;
-- add deeper CRM Intake invalid/authorization cases and package tests for the
-  demo orchestrator, which currently relies on the successful real browser
-  journey rather than its own package suite.
+- add deeper CRM Intake invalid/authorization cases.
 
 The recurring thread heartbeat named **Kontor full E2E program** continues from
 this checkpoint and reports only meaningful progress, failures or required

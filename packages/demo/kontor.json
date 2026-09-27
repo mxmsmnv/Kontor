@@ -4,7 +4,7 @@
     "name": "KontorDemo",
     "title": "Kontor Demo",
     "description": "Connected order-to-cash scenario across Kontor business components.",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "business",
     "category": "operations",
     "license": "MIT",

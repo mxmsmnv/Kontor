@@ -42,7 +42,7 @@ class KontorDemo extends WireData implements Module
         return [
             'title' => 'Kontor Demo',
             'summary' => 'Connected order-to-cash scenario across Kontor components.',
-            'version' => '001',
+            'version' => '002',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'play-circle',

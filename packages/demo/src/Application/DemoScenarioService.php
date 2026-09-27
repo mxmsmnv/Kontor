@@ -89,7 +89,6 @@ final class DemoScenarioService
                 );
             }
 
-            $scenario->record($effect($scenario));
             $result = $this->workflow->transition(
                 $scenario->organizationId,
                 self::ENTITY_TYPE,
@@ -99,6 +98,7 @@ final class DemoScenarioService
                 $actorHasPermission,
                 ['demoScenarioUid' => $scenario->uid->toString()],
             );
+            $scenario->record($effect($scenario));
 
             if ($result instanceof ApprovalRequest) {
                 $scenario->status = 'awaiting_approval';
