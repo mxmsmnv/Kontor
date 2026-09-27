@@ -100,3 +100,9 @@ following remain explicit:
 The recurring thread heartbeat named **Kontor full E2E program** continues from
 this checkpoint and reports only meaningful progress, failures or required
 user action.
+
+## Cleanup
+
+The agent-controlled browser tab and local PHP server were stopped after the
+run. The disposable `kontor_e2e_full` database and all short-lived verification
+databases were dropped; no test worker or watcher was left running.
