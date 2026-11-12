@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Expenses\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Expenses\Domain\Expense;
 use Kontor\SDK\Contracts\RepositoryInterface;
@@ -33,6 +34,37 @@ final class ExpenseRepository implements RepositoryInterface
     public function require(string $id): Expense
     {
         return $this->find($id) ?? throw new RuntimeException("Expense \"{$id}\" was not found.");
+    }
+
+    /** @param callable(Expense): Expense $change */
+    public function change(string $uid, callable $change): Expense
+    {
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($this->pdo);
+
+        try {
+            $statement = $this->pdo->prepare(
+                'SELECT * FROM kontor_expenses WHERE uid = :uid' . DatabaseConcurrency::forUpdate($this->pdo)
+            );
+            $statement->execute(['uid' => $uid]);
+            $row = $statement->fetch(\PDO::FETCH_ASSOC);
+            $statement->closeCursor();
+            if ($row === false) {
+                throw new RuntimeException("Expense \"{$uid}\" was not found.");
+            }
+
+            $expense = $change($this->hydrate($row));
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $expense;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
     }
 
     public function save(object $entity): void

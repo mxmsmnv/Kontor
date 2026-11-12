@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Purchasing\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Purchasing\Domain\PurchaseOrder;
 use Kontor\SDK\Contracts\RepositoryInterface;
@@ -33,6 +34,25 @@ final class PurchaseOrderRepository implements RepositoryInterface
     public function require(string $id): PurchaseOrder
     {
         return $this->find($id) ?? throw new RuntimeException("Purchase order \"{$id}\" was not found.");
+    }
+
+    public function requireForUpdate(string $uid, string $organizationUid): PurchaseOrder
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_purchasing_orders
+             WHERE uid = :uid AND organization_id = :organization_id AND archived_at IS NULL'
+            . DatabaseConcurrency::forUpdate($this->pdo)
+        );
+        $statement->execute([
+            'uid' => $uid,
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+        ]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+        $statement->closeCursor();
+
+        return $row === false
+            ? throw new RuntimeException("Purchase order \"{$uid}\" was not found.")
+            : $this->hydrate($row);
     }
 
     public function save(object $entity): void

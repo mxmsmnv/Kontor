@@ -36,22 +36,23 @@ final class ExpenseWorkflowCoordinator
         int $actorUserId,
         string $reason = '',
     ): Expense {
-        $expense = $this->expenses->require($expenseUid);
         if ($action === 'reject' && trim($reason) === '') {
             throw new \InvalidArgumentException('A rejection reason is required.');
         }
 
-        $this->synchronize($expense, $actorUserId);
-        $this->transition($expense, $action, $actorUserId, $reason);
+        return $this->expenses->change($expenseUid, function (Expense $expense) use ($expenseUid, $action, $actorUserId, $reason): Expense {
+            $this->synchronize($expense, $actorUserId);
+            $this->transition($expense, $action, $actorUserId, $reason);
 
-        return match ($action) {
-            'submit' => $this->expenseWorkflow->submit($expenseUid, $actorUserId),
-            'approve' => $this->expenseWorkflow->approve($expenseUid, $actorUserId),
-            'reject' => $this->expenseWorkflow->reject($expenseUid, $actorUserId, $reason),
-            'reimburse' => $this->expenseWorkflow->reimburse($expenseUid, $actorUserId),
-            'cancel' => $this->expenseWorkflow->cancel($expenseUid),
-            default => throw new \InvalidArgumentException("\"{$action}\" is not an expense workflow action."),
-        };
+            return match ($action) {
+                'submit' => $this->expenseWorkflow->submit($expenseUid, $actorUserId),
+                'approve' => $this->expenseWorkflow->approve($expenseUid, $actorUserId),
+                'reject' => $this->expenseWorkflow->reject($expenseUid, $actorUserId, $reason),
+                'reimburse' => $this->expenseWorkflow->reimburse($expenseUid, $actorUserId),
+                'cancel' => $this->expenseWorkflow->cancel($expenseUid),
+                default => throw new \InvalidArgumentException("\"{$action}\" is not an expense workflow action."),
+            };
+        });
     }
 
     public function currentState(Expense $expense): ?string

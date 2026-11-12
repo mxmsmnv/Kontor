@@ -31,7 +31,10 @@ final class GoodsReceiptServiceTest extends DatabaseTestCase
     private DocumentLineRepository $lines;
     private PurchaseOrderWorkflowService $workflow;
     private GoodsReceiptService $receiptService;
+    private GoodsReceiptRepository $receipts;
     private BalanceRepository $balances;
+    private WarehouseRepository $warehouses;
+    private InventoryMovementService $inventory;
     private string $warehouseUid;
 
     protected function setUp(): void
@@ -45,21 +48,22 @@ final class GoodsReceiptServiceTest extends DatabaseTestCase
         $this->lines = new DocumentLineRepository($this->pdo, $organizations);
         $this->workflow = new PurchaseOrderWorkflowService($this->orders, $this->lines, $sequences);
 
-        $warehouses = new WarehouseRepository($this->pdo, $organizations);
+        $this->warehouses = new WarehouseRepository($this->pdo, $organizations);
         $this->balances = new BalanceRepository($this->pdo, $organizations);
-        $inventoryMovements = new InventoryMovementService(
-            $this->pdo, $organizations, $warehouses, $this->balances, new MovementRepository($this->pdo, $organizations),
+        $this->inventory = new InventoryMovementService(
+            $this->pdo, $organizations, $this->warehouses, $this->balances, new MovementRepository($this->pdo, $organizations),
         );
 
         $warehouse = Warehouse::create($this->organizationUid, 'MAIN', 'Main Warehouse');
-        $warehouses->save($warehouse);
+        $this->warehouses->save($warehouse);
         $this->warehouseUid = $warehouse->uid->toString();
 
+        $this->receipts = new GoodsReceiptRepository($this->pdo, $organizations);
         $this->receiptService = new GoodsReceiptService(
             $this->pdo, $this->orders, $this->lines,
-            new GoodsReceiptRepository($this->pdo, $organizations),
+            $this->receipts,
             new GoodsReceiptLineRepository($this->pdo, $organizations),
-            $inventoryMovements,
+            $this->inventory,
         );
     }
 
@@ -131,6 +135,84 @@ final class GoodsReceiptServiceTest extends DatabaseTestCase
         $this->receiptService->receive($this->organizationUid, $order->uid->toString(), $this->warehouseUid, [
             ['poLineUid' => $line->uid->toString(), 'quantity' => 11.0],
         ]);
+    }
+
+    public function test_duplicate_receipt_rows_cannot_over_receive_and_a_corrected_receipt_can_be_saved(): void
+    {
+        $order = $this->issuedOrderWithOneLine();
+        $orderUid = $order->uid->toString();
+        $lineUid = $this->lines->forDocument('purchase_order', $orderUid)[0]->uid->toString();
+
+        try {
+            $this->receiptService->receive($this->organizationUid, $orderUid, $this->warehouseUid, [
+                ['poLineUid' => $lineUid, 'quantity' => 6.0],
+                ['poLineUid' => $lineUid, 'quantity' => 5.0],
+            ]);
+            self::fail('The combined receipt quantity exceeds the order.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('only 10 remains outstanding', $exception->getMessage());
+        }
+
+        self::assertSame('issued', $this->orders->require($orderUid)->status);
+        self::assertSame([], $this->receipts->forPurchaseOrder($orderUid));
+        self::assertSame([], $this->balances->forOrganization($this->organizationUid));
+
+        $receipt = $this->receiptService->receive($this->organizationUid, $orderUid, $this->warehouseUid, [
+            ['poLineUid' => $lineUid, 'quantity' => 6.0],
+            ['poLineUid' => $lineUid, 'quantity' => 4.0],
+        ]);
+        self::assertNotNull($this->receipts->find($receipt->uid->toString()));
+        self::assertSame('received', $this->orders->require($orderUid)->status);
+        self::assertSame(10.0, $this->balances->find($this->organizationUid, $this->warehouseUid, self::ITEM)->quantityOnHand);
+    }
+
+    public function test_received_stock_can_be_transferred_reserved_and_shipped(): void
+    {
+        $order = $this->issuedOrderWithOneLine();
+        $orderUid = $order->uid->toString();
+        $lineUid = $this->lines->forDocument('purchase_order', $orderUid)[0]->uid->toString();
+        $outbound = Warehouse::create($this->organizationUid, 'OUT', 'Outbound warehouse');
+        $this->warehouses->save($outbound);
+        $outboundUid = $outbound->uid->toString();
+
+        $this->receiptService->receive($this->organizationUid, $orderUid, $this->warehouseUid, [
+            ['poLineUid' => $lineUid, 'quantity' => 10.0],
+        ]);
+        $this->inventory->transfer($this->organizationUid, $this->warehouseUid, $outboundUid, self::ITEM, 8.0);
+        $this->inventory->reserve($this->organizationUid, $outboundUid, self::ITEM, 3.0);
+
+        $balance = $this->balances->find($this->organizationUid, $outboundUid, self::ITEM);
+        self::assertSame(8.0, $balance->quantityOnHand);
+        self::assertSame(5.0, $balance->quantityAvailable);
+
+        $shipment = $this->inventory->shipReserved($this->organizationUid, $outboundUid, self::ITEM, 3.0,
+            idempotencyKey: 'purchase-dispatch-shipment');
+        $retry = $this->inventory->shipReserved($this->organizationUid, $outboundUid, self::ITEM, 3.0,
+            idempotencyKey: 'purchase-dispatch-shipment');
+
+        self::assertSame($shipment->uid->toString(), $retry->uid->toString());
+        self::assertSame(2.0, $this->balances->find($this->organizationUid, $this->warehouseUid, self::ITEM)->quantityOnHand);
+        $balance = $this->balances->find($this->organizationUid, $outboundUid, self::ITEM);
+        self::assertSame(5.0, $balance->quantityOnHand);
+        self::assertSame(0.0, $balance->quantityReserved);
+        self::assertSame(5.0, $balance->quantityAvailable);
+        self::assertSame('received', $this->orders->require($orderUid)->status);
+    }
+
+    public function test_fractional_receipt_can_complete_the_remaining_quantity(): void
+    {
+        $order = $this->issuedOrderWithOneLine(0.3);
+        $orderUid = $order->uid->toString();
+        $lineUid = $this->lines->forDocument('purchase_order', $orderUid)[0]->uid->toString();
+        $this->receiptService->receive($this->organizationUid, $orderUid, $this->warehouseUid, [
+            ['poLineUid' => $lineUid, 'quantity' => 0.1],
+        ]);
+        $this->receiptService->receive($this->organizationUid, $orderUid, $this->warehouseUid, [
+            ['poLineUid' => $lineUid, 'quantity' => 0.2],
+        ]);
+
+        self::assertSame('received', $this->orders->require($orderUid)->status);
+        self::assertSame(0.3, $this->balances->find($this->organizationUid, $this->warehouseUid, self::ITEM)->quantityOnHand);
     }
 
     public function test_cannot_receive_against_a_draft_order(): void

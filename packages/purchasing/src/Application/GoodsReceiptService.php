@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Purchasing\Application;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Inventory\Application\InventoryMovementService;
 use Kontor\Purchasing\Domain\GoodsReceipt;
 use Kontor\Purchasing\Domain\GoodsReceiptLine;
@@ -28,6 +29,8 @@ use RuntimeException;
  */
 final class GoodsReceiptService
 {
+    private const QUANTITY_SCALE = 6;
+
     public function __construct(
         private readonly \PDO $pdo,
         private readonly PurchaseOrderRepository $orders,
@@ -43,46 +46,52 @@ final class GoodsReceiptService
      */
     public function receive(string $organizationUid, string $purchaseOrderUid, string $warehouseUid, array $lines, ?int $createdBy = null): GoodsReceipt
     {
-        $order = $this->orders->require($purchaseOrderUid);
+        return $this->transact(function () use ($organizationUid, $purchaseOrderUid, $warehouseUid, $lines, $createdBy): GoodsReceipt {
+            $order = $this->orders->requireForUpdate($purchaseOrderUid, $organizationUid);
 
-        if (!$order->isReceivable()) {
-            throw new RuntimeException("Purchase order \"{$purchaseOrderUid}\" cannot be received from status \"{$order->status}\".");
-        }
-
-        if ($lines === []) {
-            throw new InvalidArgumentException('At least one line is required to record a goods receipt.');
-        }
-
-        $orderLines = [];
-        foreach ($this->lines->forDocument('purchase_order', $purchaseOrderUid) as $orderLine) {
-            $orderLines[$orderLine->uid->toString()] = $orderLine;
-        }
-
-        foreach ($lines as $requested) {
-            $poLineUid = $requested['poLineUid'];
-
-            if (!isset($orderLines[$poLineUid])) {
-                throw new InvalidArgumentException("\"{$poLineUid}\" is not a line on purchase order \"{$purchaseOrderUid}\".");
+            if (!$order->isReceivable()) {
+                throw new RuntimeException("Purchase order \"{$purchaseOrderUid}\" cannot be received from status \"{$order->status}\".");
             }
 
-            if ($requested['quantity'] <= 0) {
-                throw new InvalidArgumentException('Received quantity must be greater than zero.');
+            if ($lines === []) {
+                throw new InvalidArgumentException('At least one line is required to record a goods receipt.');
             }
 
-            $orderedQuantity = $orderLines[$poLineUid]->quantity;
-            $alreadyReceived = $this->receiptLines->totalReceivedFor($poLineUid);
-            $remaining = $orderedQuantity - $alreadyReceived;
-
-            if ($requested['quantity'] > $remaining) {
-                throw new RuntimeException(
-                    "Cannot receive {$requested['quantity']} of line \"{$poLineUid}\" — only {$remaining} remains outstanding."
-                );
+            $orderLines = [];
+            foreach ($this->lines->forDocument('purchase_order', $purchaseOrderUid) as $orderLine) {
+                $orderLines[$orderLine->uid->toString()] = $orderLine;
             }
-        }
 
-        $receipt = GoodsReceipt::create($organizationUid, $purchaseOrderUid, $warehouseUid, $createdBy);
+            $requestedTotals = [];
+            foreach ($lines as $index => $requested) {
+                $poLineUid = $requested['poLineUid'];
 
-        $this->transact(function () use ($organizationUid, $warehouseUid, $lines, $orderLines, $receipt, $order, $createdBy): void {
+                if (!isset($orderLines[$poLineUid])) {
+                    throw new InvalidArgumentException("\"{$poLineUid}\" is not a line on purchase order \"{$purchaseOrderUid}\".");
+                }
+
+                $quantity = round($requested['quantity'], self::QUANTITY_SCALE);
+                if (!is_finite($quantity) || $quantity <= 0) {
+                    throw new InvalidArgumentException('Received quantity must be greater than zero.');
+                }
+
+                $lines[$index]['quantity'] = $quantity;
+                $requestedTotals[$poLineUid] = round(($requestedTotals[$poLineUid] ?? 0.0) + $quantity, self::QUANTITY_SCALE);
+            }
+
+            foreach ($requestedTotals as $poLineUid => $quantity) {
+                $orderedQuantity = $orderLines[$poLineUid]->quantity;
+                $alreadyReceived = $this->receiptLines->totalReceivedFor($poLineUid);
+                $remaining = round($orderedQuantity - $alreadyReceived, self::QUANTITY_SCALE);
+
+                if ($quantity > $remaining) {
+                    throw new RuntimeException(
+                        "Cannot receive {$quantity} of line \"{$poLineUid}\" — only {$remaining} remains outstanding."
+                    );
+                }
+            }
+
+            $receipt = GoodsReceipt::create($organizationUid, $purchaseOrderUid, $warehouseUid, $createdBy);
             $this->receipts->insert($receipt);
 
             foreach ($lines as $requested) {
@@ -102,9 +111,9 @@ final class GoodsReceiptService
             }
 
             $this->recomputeStatus($order, $orderLines);
-        });
 
-        return $receipt;
+            return $receipt;
+        });
     }
 
     /**
@@ -137,22 +146,19 @@ final class GoodsReceiptService
         $this->orders->save($order);
     }
 
-    private function transact(callable $fn): void
+    private function transact(callable $receive): GoodsReceipt
     {
-        $wasInTransaction = $this->pdo->inTransaction();
-
-        if (!$wasInTransaction) {
-            $this->pdo->beginTransaction();
-        }
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($this->pdo);
 
         try {
-            $fn();
-
-            if (!$wasInTransaction) {
+            $receipt = $receive();
+            if ($ownsTransaction) {
                 $this->pdo->commit();
             }
+
+            return $receipt;
         } catch (\Throwable $e) {
-            if (!$wasInTransaction && $this->pdo->inTransaction()) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
 
