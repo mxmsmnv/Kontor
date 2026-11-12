@@ -12,6 +12,8 @@ All notable changes to Kontor are documented here.
 
 ### Fixed
 
+- Install Search before Contacts when ProcessWire resolves CRM dependencies in one step.
+
 - Align personal dashboard cards with the grid and make Earlier and Later change the displayed widget order.
 - Allow closed tasks to be reopened without generating duplicate recurring tasks.
 - Preserve native button text colors in Konkat and restore missing surface and border styles in Core Original.

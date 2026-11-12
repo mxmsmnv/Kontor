@@ -53,7 +53,7 @@ class KontorCRM extends WireData implements Module
             'icon' => 'handshake-o',
             'singular' => true,
             'autoload' => true,
-            'requires' => ['Kontor', 'KontorContacts', 'KontorSearch'],
+            'requires' => ['Kontor', 'KontorSearch', 'KontorContacts'],
             'permissions' => [
                 'kontor-crm-lead-view' => 'View leads',
                 'kontor-crm-lead-create' => 'Create leads',
