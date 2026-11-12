@@ -68,13 +68,14 @@ KONTOR_E2E_EDITOR_PASS='<local-test-password>' \
 KONTOR_E2E_RESTRICTED_PASS='<local-test-password>' npm run test:e2e:available
 ```
 
-The Playwright runner intentionally mutates the qualification journey only in
-the desktop Chromium project, then repeats the permission, responsive and axe
-checks in the remaining browser/device profiles. It retains the local site and
-named fixture records between runs; generated traces, videos and reports live
-under ignored `artifacts/e2e`. Every journey fails on console errors, uncaught
-page errors, failed requests or HTTP responses at or above 400. A successful
-PHPUnit run alone is not an E2E pass.
+Enable KontorContacts, KontorCRM, KontorTasks and KontorDashboard on the local
+site before preparing the fixtures. Desktop Chromium runs the mutating journeys
+for lead qualification, company custom fields, task reopening and dashboard
+widgets. The other browser and device profiles repeat the lead permission,
+responsive and axe checks. The local site and named fixture records persist
+between runs. Traces, videos and reports live under ignored `artifacts/e2e`.
+Every journey checks for console errors, uncaught page errors, failed requests
+and HTTP responses at or above 400.
 
 ## Test environment
 

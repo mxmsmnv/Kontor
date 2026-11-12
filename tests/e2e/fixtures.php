@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Kontor\Contacts\Domain\Contact;
+use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\CRM\Domain\Lead;
 use Kontor\CRM\Domain\Pipeline;
 use Kontor\CRM\Domain\Stage;
@@ -24,7 +25,7 @@ ob_start();
 require $site . '/index.php';
 ob_end_clean();
 
-$requiredModules = ['KontorContacts', 'KontorCRM', 'KontorCRMIntake'];
+$requiredModules = ['KontorContacts', 'KontorCRM', 'KontorCRMIntake', 'KontorDashboard', 'KontorTasks'];
 foreach ($requiredModules as $moduleName) {
     if (!$modules->isInstalled($moduleName)) {
         throw new RuntimeException("Install {$moduleName} before preparing browser fixtures.");
@@ -70,8 +71,11 @@ $configureUser = static function (string $name, string $password, object $role) 
 $editorPermissions = [
     'page-view', 'kontor-access',
     'kontor-contacts-contact-view', 'kontor-contacts-contact-create', 'kontor-contacts-contact-edit',
+    'kontor-contacts-company-view', 'kontor-contacts-company-create', 'kontor-contacts-company-edit',
     'kontor-crm-lead-view', 'kontor-crm-lead-create', 'kontor-crm-lead-edit', 'kontor-crm-lead-convert',
     'kontor-crm-deal-view', 'kontor-crm-deal-create',
+    'kontor-dashboard-view', 'kontor-dashboard-create', 'kontor-dashboard-edit',
+    'kontor-tasks-task-view', 'kontor-tasks-task-create', 'kontor-tasks-task-edit', 'kontor-tasks-task-complete',
 ];
 $restrictedPermissions = [
     'page-view', 'kontor-access', 'kontor-contacts-contact-view',
@@ -83,6 +87,14 @@ $editor = $configureUser(
     $editorPassword,
     $configureRole('kontor-e2e-crm-editor-role', $editorPermissions),
 );
+$journeyUsers = [];
+foreach (['company', 'tasks', 'dashboard'] as $journey) {
+    $journeyUsers[$journey] = $configureUser(
+        'kontor-e2e-' . $journey . '-editor',
+        $editorPassword,
+        $editor->roles->get('kontor-e2e-crm-editor-role'),
+    );
+}
 $restrictedRole = $configureRole('kontor-e2e-crm-restricted-role', $restrictedPermissions);
 $restrictedUsers = [];
 foreach (['chromium-desktop', 'chromium-mobile', 'firefox-desktop', 'webkit-mobile'] as $project) {
@@ -97,7 +109,7 @@ foreach (['chromium-desktop', 'chromium-mobile', 'firefox-desktop', 'webkit-mobi
 // users' accumulated login throttle state so repeated browser matrices remain
 // deterministic without weakening the application's production defaults.
 $throttle = $database->pdo()->prepare('DELETE FROM session_login_throttle WHERE name = :name');
-foreach ([$editor, ...array_values($restrictedUsers)] as $fixtureUser) {
+foreach ([$editor, ...array_values($journeyUsers), ...array_values($restrictedUsers)] as $fixtureUser) {
     $throttle->execute(['name' => (string) $fixtureUser->name]);
 }
 
@@ -107,6 +119,11 @@ $organizationUid = (string) $database->pdo()
 if ($organizationUid === '') {
     throw new RuntimeException('The browser site has no Kontor organization.');
 }
+
+$organizations = new OrganizationRepository($database->pdo());
+$organization = $organizations->require($organizationUid);
+$organization->settings['companyFields']['e2e_reference'] = 'E2E reference';
+$organizations->save($organization);
 
 /** @var ProcessWire\KontorCRMIntake $intake */
 $intake = $modules->get('KontorCRMIntake');
@@ -170,6 +187,7 @@ $state = [
     'schema_version' => 1,
     'prepared_at' => gmdate(DATE_ATOM),
     'editor_user' => (string) $editor->name,
+    'journey_users' => array_map(static fn (object $user): string => (string) $user->name, $journeyUsers),
     'restricted_users' => array_map(
         static fn (object $user): string => (string) $user->name,
         $restrictedUsers,

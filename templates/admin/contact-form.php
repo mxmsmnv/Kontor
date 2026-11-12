@@ -98,7 +98,7 @@ $connectedCount = count($workspace['leads']) + count($workspace['deals']) + coun
                 <?php if ($fieldValue('email') !== ''): ?><a class="uk-link-reset" href="mailto:<?= $e($fieldValue('email')) ?>"><i class="fa fa-envelope-o"></i> <?= $e($fieldValue('email')) ?></a><?php endif; ?>
                 <?php $primaryPhone = $fieldValue('mobile') ?: $fieldValue('phone'); ?>
                 <?php if ($primaryPhone !== ''): ?><a class="uk-link-reset" href="tel:<?= $e($primaryPhone) ?>"><i class="fa fa-phone"></i> <?= $e($primaryPhone) ?></a><?php endif; ?>
-                <?php if ($fieldValue('linkedin_url') !== ''): ?><a class="uk-link-reset" href="<?= $e($fieldValue('linkedin_url')) ?>" target="_blank" rel="noopener"><i class="fa fa-linkedin-square"></i> LinkedIn</a><?php endif; ?>
+                <?php if ($fieldValue('linkedin_url') !== ''): ?><a class="uk-link-reset" href="<?= $e($fieldValue('linkedin_url')) ?>" target="_blank" rel="noopener"><i class="fa fa-linkedin-square" aria-hidden="true"></i> LinkedIn</a><?php endif; ?>
               </div>
             </div>
           </div>

@@ -15,8 +15,11 @@ test('CRM editor qualifies a contact lead and converts it to a deal', async ({ p
   await page.locator('input[name="first_name"]').fill('E2E');
   await page.locator('input[name="last_name"]').fill(`Journey ${runId}`);
   await page.locator('input[name="email"]').fill(`e2e-${runId}@example.test`);
+  await page.locator('input[name="linkedin"]').fill('www.linkedin.com/in/kontor-e2e');
   await page.getByRole('button', { name: 'Save contact' }).click();
   await expect(page.getByText('Contact saved.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'LinkedIn', exact: true }))
+    .toHaveAttribute('href', 'https://www.linkedin.com/in/kontor-e2e');
 
   await page.getByRole('link', { name: 'New lead' }).click();
   await page.locator('input[name="title"]').fill(title);

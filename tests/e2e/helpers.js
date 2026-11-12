@@ -44,7 +44,7 @@ async function assertAccessible(page, label) {
   const violations = result.violations.filter((violation) => ['critical', 'serious'].includes(violation.impact));
   if (violations.length > 0) {
     throw new Error(`${label}: ${violations.map((violation) => {
-      const targets = violation.nodes.slice(0, 3).flatMap((node) => node.target).join(', ');
+      const targets = violation.nodes.slice(0, 3).map((node) => `${node.target.join(', ')}: ${node.failureSummary}`).join('; ');
       return `${violation.id} (${violation.nodes.length}: ${targets})`;
     }).join(', ')}`);
   }
