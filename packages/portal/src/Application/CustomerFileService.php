@@ -13,17 +13,8 @@ use RuntimeException;
  * own documents (reusing `kontor/files`'s own `FileRepository::forEntity()`
  * directly) and signs a time-limited download URL for one of them.
  *
- * Deliberately does NOT reuse `Kontor\Files\Application\FileManager::temporaryUrl()`
- * for the URL itself: that method signs against `KontorFiles`'s own
- * placeholder `baseUrl` (`kontor/files`'s README documents this — the
- * real verifying/streaming endpoint was explicitly left for "a later
- * stage"). This substage *is* that later stage, but the real endpoint
- * belongs to Portal, not to `kontor/files` (a customer, not an admin, is
- * downloading) — so this class signs its own URL, pointed at
- * `PortalFileDownloadHandler`'s real endpoint, using the same
- * `SignedUrlSigner` secret (ProcessWire's own `config->authSalt`) so the
- * signature it produces verifies correctly there. `kontor/files` itself
- * is never modified.
+ * The portal uses its own signer and HTTP endpoint so admin download links
+ * and customer download links remain scoped to their respective routes.
  */
 final class CustomerFileService
 {
@@ -45,7 +36,7 @@ final class CustomerFileService
     public function downloadUrl(string $fileUid, \DateTimeImmutable $expiresAt): string
     {
         $file = $this->files->find($fileUid) ?? throw new RuntimeException("File \"{$fileUid}\" was not found.");
-        if ((int) $file['organization_id'] !== $this->organizationId) {
+        if ((int) $file['organization_id'] !== $this->organizationId || $file['archived_at'] !== null) {
             throw new RuntimeException("File \"{$fileUid}\" was not found.");
         }
 

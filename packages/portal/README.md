@@ -45,21 +45,13 @@ uses internally. Initiating a *new* payment (a card/bank gateway) is out
 of scope — no payment gateway integration exists anywhere in this
 monorepo yet.
 
-## Files: the real download endpoint `kontor/files` deferred
+## Customer file downloads
 
-`kontor/files`'s own README documents that wiring an HTTP endpoint to
-verify a signed URL and stream the file back was left for "a later
-stage." This substage *is* that later stage — but the endpoint is
-customer-facing, not admin-facing, so it lives here rather than in
-`kontor/files` (never modified). `CustomerFileService` signs its own URL
-with `Kontor\Files\Infrastructure\Storage\SignedUrlSigner`, using the
-same secret `kontor/files` uses (ProcessWire's own `config->authSalt`)
-but pointed at Portal's own `/portal/files/download` route.
-`PortalFileDownloadHandler::handle()` verifies the signature and expiry
-and streams the file back via `StorageInterface`; `KontorPortal::hookFileDownload()`
-is the thin `ProcessPageView::execute` hook wiring it to a real URL — the
-same "pure core, thin I/O wrapper" split `kontor/api`/`kontor/graphql`
-already use for their own real HTTP entry points.
+`CustomerFileService` lists files for a document in its organization and
+creates time-limited URLs under the site's `/portal/files/download` route.
+Before offering a URL, the site profile must authenticate the customer and
+verify that the customer can access the document. The signed URL allows the
+holder to download the file until expiry.
 
 ## Profile: an explicit safe-field allowlist
 

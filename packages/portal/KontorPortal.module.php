@@ -89,24 +89,27 @@ class KontorPortal extends WireData implements Module
     public function hookFileDownload(HookEvent $event): void
     {
         $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-        $path = trim((string) (parse_url($requestUri, PHP_URL_PATH) ?? ''), '/');
+        $path = rtrim((string) parse_url($requestUri, PHP_URL_PATH), '/');
+        $downloadPath = rtrim($this->wire()->config->urls->root, '/') . '/portal/files/download';
 
-        if ($path !== 'portal/files/download') {
+        if ($path !== $downloadPath) {
             return;
         }
 
         parse_str((string) (parse_url($requestUri, PHP_URL_QUERY) ?? ''), $query);
 
-        $result = $this->fileDownloadHandler()->handle(
-            (string) ($query['path'] ?? ''),
-            (int) ($query['expires'] ?? 0),
-            (string) ($query['signature'] ?? ''),
-        );
+        $path = is_string($query['path'] ?? null) ? $query['path'] : '';
+        $expires = is_string($query['expires'] ?? null) ? (int) $query['expires'] : 0;
+        $signature = is_string($query['signature'] ?? null) ? $query['signature'] : '';
+        $result = $this->fileDownloadHandler()->handle($path, $expires, $signature);
 
         http_response_code($result->status);
+        header('Cache-Control: private, no-store');
 
         if ($result->status === 200 && $result->stream !== null) {
             header("Content-Type: {$result->mimeType}");
+            header('Content-Disposition: attachment');
+            header('X-Content-Type-Options: nosniff');
             fpassthru($result->stream);
             fclose($result->stream);
         }
@@ -143,15 +146,18 @@ class KontorPortal extends WireData implements Module
         );
     }
 
-    public function files(): CustomerFileService
+    public function files(?string $organizationUid = null): CustomerFileService
     {
         /** @var KontorFiles $filesModule */
         $filesModule = $this->wire()->modules->get('KontorFiles');
 
+        $organizations = $this->organizations();
+        $organizationUid ??= $organizations->defaultOrganization('US', 'en', 'USD')->uid->toString();
+
         return new CustomerFileService(
             $filesModule->fileRepository(),
             $this->signer(),
-            $this->organizations()->internalIdOf($this->organizationUid()),
+            $organizations->internalIdOf($organizationUid),
         );
     }
 
@@ -173,24 +179,27 @@ class KontorPortal extends WireData implements Module
 
     public function healthCheck(): PortalHealthCheck
     {
-        /** @var KontorContacts $contactsModule */
         $contactsModule = $this->wire()->modules->get('KontorContacts');
 
         return new PortalHealthCheck($this->accountRepository(), $contactsModule->contactRepository());
     }
 
-    /**
-     * Portal's own signer instance — same secret as `kontor/files`'s own
-     * (ProcessWire's `config->authSalt`), but pointed at Portal's real
-     * download endpoint rather than `kontor/files`'s still-placeholder
-     * one. See `CustomerFileService`'s own doc comment for why.
-     */
     private function signer(): SignedUrlSigner
     {
-        return $this->signer ??= new SignedUrlSigner(
-            secret: $this->wire()->config->authSalt,
-            baseUrl: $this->wire()->config->urls->root.'portal/files/download',
-        );
+        if ($this->signer === null) {
+            $config = $this->wire()->config;
+            $secret = (string) ($config->authSalt ?: $config->tableSalt ?: $config->userAuthSalt);
+            if ($secret === '') {
+                throw new WireException($this->_('Kontor Portal requires a ProcessWire site salt for signed downloads.'));
+            }
+
+            $this->signer = new SignedUrlSigner(
+                secret: hash_hmac('sha256', 'kontor-portal-download', $secret),
+                baseUrl: $config->urls->root . 'portal/files/download',
+            );
+        }
+
+        return $this->signer;
     }
 
     private function organizations(): OrganizationRepository
