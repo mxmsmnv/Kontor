@@ -47,7 +47,9 @@ Exact PHP calls, stability rules and examples are documented in [API.md](API.md)
 2. Run `composer install --no-dev` in that directory.
 3. In ProcessWire Admin, choose **Modules → Refresh** and install **Kontor**.
 4. Install only the component modules required by the approved site Blueprint; ProcessWire enforces declared module dependencies.
-5. Assign the smallest required `kontor-*` permissions to each role and verify anonymous, member, editor and administrator paths.
+5. In **Access → Users**, create the employee and select `kontor-employee` when setting their password and email.
+
+Kontor creates the `kontor-employee` role on install or upgrade. The role can open Kontor and view and edit leads, deals, contacts and companies when those components are installed. With Workspace installed, the role also includes `workspace-use`; select **AdminThemeWorkspace** for the employee to use the launcher and its account menu. The role has no ProcessWire administration or Kontor settings permissions. Kontor never assigns the role to an account automatically. If a site already has a role with this name, Kontor leaves it as configured.
 
 The distribution includes a root-level discovery wrapper for every package module. Keep these `Kontor<Name>/Kontor<Name>.module.php` directories beside `packages/` when copying or packaging the repository; they let ProcessWire discover all 34 optional component modules while Composer continues loading their implementation from `packages/`. The wrappers are ordinary PHP files and do not rely on symbolic links, so the same release works on Unix and Windows hosts.
 

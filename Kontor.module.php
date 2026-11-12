@@ -13,6 +13,7 @@ use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Backup\BackupArchiveBuilder;
 use Kontor\Core\Infrastructure\Database\TranslatingPDO;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
+use Kontor\Core\Infrastructure\Installation\EmployeeRoleProvisioner;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\ExtensionRepository;
 use Kontor\Core\Infrastructure\Persistence\AuditEventRepository;
@@ -52,7 +53,7 @@ class Kontor extends WireData implements Module
         return [
             'title' => 'Kontor',
             'summary' => 'Open-source modular ERP, CRM and business operations platform.',
-            'version' => '111',
+            'version' => '112',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/Kontor',
             'icon' => 'cubes',
@@ -88,9 +89,12 @@ class Kontor extends WireData implements Module
 
     private ?Container $container = null;
 
+    private bool $employeeRoleHookRegistered = false;
+
     public function init(): void
     {
         $this->container();
+        $this->registerEmployeeRoleHook();
     }
 
     /**
@@ -198,6 +202,8 @@ class Kontor extends WireData implements Module
         $components = new ComponentRegistry($pdo);
         $components->markInstalled('core', self::getModuleInfo()['version'], 'core');
         $components->enable('core');
+        $this->provisionEmployeeRole();
+        $this->registerEmployeeRoleHook();
     }
 
     public function ___upgrade($fromVersion, $toVersion): void
@@ -205,6 +211,35 @@ class Kontor extends WireData implements Module
         $components = new ComponentRegistry($this->pdo());
         $components->markInstalled('core', self::getModuleInfo()['version'], 'core');
         $components->enable('core');
+        $this->provisionEmployeeRole();
+    }
+
+    private function provisionEmployeeRole(): void
+    {
+        // ProcessWire installs metadata permissions after calling ___install().
+        $permissions = $this->wire()->permissions;
+        if (!$permissions->get('kontor-access')->id) {
+            $permission = $permissions->add('kontor-access');
+            $permission->title = self::getModuleInfo()['permissions']['kontor-access'];
+            $permissions->save($permission);
+        }
+        (new EmployeeRoleProvisioner($this->wire()))->create();
+    }
+
+    private function registerEmployeeRoleHook(): void
+    {
+        if ($this->employeeRoleHookRegistered) {
+            return;
+        }
+        $this->employeeRoleHookRegistered = true;
+        $this->addHookAfter('Modules::install', $this, 'configureEmployeeRoleAfterComponentInstall');
+    }
+
+    public function configureEmployeeRoleAfterComponentInstall(HookEvent $event): void
+    {
+        if ($event->return instanceof Module) {
+            (new EmployeeRoleProvisioner($this->wire()))->addComponentDefaults($event->return->className());
+        }
     }
 
     /**
