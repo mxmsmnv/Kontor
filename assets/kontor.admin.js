@@ -279,12 +279,14 @@ document.addEventListener('DOMContentLoaded', () => {
     update();
   });
 
-  document.querySelectorAll('form[data-kontor-confirm]').forEach((form) => {
-    form.addEventListener('submit', (event) => {
-      if (!window.confirm(form.dataset.kontorConfirm)) {
-        event.preventDefault();
-      }
-    });
+  document.addEventListener('submit', (event) => {
+    if (event.defaultPrevented) {
+      return;
+    }
+    const message = event.submitter?.dataset.kontorConfirm || event.target.dataset.kontorConfirm;
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+    }
   });
 
   document.querySelectorAll('[data-kontor-directory]').forEach((directory) => {

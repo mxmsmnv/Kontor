@@ -32,7 +32,7 @@ final class CustomerInvoiceRepository
         $statement = $this->pdo->prepare(
             "SELECT * FROM kontor_invoices
              WHERE organization_id = :organization_id AND customer_type = 'contact' AND customer_uid = :contact_uid
-                AND archived_at IS NULL
+                AND number IS NOT NULL AND status <> 'draft' AND archived_at IS NULL
              ORDER BY created_at DESC"
         );
         $statement->execute(['organization_id' => $organizationId, 'contact_uid' => $contactUid]);
@@ -47,7 +47,8 @@ final class CustomerInvoiceRepository
         $statement = $this->pdo->prepare(
             "SELECT * FROM kontor_invoices
              WHERE organization_id = :organization_id AND uid = :uid
-                AND customer_type = 'contact' AND customer_uid = :contact_uid"
+                AND customer_type = 'contact' AND customer_uid = :contact_uid
+                AND number IS NOT NULL AND status <> 'draft' AND archived_at IS NULL"
         );
         $statement->execute(['organization_id' => $organizationId, 'uid' => $invoiceUid, 'contact_uid' => $contactUid]);
 

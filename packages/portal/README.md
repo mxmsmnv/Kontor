@@ -31,8 +31,9 @@ repositories do internally). Neither sibling repository exposes a
 "find by customer" method, and neither is retrofitted with one here —
 Portal owns this query as its own repository instead, the same "never
 modify an already-shipped package for a later consumer" discipline used
-throughout this monorepo. Every lookup checks ownership
-(`findOwned()`) — a customer can never see another customer's document.
+throughout this monorepo. Both list and detail lookups check the organization
+and contact and return only numbered, unarchived documents issued to the
+customer.
 
 ## Payments: read-only history, no gateway
 

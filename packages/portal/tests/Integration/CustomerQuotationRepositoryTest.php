@@ -30,8 +30,14 @@ final class CustomerQuotationRepositoryTest extends DatabaseTestCase
     public function test_for_contact_only_returns_that_contacts_own_quotations(): void
     {
         $salesRepository = new QuotationRepository($this->pdo, new OrganizationRepository($this->pdo));
-        $salesRepository->save(Quotation::create($this->organizationUid, 'contact', 'contact_1', 'EUR'));
-        $salesRepository->save(Quotation::create($this->organizationUid, 'contact', 'contact_2', 'EUR'));
+        $own = Quotation::create($this->organizationUid, 'contact', 'contact_1', 'EUR');
+        $own->status = 'issued';
+        $own->number = 'E2E-001';
+        $salesRepository->save($own);
+        $other = Quotation::create($this->organizationUid, 'contact', 'contact_2', 'EUR');
+        $other->status = 'issued';
+        $other->number = 'E2E-002';
+        $salesRepository->save($other);
 
         $portalRepository = new CustomerQuotationRepository($this->pdo, new OrganizationRepository($this->pdo));
         $quotations = $portalRepository->forContact($this->organizationUid, 'contact_1');
@@ -43,7 +49,10 @@ final class CustomerQuotationRepositoryTest extends DatabaseTestCase
     public function test_a_company_customer_quotation_is_not_visible_to_a_contact(): void
     {
         $salesRepository = new QuotationRepository($this->pdo, new OrganizationRepository($this->pdo));
-        $salesRepository->save(Quotation::create($this->organizationUid, 'company', 'contact_1', 'EUR'));
+        $own = Quotation::create($this->organizationUid, 'company', 'contact_1', 'EUR');
+        $own->status = 'issued';
+        $own->number = 'E2E-001';
+        $salesRepository->save($own);
 
         $portalRepository = new CustomerQuotationRepository($this->pdo, new OrganizationRepository($this->pdo));
         $quotations = $portalRepository->forContact($this->organizationUid, 'contact_1');
@@ -51,15 +60,31 @@ final class CustomerQuotationRepositoryTest extends DatabaseTestCase
         $this->assertSame([], $quotations);
     }
 
-    public function test_find_owned_returns_null_for_someone_elses_quotation(): void
+    public function test_only_issued_and_unarchived_own_documents_are_visible_for_quotation(): void
     {
         $salesRepository = new QuotationRepository($this->pdo, new OrganizationRepository($this->pdo));
         $quotation = Quotation::create($this->organizationUid, 'contact', 'contact_1', 'EUR');
         $salesRepository->save($quotation);
 
         $portalRepository = new CustomerQuotationRepository($this->pdo, new OrganizationRepository($this->pdo));
+        $uid = $quotation->uid->toString();
+        $this->assertNull($portalRepository->findOwned($this->organizationUid, 'contact_1', $uid));
+        $this->assertSame([], $portalRepository->forContact($this->organizationUid, 'contact_1'));
 
-        $this->assertNull($portalRepository->findOwned($this->organizationUid, 'contact_2', $quotation->uid->toString()));
-        $this->assertNotNull($portalRepository->findOwned($this->organizationUid, 'contact_1', $quotation->uid->toString()));
+        $quotation->status = 'cancelled';
+        $salesRepository->save($quotation);
+        $this->assertNull($portalRepository->findOwned($this->organizationUid, 'contact_1', $uid));
+        $this->assertSame([], $portalRepository->forContact($this->organizationUid, 'contact_1'));
+
+        $quotation->status = 'issued';
+        $quotation->number = 'E2E-001';
+        $salesRepository->save($quotation);
+
+        $this->assertNull($portalRepository->findOwned($this->organizationUid, 'contact_2', $uid));
+        $this->assertNotNull($portalRepository->findOwned($this->organizationUid, 'contact_1', $uid));
+
+        $salesRepository->archive($uid);
+        $this->assertNull($portalRepository->findOwned($this->organizationUid, 'contact_1', $uid));
+        $this->assertSame([], $portalRepository->forContact($this->organizationUid, 'contact_1'));
     }
 }

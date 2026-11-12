@@ -68,10 +68,12 @@ KONTOR_E2E_EDITOR_PASS='<local-test-password>' \
 KONTOR_E2E_RESTRICTED_PASS='<local-test-password>' npm run test:e2e:available
 ```
 
-Enable KontorContacts, KontorCRM, KontorTasks and KontorDashboard on the local
-site before preparing the fixtures. Desktop Chromium runs the mutating journeys
-for lead qualification, company custom fields, task reopening and dashboard
-widgets. The other browser and device profiles repeat the lead permission,
+Enable Contacts, CRM, CRM Intake, Tasks, Dashboard, Sales, Invoices, Payments,
+Documents, Files, Mail and Portal on the local site before preparing the
+fixtures. Desktop Chromium runs the mutating journeys for lead qualification,
+company custom fields, task reopening, dashboard widgets, quotation to
+settlement, and portal account administration. Invoice delivery uses Mail's
+test mode. The other browser and device profiles repeat the lead permission,
 responsive and axe checks. The local site and named fixture records persist
 between runs. Traces, videos and reports live under ignored `artifacts/e2e`.
 Every journey checks for console errors, uncaught page errors, failed requests

@@ -36,7 +36,7 @@ final class CustomerQuotationRepository
         $statement = $this->pdo->prepare(
             "SELECT * FROM kontor_sales_quotations
              WHERE organization_id = :organization_id AND customer_type = 'contact' AND customer_uid = :contact_uid
-                AND archived_at IS NULL
+                AND number IS NOT NULL AND status <> 'draft' AND archived_at IS NULL
              ORDER BY created_at DESC"
         );
         $statement->execute(['organization_id' => $organizationId, 'contact_uid' => $contactUid]);
@@ -56,7 +56,8 @@ final class CustomerQuotationRepository
         $statement = $this->pdo->prepare(
             "SELECT * FROM kontor_sales_quotations
              WHERE organization_id = :organization_id AND uid = :uid
-                AND customer_type = 'contact' AND customer_uid = :contact_uid"
+                AND customer_type = 'contact' AND customer_uid = :contact_uid
+                AND number IS NOT NULL AND status <> 'draft' AND archived_at IS NULL"
         );
         $statement->execute(['organization_id' => $organizationId, 'uid' => $quotationUid, 'contact_uid' => $contactUid]);
 

@@ -7,6 +7,8 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\CRM\Domain\Lead;
 use Kontor\CRM\Domain\Pipeline;
 use Kontor\CRM\Domain\Stage;
+use Kontor\Ledger\Domain\Account;
+use Kontor\Mail\Domain\Mailbox;
 
 $site = rtrim((string) getenv('KONTOR_E2E_SITE'), '/');
 $stateFile = (string) getenv('KONTOR_E2E_STATE');
@@ -26,6 +28,8 @@ require $site . '/index.php';
 ob_end_clean();
 
 $requiredModules = ['KontorContacts', 'KontorCRM', 'KontorCRMIntake', 'KontorDashboard', 'KontorTasks'];
+$requiredModules = [...$requiredModules, 'KontorSales', 'KontorInvoices', 'KontorPayments',
+    'KontorDocuments', 'KontorFiles', 'KontorMail', 'KontorPortal'];
 foreach ($requiredModules as $moduleName) {
     if (!$modules->isInstalled($moduleName)) {
         throw new RuntimeException("Install {$moduleName} before preparing browser fixtures.");
@@ -76,6 +80,12 @@ $editorPermissions = [
     'kontor-crm-deal-view', 'kontor-crm-deal-create',
     'kontor-dashboard-view', 'kontor-dashboard-create', 'kontor-dashboard-edit',
     'kontor-tasks-task-view', 'kontor-tasks-task-create', 'kontor-tasks-task-edit', 'kontor-tasks-task-complete',
+    'kontor-sales-quotation-view', 'kontor-sales-quotation-create', 'kontor-sales-quotation-issue',
+    'kontor-sales-quotation-accept', 'kontor-sales-order-view', 'kontor-sales-order-create',
+    'kontor-sales-order-confirm', 'kontor-invoices-invoice-view', 'kontor-invoices-invoice-create',
+    'kontor-invoices-invoice-issue', 'kontor-invoices-invoice-send',
+    'kontor-payments-payment-view', 'kontor-payments-payment-create', 'kontor-payments-payment-allocate',
+    'kontor-portal-account-manage',
 ];
 $restrictedPermissions = [
     'page-view', 'kontor-access', 'kontor-contacts-contact-view',
@@ -88,7 +98,7 @@ $editor = $configureUser(
     $configureRole('kontor-e2e-crm-editor-role', $editorPermissions),
 );
 $journeyUsers = [];
-foreach (['company', 'tasks', 'dashboard'] as $journey) {
+foreach (['company', 'tasks', 'dashboard', 'commerce'] as $journey) {
     $journeyUsers[$journey] = $configureUser(
         'kontor-e2e-' . $journey . '-editor',
         $editorPassword,
@@ -174,6 +184,44 @@ $contact = Contact::create(
     email: 'kontor-e2e-restricted@example.test',
 );
 $contacts->contactRepository()->save($contact);
+$commerceContact = Contact::create(
+    $organizationUid,
+    'Commerce',
+    null,
+    'Fixture',
+    'E2E Commerce Fixture',
+    email: 'kontor-e2e-commerce@example.test',
+);
+$contacts->contactRepository()->save($commerceContact);
+
+$documents = $modules->get('KontorDocuments');
+foreach (['quotation', 'invoice'] as $documentType) {
+    $key = $documentType . '.standard';
+    if ($documents->templateRepository()->findCurrentVersion($organizationUid, $key, 'en') === null) {
+        $documents->templateManager()->publish(
+            $organizationUid, $key, $documentType, 'en', 'E2E ' . ucfirst($documentType),
+            '<h1>{{ number }}</h1>',
+        );
+    }
+}
+$mailboxes = $modules->get('KontorMail')->mailboxRepository();
+if (!array_filter($mailboxes->forOrganization($organizationUid),
+    static fn (Mailbox $mailbox): bool => $mailbox->emailAddress === 'kontor-e2e-billing@example.test')) {
+    $mailboxes->save(Mailbox::open($organizationUid, 'E2E Billing', 'kontor-e2e-billing@example.test'));
+}
+if ($modules->isInstalled('KontorLedger')) {
+    $accounts = $modules->get('KontorLedger')->accountRepository();
+    foreach ([
+        ['1200', 'Bank', 'asset'],
+        ['1400', 'Trade receivables', 'asset'],
+        ['1700', 'Sales tax', 'liability'],
+        ['8000', 'Sales', 'revenue'],
+    ] as [$code, $name, $type]) {
+        if ($accounts->findByCode($organizationUid, $code) === null) {
+            $accounts->save(Account::create($organizationUid, $code, $name, $type, 'USD'));
+        }
+    }
+}
 $lead = Lead::create(
     $organizationUid,
     'E2E Restricted Conversion Check',
@@ -193,6 +241,7 @@ $state = [
         $restrictedUsers,
     ),
     'restricted_lead_uid' => $lead->uid->toString(),
+    'commerce_contact_uid' => $commerceContact->uid->toString(),
 ];
 if (file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
     throw new RuntimeException('Could not write the browser fixture state.');
