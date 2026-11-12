@@ -95,6 +95,24 @@ final class CompanyRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function test_alphabetical_selection_and_company_field_search(): void
+    {
+        $repository = $this->repository();
+        $repository->save(Company::create($this->organizationUid, 'Alpha', metadata: [
+            'fields' => ['license' => 'DEMO-123'],
+        ]));
+        $repository->save(Company::create($this->organizationUid, 'Zulu', metadata: [
+            'private_reference' => 'DEMO-123',
+        ]));
+
+        $alphabetical = $repository->findAll($this->organizationUid, limit: 1, alphabetical: true);
+        self::assertSame('Alpha', $alphabetical[0]->legalName);
+        $matches = $repository->findAll($this->organizationUid, 'DEMO-123');
+        self::assertCount(1, $matches);
+        self::assertSame('Alpha', $matches[0]->legalName);
+        self::assertSame(1, $repository->countMatching($this->organizationUid, 'DEMO-123'));
+    }
+
     public function test_require_throws_for_unknown_uid(): void
     {
         $this->expectException(\RuntimeException::class);

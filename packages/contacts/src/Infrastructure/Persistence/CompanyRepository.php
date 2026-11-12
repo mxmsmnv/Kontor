@@ -131,9 +131,10 @@ final class CompanyRepository implements RepositoryInterface
         int $limit = 100,
         int $offset = 0,
         string $status = '',
+        bool $alphabetical = false,
     ): array
     {
-        return $this->findList($organizationUid, $query, false, $limit, $offset, $status);
+        return $this->findList($organizationUid, $query, false, $limit, $offset, $status, $alphabetical);
     }
 
     /**
@@ -160,6 +161,7 @@ final class CompanyRepository implements RepositoryInterface
         int $limit,
         int $offset,
         string $status,
+        bool $alphabetical = false,
     ): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
@@ -178,7 +180,7 @@ final class CompanyRepository implements RepositoryInterface
                 OR email LIKE :query
                 OR phone LIKE :query
                 OR registration_number LIKE :query
-                OR metadata_json LIKE :query
+                OR JSON_EXTRACT(metadata_json, \'$.fields\') LIKE :query
             )';
         }
 
@@ -186,7 +188,8 @@ final class CompanyRepository implements RepositoryInterface
             $sql .= ' AND status = :status';
         }
 
-        $sql .= ' ORDER BY updated_at DESC, legal_name ASC LIMIT :limit OFFSET :offset';
+        $sql .= $alphabetical ? ' ORDER BY legal_name ASC, id ASC' : ' ORDER BY updated_at DESC, legal_name ASC';
+        $sql .= ' LIMIT :limit OFFSET :offset';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
 
@@ -229,7 +232,7 @@ final class CompanyRepository implements RepositoryInterface
                 OR email LIKE :query
                 OR phone LIKE :query
                 OR registration_number LIKE :query
-                OR metadata_json LIKE :query
+                OR JSON_EXTRACT(metadata_json, \'$.fields\') LIKE :query
             )';
         }
 

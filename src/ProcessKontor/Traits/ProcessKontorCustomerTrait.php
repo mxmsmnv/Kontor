@@ -177,6 +177,10 @@ trait ProcessKontorCustomerTrait
         if ($this->wire()->input->post('submit_save')) {
             $this->requirePost();
             $form->processInput($this->wire()->input->post);
+            $linkedin = $this->formValue($form, 'linkedin');
+            if ($linkedin !== null && $this->linkedinProfileUrl($linkedin) === null) {
+                $form->getChildByName('linkedin')->error($this->_('Enter a valid LinkedIn URL.'));
+            }
             try {
                 $intakeAnswers = $this->postedCrmIntakeAnswers('contact', $intakeFields);
                 $intakeValues = $intakeAnswers;
@@ -227,7 +231,10 @@ trait ProcessKontorCustomerTrait
             'first_name' => $contact?->firstName ?? '',
             'last_name' => $contact?->lastName ?? '',
             'email' => $contact?->email ?? '',
-            'linkedin' => (string) ($contact?->metadata['linkedin'] ?? ''),
+            'linkedin' => is_string($contact?->metadata['linkedin'] ?? null) ? $contact->metadata['linkedin'] : '',
+            'linkedin_url' => $this->linkedinProfileUrl(
+                is_string($contact?->metadata['linkedin'] ?? null) ? $contact->metadata['linkedin'] : null
+            ) ?? '',
             'phone' => $contact?->phone ?? '',
             'mobile' => $contact?->mobile ?? '',
             'job_title' => $contact?->jobTitle ?? '',
@@ -256,15 +263,9 @@ trait ProcessKontorCustomerTrait
             'entity' => $contact,
             'entityType' => 'contact',
             'relationships' => $relationships,
-            // The repository lists most recently updated first, which is right
-            // for the companies page and wrong for a dropdown: a person
-            // looking for Bromley expects A to Z.
             'availableCompanies' => $contact === null
                 ? []
-                : (static function (array $companies): array {
-                    usort($companies, static fn ($a, $b): int => strcasecmp($a->legalName, $b->legalName));
-                    return $companies;
-                })($this->companyRepository()->findAll($this->organizationUid(), '', 250)),
+                : $this->companyRepository()->findAll($this->organizationUid(), limit: 250, alphabetical: true),
             'addresses' => $contact === null
                 ? []
                 : $this->addressRepository()->forOwner('contact', $contact->uid->toString()),

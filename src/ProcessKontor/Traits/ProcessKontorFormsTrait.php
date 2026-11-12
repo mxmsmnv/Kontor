@@ -102,7 +102,8 @@ trait ProcessKontorFormsTrait
         $this->addTextField($form, 'first_name', $this->_('First name'), $contact?->firstName, false, 50);
         $this->addTextField($form, 'last_name', $this->_('Last name'), $contact?->lastName, false, 50);
         $this->addEmailField($form, 'email', $this->_('Email'), $contact?->email, 50);
-        $this->addTextField($form, 'linkedin', $this->_('LinkedIn'), (string) ($contact?->metadata['linkedin'] ?? ''), false, 255);
+        $linkedin = $contact?->metadata['linkedin'] ?? null;
+        $this->addTextField($form, 'linkedin', $this->_('LinkedIn'), is_string($linkedin) ? $linkedin : null, false, 50);
         $this->addTextField($form, 'phone', $this->_('Phone'), $contact?->phone, false, 50);
         $this->addTextField($form, 'mobile', $this->_('Mobile'), $contact?->mobile, false, 50);
         $this->addTextField($form, 'job_title', $this->_('Job title'), $contact?->jobTitle, false, 50);
@@ -606,7 +607,7 @@ trait ProcessKontorFormsTrait
             return [];
         }
 
-        return array_filter($fields, static fn (mixed $label, mixed $key): bool => is_string($label) && is_string($key), ARRAY_FILTER_USE_BOTH);
+        return array_filter($fields, static fn (mixed $label, mixed $key): bool => is_string($label) && is_string($key) && preg_match('/^[a-z0-9_]+$/D', $key) === 1, ARRAY_FILTER_USE_BOTH);
     }
 
     /**
@@ -630,7 +631,13 @@ trait ProcessKontorFormsTrait
 
             $key = trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower($label)), '_');
 
-            if ($key === '' || isset($fields[$key])) {
+            if ($key === '' || preg_match('/[^\x00-\x7F]/', $label) === 1) {
+                $normalized = mb_strtolower((string) preg_replace('/\s+/u', ' ', $label), 'UTF-8');
+                $key = 'field_' . substr(hash('sha256', $normalized), 0, 24);
+            } elseif (ctype_digit($key)) {
+                $key = 'field_' . $key;
+            }
+            if (isset($fields[$key])) {
                 continue;
             }
 
@@ -638,6 +645,27 @@ trait ProcessKontorFormsTrait
         }
 
         return $fields;
+    }
+
+    private function linkedinProfileUrl(?string $value): ?string
+    {
+        $value = trim($value ?? '');
+        if ($value === '') {
+            return null;
+        }
+
+        $url = preg_match('~^https?://~i', $value) ? $value : 'https://' . $value;
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+        $parts = parse_url($url);
+        $host = strtolower($parts['host'] ?? '');
+        if (isset($parts['user']) || isset($parts['pass'])
+            || ($host !== 'linkedin.com' && !str_ends_with($host, '.linkedin.com'))) {
+            return null;
+        }
+
+        return $url;
     }
 
     private function saveContactFromForm(InputfieldForm $form, ?Contact $contact): Contact
@@ -661,19 +689,12 @@ trait ProcessKontorFormsTrait
         $contact->jobTitle = $this->formValue($form, 'job_title');
         $contact->status = $this->requiredFormValue($form, 'status');
         $contact->notes = $this->formValue($form, 'notes');
-        // LinkedIn lives in the contact's metadata, so no table change; a
-        // bare "linkedin.com/in/name" gains its scheme, an empty box clears it.
-        $linkedin = trim((string) $this->formValue($form, 'linkedin'));
-        if ($linkedin !== '' && !preg_match('~^https?://~i', $linkedin)) {
-            $linkedin = 'https://' . $linkedin;
-        }
-        $metadata = $contact->metadata;
-        if ($linkedin === '') {
-            unset($metadata['linkedin']);
+        $linkedin = $this->linkedinProfileUrl($this->formValue($form, 'linkedin'));
+        if ($linkedin === null) {
+            unset($contact->metadata['linkedin']);
         } else {
-            $metadata['linkedin'] = $linkedin;
+            $contact->metadata['linkedin'] = $linkedin;
         }
-        $contact->metadata = $metadata;
         $this->contactRepository()->save($contact);
 
         return $contact;

@@ -132,6 +132,7 @@ trait ProcessKontorAuditSupportTrait
             'phone' => $contact->phone,
             'status' => $contact->status,
             'jobTitle' => $contact->jobTitle,
+            'linkedin' => $contact->metadata['linkedin'] ?? null,
         ];
     }
 
