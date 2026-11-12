@@ -116,7 +116,7 @@ final class CollaborationNotificationJobTest extends DatabaseTestCase
             $job->handle($job->payload(), $progress);
             $this->fail('A failed mail transport must fail the Queue job.');
         } catch (\RuntimeException $e) {
-            $this->assertSame('SMTP unavailable', $e->getMessage());
+            $this->assertSame('Mail transport failed.', $e->getMessage());
         }
 
         $history = $messages->forOrganization($this->organizationUid);

@@ -31,6 +31,13 @@ find . -path './vendor' -prune -o -path '*/vendor' -prune -o \
 # Unit tests (DB-gated tests skip when the variables are absent)
 vendor/bin/phpunit
 
+# Core and every package suite, with skipped tests treated as failures.
+# Use an empty disposable MySQL database and a separate disposable Redis instance.
+KONTOR_TEST_DB_DSN='mysql:host=127.0.0.1;port=3399;dbname=kontor_test' \
+KONTOR_TEST_DB_USER='kontor' KONTOR_TEST_DB_PASS='kontor' \
+KONTOR_TEST_REDIS_HOST='127.0.0.1' KONTOR_TEST_REDIS_PORT=6381 \
+php tests/run-all.php
+
 # Integration and migration tests against a dedicated disposable database
 KONTOR_TEST_DB_DSN='mysql:host=127.0.0.1;port=3306;dbname=kontor_test' \
 KONTOR_TEST_DB_USER='kontor' KONTOR_TEST_DB_PASS='kontor' \
