@@ -74,9 +74,11 @@ MySQL (see `../../docker-compose.test.yml`) and is skipped otherwise, same
 
 The root `ProcessKontor` module provides a deliberately narrow first task
 workflow: list and filter tasks, create or edit one, start it, complete or
-cancel it, and archive or restore it. Completing a recurring task exposes the
-next occurrence created by the existing workflow service. An assigned task can
-also schedule email reminders and shows their scheduled/sent lifecycle.
+cancel it, and archive or restore it. In **Tasks → Closed**, editors can open
+a completed or cancelled task and choose **Reopen task** to return it to the
+active queue. A recurring task keeps any next occurrence it already generated.
+An assigned task can also schedule email reminders and shows their scheduled
+and sent states.
 
 ## Not in scope for this substage
 

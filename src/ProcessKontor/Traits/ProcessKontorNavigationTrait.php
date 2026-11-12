@@ -521,11 +521,13 @@ trait ProcessKontorNavigationTrait
             $widgetKey = $this->wire()->sanitizer->text(
                 (string) $this->wire()->input->post('widget_key')
             );
+            $widgets = $module->widgetRepository()->forDashboard($dashboardUid);
+            $lastWidget = end($widgets);
             $widget = $module->dashboardService()->addWidget(
                 $this->organizationUid(),
                 $dashboardUid,
                 $widgetKey,
-                sortOrder: count($module->widgetRepository()->forDashboard($dashboardUid)),
+                sortOrder: $lastWidget === false ? 0 : $lastWidget->sortOrder + 1,
             );
         } else {
             $widgetUid = $this->wire()->sanitizer->text(
@@ -542,14 +544,7 @@ trait ProcessKontorNavigationTrait
             if ($action === 'remove') {
                 $module->dashboardService()->removeWidget($widgetUid);
             } elseif ($action === 'move_left' || $action === 'move_right') {
-                $module->dashboardService()->moveWidget(
-                    $widgetUid,
-                    max(
-                        0,
-                        min(12 - max(2, min(12, $widget->width)), $widget->positionX + ($action === 'move_left' ? -1 : 1)),
-                    ),
-                    $widget->positionY,
-                );
+                $module->dashboardService()->shiftWidget($widgetUid, earlier: $action === 'move_left');
             } else {
                 $maximumWidth = max(2, 12 - max(0, min(10, $widget->positionX)));
                 $module->dashboardService()->resizeWidget(

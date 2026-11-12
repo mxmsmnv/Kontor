@@ -171,7 +171,7 @@ final class TaskReminderDeliveryTest extends DatabaseTestCase
             $job->handle($job->payload(), $progress);
             $this->fail('A failed transport must leave the Queue job retryable.');
         } catch (\RuntimeException $e) {
-            $this->assertSame('SMTP unavailable', $e->getMessage());
+            $this->assertSame('Mail transport failed.', $e->getMessage());
         }
 
         $this->assertFalse($reminders->reminder($reminder->uid->toString())->isSent());

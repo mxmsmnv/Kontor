@@ -22,16 +22,16 @@ final class TaskWorkflowService
 
     public function start(string $taskUid): Task
     {
-        $task = $this->tasks->require($taskUid);
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): Task {
+            if (!$task->isOpen()) {
+                throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be started.");
+            }
 
-        if (!$task->isOpen()) {
-            throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be started.");
-        }
+            $task->status = 'in_progress';
+            $this->tasks->saveWorkflowState($task);
 
-        $task->status = 'in_progress';
-        $this->tasks->save($task);
-
-        return $task;
+            return $task;
+        });
     }
 
     /**
@@ -39,47 +39,70 @@ final class TaskWorkflowService
      */
     public function complete(string $taskUid): array
     {
-        $task = $this->tasks->require($taskUid);
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): array {
+            if (!$task->isOpen()) {
+                throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be completed.");
+            }
 
-        if (!$task->isOpen()) {
-            throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be completed.");
-        }
+            $task->status = 'done';
+            $task->completedAt = new \DateTimeImmutable();
+            $this->tasks->saveWorkflowState($task);
 
-        $task->status = 'done';
-        $task->completedAt = new \DateTimeImmutable();
-        $this->tasks->save($task);
+            $advanced = $this->tasks->recurrenceAdvanced($taskUid) ?? false;
+            $next = null;
+            $nextDueAt = $advanced ? null : $task->nextOccurrenceDueAt($task->completedAt);
+            if ($nextDueAt !== null) {
+                $next = Task::create(
+                    organizationId: $task->organizationId,
+                    title: $task->title,
+                    description: $task->description,
+                    priority: $task->priority,
+                    assignedTo: $task->assignedTo,
+                    dueAt: $nextDueAt,
+                    recurrenceRule: $task->recurrenceRule,
+                    recurrenceUntil: $task->recurrenceUntil,
+                );
+                $this->tasks->save($next);
+            }
+            $this->tasks->recordRecurrenceAdvance($taskUid, $advanced || $next !== null);
 
-        $next = null;
-        $nextDueAt = $task->nextOccurrenceDueAt();
-
-        if ($nextDueAt !== null) {
-            $next = Task::create(
-                organizationId: $task->organizationId,
-                title: $task->title,
-                description: $task->description,
-                priority: $task->priority,
-                assignedTo: $task->assignedTo,
-                dueAt: $nextDueAt,
-                recurrenceRule: $task->recurrenceRule,
-                recurrenceUntil: $task->recurrenceUntil,
-            );
-            $this->tasks->save($next);
-        }
-
-        return ['completed' => $task, 'next' => $next];
+            return ['completed' => $task, 'next' => $next];
+        });
     }
 
     public function cancel(string $taskUid): Task
     {
-        $task = $this->tasks->require($taskUid);
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): Task {
+            if (!$task->isOpen()) {
+                throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be cancelled.");
+            }
 
-        if (!$task->isOpen()) {
-            throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be cancelled.");
-        }
+            $task->status = 'cancelled';
+            $this->tasks->saveWorkflowState($task);
 
-        $task->status = 'cancelled';
-        $this->tasks->save($task);
+            return $task;
+        });
+    }
 
-        return $task;
+    public function reopen(string $taskUid): Task
+    {
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): Task {
+            if (!in_array($task->status, ['done', 'cancelled'], true)) {
+                throw new RuntimeException("Task \"{$taskUid}\" is not closed and cannot be reopened.");
+            }
+
+            if ($task->status === 'done' && $this->tasks->recurrenceAdvanced($taskUid) === null) {
+                // Earlier versions generated successors without recording the source occurrence.
+                $this->tasks->recordRecurrenceAdvance(
+                    $taskUid,
+                    $task->nextOccurrenceDueAt($task->completedAt) !== null,
+                );
+            }
+            $task->status = 'open';
+            $task->completedAt = null;
+            $this->tasks->saveWorkflowState($task);
+
+            return $task;
+        });
     }
 }

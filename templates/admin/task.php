@@ -68,7 +68,7 @@ $workflowStage = $task === null ? 0 : match ($task->status) {
 $showReminderWorkspace = $task !== null && ($task->isOpen() || $reminders !== []);
 $tasksUrl = $adminUrl . 'tasks/' . ($archived
     ? '?archived=1'
-    : ($task !== null && !$task->isOpen() ? '?scope=all' : ''));
+    : ($task !== null && !$task->isOpen() ? '?scope=closed' : ''));
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
@@ -173,6 +173,9 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
             <?php if (!$archived && $task->status === 'open' && $canEdit): ?><div><button class="uk-button uk-button-primary" name="action" value="start" type="submit"><i class="fa fa-play"></i> Start task</button></div><?php endif; ?>
             <?php if (!$archived && $task->isOpen() && $canComplete): ?><div><button class="uk-button uk-button-primary" name="action" value="complete" type="submit"><i class="fa fa-check"></i> Complete</button></div><?php endif; ?>
             <?php if (!$archived && $task->isOpen() && $canCancel): ?><div><button class="uk-button uk-button-default" name="action" value="cancel" type="submit" data-kontor-confirm="Cancel this task?"><i class="fa fa-ban"></i> Cancel</button></div><?php endif; ?>
+            <?php if (!$archived && $canEdit && in_array($task->status, ['done', 'cancelled'], true)): ?>
+              <div><button class="uk-button uk-button-primary" name="action" value="reopen" type="submit"><i class="fa fa-undo" aria-hidden="true"></i> Reopen task</button></div>
+            <?php endif; ?>
             <?php if ($canEdit): ?><div><button class="uk-button uk-button-default" name="action" value="<?= $archived ? 'restore' : 'archive' ?>" type="submit" data-kontor-confirm="<?= $archived ? 'Restore this task to the active queue?' : 'Archive this task?' ?>"><i class="fa fa-<?= $archived ? 'undo' : 'archive' ?>"></i> <?= $archived ? 'Restore' : 'Archive' ?></button></div><?php endif; ?>
           </form>
         </div>

@@ -77,7 +77,8 @@
     "storage": {
         "tables": [
             "kontor_tasks",
-            "kontor_task_reminders"
+            "kontor_task_reminders",
+            "kontor_task_recurrence"
         ],
         "directories": []
     },

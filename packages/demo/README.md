@@ -1,7 +1,13 @@
 # Kontor Demo
 
-`KontorDemo` is an executable reference workflow, not a static fixture.
-It connects real Kontor records through an order-to-cash scenario:
+`KontorDemo` is an executable order-to-cash workflow. Installing the
+module adds the Demo screen and prepares its storage. To create sample records
+on a disposable installation, open **Admin → Kontor → Demo** and select
+**New scenario**. Use the action shown at each step to continue through settlement.
+The [demo installer](../../README.md#installation) installs the modules this
+workflow needs in dependency order.
+
+Each step adds the relevant linked records:
 
 1. customer intake and CRM qualification;
 2. catalog-backed quotation preparation;

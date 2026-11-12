@@ -19,6 +19,7 @@ use Kontor\Tasks\Infrastructure\Dashboard\MyOpenTasksWidgetProvider;
 use Kontor\Tasks\Infrastructure\Queue\TaskReminderDeliveryJob;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
+use Kontor\Tasks\Migrations\Migration0003TrackTaskRecurrence;
 
 /**
  * KontorTasks bootstrap module (kontor.md Substage 5.1). First business
@@ -33,7 +34,7 @@ class KontorTasks extends WireData implements Module
         return [
             'title' => 'Kontor Tasks',
             'summary' => 'Tasks, reminders, recurrence, calendar, entity relations.',
-            'version' => '100',
+            'version' => '101',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorTasks',
             'icon' => 'check-square-o',
@@ -171,6 +172,7 @@ class KontorTasks extends WireData implements Module
         $runner->run([
             new Migration0001CreateTasksTable(),
             new Migration0002CreateTaskRemindersTable(),
+            new Migration0003TrackTaskRecurrence(),
         ]);
 
         $components = new ComponentRegistry($pdo);
@@ -180,7 +182,12 @@ class KontorTasks extends WireData implements Module
 
     public function ___upgrade($fromVersion, $toVersion): void
     {
-        $components = new ComponentRegistry($this->pdo());
+        $pdo = $this->pdo();
+        $runner = new MigrationRunner($pdo);
+        $runner->ensureLedgerExists();
+        $runner->run([new Migration0003TrackTaskRecurrence()]);
+
+        $components = new ComponentRegistry($pdo);
         $components->markInstalled('tasks', self::getModuleInfo()['version'], 'tasks');
         $components->enable('tasks');
     }

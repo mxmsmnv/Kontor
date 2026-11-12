@@ -1,3 +1,19 @@
+/* Core Original does not provide Konkat's color and surface tokens. */
+.AdminThemeUikitOriginal .kontor-shell {
+  --pw-text-color: #333;
+  --pw-muted-color: #666;
+  --pw-border-color: #ddd;
+  --pw-main-color: #216f9b;
+  --pw-main-background: #f5f5f5;
+  --pw-blocks-background: #fff;
+  --pw-inputs-background: #fff;
+  --pw-input-radius: 0;
+  --pw-alert-success: #e8f5ec;
+  --pw-alert-warning: #fff2d8;
+  --pw-alert-danger: #fce8e8;
+  --pw-error-inline-text-color: #a61b2b;
+}
+
 .kontor-shell {
   color: var(--pw-text-color);
   display: flex;
@@ -51,8 +67,13 @@
   gap: 0.65rem;
 }
 
-.kontor-pagehead__actions .uk-button-primary {
-  color: #fff !important;
+/* UIkit's link reset otherwise forces button links to inherit body text. */
+.kontor-shell .uk-button-primary.uk-link-reset {
+  color: var(--pw-button-color, #fff) !important;
+}
+
+.kontor-shell .uk-button-primary.uk-link-reset:is(:hover, :focus-visible) {
+  color: var(--pw-button-hover-color, #fff) !important;
 }
 
 .kontor-button {
@@ -64,14 +85,14 @@
 }
 
 .kontor-button--ghost {
-  background: var(--pw-button-muted-background) !important;
-  border-color: var(--pw-button-muted-border) !important;
-  color: var(--pw-button-muted-color) !important;
+  background: var(--pw-button-muted-background, #fff) !important;
+  border-color: var(--pw-button-muted-border, #ddd) !important;
+  color: var(--pw-button-muted-color, #333) !important;
 }
 
 .kontor-button--ghost:hover {
-  background: var(--pw-button-hover-background) !important;
-  color: var(--pw-button-hover-color) !important;
+  background: var(--pw-button-hover-background, #f5f5f5) !important;
+  color: var(--pw-button-hover-color, #333) !important;
 }
 
 .kontor-card {
@@ -709,16 +730,8 @@
   text-decoration: none !important;
 }
 
-.kontor-crm-workspace .uk-button-primary {
-  color: #fff !important;
-}
-
 .kontor-lead-workspace .uk-button {
   text-decoration: none !important;
-}
-
-.kontor-lead-workspace .uk-button-primary {
-  color: #fff !important;
 }
 
 .kontor-lead-summary {

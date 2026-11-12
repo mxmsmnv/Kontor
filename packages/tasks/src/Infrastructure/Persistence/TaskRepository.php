@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Tasks\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\Contracts\RepositoryInterface;
 use Kontor\SDK\ValueObjects\Uid;
@@ -47,6 +48,79 @@ final class TaskRepository implements RepositoryInterface
     public function require(string $id): Task
     {
         return $this->find($id) ?? throw new RuntimeException("Task \"{$id}\" was not found.");
+    }
+
+    /**
+     * @template Result
+     * @param callable(Task): Result $change
+     * @return Result
+     */
+    public function changeActiveTask(string $id, callable $change): mixed
+    {
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($this->pdo);
+
+        try {
+            $statement = $this->pdo->prepare(
+                'SELECT * FROM kontor_tasks WHERE uid = :uid AND archived_at IS NULL'
+                . DatabaseConcurrency::forUpdate($this->pdo)
+            );
+            $statement->execute(['uid' => $id]);
+            $row = $statement->fetch(\PDO::FETCH_ASSOC);
+            $statement->closeCursor();
+
+            if ($row === false) {
+                throw new RuntimeException("Active task \"{$id}\" was not found.");
+            }
+
+            $result = $change($this->hydrate($row));
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $result;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    public function saveWorkflowState(Task $task): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE kontor_tasks
+             SET status = :status, completed_at = :completed_at, updated_at = :updated_at, version = version + 1
+             WHERE uid = :uid'
+        );
+        $statement->execute([
+            'uid' => $task->uid->toString(),
+            'status' => $task->status,
+            'completed_at' => $task->completedAt?->format('Y-m-d H:i:s.u'),
+            'updated_at' => $this->now(),
+        ]);
+    }
+
+    public function recurrenceAdvanced(string $taskUid): ?bool
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT advanced FROM kontor_task_recurrence WHERE task_uid = :task_uid'
+        );
+        $statement->execute(['task_uid' => $taskUid]);
+        $advanced = $statement->fetchColumn();
+
+        return $advanced === false ? null : (bool) $advanced;
+    }
+
+    public function recordRecurrenceAdvance(string $taskUid, bool $advanced): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO kontor_task_recurrence (task_uid, advanced)
+             VALUES (:task_uid, :advanced)
+             ON DUPLICATE KEY UPDATE advanced = VALUES(advanced)'
+        );
+        $statement->execute(['task_uid' => $taskUid, 'advanced' => (int) $advanced]);
     }
 
     public function save(object $entity): void
@@ -113,6 +187,7 @@ final class TaskRepository implements RepositoryInterface
         bool $archived = false,
         int $limit = 50,
         int $offset = 0,
+        bool $closedOnly = false,
     ): array {
         [$where, $params] = $this->matchingConditions(
             $organizationUid,
@@ -121,6 +196,9 @@ final class TaskRepository implements RepositoryInterface
             $priority,
             $archived,
         );
+        if ($closedOnly) {
+            $where[] = "t.status IN ('done', 'cancelled')";
+        }
         $statement = $this->pdo->prepare(
             'SELECT t.* FROM kontor_tasks t
              WHERE ' . implode(' AND ', $where) . '
@@ -239,6 +317,7 @@ final class TaskRepository implements RepositoryInterface
             completedAt: $row['completed_at'] !== null ? new \DateTimeImmutable($row['completed_at']) : null,
             recurrenceRule: $row['recurrence_rule'],
             recurrenceUntil: $row['recurrence_until'] !== null ? new \DateTimeImmutable($row['recurrence_until']) : null,
+            archived: $row['archived_at'] !== null,
         );
     }
 

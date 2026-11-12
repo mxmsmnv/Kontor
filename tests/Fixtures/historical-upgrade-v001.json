@@ -23,7 +23,7 @@
   {"moduleName":"KontorLedger","modulePath":"packages/ledger/KontorLedger.module.php","component":"ledger","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorMail","modulePath":"packages/mail/KontorMail.module.php","component":"mail","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorMarketplace","modulePath":"packages/marketplace/KontorMarketplace.module.php","component":"marketplace","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
-  {"moduleName":"KontorMCP","modulePath":"packages/mcp/KontorMCP.module.php","component":"mcp","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":false,"pendingMigrations":[]},
+  {"moduleName":"KontorMCP","modulePath":"packages/mcp/KontorMCP.module.php","component":"mcp","sourceVersion":"001","targetVersion": "101","upgradeHookRequired":false,"pendingMigrations":[]},
   {"moduleName":"KontorPayments","modulePath":"packages/payments/KontorPayments.module.php","component":"payments","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorPortal","modulePath":"packages/portal/KontorPortal.module.php","component":"portal","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorProjects","modulePath":"packages/projects/KontorProjects.module.php","component":"projects","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
@@ -33,6 +33,6 @@
   {"moduleName":"KontorSales","modulePath":"packages/sales/KontorSales.module.php","component":"sales","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorSearch","modulePath":"packages/search/KontorSearch.module.php","component":"search","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorSettings","modulePath":"packages/settings/KontorSettings.module.php","component":"settings","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":false,"pendingMigrations":[]},
-  {"moduleName":"KontorTasks","modulePath":"packages/tasks/KontorTasks.module.php","component":"tasks","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
+  {"moduleName":"KontorTasks","modulePath":"packages/tasks/KontorTasks.module.php","component":"tasks","sourceVersion":"001","targetVersion": "101","upgradeHookRequired":true,"pendingMigrations":["Kontor\\Tasks\\Migrations\\Migration0003TrackTaskRecurrence"]},
   {"moduleName":"KontorWorkflow","modulePath":"packages/workflow/KontorWorkflow.module.php","component":"workflow","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]}
 ]

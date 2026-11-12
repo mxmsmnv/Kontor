@@ -107,9 +107,9 @@ trait ProcessKontorWorkTrait
         );
         $scope = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('scope'),
-            ['active', 'all', 'mine', 'overdue', 'today', 'upcoming']
+            ['active', 'all', 'closed', 'mine', 'overdue', 'today', 'upcoming']
         ) ?? ($archived ? 'all' : 'active');
-        if (in_array($status, ['done', 'cancelled'], true) && $scope !== 'all') {
+        if (in_array($status, ['done', 'cancelled'], true) && !in_array($scope, ['all', 'closed'], true)) {
             $scope = 'all';
         }
         $repository = $this->taskModule()->taskRepository();
@@ -125,6 +125,7 @@ trait ProcessKontorWorkTrait
             $priority,
             $archived,
             limit: 250,
+            closedOnly: $scope === 'closed',
         );
         $today = new \DateTimeImmutable('today');
         $tomorrow = $today->modify('+1 day');
@@ -177,9 +178,9 @@ trait ProcessKontorWorkTrait
     {
         $this->requireTasks();
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
-        $archived = (string) $this->wire()->input->get('archived') === '1';
         $repository = $this->taskModule()->taskRepository();
         $task = $id !== '' ? $repository->require($id) : null;
+        $archived = $task?->archived ?? false;
         $this->requirePermission($task === null ? 'kontor-tasks-task-create' : 'kontor-tasks-task-edit');
 
         if ($task !== null) {
@@ -391,11 +392,12 @@ trait ProcessKontorWorkTrait
     {
         $this->requirePost();
         $this->requireTasks();
+        $actions = ['start', 'complete', 'cancel', 'reopen', 'archive', 'restore'];
         $action = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->post('action'),
-            ['start', 'complete', 'cancel', 'archive', 'restore']
+            $actions,
         );
-        $this->requireAction($action, ['start', 'complete', 'cancel', 'archive', 'restore']);
+        $this->requireAction($action, $actions);
         $this->requirePermission(match ($action) {
             'complete' => 'kontor-tasks-task-complete',
             'cancel' => 'kontor-tasks-task-cancel',
@@ -426,6 +428,8 @@ trait ProcessKontorWorkTrait
             }
         } elseif ($action === 'cancel') {
             $module->workflow()->cancel($id);
+        } elseif ($action === 'reopen') {
+            $module->workflow()->reopen($id);
         } elseif ($action === 'restore') {
             $module->taskRepository()->restore($id);
             $this->audit('tasks', 'task', $id, 'restored');
@@ -439,7 +443,7 @@ trait ProcessKontorWorkTrait
         }
 
         $this->audit('tasks', 'task', $id, $action);
-        $this->message($this->_('Task updated.'));
+        $this->message($action === 'reopen' ? $this->_('Task reopened.') : $this->_('Task updated.'));
         $this->wire()->session->redirect('../task/?id=' . rawurlencode($id));
     }
 

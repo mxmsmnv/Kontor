@@ -51,6 +51,19 @@ Exact PHP calls, stability rules and examples are documented in [API.md](API.md)
 
 The distribution includes a root-level discovery wrapper for every package module. Keep these `Kontor<Name>/Kontor<Name>.module.php` directories beside `packages/` when copying or packaging the repository; they let ProcessWire discover all 34 optional component modules while Composer continues loading their implementation from `packages/`. The wrappers are ordinary PHP files and do not rely on symbolic links, so the same release works on Unix and Windows hosts.
 
+To try the connected demo on a disposable ProcessWire installation, copy Kontor,
+install its Composer dependencies and refresh the module list as above. From the
+Kontor directory, preview the demo's dependency order and then install it:
+
+```bash
+php bin/kontor demo:install /absolute/path/to/processwire-test
+php bin/kontor demo:install /absolute/path/to/processwire-test --apply
+```
+
+Open **Admin → Kontor → Demo** and select **New scenario**. The scenario
+creates linked sample records as you advance each step through settlement.
+See the [demo guide](packages/demo/README.md) for details.
+
 Upgrades are migration-driven. Ordinary uninstall removes module wiring but deliberately preserves business tables and stored data. Back up and explicitly plan any later data removal.
 
 ## Development and Testing

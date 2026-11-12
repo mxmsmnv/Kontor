@@ -151,14 +151,18 @@ class KontorDemo extends WireData implements Module
     public function componentChecks(): array
     {
         $checks = [];
+        $required = self::getModuleInfo()['requires'];
         foreach ($this->componentModules() as $moduleName) {
             $info = $this->wire()->modules->getModuleInfo($moduleName);
             if (!$this->wire()->modules->isInstalled($moduleName)) {
+                $isRequired = in_array($moduleName, $required, true);
                 $checks[] = [
                     'module' => $moduleName,
                     'title' => (string) ($info['title'] ?? $moduleName),
-                    'status' => 'critical',
-                    'message' => 'Module is not installed.',
+                    'status' => $isRequired ? 'critical' : 'optional',
+                    'message' => $isRequired
+                        ? 'Required module is not installed.'
+                        : 'Optional module is not installed.',
                 ];
                 continue;
             }
@@ -604,7 +608,8 @@ class KontorDemo extends WireData implements Module
             'KontorExpenses', 'KontorProjects', 'KontorWorkflow', 'KontorAutomation',
             'KontorEntities', 'KontorGraphQL', 'KontorMarketplace', 'KontorMail',
             'KontorPortal', 'KontorCache', 'KontorDocuments', 'KontorAI',
-            'KontorLedger', 'KontorGermany', 'KontorDemo',
+            'KontorLedger', 'KontorGermany', 'KontorCRMIntake', 'KontorMCP',
+            'KontorSettings', 'KontorDemo',
         ];
     }
 

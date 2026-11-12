@@ -34,6 +34,7 @@ final class Task
         public ?\DateTimeImmutable $completedAt,
         public ?string $recurrenceRule,
         public ?\DateTimeImmutable $recurrenceUntil,
+        public readonly bool $archived = false,
     ) {
     }
 
@@ -89,14 +90,14 @@ final class Task
      * interval — or null if this task isn't recurring, or the next
      * occurrence would fall after `recurrenceUntil`.
      */
-    public function nextOccurrenceDueAt(): ?\DateTimeImmutable
+    public function nextOccurrenceDueAt(?\DateTimeImmutable $reference = null): ?\DateTimeImmutable
     {
         if ($this->recurrenceRule === null) {
             return null;
         }
 
         $interval = self::RECURRENCE_INTERVALS[$this->recurrenceRule];
-        $next = ($this->dueAt ?? new \DateTimeImmutable())->modify($interval);
+        $next = ($this->dueAt ?? $reference ?? new \DateTimeImmutable())->modify($interval);
 
         if ($this->recurrenceUntil !== null && $next > $this->recurrenceUntil) {
             return null;

@@ -2,6 +2,19 @@
 
 All notable changes to Kontor are documented here.
 
+## Unreleased
+
+### Added
+
+- Preview and install the connected demo's required modules in dependency order with the demo setup command.
+
+### Fixed
+
+- Align personal dashboard cards with the grid and make Earlier and Later change the displayed widget order.
+- Allow closed tasks to be reopened without generating duplicate recurring tasks.
+- Preserve native button text colors in Konkat and restore missing surface and border styles in Core Original.
+- Explain when the demo creates records and distinguish missing optional modules from missing demo dependencies.
+
 ## [1.1.1] - 2026-10-10
 
 ### Fixed

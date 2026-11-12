@@ -108,6 +108,14 @@ final class DashboardService
         return $widget;
     }
 
+    public function shiftWidget(string $widgetUid, bool $earlier): void
+    {
+        $widget = $this->widgets->require($widgetUid);
+        if ($this->widgets->shift($widget, $earlier)) {
+            $this->flushDashboard($widget->dashboardUid);
+        }
+    }
+
     public function resizeWidget(string $widgetUid, int $width, int $height): DashboardWidget
     {
         $widget = $this->widgets->require($widgetUid);

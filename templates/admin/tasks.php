@@ -121,10 +121,16 @@ $scopeUrl = static function (string $scope) use ($adminUrl, $archived): string {
     <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid>
       <div>
         <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom"><?= $archived ? 'History' : 'Work queue' ?></p>
-        <h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom"><?= $e(match ($selectedScope) { 'active' => 'Active tasks', 'mine' => 'Assigned to me', 'overdue' => 'Overdue tasks', 'today' => 'Due today', 'upcoming' => 'Coming up', default => $archived ? 'Archived tasks' : 'All tasks' }) ?></h3>
+        <h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom"><?= $e(match ($selectedScope) { 'active' => 'Active tasks', 'closed' => 'Closed tasks', 'mine' => 'Assigned to me', 'overdue' => 'Overdue tasks', 'today' => 'Due today', 'upcoming' => 'Coming up', default => $archived ? 'Archived tasks' : 'All tasks' }) ?></h3>
         <p class="uk-text-muted uk-margin-small-top uk-margin-remove-bottom"><?= $e((string) count($tasks)) ?> task<?= count($tasks) === 1 ? '' : 's' ?> shown</p>
       </div>
-      <?php if (!$archived): ?><div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid><div><a class="uk-button uk-link-reset <?= $selectedScope === 'all' ? 'uk-button-primary' : 'uk-button-default' ?>" href="<?= $e($scopeUrl('all')) ?>"><i class="fa fa-list-ul"></i> All <?= $e((string) $allCount) ?></a></div><div><a class="uk-button uk-link-reset <?= $selectedScope === 'upcoming' ? 'uk-button-primary' : 'uk-button-default' ?>" href="<?= $e($scopeUrl('upcoming')) ?>"><i class="fa fa-calendar"></i> Coming up</a></div></div><?php endif; ?>
+      <?php if (!$archived): ?>
+        <div class="uk-flex uk-flex-wrap uk-grid-small" uk-grid>
+          <div><a class="uk-button uk-link-reset <?= $selectedScope === 'all' ? 'uk-button-primary' : 'uk-button-default' ?>" href="<?= $e($scopeUrl('all')) ?>"><i class="fa fa-list-ul"></i> All <?= $e((string) $allCount) ?></a></div>
+          <div><a class="uk-button uk-link-reset <?= $selectedScope === 'closed' ? 'uk-button-primary' : 'uk-button-default' ?>" href="<?= $e($scopeUrl('closed')) ?>"<?= $selectedScope === 'closed' ? ' aria-current="page"' : '' ?>><i class="fa fa-check-circle-o" aria-hidden="true"></i> Closed</a></div>
+          <div><a class="uk-button uk-link-reset <?= $selectedScope === 'upcoming' ? 'uk-button-primary' : 'uk-button-default' ?>" href="<?= $e($scopeUrl('upcoming')) ?>"><i class="fa fa-calendar"></i> Coming up</a></div>
+        </div>
+      <?php endif; ?>
     </div>
 
     <div class="uk-alert uk-alert-primary uk-margin" role="note">
@@ -169,7 +175,7 @@ $scopeUrl = static function (string $scope) use ($adminUrl, $archived): string {
     <?php else: ?>
       <div class="uk-placeholder uk-text-center">
         <span class="fa fa-check-circle-o fa-2x uk-text-muted"></span>
-        <h3 class="uk-margin-small-top uk-margin-small-bottom"><?= $filtersActive ? 'No matching tasks' : match ($selectedScope) { 'active' => 'No active tasks', 'mine' => 'Nothing assigned to you', 'overdue' => 'Nothing overdue', 'today' => 'Nothing due today', 'upcoming' => 'Nothing coming up', default => $archived ? 'Archive is empty' : 'No tasks yet' } ?></h3>
+        <h3 class="uk-margin-small-top uk-margin-small-bottom"><?= $filtersActive ? 'No matching tasks' : match ($selectedScope) { 'active' => 'No active tasks', 'closed' => 'No closed tasks', 'mine' => 'Nothing assigned to you', 'overdue' => 'Nothing overdue', 'today' => 'Nothing due today', 'upcoming' => 'Nothing coming up', default => $archived ? 'Archive is empty' : 'No tasks yet' } ?></h3>
         <p class="uk-text-muted uk-margin-small-top"><?= $filtersActive ? 'Try a broader search or reset the filters.' : ($selectedScope === 'all' ? 'Create a task to add work to this queue.' : 'Choose another focus view to see more work.') ?></p>
         <?php if ($filtersActive): ?><a class="uk-button uk-button-default" href="<?= $e($scopeUrl($selectedScope)) ?>">Reset filters</a><?php elseif ($canCreate && !$archived && $selectedScope === 'all'): ?><a class="uk-button uk-button-primary" href="<?= $e($adminUrl) ?>task/"><i class="fa fa-plus"></i> Create first task</a><?php endif; ?>
       </div>

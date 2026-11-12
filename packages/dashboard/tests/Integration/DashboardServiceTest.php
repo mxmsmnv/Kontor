@@ -114,6 +114,31 @@ final class DashboardServiceTest extends DatabaseTestCase
         $this->assertSame(4, $resized->height);
     }
 
+    public function test_shifting_widgets_changes_render_order_even_with_legacy_sort_order_ties(): void
+    {
+        $dashboard = $this->service->createPersonalDashboard($this->organizationUid, 7, 'My dashboard');
+        $dashboardUid = $dashboard->uid->toString();
+        $first = $this->service->addWidget($this->organizationUid, $dashboardUid, 'welcome', sortOrder: 2);
+        $second = $this->service->addWidget($this->organizationUid, $dashboardUid, 'welcome', sortOrder: 2);
+        $third = $this->service->addWidget($this->organizationUid, $dashboardUid, 'welcome', sortOrder: 8);
+        $firstUid = $first->uid->toString();
+        $secondUid = $second->uid->toString();
+        $thirdUid = $third->uid->toString();
+        $renderOrder = function () use ($dashboardUid): array {
+            $rendered = $this->service->render($dashboardUid, $this->organizationUid, 7);
+
+            return array_map(static fn (array $widget): string => $widget['layout']->uid->toString(), $rendered['widgets']);
+        };
+
+        $this->assertSame([$firstUid, $secondUid, $thirdUid], $renderOrder());
+        $this->service->shiftWidget($secondUid, earlier: true);
+        $this->assertSame([$secondUid, $firstUid, $thirdUid], $renderOrder());
+        $this->service->shiftWidget($thirdUid, earlier: false);
+        $this->assertSame([$secondUid, $firstUid, $thirdUid], $renderOrder());
+        $this->service->shiftWidget($secondUid, earlier: false);
+        $this->assertSame([$firstUid, $secondUid, $thirdUid], $renderOrder());
+    }
+
     public function test_dashboard_for_prefers_personal_default_over_role_default(): void
     {
         $this->service->createRoleDashboard($this->organizationUid, 'sales-rep', 'Team default', isDefault: true);

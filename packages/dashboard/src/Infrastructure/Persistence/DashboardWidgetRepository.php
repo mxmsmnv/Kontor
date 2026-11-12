@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Dashboard\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Dashboard\Domain\DashboardWidget;
 use Kontor\SDK\ValueObjects\Uid;
@@ -72,11 +73,59 @@ final class DashboardWidgetRepository
     public function forDashboard(string $dashboardUid): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT * FROM kontor_dashboard_widgets WHERE dashboard_uid = :dashboard_uid ORDER BY sort_order ASC'
+            'SELECT * FROM kontor_dashboard_widgets WHERE dashboard_uid = :dashboard_uid ORDER BY sort_order, id'
         );
         $statement->execute(['dashboard_uid' => $dashboardUid]);
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    public function shift(DashboardWidget $widget, bool $earlier): bool
+    {
+        $scope = [
+            'dashboard_uid' => $widget->dashboardUid,
+            'organization_id' => $this->organizations->internalIdOf($widget->organizationId),
+        ];
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($this->pdo);
+
+        try {
+            $select = $this->pdo->prepare(
+                'SELECT uid, sort_order FROM kontor_dashboard_widgets
+                 WHERE dashboard_uid = :dashboard_uid AND organization_id = :organization_id
+                 ORDER BY sort_order, id' . DatabaseConcurrency::forUpdate($this->pdo)
+            );
+            $select->execute($scope);
+            $widgets = $select->fetchAll(\PDO::FETCH_ASSOC);
+            $index = array_search($widget->uid->toString(), array_column($widgets, 'uid'), true);
+            $neighbor = $index === false ? null : $index + ($earlier ? -1 : 1);
+            $changed = $neighbor !== null && isset($widgets[$neighbor]);
+
+            if ($changed) {
+                [$widgets[$index], $widgets[$neighbor]] = [$widgets[$neighbor], $widgets[$index]];
+                $update = $this->pdo->prepare(
+                    'UPDATE kontor_dashboard_widgets SET sort_order = :sort_order, updated_at = :updated_at
+                     WHERE uid = :uid AND dashboard_uid = :dashboard_uid AND organization_id = :organization_id'
+                );
+                $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s.u');
+                foreach ($widgets as $sortOrder => $row) {
+                    if ((int) $row['sort_order'] !== $sortOrder) {
+                        $update->execute($scope + ['uid' => $row['uid'], 'sort_order' => $sortOrder, 'updated_at' => $now]);
+                    }
+                }
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $changed;
+        } catch (\Throwable $exception) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     public function remove(string $uid): void

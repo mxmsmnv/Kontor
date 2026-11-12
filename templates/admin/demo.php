@@ -44,7 +44,7 @@ $entityLabels = [
     <div>
       <p class="kontor-eyebrow">Executable reference vertical</p>
       <h2>Connected Kontor demo</h2>
-      <p>Run a real customer journey from intake through approval, delivery, invoicing and settlement.</p>
+      <p>Sample records are created as you advance through intake, approval, delivery, invoicing and settlement.</p>
     </div>
     <div class="pw-module-actions kontor-pagehead__actions">
       <a class="uk-button uk-button-secondary kontor-button kontor-button--ghost" href="<?= $e($adminUrl) ?>health/">
@@ -80,7 +80,7 @@ $entityLabels = [
       <div class="pw-empty-state uk-placeholder uk-text-center kontor-empty">
         <i class="fa fa-play-circle"></i>
         <h3>No demo scenario yet</h3>
-        <p>Create one to seed connected records and start the workflow.</p>
+        <p>Select New scenario to create the first customer and CRM records. Each step adds its own linked records.</p>
       </div>
     </section>
   <?php else: ?>
