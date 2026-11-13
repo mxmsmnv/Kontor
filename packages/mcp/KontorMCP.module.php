@@ -7,6 +7,7 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Entities\Infrastructure\API\CustomEntityResource;
 use Kontor\MCP\Application\ActivityTools;
+use Kontor\MCP\Application\AutomationDraftTools;
 use Kontor\MCP\Application\CatalogTools;
 use Kontor\MCP\Application\CommerceDraftTools;
 use Kontor\MCP\Application\CompanyTools;
@@ -33,6 +34,7 @@ require_once __DIR__ . '/KontorMcpProjectsTrait.php';
 class KontorMCP extends WireData implements Module, ConfigurableModule
 {
     use ActivityTools;
+    use AutomationDraftTools;
     use CatalogTools;
     use CommerceDraftTools;
     use CompanyTools;
@@ -456,6 +458,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
                 ['document', 'idempotency_key', 'confirmation'],
             ),
             ...$this->activityTools(),
+            ...$this->automationDraftTools(),
             ...$this->catalogTools(),
             ...$this->commerceDraftTools(),
             ...$this->companyTools(),
