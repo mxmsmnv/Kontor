@@ -54,6 +54,22 @@ $documentLabel = $invoice->kind === 'credit_note' ? 'Credit note' : 'Invoice';
     </div>
   </section>
 
+  <?php if ($canDraftReminder): ?>
+    <details class="uk-card uk-card-default uk-card-small uk-card-body uk-margin"<?= $reminderDraft !== null || $reminderError !== null ? ' open' : '' ?>>
+      <summary class="uk-text-bold">Draft payment reminder with AI</summary>
+      <p class="uk-text-meta">The AI provider receives the invoice number, outstanding balance, due date and document language shown here.</p>
+      <form method="post" action="<?= $e($adminUrl . 'invoice/?id=' . rawurlencode($invoice->uid->toString())) ?>">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <button class="uk-button uk-button-default" name="draft_invoice_reminder" value="1" type="submit">Generate reminder draft</button>
+      </form>
+      <?php if ($reminderError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($reminderError) ?></p><?php endif; ?>
+      <?php if ($reminderDraft !== null): ?>
+        <label class="uk-form-label uk-margin-small-top" for="invoice-ai-reminder">Review the reminder and verify the amount and date before sending</label>
+        <textarea class="uk-textarea" id="invoice-ai-reminder" rows="7"><?= $e($reminderDraft) ?></textarea>
+      <?php endif; ?>
+    </details>
+  <?php endif; ?>
+
   <div class="uk-grid-medium" uk-grid>
     <div class="uk-width-1-1 uk-width-2-3@l">
       <section class="uk-card uk-card-default uk-card-small uk-card-body">

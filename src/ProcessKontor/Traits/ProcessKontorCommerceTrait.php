@@ -919,6 +919,37 @@ trait ProcessKontorCommerceTrait
         $module = $this->invoiceModule();
         $invoice = $module->invoiceRepository()->require($id);
         $this->requireSameOrganization($invoice->organizationId);
+        $canDraftReminder = $invoice->kind === 'invoice'
+            && in_array($invoice->status, ['issued', 'sent', 'overdue', 'partially_paid'], true)
+            && $invoice->number !== null && $invoice->due->amountMinor() > 0
+            && $this->can('kontor-invoices-invoice-send') && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $reminderDraft = null;
+        $reminderError = null;
+        if ($this->wire()->input->post('draft_invoice_reminder') === '1') {
+            $this->requirePost();
+            if (!$canDraftReminder) {
+                throw new WirePermissionException($this->_('AI reminder drafting is unavailable for this invoice.'));
+            }
+            $response = $this->aiModule()->drafting()->draft(
+                $invoice->organizationId,
+                [
+                    'invoiceNumber' => $invoice->number,
+                    'outstanding' => number_format($invoice->due->amountMinor() / 100, 2, '.', '') . ' ' . $invoice->due->currencyCode(),
+                    'dueDate' => $invoice->dueDate?->format('Y-m-d'),
+                    'language' => $invoice->documentLanguage,
+                ],
+                'Draft a polite payment reminder in the specified language. Use the outstanding balance and invoice number exactly. Omit the due date if absent. Do not claim the invoice is overdue or invent fees or payment instructions.',
+                (string) $this->wire()->user->id,
+            );
+            $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+            if (is_string($draft) && trim($draft) !== '') {
+                $reminderDraft = $draft;
+            } else {
+                $reminderError = $this->_('The AI provider did not return a draft. Try again.');
+            }
+        }
+
         $this->setPageTitle(sprintf(
             $this->_('Kontor · %s'),
             $invoice->number ?? $this->_('Draft invoice')
@@ -976,6 +1007,9 @@ trait ProcessKontorCommerceTrait
         $showLedger = $this->ledgerReady() && $this->can('kontor-ledger-entry-view');
 
         return $this->renderTemplate('invoice', [
+            'canDraftReminder' => $canDraftReminder,
+            'reminderDraft' => $reminderDraft,
+            'reminderError' => $reminderError,
             'invoice' => $invoice,
             'lines' => $module->documentLineRepository()->forDocument(
                 $documentType,
