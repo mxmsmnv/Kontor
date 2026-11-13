@@ -286,6 +286,21 @@ $renderAssignment = static function (string $idPrefix) use (
           </div>
         </section>
 
+        <?php if ($canSuggestTaskSteps): ?>
+          <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
+            <h3 class="uk-card-title uk-margin-remove-top">AI next steps</h3>
+            <?php if ($taskSteps !== null): ?>
+              <p class="uk-text-meta">Review these suggestions before using them.</p>
+              <p><?= nl2br($e($taskSteps), false) ?></p>
+            <?php endif; ?>
+            <form method="post" action="<?= $e($adminUrl . 'task/?id=' . rawurlencode($task->uid->toString())) ?>">
+              <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+              <p class="uk-text-meta">Sends the task title and up to 8,000 characters of its description to the AI provider configured in Squad.</p>
+              <button class="uk-button uk-button-default" type="submit" name="suggest_task_steps" value="1"><i class="fa fa-magic" aria-hidden="true"></i> Suggest next steps</button>
+            </form>
+          </section>
+        <?php endif; ?>
+
         <?php if ($relatedRecords !== []): ?>
           <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
             <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Connected work</p><h3 class="uk-card-title uk-margin-small-top">Related records</h3>

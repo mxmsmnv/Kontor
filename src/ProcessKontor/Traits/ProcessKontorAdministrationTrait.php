@@ -927,6 +927,9 @@ trait ProcessKontorAdministrationTrait
         $previewToken = null;
         $backupId = null;
         $columnMapping = [];
+        $canSuggestColumns = $this->aiReady() && $this->can('kontor-ai-action-approve')
+            && $this->aiModule()->providerRegistry()->all() !== [];
+        $aiMappingUnavailable = false;
         $this->cleanupImportPreviews();
 
         if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
@@ -949,7 +952,26 @@ trait ProcessKontorAdministrationTrait
                     $batchId = Uid::generate()->toString();
 
                     try {
-                        $reader = $this->dataExchangeImportReader($entityType, $format);
+                        $suggest = null;
+                        if ($canSuggestColumns && $entityType === 'contact' && $format === 'xlsx'
+                            && $this->wire()->input->post('suggest_columns') === '1') {
+                            $suggest = function (array $headers, array $allowed) use (&$aiMappingUnavailable): array {
+                                $schema = array_fill_keys($headers, 'one of: ' . implode(', ', $allowed) . ', or null');
+                                $response = $this->aiModule()->extraction()->extract(
+                                    $this->organizationUid(),
+                                    'Map these spreadsheet column labels to contact fields: ' . json_encode($headers, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                                    $schema,
+                                    (string) $this->wire()->user->id,
+                                );
+                                if (!$response->success) {
+                                    $aiMappingUnavailable = true;
+                                    return [];
+                                }
+
+                                return $response->output['fields'] ?? [];
+                            };
+                        }
+                        $reader = $this->dataExchangeImportReader($entityType, $format, $suggest);
                         $result = $this->importManager()->run(
                             entityType: $entityType,
                             reader: $reader,
@@ -974,7 +996,8 @@ trait ProcessKontorAdministrationTrait
                                 $format,
                                 $filename,
                                 $entityType,
-                                $result->updated
+                                $result->updated,
+                                $columnMapping ?: null,
                             );
                             $path = '';
                         }
@@ -995,6 +1018,8 @@ trait ProcessKontorAdministrationTrait
             'filename' => $filename,
             'previewToken' => $previewToken,
             'columnMapping' => $columnMapping,
+            'canSuggestColumns' => $canSuggestColumns,
+            'aiMappingUnavailable' => $aiMappingUnavailable,
             'backupId' => $backupId,
             'availableEntityTypes' => $this->availableImportEntityTypes(),
             'backupLabel' => $entityType === 'catalog_item' ? 'Catalog' : 'Contacts',

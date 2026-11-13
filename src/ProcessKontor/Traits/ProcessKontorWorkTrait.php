@@ -409,6 +409,42 @@ trait ProcessKontorWorkTrait
         $repository = $this->taskModule()->taskRepository();
         $task = $id !== '' ? $this->requireVisibleTask($id) : null;
         $archived = $task?->archived ?? false;
+        $canSuggestTaskSteps = $task !== null && !$archived && $task->isOpen()
+            && $this->aiReady() && $this->can('kontor-ai-action-approve')
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $taskSteps = null;
+        if ($this->wire()->input->post('suggest_task_steps')) {
+            $this->requirePost();
+            if (!$canSuggestTaskSteps) {
+                throw new WirePermissionException($this->_('AI suggestions are unavailable for this task.'));
+            }
+            $uid = $task->uid->toString();
+            $response = $this->aiModule()->drafting()->draft(
+                $task->organizationId,
+                [
+                    'title' => $task->title,
+                    'description' => mb_substr($task->description ?? '', 0, 8000),
+                ],
+                'Suggest three to five practical next steps as a plain-text checklist in the task language. '
+                    . 'Use only the task context. If information is missing, suggest what the user should clarify.',
+                (string) $this->wire()->user->id,
+            );
+            $draft = $response->output['draft'] ?? null;
+            if ($response->success && is_string($draft) && trim($draft) !== '') {
+                $this->wire()->session->set('kontorTaskSteps:' . $uid, mb_substr(trim($draft), 0, 6000));
+            } else {
+                $this->error($this->_('AI suggestions are unavailable right now. Try again later.'));
+            }
+            $this->wire()->session->redirect('../task/?id=' . rawurlencode($uid));
+        }
+        if ($canSuggestTaskSteps) {
+            $session = $this->wire()->session;
+            $key = 'kontorTaskSteps:' . $task->uid->toString();
+            $savedSteps = $session->get($key);
+            $session->remove($key);
+            $taskSteps = is_string($savedSteps) ? $savedSteps : null;
+        }
+
         $canAssign = $this->can('kontor-tasks-task-assign');
         $canEdit = $this->can('kontor-tasks-task-edit');
         $actor = $this->wire()->user;
@@ -663,6 +699,8 @@ trait ProcessKontorWorkTrait
 
         return $this->renderTemplate('task', [
             'task' => $task,
+            'canSuggestTaskSteps' => $canSuggestTaskSteps,
+            'taskSteps' => $taskSteps,
             'values' => $values,
             'error' => $error,
             'archived' => $archived,

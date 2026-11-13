@@ -12,6 +12,8 @@
 /** @var \Kontor\Contacts\Domain\Company|null $selectedCompany */
 /** @var \Kontor\Sales\Domain\Quotation[] $dealQuotations */
 /** @var bool $canCreateQuotation */
+/** @var bool $canSuggestDealSteps */
+/** @var array{text: string, error: bool}|null $dealSuggestion */
 /** @var bool $canEdit */
 /** @var bool $canMove */
 /** @var bool $canCloseWon */
@@ -117,6 +119,25 @@ $renderForm = static function () use ($deal, $values, $pipelines, $stages, $cont
         <?php endif; ?>
       </section></div>
     </div>
+
+    <?php if ($canSuggestDealSteps): ?>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top" id="deal-ai-steps">
+        <h3 class="uk-card-title">AI deal brief</h3>
+        <p class="uk-text-meta">Generate a summary and suggested next steps. This sends the deal title, up to 4,000 characters of its description, stage and expected close date to the configured AI provider.</p>
+        <?php if ($dealSuggestion !== null): ?>
+          <?php if ($dealSuggestion['error']): ?>
+            <p class="uk-text-danger" role="alert"><?= $e($dealSuggestion['text']) ?></p>
+          <?php else: ?>
+            <p><?= nl2br($e($dealSuggestion['text'])) ?></p>
+            <p class="uk-text-meta">Review these suggestions before acting.</p>
+          <?php endif; ?>
+        <?php endif; ?>
+        <form method="post" action="./?id=<?= $e(rawurlencode($deal->uid->toString())) ?>#deal-ai-steps">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <button class="uk-button uk-button-default" name="suggest_deal_steps" value="1" type="submit">Suggest next steps</button>
+        </form>
+      </section>
+    <?php endif; ?>
 
     <?php if ($canEdit): ?><details class="uk-margin-medium-top"><summary class="uk-button uk-button-default uk-button-small">Archive options</summary><div class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top"><h3 class="uk-card-title">Archive deal</h3><p class="uk-text-muted">Remove this deal from the active workspace while preserving its history.</p><form method="post" action="<?= $e($adminUrl) ?>crm-deal-action/" data-kontor-confirm="Archive this deal?"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($deal->uid->toString()) ?>"><button class="uk-button uk-button-danger" name="action" value="archive" type="submit"><i class="fa fa-archive"></i> Archive deal</button></form></div></details><?php endif; ?>
     <?php if ($canCloseLost): ?><div id="kontor-deal-lost" uk-modal><div class="uk-modal-dialog uk-modal-body"><a class="uk-modal-close-default" href="#" role="button" uk-close aria-label="Close"></a><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Close opportunity</p><h2 class="uk-modal-title uk-margin-small-top">Mark deal as lost</h2><p class="uk-text-muted">Record a concise reason so the team can learn from the outcome.</p><form class="uk-form-stacked" method="post" action="<?= $e($adminUrl) ?>crm-deal-action/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="id" value="<?= $e($deal->uid->toString()) ?>"><input type="hidden" name="action" value="lost"><input type="hidden" name="return_to" value="deal"><label class="uk-form-label" for="deal-lost-reason">Loss reason <span class="uk-text-meta">(optional)</span></label><textarea class="uk-textarea uk-margin-small-top" id="deal-lost-reason" name="lost_reason" rows="4" placeholder="Budget postponed until next year"></textarea><div class="uk-text-meta uk-margin-small-top">Use a business reason, not internal blame.</div><div class="uk-flex uk-flex-right uk-grid-small uk-margin" uk-grid><div><button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button></div><div><button class="uk-button uk-button-primary" type="submit">Mark as lost</button></div></div></form></div></div><?php endif; ?>

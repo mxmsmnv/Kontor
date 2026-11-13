@@ -1,6 +1,6 @@
 # Kontor AI integration map
 
-Squad connects the Kontor AI workbench to OpenRouter once a key and model are configured. The workbench offers summary, extraction and drafts. Local preview is the default. Use synthetic text for the first live test. The table describes proposed component features, not features enabled by installing Squad.
+Kontor AI uses the default provider configured in Squad. The workbench offers summary, extraction and drafts. Excel contact import offers optional suggestions for unknown headers. Active CRM deals and tasks offer on-demand next steps. The table describes further proposals for each component.
 
 | Component | Suggested use |
 | --- | --- |

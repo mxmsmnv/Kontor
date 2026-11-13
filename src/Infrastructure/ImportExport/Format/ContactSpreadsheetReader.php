@@ -24,8 +24,11 @@ final class ContactSpreadsheetReader implements RecordReaderInterface
     /** @var array<string,string> */
     private array $mapping = [];
 
-    public function __construct(private readonly RecordReaderInterface $reader)
-    {
+    public function __construct(
+        private readonly RecordReaderInterface $reader,
+        private readonly ?\Closure $suggest = null,
+        private readonly ?array $reviewedMapping = null,
+    ) {
     }
 
     public function mapping(): array
@@ -40,16 +43,33 @@ final class ContactSpreadsheetReader implements RecordReaderInterface
         foreach ($this->reader->read($path) as $record) {
             if (!$initialized) {
                 $initialized = true;
-                foreach (array_keys($record) as $header) {
-                    $normalized = mb_strtolower((string) $header);
-                    $normalized = trim(preg_replace('/[^\p{L}\p{N}]+/u', ' ', $normalized) ?? '');
-                    foreach (self::FIELDS as $field => $aliases) {
-                        if (in_array($normalized, $aliases, true)) {
-                            if (in_array($field, $this->mapping, true)) {
-                                throw new \RuntimeException("Multiple columns match {$field}. Keep one column for that field.");
+                if ($this->reviewedMapping !== null) {
+                    $this->mapping = $this->reviewedMapping;
+                } else {
+                    foreach (array_keys($record) as $header) {
+                        $normalized = mb_strtolower((string) $header);
+                        $normalized = trim(preg_replace('/[^\p{L}\p{N}]+/u', ' ', $normalized) ?? '');
+                        foreach (self::FIELDS as $field => $aliases) {
+                            if (in_array($normalized, $aliases, true)) {
+                                if (in_array($field, $this->mapping, true)) {
+                                    throw new \RuntimeException("Multiple columns match {$field}. Keep one column for that field.");
+                                }
+                                $this->mapping[$header] = $field;
+                                break;
                             }
-                            $this->mapping[$header] = $field;
-                            break;
+                        }
+                    }
+                    $unknown = array_values(array_filter(array_diff(array_keys($record), array_keys($this->mapping)),
+                        static fn ($header): bool => is_string($header) && mb_strlen($header) <= 80
+                            && preg_match('/^[\p{L}\p{M} ._()\/-]+$/u', $header) === 1));
+                    if ($this->suggest !== null && $unknown !== []) {
+                        $unknown = array_slice($unknown, 0, 40);
+                        $allowed = array_values(array_diff(array_keys(self::FIELDS), ['type', 'status'], $this->mapping));
+                        foreach (($this->suggest)($unknown, $allowed) as $header => $field) {
+                            if (in_array($header, $unknown, true) && in_array($field, $allowed, true)
+                                && !in_array($field, $this->mapping, true)) {
+                                $this->mapping[$header] = $field;
+                            }
                         }
                     }
                 }

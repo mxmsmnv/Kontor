@@ -36,6 +36,10 @@
         <input type="file" name="import_file" required accept=".csv,.json,.jsonl,.ndjson,.xlsx">
         <small>Maximum 10 MB. For Excel contacts, put headers such as Full Name, Email and Phone in the first populated row of the first sheet. Other imports use Kontor field names.</small>
       </label>
+      <?php if ($canSuggestColumns): ?>
+        <label><input type="checkbox" name="suggest_columns" value="1"> Suggest mappings for unrecognized Excel contact columns with AI</label>
+        <small>Sends eligible column labels to the configured AI provider. Check that headers contain no private information.</small>
+      <?php endif; ?>
       <button class="uk-button uk-button-primary kontor-button" type="submit">
         <i class="fa fa-search"></i> Preview import
       </button>
@@ -46,6 +50,9 @@
     </p>
   </section>
 
+  <?php if ($aiMappingUnavailable): ?>
+    <p class="uk-alert-warning">AI suggestions were unavailable. Kontor used its built-in column mapping.</p>
+  <?php endif; ?>
   <?php if ($result !== null): ?>
     <section class="kontor-import-result">
       <div class="kontor-sectionhead">

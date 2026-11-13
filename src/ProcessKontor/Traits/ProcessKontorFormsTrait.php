@@ -1249,12 +1249,12 @@ trait ProcessKontorFormsTrait
         return [$path, $format, $originalName];
     }
 
-    private function dataExchangeImportReader(string $entityType, string $format): \Kontor\Core\Infrastructure\ImportExport\Format\RecordReaderInterface
+    private function dataExchangeImportReader(string $entityType, string $format, ?\Closure $suggest = null, ?array $mapping = null): \Kontor\Core\Infrastructure\ImportExport\Format\RecordReaderInterface
     {
         $reader = (new FormatResolver())->reader($format);
 
         return $entityType === 'contact' && $format === 'xlsx'
-            ? new \Kontor\Core\Infrastructure\ImportExport\Format\ContactSpreadsheetReader($reader)
+            ? new \Kontor\Core\Infrastructure\ImportExport\Format\ContactSpreadsheetReader($reader, $suggest, $mapping)
             : $reader;
     }
 
@@ -1264,7 +1264,8 @@ trait ProcessKontorFormsTrait
         string $format,
         string $filename,
         string $entityType,
-        int $updated
+        int $updated,
+        ?array $mapping = null,
     ): string {
         $previews = $this->wire()->session->get('kontorImportPreviews');
         $previews = is_array($previews) ? $previews : [];
@@ -1274,6 +1275,7 @@ trait ProcessKontorFormsTrait
             'filename' => $filename,
             'entityType' => $entityType,
             'updated' => $updated,
+            'mapping' => $mapping,
             'checksum' => hash_file('sha256', $path),
             'expires' => time() + 3600,
         ];
@@ -1331,7 +1333,7 @@ trait ProcessKontorFormsTrait
         try {
             $result = $this->importManager()->run(
                 entityType: $entityType,
-                reader: $this->dataExchangeImportReader($entityType, $format),
+                reader: $this->dataExchangeImportReader($entityType, $format, mapping: $preview['mapping'] ?? null),
                 path: $path,
                 context: new ImportContext(
                     organizationId: $this->organizationUid(),

@@ -62,6 +62,22 @@ final class XlsxFormatTest extends TestCase
         self::assertSame(['ФИО' => 'display_name', 'E-mail' => 'email', 'Телефон' => 'phone'], $reader->mapping());
     }
 
+    public function test_contact_suggestions_are_limited_to_unknown_headers_and_reused_after_preview(): void
+    {
+        $records = [['Buyer label' => 'Demo contact', 'Email' => 'contact@example.test', 'Ignored label' => 'demo']];
+        (new XlsxRecordWriter())->write($this->path, $records, array_keys($records[0]));
+        $reader = new ContactSpreadsheetReader(new XlsxRecordReader(), static function (array $headers, array $allowed): array {
+            self::assertSame(['Buyer label', 'Ignored label'], $headers);
+            self::assertNotContains('email', $allowed);
+
+            return ['Buyer label' => 'display_name', 'Ignored label' => 'email'];
+        });
+        $preview = iterator_to_array($reader->read($this->path));
+        self::assertSame([['email' => 'contact@example.test', 'display_name' => 'Demo contact']], $preview);
+        $commit = new ContactSpreadsheetReader(new XlsxRecordReader(), reviewedMapping: $reader->mapping());
+        self::assertSame($preview, iterator_to_array($commit->read($this->path)));
+    }
+
     public function test_reads_a_file_using_shared_strings_like_real_spreadsheet_software(): void
     {
         $this->buildSharedStringsXlsx($this->path);

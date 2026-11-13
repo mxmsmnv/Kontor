@@ -893,6 +893,40 @@ trait ProcessKontorCustomerTrait
             ? 'kontor-crm-deal-create'
             : 'kontor-crm-deal-view');
         $canEdit = $deal === null || $this->can('kontor-crm-deal-edit');
+        $canSuggestDealSteps = $deal !== null && $deal->isOpen()
+            && $this->aiReady()
+            && $this->can('kontor-ai-action-approve')
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $dealSuggestion = null;
+
+        $suggestDealSteps = (bool) $this->wire()->input->post('suggest_deal_steps');
+        if ($suggestDealSteps) {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+            if (!$canSuggestDealSteps) {
+                throw new WireException($this->_('AI suggestions require an active deal and a configured provider.'));
+            }
+            $stage = $crm->stageRepository()->find($deal->stageUid);
+            $context = [
+                'title' => mb_substr($deal->title, 0, 200),
+                'description' => mb_substr($deal->description ?? '', 0, 4000),
+                'expected_close_date' => $deal->expectedCloseDate?->format('Y-m-d'),
+            ];
+            if ($stage !== null && $stage->pipelineUid === $deal->pipelineUid) {
+                $context['stage'] = $stage->displayNameIn('en') ?? $stage->nameKey;
+            }
+            $response = $this->aiModule()->drafting()->draft(
+                $deal->organizationId,
+                $context,
+                'Write a one-sentence deal summary and up to three practical next steps. Use the deal description language when clear. Base suggestions on the supplied context and flag assumptions. Do not suggest changing deal status without confirmation.',
+                (string) $this->wire()->user->id,
+            );
+            $draft = $response->output['draft'] ?? null;
+            $dealSuggestion = $response->success && is_string($draft) && trim($draft) !== ''
+                ? ['text' => $draft, 'error' => false]
+                : ['text' => $this->_('Could not generate suggestions. Please try again.'), 'error' => true];
+        }
+
         $pipelines = $crm->pipelineRepository()->forOrganization($this->organizationUid());
         $requestedPipeline = $this->wire()->sanitizer->text(
             (string) ($this->wire()->input->post('pipeline_uid') ?: $this->wire()->input->get('pipeline'))
@@ -926,7 +960,7 @@ trait ProcessKontorCustomerTrait
         $intakeValues = $deal === null ? [] : $this->crmIntakeValues('deal', $deal->uid->toString());
         $intakeAnswers = null;
 
-        if ($this->wire()->input->post('submit_save')) {
+        if (!$suggestDealSteps && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
             $this->requirePermission($deal === null
                 ? 'kontor-crm-deal-create'
@@ -1118,6 +1152,8 @@ trait ProcessKontorCustomerTrait
             'canViewContact' => $this->can('kontor-contacts-contact-view'),
             'canViewCompany' => $this->can('kontor-contacts-company-view'),
             'dealQuotations' => $dealQuotations,
+            'canSuggestDealSteps' => $canSuggestDealSteps,
+            'dealSuggestion' => $dealSuggestion,
             'canCreateQuotation' => $deal !== null
                 && $deal->status === 'won'
                 && ($deal->companyUid !== null || $deal->contactUid !== null)
