@@ -6,11 +6,15 @@ Version 1.0.1 additionally provides an opt-in, read-only PocketWire SDK surface.
 
 ## Access model
 
-An MCP Server client with the `admin` scope can call every tool published by this provider. Lower scopes receive a strict subset:
+Each MCP client must be linked to one active ProcessWire user. Issue one client per user and device in **Setup → MCP Server → Clients**, then add `client-id:user-id` to **Modules → Kontor MCP → MCP client accounts**. The client ID is public metadata, not the bearer token. Existing clients must also be linked before using Kontor tools.
 
-- `read`: status, component/resource discovery, bounded search and record reads, mutation validation, settings export and import preview;
-- `draft`: validated, idempotent record create and update operations, plus all read tools;
-- `admin`: reviewed archive and settings-apply operations, plus every lower scope.
+The gateway scopes and the linked user's current ProcessWire permissions both apply:
+
+- `read` permits discovery and record reads. Contact validation also requires the corresponding create or edit permission.
+- `draft` adds contact creation and updates when the linked user holds the corresponding permission.
+- `admin` adds reviewed archival where the linked user has the archive permission. Settings tools require a linked superuser.
+
+Employee discovery and search are limited to explicitly mapped resources and permissions. Contact search requires the explicit `contact` entity type. Revoke the client in MCP Server before removing its binding. A revoked or unlinked client loses access to Kontor tools.
 
 “Full access” remains bounded: there is no PHP, shell, SQL, filesystem, module installation, permission management, secret retrieval or raw-file tool. Every input schema is closed and bounded, writes use stable identifiers and idempotency keys, and archive/settings apply require explicit confirmation phrases.
 

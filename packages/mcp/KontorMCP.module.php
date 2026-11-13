@@ -8,7 +8,7 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\MCP\Application\KontorMcpBridge;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
 
-class KontorMCP extends WireData implements Module
+class KontorMCP extends WireData implements Module, ConfigurableModule
 {
     private ?KontorMcpBridge $bridge = null;
 
@@ -27,6 +27,79 @@ class KontorMCP extends WireData implements Module
             'pocketWireProvider' => true,
             'requires' => ['Kontor', 'KontorAPI', 'McpServer'],
         ];
+    }
+
+    public function getModuleConfigInputfields(array $data): InputfieldWrapper
+    {
+        $fields = new InputfieldWrapper();
+        $bindings = $this->wire()->modules->get('InputfieldTextarea');
+        $bindings->name = 'client_user_bindings';
+        $bindings->label = $this->_('MCP client accounts');
+        $bindings->description = $this->_('Enter one client ID and ProcessWire user ID per line, separated by a colon. Issue a new client for each user and device. Revoke a client before removing its binding.');
+        $bindings->value = (string) ($data['client_user_bindings'] ?? '');
+        $fields->add($bindings);
+        return $fields;
+    }
+
+    private function mcpActor(): ?User
+    {
+        $context = $this->wire()->modules->get('McpServer')->requestClientContext();
+        if ($context === null) {
+            return null;
+        }
+
+        $config = $this->wire()->modules->getConfig($this);
+        $ids = [];
+        foreach (preg_split('/\R/', (string) ($config['client_user_bindings'] ?? '')) as $line) {
+            if (preg_match('/^([a-f0-9]{16}):([1-9][0-9]{0,9})$/D', trim($line), $parts)
+                && $parts[1] === $context['id']) {
+                $ids[] = (int) $parts[2];
+            }
+        }
+        if (count($ids) !== 1) {
+            throw new WirePermissionException('The MCP client requires a unique Kontor user binding.');
+        }
+
+        $actor = $this->wire()->users->get($ids[0]);
+        if (!$actor instanceof User || !$actor->id || $actor->isGuest()
+            || $actor->isUnpublished() || $actor->isTrash()
+            || $actor->hasStatus(Page::statusLocked)
+            || (!$actor->isSuperuser() && !$actor->hasPermission('kontor-access'))) {
+            throw new WirePermissionException('The linked user cannot access Kontor.');
+        }
+        return $actor;
+    }
+
+    private function requireMcpResource(string $resource, string $operation): void
+    {
+        $actor = $this->mcpActor();
+        if ($actor === null || $actor->isSuperuser()) {
+            return;
+        }
+
+        $allowed = $operation === 'view'
+            ? $this->pocketWireCanReadResource($resource, $actor)
+            : $resource === 'contacts' && $actor->hasPermission('kontor-contacts-contact-' . $operation);
+        if (!$allowed) {
+            throw new WirePermissionException('The linked user lacks the Kontor resource permission.');
+        }
+    }
+
+    private function requireMcpSuperuser(): void
+    {
+        $actor = $this->mcpActor();
+        if ($actor !== null && !$actor->isSuperuser()) {
+            throw new WirePermissionException('The linked user requires superuser access for Kontor settings.');
+        }
+    }
+
+    private function mcpIdempotencyKey(string $key): string
+    {
+        $actor = $this->mcpActor();
+        if ($actor === null || !preg_match('/^[A-Za-z0-9._:-]{8,160}$/D', trim($key))) {
+            return $key;
+        }
+        return 'user:' . $actor->id . ':' . hash('sha256', trim($key));
     }
 
     /** @return array{id:string,title:string,module:string,moduleVersion:string} */
@@ -308,24 +381,52 @@ class KontorMCP extends WireData implements Module
     /** @return array<string, mixed> */
     public function mcpKontorStatus(): array
     {
+        $this->mcpActor();
         return $this->safe(fn (): array => $this->bridge()->status());
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorComponents(): array
     {
+        $this->mcpActor();
         return $this->safe(fn (): array => $this->bridge()->components());
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorResources(): array
     {
-        return $this->safe(fn (): array => $this->bridge()->resourceSchemas());
+        $actor = $this->mcpActor();
+        $result = $this->safe(fn (): array => $this->bridge()->resourceSchemas());
+        if ($actor === null || $actor->isSuperuser()) {
+            return $result;
+        }
+        $items = array_values(array_filter($result['items'], fn (array $item): bool =>
+            $this->pocketWireCanReadResource($item['resource'], $actor)));
+        foreach ($items as &$item) {
+            if ($item['resource'] === 'contacts') {
+                foreach (['create' => 'create', 'update' => 'edit', 'archive' => 'archive'] as $action => $permission) {
+                    if (isset($item['operations'][$action])) {
+                        $item['operations'][$action] = $item['operations'][$action]
+                            && $actor->hasPermission('kontor-contacts-contact-' . $permission);
+                    }
+                }
+            }
+        }
+        unset($item);
+        return ['items' => $items, 'total' => count($items)];
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorSearch(string $query, string $entity_types = '[]', int $limit = 20, int $offset = 0): array
     {
+        $actor = $this->mcpActor();
+        if ($actor !== null && !$actor->isSuperuser()) {
+            $types = json_decode($entity_types, true);
+            // Only expose search providers whose record visibility matches the Workspace.
+            if ($types !== ['contact'] || !$this->pocketWireCanSearchType('contact', $actor)) {
+                throw new WirePermissionException('Employee MCP search requires the permitted contact type.');
+            }
+        }
         return $this->safe(fn (): array => $this->bridge()->search($query, $entity_types, $limit, $offset));
     }
 
@@ -338,6 +439,7 @@ class KontorMCP extends WireData implements Module
         string $sort = '[]',
         string $fields = '[]',
     ): array {
+        $this->requireMcpResource($resource, 'view');
         return $this->safe(fn (): array => $this->bridge()->listRecords(
             $resource,
             $page,
@@ -351,25 +453,29 @@ class KontorMCP extends WireData implements Module
     /** @return array<string, mixed> */
     public function mcpKontorRecordGet(string $resource, string $uid, string $fields = '[]'): array
     {
+        $this->requireMcpResource($resource, 'view');
         return $this->safe(fn (): array => $this->bridge()->getRecord($resource, $uid, $fields));
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorRecordValidate(string $resource, string $operation, string $document, string $uid = ''): array
     {
+        $this->requireMcpResource($resource, $operation === 'create' ? 'create' : 'edit');
         return $this->safe(fn (): array => $this->bridge()->validateRecord($resource, $operation, $document, $uid));
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorRecordCreate(string $resource, string $document, string $idempotency_key): array
     {
-        return $this->safe(fn (): array => $this->bridge()->createRecord($resource, $document, $idempotency_key));
+        $this->requireMcpResource($resource, 'create');
+        return $this->safe(fn (): array => $this->bridge()->createRecord($resource, $document, $this->mcpIdempotencyKey($idempotency_key)));
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorRecordUpdate(string $resource, string $uid, string $document, string $idempotency_key): array
     {
-        return $this->safe(fn (): array => $this->bridge()->updateRecord($resource, $uid, $document, $idempotency_key));
+        $this->requireMcpResource($resource, 'edit');
+        return $this->safe(fn (): array => $this->bridge()->updateRecord($resource, $uid, $document, $this->mcpIdempotencyKey($idempotency_key)));
     }
 
     /** @return array<string, mixed> */
@@ -379,10 +485,11 @@ class KontorMCP extends WireData implements Module
         string $idempotency_key,
         string $confirmation,
     ): array {
+        $this->requireMcpResource($resource, 'archive');
         return $this->safe(fn (): array => $this->bridge()->archiveRecord(
             $resource,
             $uid,
-            $idempotency_key,
+            $this->mcpIdempotencyKey($idempotency_key),
             $confirmation,
         ));
     }
@@ -390,6 +497,7 @@ class KontorMCP extends WireData implements Module
     /** @return array<string, mixed> */
     public function mcpKontorSettingsExport(): array
     {
+        $this->requireMcpSuperuser();
         return $this->safe(fn (): array => $this->bridge()->exportSettings([
             'host' => (string) $this->wire()->config->httpHost,
             'transport' => 'mcp',
@@ -399,15 +507,17 @@ class KontorMCP extends WireData implements Module
     /** @return array<string, mixed> */
     public function mcpKontorSettingsPreview(string $document): array
     {
+        $this->requireMcpSuperuser();
         return $this->safe(fn (): array => $this->bridge()->previewSettings($document));
     }
 
     /** @return array<string, mixed> */
     public function mcpKontorSettingsApply(string $document, string $idempotency_key, string $confirmation): array
     {
+        $this->requireMcpSuperuser();
         return $this->safe(fn (): array => $this->bridge()->applySettings(
             $document,
-            $idempotency_key,
+            $this->mcpIdempotencyKey($idempotency_key),
             $confirmation,
         ));
     }
