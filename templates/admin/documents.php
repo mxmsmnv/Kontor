@@ -67,6 +67,24 @@ $longField = static fn (string $field): bool => preg_match('/(?:_details|_descri
     <?php endif; ?>
   </header>
 
+  <?php if ($canDraftDocument): ?>
+    <details class="uk-card uk-card-default uk-card-small uk-card-body uk-margin"<?= $documentDraft !== null || $documentDraftError !== null ? ' open' : '' ?>>
+      <summary class="uk-text-bold">Draft section with AI</summary>
+      <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'documents/?id=' . rawurlencode($selected->uid->toString())) ?>">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <label class="uk-form-label" for="document-ai-brief">What should this section say?</label>
+        <textarea class="uk-textarea uk-margin-small" id="document-ai-brief" name="document_brief" rows="4" maxlength="4000" required><?= $e($documentBrief) ?></textarea>
+        <p class="uk-text-meta">The AI provider receives this brief, the document type and the template language.</p>
+        <button class="uk-button uk-button-default" name="draft_document_text" value="1" type="submit">Generate draft</button>
+      </form>
+      <?php if ($documentDraftError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($documentDraftError) ?></p><?php endif; ?>
+      <?php if ($documentDraft !== null): ?>
+        <label class="uk-form-label uk-margin-small-top" for="document-ai-draft">Review and copy into the template editor</label>
+        <textarea class="uk-textarea" id="document-ai-draft" rows="7"><?= $e($documentDraft) ?></textarea>
+      <?php endif; ?>
+    </details>
+  <?php endif; ?>
+
   <?php if ($selected !== null): ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
       <div class="uk-grid-medium uk-flex-middle" uk-grid>

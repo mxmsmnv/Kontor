@@ -239,6 +239,35 @@ trait ProcessKontorContentTrait
         if ($selected !== null) {
             $this->requireSameOrganization($selected->organizationId);
         }
+        $canDraftDocument = $selected !== null && !$selected->isArchived()
+            && $this->can('kontor-documents-template-edit') && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $documentBrief = '';
+        $documentDraft = null;
+        $documentDraftError = null;
+        if ($this->wire()->input->post('draft_document_text') === '1') {
+            $this->requirePost();
+            if (!$canDraftDocument) {
+                throw new WirePermissionException($this->_('AI drafting is unavailable for this template.'));
+            }
+            $documentBrief = trim((string) $this->wire()->input->post('document_brief'));
+            if ($documentBrief === '' || mb_strlen($documentBrief) > 4000) {
+                $documentDraftError = $this->_('Enter a brief of up to 4,000 characters.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $selected->organizationId,
+                    ['brief' => $documentBrief, 'type' => $selected->documentType, 'language' => $selected->language],
+                    'Draft plain text for the requested section in the template language. Use placeholders for missing facts. Do not invent terms, commitments or amounts.',
+                    (string) $this->wire()->user->id,
+                );
+                $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($draft) && trim($draft) !== '') {
+                    $documentDraft = $draft;
+                } else {
+                    $documentDraftError = $this->_('The AI provider did not return a draft. Try again.');
+                }
+            }
+        }
         $preview = $this->wire()->session->get('kontorDocumentsPreview');
         $this->wire()->session->set('kontorDocumentsPreview', null);
         $this->setPageTitle($selected !== null
@@ -251,6 +280,10 @@ trait ProcessKontorContentTrait
 
         return $this->renderTemplate('documents', [
             'templates' => $module->templateRepository()->forOrganization($this->organizationUid()),
+            'canDraftDocument' => $canDraftDocument,
+            'documentBrief' => $documentBrief,
+            'documentDraft' => $documentDraft,
+            'documentDraftError' => $documentDraftError,
             'selected' => $selected,
             'preview' => is_array($preview) ? $preview : null,
             'canCreate' => $this->can('kontor-documents-template-create'),
