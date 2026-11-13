@@ -143,7 +143,7 @@ if ($entityType === 'contact') {
         <form method="post" action="<?= $e($adminUrl) ?>contact-ai-summary/">
           <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
           <input type="hidden" name="contact_uid" value="<?= $e($entity->uid->toString()) ?>">
-          <label class="kontor-check"><input type="checkbox" name="simulate" value="1" checked> <span>Use local preview</span></label>
+          <label class="kontor-check"><input type="checkbox" name="simulate" value="1" checked> <span>Use local preview. Uncheck to send the contact name, notes, tags and company names to OpenRouter.</span></label>
           <button class="uk-button uk-button-secondary kontor-button kontor-button--ghost" type="submit"><i class="fa fa-magic"></i> Generate contact brief</button>
         </form>
       </section>

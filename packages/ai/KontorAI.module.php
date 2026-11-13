@@ -10,7 +10,7 @@ use Kontor\AI\Application\ExternalApprovalService;
 use Kontor\AI\Application\SummaryService;
 use Kontor\AI\Health\AIHealthCheck;
 use Kontor\AI\Infrastructure\Persistence\PendingAIActionRepository;
-use Kontor\AI\Infrastructure\Providers\NullSquadClient;
+use Kontor\AI\Infrastructure\Providers\ProcessWireSquadClient;
 use Kontor\AI\Infrastructure\Providers\PreviewAIProvider;
 use Kontor\AI\Infrastructure\Providers\SquadAdapter;
 use Kontor\AI\Infrastructure\Registry\AIProviderRegistry;
@@ -26,7 +26,7 @@ use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
  * Stage 9). Depends only on kontor/core —
  * `KontorAIProviderInterface`/`AIRequest`/`AIResponse` already live in
  * kontor/sdk (kontor.md#9.12). "Kontor AI is optional" (kontor.md#32):
- * with no real Squad connection configured, `NullSquadClient` fails
+ * with no real Squad connection configured, the gateway fails
  * cleanly rather than fabricating a response — a real deployment
  * supplies its own `SquadClientInterface`.
  */
@@ -60,7 +60,13 @@ class KontorAI extends WireData implements Module
         $kontor = $this->wire()->modules->get('Kontor');
 
         $this->registerTranslations($kontor->container()->get(TranslationRegistry::class));
-        $this->providerRegistry()->register(new SquadAdapter(new NullSquadClient()));
+        $modules = $this->wire()->modules;
+        if ($modules->isInstalled('Squad')) {
+            $squad = $modules->get('Squad');
+            if ($squad instanceof Squad && $squad->getProvider('openrouter') !== null) {
+                $this->providerRegistry()->register(new SquadAdapter(new ProcessWireSquadClient($squad->ask(...))));
+            }
+        }
     }
 
     private function registerTranslations(TranslationRegistry $translations): void

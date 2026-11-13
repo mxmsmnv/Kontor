@@ -305,8 +305,6 @@ trait ProcessKontorCustomerTrait
         );
         $text = implode("\n", array_filter([
             'Contact: ' . $contact->displayName,
-            $contact->email !== null ? 'Email: ' . $contact->email : null,
-            $contact->phone !== null ? 'Phone: ' . $contact->phone : null,
             $contact->jobTitle !== null ? 'Job title: ' . $contact->jobTitle : null,
             $contact->notes !== null ? 'Notes: ' . $contact->notes : null,
             $tags !== [] ? 'Tags: ' . implode(', ', $tags) : null,
