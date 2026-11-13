@@ -150,7 +150,7 @@ class KontorTasks extends WireData implements Module
 
         return new TaskAccessScope(
             (int) $user->id,
-            $superuser || $user->hasPermission('kontor-tasks-task-view'),
+            $superuser || ($user->hasPermission('kontor-access') && $user->hasPermission('kontor-tasks-task-view')),
             $superuser || $user->hasPermission(self::VIEW_ALL),
             $departments,
         );
