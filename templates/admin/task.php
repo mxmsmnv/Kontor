@@ -199,6 +199,10 @@ $renderAssignment = static function (string $idPrefix) use (
             <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Planning</p>
             <h3 class="uk-card-title uk-margin-small-top">Plan and assign the work</h3>
             <div class="uk-margin">
+              <label class="uk-form-label">Label <select class="uk-select" name="work_label">
+                <option value="">No label</option>
+                <?php foreach ($labelOptions as $label): ?><option<?= $values['workLabel'] === $label ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?>
+              </select></label>
               <label class="uk-form-label" for="task-priority">Priority</label>
               <select class="uk-select uk-margin-small-top" id="task-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select>
               <div class="uk-text-meta uk-margin-small-top">Reserve High and Urgent for work that blocks a customer or teammate.</div>
@@ -352,6 +356,10 @@ $renderAssignment = static function (string $idPrefix) use (
             <div class="uk-margin"><label class="uk-form-label" for="task-edit-title">Title</label><input class="uk-input uk-margin-small-top" id="task-edit-title" name="title" value="<?= $e($values['title']) ?>" required><div class="uk-text-meta uk-margin-small-top">Describe the outcome or action in a few clear words.</div></div>
             <div class="uk-margin"><label class="uk-form-label" for="task-edit-description">Description</label><textarea class="uk-textarea uk-margin-small-top" id="task-edit-description" name="description" rows="4"><?= $e($values['description']) ?></textarea><div class="uk-text-meta uk-margin-small-top">Add the context teammates need to execute the work.</div></div>
             <div class="uk-grid-small" uk-grid>
+              <label class="uk-form-label">Label <select class="uk-select" name="work_label">
+                <option value="">No label</option>
+                <?php foreach ($labelOptions as $label): ?><option<?= $values['workLabel'] === $label ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?>
+              </select></label>
               <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-priority">Priority</label><select class="uk-select uk-margin-small-top" id="task-edit-priority" name="priority"><?php foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['priority'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Use High or Urgent only when delay blocks a customer or teammate.</div></div>
               <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-due">Due date</label><input class="uk-input uk-margin-small-top" id="task-edit-due" type="datetime-local" name="due_at" value="<?= $e($values['dueAt']) ?>"><div class="uk-text-meta uk-margin-small-top">Set the real commitment date, or leave it unscheduled.</div></div>
               <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-recurrence">Repeats</label><select class="uk-select uk-margin-small-top" id="task-edit-recurrence" name="recurrence_rule"><option value="">Does not repeat</option><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['recurrenceRule'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Repeating tasks require a due date.</div></div>

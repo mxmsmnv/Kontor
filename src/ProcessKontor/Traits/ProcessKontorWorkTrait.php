@@ -109,6 +109,21 @@ trait ProcessKontorWorkTrait
         return $task;
     }
 
+    private const TASK_LABELS = ['SALES', 'MARKETING', 'PRODUCTION', 'SMM', 'ADMINISTRATIVE'];
+
+    private function taskLabel(Task $task): string
+    {
+        return (string) $this->taskLabelStore()->get(
+            $this->organizationInternalId(), 'KontorTasks', 'task', $task->uid->toString(), 'work_label',
+        );
+    }
+
+    private function taskLabelStore(): \Kontor\Core\Infrastructure\Persistence\ExtensionRepository
+    {
+        return $this->wire()->modules->get('Kontor')->container()
+            ->get(\Kontor\Core\Infrastructure\Persistence\ExtensionRepository::class);
+    }
+
     public function ___executeTasks(): string
     {
         $this->requireTasks();
@@ -168,6 +183,17 @@ trait ProcessKontorWorkTrait
                 default => true,
             }
         ));
+        $taskLabels = [];
+        foreach ($tasks as $task) {
+            $taskLabels[$task->uid->toString()] = $this->taskLabel($task);
+        }
+        $selectedLabel = $this->wire()->sanitizer->option(
+            (string) $this->wire()->input->get('work_label'), self::TASK_LABELS,
+        ) ?? '';
+        if ($selectedLabel !== '') {
+            $tasks = array_values(array_filter($tasks, static fn (Task $task): bool =>
+                $taskLabels[$task->uid->toString()] === $selectedLabel));
+        }
         $assigneeLabels = [];
         foreach ($tasks as $task) {
             if ($task->assignedTo === null || isset($assigneeLabels[$task->assignedTo])) {
@@ -186,6 +212,9 @@ trait ProcessKontorWorkTrait
 
         return $this->renderTemplate('tasks', [
             'tasks' => $tasks,
+            'taskLabels' => $taskLabels,
+            'labelOptions' => self::TASK_LABELS,
+            'selectedLabel' => $selectedLabel,
             'allTasks' => $allTasks,
             'query' => $query,
             'selectedStatus' => $status,
@@ -523,6 +552,7 @@ trait ProcessKontorWorkTrait
         $values = [
             'title' => $task?->title ?? ($contextLabel !== '' ? 'Follow up with ' . $contextLabel : ''),
             'description' => $task?->description ?? '',
+            'workLabel' => $task === null ? '' : $this->taskLabel($task),
             'priority' => $task?->priority ?? 'normal',
             'dueAt' => $task?->dueAt?->format('Y-m-d\TH:i') ?? '',
             'recurrenceRule' => $task?->recurrenceRule ?? '',
@@ -557,6 +587,11 @@ trait ProcessKontorWorkTrait
                     (string) $this->wire()->input->post('recurrence_until')
                 ),
             ]);
+            if ($this->wire()->input->post('work_label') !== null) {
+                $values['workLabel'] = $this->wire()->sanitizer->option(
+                    (string) $this->wire()->input->post('work_label'), self::TASK_LABELS,
+                ) ?? '';
+            }
             if ($canAssign && $this->wire()->input->post('visibility') !== null) {
                 $values['visibility'] = (string) $this->wire()->input->post('visibility');
                 $values['departmentRoleId'] = $values['visibility'] === Task::VISIBILITY_DEPARTMENT
@@ -609,7 +644,7 @@ trait ProcessKontorWorkTrait
                 if ($task === null && $contextType !== '' && $contextUid !== '') {
                     $this->requirePermission('kontor-tasks-relation-manage');
                 }
-                $apply = static function (Task $target) use ($values, $dueAt, $recurrenceUntil, $repository): Task {
+                $apply = function (Task $target) use ($values, $dueAt, $recurrenceUntil, $repository): Task {
                     $target->title = $values['title'];
                     $target->description = $values['description'] !== '' ? $values['description'] : null;
                     $target->priority = $values['priority'];
@@ -620,6 +655,10 @@ trait ProcessKontorWorkTrait
                     $target->visibility = $values['visibility'];
                     $target->departmentRoleId = $values['departmentRoleId'];
                     $repository->save($target);
+                    $this->taskLabelStore()->set(
+                        $this->organizationInternalId(), 'KontorTasks', 'task',
+                        $target->uid->toString(), 'work_label', $values['workLabel'],
+                    );
 
                     return $target;
                 };
@@ -726,6 +765,7 @@ trait ProcessKontorWorkTrait
             'canSuggestTaskSteps' => $canSuggestTaskSteps,
             'taskSteps' => $taskSteps,
             'values' => $values,
+            'labelOptions' => self::TASK_LABELS,
             'error' => $error,
             'archived' => $archived,
             'reminders' => $reminders,

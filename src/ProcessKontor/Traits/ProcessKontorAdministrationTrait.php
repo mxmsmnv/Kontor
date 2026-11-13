@@ -835,6 +835,16 @@ trait ProcessKontorAdministrationTrait
             }
         }
 
+        if ($ownerType === 'contact') {
+            $segments = $this->wire()->input->post('contact_segments');
+            if (is_array($segments)) {
+                $tags = array_merge($tags, array_intersect(
+                    ['interior designers', 'architects', 'past clients', 'ongoing clients', 'prospects', 'developers'],
+                    array_filter($segments, 'is_string'),
+                ));
+            }
+        }
+
         $this->tagService()->setTags($this->organizationUid(), $ownerType, $ownerUid, $tags);
         $currentTags = $this->tagService()->tagsFor($this->organizationUid(), $ownerType, $ownerUid);
         $this->audit(
