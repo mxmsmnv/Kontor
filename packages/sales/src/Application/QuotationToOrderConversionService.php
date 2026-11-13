@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Sales\Application;
 
 use Kontor\Core\Infrastructure\Persistence\SequenceService;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Sales\Domain\DocumentLine;
 use Kontor\Sales\Domain\Order;
 use Kontor\Sales\Infrastructure\Persistence\DocumentLineRepository;
@@ -25,12 +26,30 @@ final class QuotationToOrderConversionService
         private readonly OrderRepository $orders,
         private readonly DocumentLineRepository $lines,
         private readonly SequenceService $sequences,
+        private readonly ?\PDO $database = null,
     ) {
     }
 
     public function convert(string $quotationUid): Order
     {
-        $quotation = $this->quotations->require($quotationUid);
+        $ownsTransaction = $this->database !== null && DatabaseConcurrency::beginWriteTransaction($this->database);
+        try {
+            $order = $this->convertQuotation($quotationUid);
+            if ($ownsTransaction) {
+                $this->database->commit();
+            }
+            return $order;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $this->database->inTransaction()) {
+                $this->database->rollBack();
+            }
+            throw $error;
+        }
+    }
+
+    private function convertQuotation(string $quotationUid): Order
+    {
+        $quotation = $this->quotations->require($quotationUid, forUpdate: $this->database !== null);
 
         if (!$quotation->isAccepted()) {
             throw new RuntimeException(
@@ -38,7 +57,7 @@ final class QuotationToOrderConversionService
             );
         }
 
-        $existingOrder = $this->orders->findByQuotation($quotationUid);
+        $existingOrder = $this->orders->findByQuotation($quotationUid, forUpdate: $this->database !== null);
         if ($existingOrder !== null) {
             throw new RuntimeException(
                 "Quotation \"{$quotationUid}\" was already converted to order \"{$existingOrder->uid}\"."
@@ -76,7 +95,7 @@ final class QuotationToOrderConversionService
                 taxRate: $line->taxRate,
                 sortOrder: $line->sortOrder,
             ),
-            $this->lines->forDocument('quotation', $quotationUid),
+            $this->lines->forDocument('quotation', $quotationUid, $quotation->organizationId),
         );
 
         $order->applyTotalsFromLines($orderLines);

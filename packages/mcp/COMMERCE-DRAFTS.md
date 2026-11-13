@@ -39,5 +39,17 @@ Invoice draft editing accepts a JSON object containing `due_date` or
 `language`; `preview=true` checks the proposed header. Dates use
 `YYYY-MM-DD` and languages are `en`, `de`, `fr` and `es`.
 
-The resulting documents remain drafts. Issuing, sending, credit notes and
-payment settlement use the existing Workspace workflows.
+Draft creation and editing leave documents in draft status. To issue,
+accept, cancel or convert a quotation, use `kontor_quotation_action_preview`
+and `kontor_quotation_action_apply`. Invoices support issue and cancel through
+`kontor_invoice_action_preview` and `kontor_invoice_action_apply`. These tools
+check the document view and action permissions. Issuance also checks customer
+visibility and requires the active document template for its language.
+
+Review the preview with the user. Apply the same UID and action with its
+`review_token`, `confirmation: "APPLY_REVIEWED_COMMERCE_ACTION"` and an
+`idempotency_key`. Applying requires `publish` scope. A changed record,
+template or line set invalidates the review. Issuance creates a private PDF
+and an immutable snapshot. Invoice issuance and cancellation use the existing
+ledger workflow. Sending, credit notes and payment settlement remain in
+Workspace.

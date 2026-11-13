@@ -33,7 +33,7 @@ final class QuotationWorkflowService
             throw new RuntimeException("Quotation \"{$quotationUid}\" is not a draft and cannot be issued.");
         }
 
-        $quotation->applyTotalsFromLines($this->lines->forDocument('quotation', $quotationUid));
+        $quotation->applyTotalsFromLines($this->lines->forDocument('quotation', $quotationUid, $quotation->organizationId));
         $quotation->number = $this->sequences->next(
             $quotation->organizationId, 'sales', 'quotation', prefix: 'QUO-', padding: 5, resetPolicy: 'yearly'
         );

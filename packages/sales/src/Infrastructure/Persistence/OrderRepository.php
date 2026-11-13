@@ -112,13 +112,13 @@ final class OrderRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
-    public function findByQuotation(string $quotationUid): ?Order
+    public function findByQuotation(string $quotationUid, bool $forUpdate = false): ?Order
     {
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_sales_orders
              WHERE quotation_uid = :quotation_uid
              ORDER BY id ASC
-             LIMIT 1'
+             LIMIT 1' . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''),
         );
         $statement->execute(['quotation_uid' => $quotationUid]);
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

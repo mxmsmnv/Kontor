@@ -10,6 +10,7 @@ use Kontor\MCP\Application\ActivityTools;
 use Kontor\MCP\Application\AutomationDraftTools;
 use Kontor\MCP\Application\CatalogTools;
 use Kontor\MCP\Application\CommerceDraftTools;
+use Kontor\MCP\Application\CommerceLifecycleTools;
 use Kontor\MCP\Application\CompanyTools;
 use Kontor\MCP\Application\ContactIntakeTools;
 use Kontor\MCP\Application\CrmActionTools;
@@ -26,6 +27,7 @@ use Kontor\MCP\Application\PortalLookupTools;
 use Kontor\MCP\Application\DocumentLookupTools;
 use Kontor\MCP\Application\WorkflowLookupTools;
 use Kontor\MCP\Application\SalesLookupTools;
+use Kontor\MCP\Application\PaymentActionTools;
 use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
 
@@ -37,6 +39,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use AutomationDraftTools;
     use CatalogTools;
     use CommerceDraftTools;
+    use CommerceLifecycleTools;
     use CompanyTools;
     use ContactIntakeTools;
     use CrmActionTools;
@@ -53,6 +56,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use DocumentLookupTools;
     use WorkflowLookupTools;
     use SalesLookupTools;
+    use PaymentActionTools;
     use TaskTools;
 
     private ?KontorMcpBridge $bridge = null;
@@ -461,6 +465,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->automationDraftTools(),
             ...$this->catalogTools(),
             ...$this->commerceDraftTools(),
+            ...$this->commerceLifecycleTools(),
             ...$this->companyTools(),
             ...$this->contactIntakeTools(),
             ...$this->mcpCrmLookupTools(),
@@ -473,6 +478,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->mcpDocumentLookupTools(),
             ...$this->workflowLookupTools(),
             ...$this->salesLookupTools(),
+            ...$this->paymentActionTools(),
             ...$this->taskTools(),
             ...$this->mcpExpenseTools(),
             ...$this->fileTools(),

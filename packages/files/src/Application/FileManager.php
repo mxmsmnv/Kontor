@@ -34,6 +34,7 @@ final class FileManager
      * creates a new version and archives the previous one.
      *
      * @param array<string, mixed> $metadata
+     * @param (callable(string): void)|null $onStored Records the stored path for an owning transaction's rollback.
      * @return array{uid: string, versionNumber: int}
      */
     public function upload(
@@ -46,6 +47,7 @@ final class FileManager
         ?string $entityUid = null,
         array $metadata = [],
         ?int $actorId = null,
+        ?callable $onStored = null,
     ): array {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
@@ -95,6 +97,10 @@ final class FileManager
         } catch (\Throwable $exception) {
             $this->storage->delete($stored->path);
             throw $exception;
+        }
+
+        if ($onStored !== null) {
+            $onStored($stored->path);
         }
 
         if ($existing !== null) {

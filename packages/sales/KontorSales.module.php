@@ -114,6 +114,7 @@ class KontorSales extends WireData implements Module
             $this->orderRepository(),
             $this->documentLineRepository(),
             $this->sequences(),
+            $this->pdo(),
         );
     }
 

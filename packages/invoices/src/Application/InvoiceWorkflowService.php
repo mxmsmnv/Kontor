@@ -36,7 +36,7 @@ final class InvoiceWorkflowService
             throw new RuntimeException("Invoice \"{$invoiceUid}\" is not a draft and cannot be issued.");
         }
 
-        $invoice->applyTotalsFromLines($this->lines->forDocument('invoice', $invoiceUid));
+        $invoice->applyTotalsFromLines($this->lines->forDocument('invoice', $invoiceUid, $invoice->organizationId));
         $invoice->number = $this->sequences->next(
             $invoice->organizationId, 'invoices', 'invoice', prefix: 'INV-', padding: 5, resetPolicy: 'yearly'
         );
@@ -68,7 +68,7 @@ final class InvoiceWorkflowService
 
     public function cancel(string $invoiceUid, ?int $createdBy = null): Invoice
     {
-        $invoice = $this->invoices->require($invoiceUid);
+        $invoice = $this->invoices->require($invoiceUid, forUpdate: true);
 
         if (!$invoice->isCancellable()) {
             throw new RuntimeException("Invoice \"{$invoiceUid}\" cannot be cancelled from status \"{$invoice->status}\".");
@@ -140,7 +140,7 @@ final class InvoiceWorkflowService
      */
     public function issueCreditNote(string $originalInvoiceUid, ?int $createdBy = null): Invoice
     {
-        $original = $this->invoices->require($originalInvoiceUid);
+        $original = $this->invoices->require($originalInvoiceUid, forUpdate: true);
 
         if (!$original->isCreditable()) {
             throw new RuntimeException("Invoice \"{$originalInvoiceUid}\" cannot be credited from status \"{$original->status}\".");
