@@ -34,7 +34,7 @@
       <label class="kontor-import__file">
         <span>Source file</span>
         <input type="file" name="import_file" required accept=".csv,.json,.jsonl,.ndjson,.xlsx">
-        <small>Maximum 10 MB. Column names must use Kontor machine field names.</small>
+        <small>Maximum 10 MB. For Excel contacts, put headers such as Full Name, Email and Phone in the first populated row of the first sheet. Other imports use Kontor field names.</small>
       </label>
       <button class="uk-button uk-button-primary kontor-button" type="submit">
         <i class="fa fa-search"></i> Preview import
@@ -57,6 +57,18 @@
           <?= $result->failed > 0 ? $e($result->failed) . ' issues' : ($result->dryRun ? 'ready' : 'imported') ?>
         </span>
       </div>
+
+      <?php if ($columnMapping !== []): ?>
+        <p><strong>Recognized contact columns</strong></p>
+        <ul>
+          <?php foreach ($columnMapping as $header => $field): ?>
+            <li><?= $e($header) ?> → <?= $e(ucwords(str_replace('_', ' ', $field))) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+      <?php if ($result->totalRows === 0): ?>
+        <p>No data rows were found. Check that the first sheet contains contact rows below the headers.</p>
+      <?php endif; ?>
 
       <div class="kontor-previewstats">
         <article><strong><?= $e($result->totalRows) ?></strong><span>Total rows</span></article>

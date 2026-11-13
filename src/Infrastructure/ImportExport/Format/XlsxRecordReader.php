@@ -50,6 +50,11 @@ final class XlsxRecordReader implements RecordReaderInterface
             /** @var DOMElement $rowElement */
             $rowValues = $this->parseRow($rowElement, $sharedStrings);
 
+            if (array_filter($rowValues, static fn ($value): bool => $value !== null
+                && (!is_string($value) || trim($value) !== '')) === []) {
+                continue;
+            }
+
             if ($header === null) {
                 $header = $rowValues;
 
@@ -59,10 +64,14 @@ final class XlsxRecordReader implements RecordReaderInterface
             $record = [];
 
             foreach ($header as $columnIndex => $columnName) {
-                if ($columnName === null || $columnName === '') {
+                if (!is_string($columnName) || trim($columnName) === '') {
                     continue;
                 }
 
+                $columnName = trim($columnName);
+                if (array_key_exists($columnName, $record)) {
+                    throw new RuntimeException("Duplicate spreadsheet column: {$columnName}.");
+                }
                 $record[$columnName] = $rowValues[$columnIndex] ?? null;
             }
 

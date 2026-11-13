@@ -926,6 +926,7 @@ trait ProcessKontorAdministrationTrait
         $filename = null;
         $previewToken = null;
         $backupId = null;
+        $columnMapping = [];
         $this->cleanupImportPreviews();
 
         if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
@@ -948,9 +949,10 @@ trait ProcessKontorAdministrationTrait
                     $batchId = Uid::generate()->toString();
 
                     try {
+                        $reader = $this->dataExchangeImportReader($entityType, $format);
                         $result = $this->importManager()->run(
                             entityType: $entityType,
-                            reader: (new FormatResolver())->reader($format),
+                            reader: $reader,
                             path: $path,
                             context: new ImportContext(
                                 organizationId: $this->organizationUid(),
@@ -960,6 +962,10 @@ trait ProcessKontorAdministrationTrait
                                 actorId: (string) $this->wire()->user->id,
                             ),
                         );
+
+                        if ($reader instanceof \Kontor\Core\Infrastructure\ImportExport\Format\ContactSpreadsheetReader) {
+                            $columnMapping = $reader->mapping();
+                        }
 
                         if ($result->totalRows > 0 && $result->failed === 0) {
                             $previewToken = $this->storeImportPreview(
@@ -988,6 +994,7 @@ trait ProcessKontorAdministrationTrait
             'result' => $result,
             'filename' => $filename,
             'previewToken' => $previewToken,
+            'columnMapping' => $columnMapping,
             'backupId' => $backupId,
             'availableEntityTypes' => $this->availableImportEntityTypes(),
             'backupLabel' => $entityType === 'catalog_item' ? 'Catalog' : 'Contacts',

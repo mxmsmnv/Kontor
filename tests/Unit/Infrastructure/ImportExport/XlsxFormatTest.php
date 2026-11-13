@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Core\Tests\Unit\Infrastructure\ImportExport;
 
+use Kontor\Core\Infrastructure\ImportExport\Format\ContactSpreadsheetReader;
 use Kontor\Core\Infrastructure\ImportExport\Format\XlsxRecordReader;
 use Kontor\Core\Infrastructure\ImportExport\Format\XlsxRecordWriter;
 use PHPUnit\Framework\TestCase;
@@ -39,6 +40,26 @@ final class XlsxFormatTest extends TestCase
         $this->assertSame('12', $result[0]['employees']);
         $this->assertSame('Widgets & Co', $result[1]['name']);
         $this->assertSame('340', $result[1]['employees']);
+    }
+
+    public function test_contact_workbook_maps_ten_rows_and_skips_empty_rows(): void
+    {
+        $records = [[]];
+        for ($i = 1; $i <= 10; $i++) {
+            $records[] = ['ФИО' => "Test Contact {$i}", 'E-mail' => "contact{$i}@example.test", 'Телефон' => '+15550101010'];
+        }
+        $records[] = [];
+        (new XlsxRecordWriter())->write($this->path, $records, ['ФИО', 'E-mail', 'Телефон']);
+        $reader = new ContactSpreadsheetReader(new XlsxRecordReader());
+        $parsed = iterator_to_array($reader->read($this->path));
+
+        self::assertCount(10, $parsed);
+        self::assertSame([
+            'display_name' => 'Test Contact 10',
+            'email' => 'contact10@example.test',
+            'phone' => '+15550101010',
+        ], $parsed[9]);
+        self::assertSame(['ФИО' => 'display_name', 'E-mail' => 'email', 'Телефон' => 'phone'], $reader->mapping());
     }
 
     public function test_reads_a_file_using_shared_strings_like_real_spreadsheet_software(): void

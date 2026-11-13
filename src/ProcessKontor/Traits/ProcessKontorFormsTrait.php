@@ -1249,6 +1249,15 @@ trait ProcessKontorFormsTrait
         return [$path, $format, $originalName];
     }
 
+    private function dataExchangeImportReader(string $entityType, string $format): \Kontor\Core\Infrastructure\ImportExport\Format\RecordReaderInterface
+    {
+        $reader = (new FormatResolver())->reader($format);
+
+        return $entityType === 'contact' && $format === 'xlsx'
+            ? new \Kontor\Core\Infrastructure\ImportExport\Format\ContactSpreadsheetReader($reader)
+            : $reader;
+    }
+
     private function storeImportPreview(
         string $batchId,
         string $path,
@@ -1322,7 +1331,7 @@ trait ProcessKontorFormsTrait
         try {
             $result = $this->importManager()->run(
                 entityType: $entityType,
-                reader: (new FormatResolver())->reader($format),
+                reader: $this->dataExchangeImportReader($entityType, $format),
                 path: $path,
                 context: new ImportContext(
                     organizationId: $this->organizationUid(),
