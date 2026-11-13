@@ -6,6 +6,7 @@ namespace Kontor\MCP\Application;
 
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Invoices\Domain\Invoice;
+use Kontor\Ledger\Domain\LedgerEntry;
 use Kontor\Payments\Domain\Payment;
 use ProcessWire\Wire404Exception;
 use ProcessWire\WirePermissionException;
@@ -40,7 +41,37 @@ trait FinanceLookupTools
                 ['uid'],
             );
         }
+        if ($this->wire()->modules->isInstalled('KontorLedger')) {
+            $tools[] = $this->tool(
+                'kontor_ledger_entries_list', 'List Kontor ledger entries',
+                'Read a page of ledger entry summaries under the Workspace ledger permission.',
+                $this->mcpLedgerEntriesList(...), 'read',
+                ['offset' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 10000]],
+            );
+        }
         return $tools;
+    }
+
+    public function mcpLedgerEntriesList(int $offset = 0): array
+    {
+        $actor = $this->mcpActor();
+        if ($actor === null || (!$actor->isSuperuser() && !$actor->hasPermission('kontor-ledger-entry-view'))) {
+            throw new WirePermissionException('The linked user cannot view ledger entries.');
+        }
+        $modules = $this->wire()->modules;
+        $organization = $modules->get('Kontor')->container()->get(OrganizationRepository::class)
+            ->defaultOrganization('US', 'en', 'USD')->uid->toString();
+        $entries = $modules->get('KontorLedger')->entryRepository()->forOrganization($organization, 26, $offset);
+
+        return [
+            'items' => array_map(static fn (LedgerEntry $entry): array => [
+                'uid' => $entry->uid->toString(),
+                'description' => $entry->description,
+                'entry_date' => $entry->entryDate->format('Y-m-d'),
+                'reference_type' => $entry->referenceType,
+            ], array_slice($entries, 0, 25)),
+            'next_offset' => count($entries) > 25 && $offset + 25 <= 10000 ? $offset + 25 : null,
+        ];
     }
 
     public function mcpInvoicesList(string $query = '', int $offset = 0): array

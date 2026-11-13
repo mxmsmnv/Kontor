@@ -82,12 +82,18 @@ final class LedgerEntryRepository
     /**
      * @return LedgerEntry[] newest first
      */
-    public function forOrganization(string $organizationUid): array
+    public function forOrganization(string $organizationUid, ?int $limit = null, int $offset = 0): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_ledger_entries WHERE organization_id = :organization_id ORDER BY entry_date DESC, created_at DESC');
-        $statement->execute(['organization_id' => $organizationId]);
+        $sql = 'SELECT * FROM kontor_ledger_entries WHERE organization_id = :organization_id ORDER BY entry_date DESC, created_at DESC, uid DESC';
+        $statement = $this->pdo->prepare($sql . ($limit === null ? '' : ' LIMIT :limit OFFSET :offset'));
+        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
+        if ($limit !== null) {
+            $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        }
+        $statement->execute();
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
