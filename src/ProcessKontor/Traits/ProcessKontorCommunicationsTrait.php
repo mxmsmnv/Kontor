@@ -110,6 +110,34 @@ trait ProcessKontorCommunicationsTrait
         if (!$this->canViewTaskLinkedMail($relations)) {
             throw new Wire404Exception();
         }
+        $canDraftReply = $selected !== null && !$selected->isOutbound()
+            && $this->can('kontor-mail-message-send') && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $replyDraft = null;
+        $replyError = null;
+        $replyExcerpt = mb_substr((string) ($selected?->bodyText ?? ''), 0, 4000);
+        if ($this->wire()->input->post('draft_mail_reply') === '1') {
+            $this->requirePost();
+            if (!$canDraftReply) {
+                throw new WirePermissionException($this->_('AI reply drafting is unavailable for this message.'));
+            }
+            $replyExcerpt = trim((string) $this->wire()->input->post('mail_reply_excerpt'));
+            if ($replyExcerpt === '' || mb_strlen($replyExcerpt) > 4000) {
+                $replyError = $this->_('Enter an excerpt of up to 4,000 characters.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $selected->organizationId,
+                    ['messageExcerpt' => $replyExcerpt],
+                    'Draft a concise reply in the language of the excerpt. Do not invent commitments or facts. Use placeholders for missing information.',
+                    (string) $this->wire()->user->id,
+                );
+                $replyDraft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (!is_string($replyDraft) || trim($replyDraft) === '') {
+                    $replyDraft = null;
+                    $replyError = $this->_('The AI provider did not return a draft. Try again.');
+                }
+            }
+        }
         $messages = array_values(array_filter(
             $module->messageRepository()->forOrganization($this->organizationUid()),
             fn ($message): bool => $this->canViewTaskLinkedMail(
@@ -124,6 +152,10 @@ trait ProcessKontorCommunicationsTrait
             'mailboxes' => $module->mailboxRepository()->forOrganization($this->organizationUid()),
             'messages' => $messages,
             'selected' => $selected,
+            'canDraftReply' => $canDraftReply,
+            'replyDraft' => $replyDraft,
+            'replyError' => $replyError,
+            'replyExcerpt' => $replyExcerpt,
             'relations' => $relations,
             'relationViews' => $this->mailRelationViews($relations),
             'entityTargets' => $this->mailEntityTargets(),

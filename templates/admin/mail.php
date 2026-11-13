@@ -115,6 +115,22 @@ $nearbyMessages = $selected === null ? [] : array_slice(array_values(array_filte
           </div>
           <hr class="uk-margin-medium">
           <div class="uk-text-break uk-margin-medium-bottom"><?= nl2br($e($selected->bodyText)) ?></div>
+          <?php if ($canDraftReply): ?>
+            <details class="uk-margin"<?= $replyDraft !== null || $replyError !== null ? ' open' : '' ?>>
+              <summary class="uk-text-bold">Draft reply with AI</summary>
+              <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'mail/?id=' . rawurlencode($selected->uid->toString())) ?>">
+                <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+                <label class="uk-form-label" for="kontor-mail-reply-excerpt">Excerpt to send to the configured AI provider</label>
+                <textarea class="uk-textarea uk-margin-small" id="kontor-mail-reply-excerpt" name="mail_reply_excerpt" rows="5" maxlength="4000" required><?= $e($replyExcerpt) ?></textarea>
+                <button class="uk-button uk-button-default" type="submit" name="draft_mail_reply" value="1">Generate reply draft</button>
+              </form>
+              <?php if ($replyError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($replyError) ?></p><?php endif; ?>
+              <?php if ($replyDraft !== null): ?>
+                <label class="uk-form-label uk-margin-small-top" for="kontor-mail-reply-draft">Reply draft for review</label>
+                <textarea class="uk-textarea" id="kontor-mail-reply-draft" rows="6"><?= $e($replyDraft) ?></textarea>
+              <?php endif; ?>
+            </details>
+          <?php endif; ?>
         </article>
       </div>
       <div class="uk-width-1-1 uk-width-1-3@l">
