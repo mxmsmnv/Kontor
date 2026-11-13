@@ -11,8 +11,10 @@ use Kontor\API\Application\IdempotencyService;
 use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use Kontor\Core\Infrastructure\Persistence\RelationRepository;
 use Kontor\Tasks\Application\TaskAccessScope;
 use Kontor\Tasks\Domain\Task;
+use Kontor\Tasks\Domain\TaskReminder;
 use PDO;
 use ProcessWire\KontorTasks;
 use ProcessWire\User;
@@ -105,6 +107,41 @@ trait TaskTools
                     'idempotency_key' => $key,
                     'confirmation' => ['type' => 'string', 'const' => 'APPLY_REVIEWED_KONTOR_TASK_ACTION'],
                 ], ['uid', 'action', 'idempotency_key', 'confirmation'], destructive: true),
+            $this->tool('kontor_task_reminders_list', 'List task reminders', 'List reminders for a visible task.',
+                [$this, 'mcpKontorTaskRemindersList'], 'read', [
+                    'uid' => $this->uidSchema(),
+                    'offset' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 10000],
+                ], ['uid']),
+            $this->tool('kontor_task_reminder_schedule', 'Schedule a task email reminder',
+                'After explicit review, schedule a future reminder for the task’s current assignee. The expected assignee must match.',
+                [$this, 'mcpKontorTaskReminderSchedule'], 'draft', [
+                    'uid' => $this->uidSchema(),
+                    'remind_at' => ['type' => 'string', 'maxLength' => 25, 'description' => 'ISO 8601 timestamp with an explicit offset.'],
+                    'expected_assignee_id' => ['type' => 'integer', 'minimum' => 1],
+                    'idempotency_key' => $key,
+                    'confirmation' => ['type' => 'string', 'const' => 'SCHEDULE_REVIEWED_TASK_EMAIL'],
+                ], ['uid', 'remind_at', 'expected_assignee_id', 'idempotency_key', 'confirmation']),
+            $this->tool('kontor_task_relations_list', 'List related CRM records', 'List contacts and companies visible to the linked user and linked to this task.',
+                [$this, 'mcpKontorTaskRelationsList'], 'read', [
+                    'uid' => $this->uidSchema(),
+                    'offset' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 10000],
+                ], ['uid']),
+            $this->tool('kontor_task_relation_link', 'Link a task to a contact or company',
+                'Add a related CRM record to a visible, active task.',
+                [$this, 'mcpKontorTaskRelationLink'], 'draft', [
+                    'uid' => $this->uidSchema(),
+                    'customer_type' => ['type' => 'string', 'enum' => ['contact', 'company']],
+                    'customer_uid' => $this->uidSchema(),
+                    'idempotency_key' => $key,
+                ], ['uid', 'customer_type', 'customer_uid', 'idempotency_key']),
+            $this->tool('kontor_task_relation_unlink', 'Unlink a CRM record from a task',
+                'Archive an active task-to-customer link after explicit review.',
+                [$this, 'mcpKontorTaskRelationUnlink'], 'draft', [
+                    'uid' => $this->uidSchema(),
+                    'relation_uid' => $this->uidSchema(),
+                    'idempotency_key' => $key,
+                    'confirmation' => ['type' => 'string', 'const' => 'UNLINK_REVIEWED_TASK_RECORD'],
+                ], ['uid', 'relation_uid', 'idempotency_key', 'confirmation'], destructive: true),
         ];
     }
 
@@ -250,6 +287,177 @@ trait TaskTools
         return $this->performMcpTaskAction($uid, $action, $idempotency_key);
     }
 
+    public function mcpKontorTaskRemindersList(string $uid, int $offset = 0): array
+    {
+        [$module, , $access, $organizationUid] = $this->taskContext();
+        $this->requireVisibleMcpTask($module->taskRepository()->find($uid), $access, $organizationUid);
+        $reminders = array_filter(
+            $module->reminderRepository()->forTask($uid),
+            static fn (TaskReminder $reminder): bool => hash_equals($organizationUid, $reminder->organizationId),
+        );
+        $items = array_map(static fn (TaskReminder $reminder): array => [
+            'uid' => $reminder->uid->toString(),
+            'channel' => $reminder->channel,
+            'remindAt' => $reminder->remindAt->format(DateTimeInterface::ATOM),
+            'sentAt' => $reminder->sentAt?->format(DateTimeInterface::ATOM),
+        ], array_slice($reminders, $offset, 51));
+
+        return $this->mcpTaskPage($items, $offset);
+    }
+
+    public function mcpKontorTaskReminderSchedule(
+        string $uid,
+        string $remind_at,
+        int $expected_assignee_id,
+        string $idempotency_key,
+        string $confirmation,
+    ): array {
+        [$module, $actor, $access, $organizationUid] = $this->taskContext();
+        if (!$actor->isSuperuser() && !$actor->hasPermission('kontor-tasks-reminder-manage')) {
+            throw new WirePermissionException('Task reminder management permission is required.');
+        }
+        if ($confirmation !== 'SCHEDULE_REVIEWED_TASK_EMAIL') {
+            throw new WireException('Explicit confirmation is required to schedule task email.');
+        }
+        $remindAt = $this->parseMcpTaskDate($remind_at, false);
+
+        return $this->writeMcpTask(
+            $module,
+            $actor,
+            $access,
+            $organizationUid,
+            $idempotency_key,
+            'schedule_reminder',
+            ['uid' => $uid, 'remindAt' => $remindAt->format(DateTimeInterface::ATOM), 'assignee' => $expected_assignee_id],
+            fn (): array => $module->taskRepository()->changeActiveTask($uid,
+                function (Task $task) use ($module, $actor, $access, $organizationUid, $expected_assignee_id, $remindAt): array {
+                    $this->requireVisibleMcpTask($task, $access, $organizationUid);
+                    if (!$task->isOpen() || $task->assignedTo !== $expected_assignee_id || $remindAt <= new DateTimeImmutable()) {
+                        throw new WireException('Confirm the current assignee and choose a future reminder time for an open task.');
+                    }
+                    $recipient = $this->wire()->users->get($expected_assignee_id);
+                    $email = strtolower(trim((string) $recipient->email));
+                    if ($recipient->isLocked() || !$module->accessFor($recipient)->allows($task)
+                        || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                        throw new WireException('The assigned user needs task access and a valid email address.');
+                    }
+                    $from = strtolower(trim((string) $this->wire()->config->adminEmail));
+                    $result = $module->reminderDispatcher()->scheduleEmail(
+                        organizationUid: $organizationUid,
+                        taskUid: $task->uid->toString(),
+                        taskTitle: $task->title,
+                        remindAt: $remindAt,
+                        recipientUserId: $expected_assignee_id,
+                        recipientEmail: $email,
+                        fromAddress: filter_var($from, FILTER_VALIDATE_EMAIL) === false ? 'notifications@kontor.local' : $from,
+                        createdBy: (int) $actor->id,
+                    );
+
+                    return ['taskUid' => $task->uid->toString(), 'reminderUid' => $result['reminder']->uid->toString()];
+                },
+            ),
+        );
+    }
+
+    public function mcpKontorTaskRelationsList(string $uid, int $offset = 0): array
+    {
+        [$module, $actor, $access, $organizationUid] = $this->taskContext();
+        $this->requireVisibleMcpTask($module->taskRepository()->find($uid), $access, $organizationUid);
+        $items = [];
+        $position = 0;
+        foreach ($module->relations()->relatedEntities($organizationUid, $uid) as $relation) {
+            $customer = $this->visibleMcpTaskCustomer($actor, $organizationUid, $relation['targetType'], $relation['targetUid']);
+            if ($customer === null || $position++ < $offset) {
+                continue;
+            }
+            $items[] = [
+                'uid' => $relation['uid'],
+                'type' => $relation['targetType'],
+                'customerUid' => $relation['targetUid'],
+                'name' => $relation['targetType'] === 'contact' ? $customer->displayName : ($customer->tradingName ?: $customer->legalName),
+            ];
+            if (count($items) > 50) {
+                break;
+            }
+        }
+
+        return $this->mcpTaskPage($items, $offset);
+    }
+
+    public function mcpKontorTaskRelationLink(string $uid, string $customer_type, string $customer_uid, string $idempotency_key): array
+    {
+        [$module, $actor, $access, $organizationUid] = $this->taskContext('edit');
+        $this->requireMcpTaskCustomer($actor, $organizationUid, ['type' => $customer_type, 'uid' => $customer_uid]);
+
+        return $this->writeMcpTask(
+            $module,
+            $actor,
+            $access,
+            $organizationUid,
+            $idempotency_key,
+            'link_customer',
+            ['uid' => $uid, 'type' => $customer_type, 'customerUid' => $customer_uid],
+            fn (): array => $module->taskRepository()->changeActiveTask($uid,
+                function (Task $task) use ($module, $access, $organizationUid, $uid, $customer_type, $customer_uid): array {
+                    $this->requireVisibleMcpTask($task, $access, $organizationUid);
+                    foreach ($module->relations()->relatedEntities($organizationUid, $uid) as $relation) {
+                        if ($relation['sourceType'] === 'task' && $relation['sourceUid'] === $uid
+                            && $relation['targetType'] === $customer_type && $relation['targetUid'] === $customer_uid) {
+                            return ['taskUid' => $uid, 'relationUid' => $relation['uid']];
+                        }
+                    }
+
+                    return ['taskUid' => $uid, 'relationUid' => $module->relations()->linkToEntity($organizationUid, $uid, $customer_type, $customer_uid)];
+                },
+            ),
+        );
+    }
+
+    public function mcpKontorTaskRelationUnlink(string $uid, string $relation_uid, string $idempotency_key, string $confirmation): array
+    {
+        [$module, $actor, $access, $organizationUid] = $this->taskContext('edit');
+        if (!$actor->isSuperuser() && !$actor->hasPermission('kontor-tasks-relation-manage')) {
+            throw new WirePermissionException('Task relation management permission is required.');
+        }
+        if ($confirmation !== 'UNLINK_REVIEWED_TASK_RECORD') {
+            throw new WireException('Explicit confirmation is required to unlink a related record.');
+        }
+
+        return $this->writeMcpTask(
+            $module,
+            $actor,
+            $access,
+            $organizationUid,
+            $idempotency_key,
+            'unlink_customer',
+            ['uid' => $uid, 'relationUid' => $relation_uid],
+            fn (): array => $module->taskRepository()->changeActiveTask($uid,
+                function (Task $task) use ($module, $actor, $access, $organizationUid, $uid, $relation_uid): array {
+                    $this->requireVisibleMcpTask($task, $access, $organizationUid);
+                    foreach ($module->relations()->relatedEntities($organizationUid, $uid) as $relation) {
+                        if ($relation['uid'] !== $relation_uid || $relation['sourceType'] !== 'task' || $relation['sourceUid'] !== $uid) {
+                            continue;
+                        }
+                        $this->requireMcpTaskCustomer($actor, $organizationUid, ['type' => $relation['targetType'], 'uid' => $relation['targetUid']]);
+                        $this->wire()->modules->get('Kontor')->container()->get(RelationRepository::class)->archive($relation_uid);
+
+                        return ['taskUid' => $uid];
+                    }
+
+                    throw new Wire404Exception('Task relation not found.');
+                },
+            ),
+        );
+    }
+
+    private function mcpTaskPage(array $items, int $offset): array
+    {
+        return [
+            'items' => array_slice($items, 0, 50),
+            'nextOffset' => count($items) > 50 && $offset + 50 <= 10000 ? $offset + 50 : null,
+        ];
+    }
+
     private function performMcpTaskAction(string $uid, string $action, string $key): array
     {
         $permission = in_array($action, ['complete', 'cancel'], true) ? $action : 'edit';
@@ -309,15 +517,23 @@ trait TaskTools
             || !$actor->hasPermission('kontor-contacts-' . $type . '-view'))) {
             throw new WirePermissionException('Linking a task requires relation management and CRM record view permissions.');
         }
-        $modules = $this->wire()->modules;
-        if (!$modules->isInstalled('KontorContacts')) {
+        if ($this->visibleMcpTaskCustomer($actor, $organizationUid, $type, $uid) === null) {
             throw new Wire404Exception('Related CRM record not found.');
+        }
+    }
+
+    private function visibleMcpTaskCustomer(User $actor, string $organizationUid, string $type, string $uid): ?object
+    {
+        $modules = $this->wire()->modules;
+        if (!in_array($type, ['contact', 'company'], true)
+            || (!$actor->isSuperuser() && !$actor->hasPermission('kontor-contacts-' . $type . '-view'))
+            || !$modules->isInstalled('KontorContacts')) {
+            return null;
         }
         $contacts = $modules->get('KontorContacts');
         $customer = $type === 'contact' ? $contacts->contactRepository()->find($uid) : $contacts->companyRepository()->find($uid);
-        if ($customer === null || !hash_equals($organizationUid, $customer->organizationId)) {
-            throw new Wire404Exception('Related CRM record not found.');
-        }
+
+        return $customer !== null && hash_equals($organizationUid, $customer->organizationId) ? $customer : null;
     }
 
     private function taskPermission(User $actor, string $permission): bool

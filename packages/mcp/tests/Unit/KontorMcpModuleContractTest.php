@@ -94,7 +94,7 @@ final class KontorMcpModuleContractTest extends TestCase
         $tools = array_column($provider->tools(), null, 'name');
         $docs = file_get_contents(dirname(__DIR__, 2) . '/API.md');
 
-        self::assertCount(7, $tools);
+        self::assertCount(12, $tools);
         foreach ($tools as $tool) {
             self::assertIsCallable($tool['handler']);
             self::assertStringContainsString($tool['name'], $docs);
@@ -102,6 +102,9 @@ final class KontorMcpModuleContractTest extends TestCase
         self::assertFalse($tools['kontor_task_create']['properties']['fields']['additionalProperties']);
         self::assertFalse($tools['kontor_task_create']['properties']['related_customer']['additionalProperties']);
         self::assertTrue($tools['kontor_task_reviewed_action']['destructive']);
+        self::assertContains('expected_assignee_id', $tools['kontor_task_reminder_schedule']['required']);
+        self::assertSame('SCHEDULE_REVIEWED_TASK_EMAIL', $tools['kontor_task_reminder_schedule']['properties']['confirmation']['const']);
+        self::assertTrue($tools['kontor_task_relation_unlink']['destructive']);
         self::assertSame('APPLY_REVIEWED_KONTOR_TASK_ACTION', $tools['kontor_task_reviewed_action']['properties']['confirmation']['const']);
     }
 

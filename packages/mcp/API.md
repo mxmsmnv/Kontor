@@ -34,6 +34,11 @@ When Kontor Tasks is installed, the gateway advertises these additional tools.
 | `kontor_task_update` | `draft` | Patch the supplied fields on a visible, active task. |
 | `kontor_task_action` | `draft` | Start, complete or reopen a visible task. Completion can create the next recurrence. |
 | `kontor_task_reviewed_action` | `draft` | Cancel, archive or restore a visible task. Confirm with `APPLY_REVIEWED_KONTOR_TASK_ACTION`. |
+| `kontor_task_reminders_list` | `read` | Read reminder times and delivery status for a visible task. |
+| `kontor_task_reminder_schedule` | `draft` | Queue a future email reminder for the explicitly reviewed assignee. Confirm with `SCHEDULE_REVIEWED_TASK_EMAIL`. |
+| `kontor_task_relations_list` | `read` | List linked CRM records the actor can view. |
+| `kontor_task_relation_link` | `draft` | Add an authorized contact or company link to an active task. |
+| `kontor_task_relation_unlink` | `draft` | Archive an authorized customer link on an active task. Confirm with `UNLINK_REVIEWED_TASK_RECORD`. |
 
 Task access always uses the linked user's Workspace permissions and assignee, department and organization scope. The task's default audience is the linked user. Assigning another person or changing audience requires the Workspace assignment permission. Linking a task to a customer requires relation management permission and permission to view the target contact or company.
 
@@ -46,3 +51,8 @@ Writes take a per-user `idempotency_key` and return the task UID while it remain
 `kontor_files_list` searches file names, and `kontor_file_get` reads metadata by UID. Both enforce the linked user's file and record permissions. List results can contain an empty page after record filtering. Follow `next_offset` until null.
 
 `kontor_file_download` returns base64 bytes for active files up to 512 KiB and additionally requires file download permission. The metadata tools omit private storage paths and signed URLs.
+
+
+Reminder scheduling requires the task reminder management permission. Review the task UID, current assignee and future reminder timestamp before submitting. The request must supply that assignee's ID as `expected_assignee_id`. The server reads the recipient address from the assigned user's account and queues the message through the same notification service as Workspace. The tool response contains the reminder UID.
+
+Managing links on existing tasks requires task edit and relation management permissions plus permission to view the target contact or company. Link and reminder lists return up to 50 items with `nextOffset` when more items exist.
