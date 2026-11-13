@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\MCP\Application;
 
+use Kontor\Core\Application\AuditLogger;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use ProcessWire\User;
 use ProcessWire\Wire404Exception;
@@ -19,6 +20,20 @@ trait FileTools
         }
 
         return [
+            $this->tool(
+                'kontor_file_archive_action',
+                'Archive or restore a Kontor file',
+                'Archive or restore a reviewed file in private storage after user confirmation.',
+                $this->mcpFileArchiveAction(...),
+                'draft',
+                [
+                    'uid' => $this->uidSchema(),
+                    'action' => ['type' => 'string', 'enum' => ['archive', 'restore']],
+                    'confirmation' => ['type' => 'string', 'const' => 'APPLY_REVIEWED_KONTOR_FILE_ACTION'],
+                ],
+                ['uid', 'action', 'confirmation'],
+                destructive: true,
+            ),
             $this->tool(
                 'kontor_files_list',
                 'List Kontor files',
@@ -114,6 +129,32 @@ trait FileTools
         });
     }
 
+    public function mcpFileArchiveAction(string $uid, string $action, string $confirmation): array
+    {
+        if ($confirmation !== 'APPLY_REVIEWED_KONTOR_FILE_ACTION' || !in_array($action, ['archive', 'restore'], true)) {
+            throw new WireException('Confirm the reviewed file action.');
+        }
+        [$file, $organizationUid, $actor] = $this->mcpReadableFile($uid, 'kontor-files-file-delete');
+        if (($file['archived_at'] !== null) === ($action === 'archive')) {
+            return ['uid' => $uid, 'archived' => $action === 'archive'];
+        }
+        return $this->safe(function () use ($uid, $action, $organizationUid, $actor, $file): array {
+            $modules = $this->wire()->modules;
+            $manager = $modules->get('KontorFiles')->fileManager();
+            if ($action === 'archive') {
+                $manager->archive($uid, $organizationUid);
+            } else {
+                $manager->restore($uid, $organizationUid);
+            }
+            $modules->get('Kontor')->container()->get(AuditLogger::class)->record(
+                (int) $file['organization_id'], 'files', 'file', $uid, $action . 'd', 'user', (string) $actor->id,
+                metadata: ['transport' => 'mcp'],
+            );
+
+            return ['uid' => $uid, 'archived' => $action === 'archive'];
+        });
+    }
+
     private function mcpReadableFile(string $uid, string $permission): array
     {
         $actor = $this->mcpActor();
@@ -131,7 +172,7 @@ trait FileTools
             throw new Wire404Exception('File not found.');
         }
 
-        return [$file, $organization->uid->toString()];
+        return [$file, $organization->uid->toString(), $actor];
     }
 
     private function filePermission(User $actor, string $permission): bool
