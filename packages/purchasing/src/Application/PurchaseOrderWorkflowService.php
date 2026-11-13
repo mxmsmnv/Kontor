@@ -27,15 +27,17 @@ final class PurchaseOrderWorkflowService
     ) {
     }
 
-    public function issue(string $purchaseOrderUid): PurchaseOrder
+    public function issue(string $purchaseOrderUid, ?string $organizationUid = null): PurchaseOrder
     {
-        $order = $this->orders->require($purchaseOrderUid);
+        $order = $organizationUid === null
+            ? $this->orders->require($purchaseOrderUid)
+            : $this->orders->requireForUpdate($purchaseOrderUid, $organizationUid);
 
         if (!$order->isDraft()) {
             throw new RuntimeException("Purchase order \"{$purchaseOrderUid}\" is not a draft and cannot be issued.");
         }
 
-        $order->applyTotalsFromLines($this->lines->forDocument('purchase_order', $purchaseOrderUid));
+        $order->applyTotalsFromLines($this->lines->forDocument('purchase_order', $purchaseOrderUid, $order->organizationId));
         $order->number = $this->sequences->next(
             $order->organizationId, 'purchasing', 'purchase_order', prefix: 'PO-', padding: 5, resetPolicy: 'yearly'
         );
@@ -48,9 +50,11 @@ final class PurchaseOrderWorkflowService
         return $order;
     }
 
-    public function cancel(string $purchaseOrderUid): PurchaseOrder
+    public function cancel(string $purchaseOrderUid, ?string $organizationUid = null): PurchaseOrder
     {
-        $order = $this->orders->require($purchaseOrderUid);
+        $order = $organizationUid === null
+            ? $this->orders->require($purchaseOrderUid)
+            : $this->orders->requireForUpdate($purchaseOrderUid, $organizationUid);
 
         if (!$order->isCancellable()) {
             throw new RuntimeException("Purchase order \"{$purchaseOrderUid}\" cannot be cancelled from status \"{$order->status}\".");

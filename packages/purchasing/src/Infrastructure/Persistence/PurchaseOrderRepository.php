@@ -38,6 +38,12 @@ final class PurchaseOrderRepository implements RepositoryInterface
 
     public function requireForUpdate(string $uid, string $organizationUid): PurchaseOrder
     {
+        return $this->findForUpdate($uid, $organizationUid)
+            ?? throw new RuntimeException("Purchase order \"{$uid}\" was not found.");
+    }
+
+    public function findForUpdate(string $uid, string $organizationUid): ?PurchaseOrder
+    {
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_purchasing_orders
              WHERE uid = :uid AND organization_id = :organization_id AND archived_at IS NULL'
@@ -50,9 +56,7 @@ final class PurchaseOrderRepository implements RepositoryInterface
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
         $statement->closeCursor();
 
-        return $row === false
-            ? throw new RuntimeException("Purchase order \"{$uid}\" was not found.")
-            : $this->hydrate($row);
+        return $row === false ? null : $this->hydrate($row);
     }
 
     public function save(object $entity): void

@@ -58,7 +58,7 @@ final class GoodsReceiptService
             }
 
             $orderLines = [];
-            foreach ($this->lines->forDocument('purchase_order', $purchaseOrderUid) as $orderLine) {
+            foreach ($this->lines->forDocument('purchase_order', $purchaseOrderUid, $organizationUid) as $orderLine) {
                 $orderLines[$orderLine->uid->toString()] = $orderLine;
             }
 

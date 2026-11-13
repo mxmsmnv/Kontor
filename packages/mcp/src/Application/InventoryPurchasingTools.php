@@ -32,6 +32,8 @@ trait InventoryPurchasingTools
         $uid = $this->uidSchema();
         $limit = ['type' => 'integer', 'minimum' => 1, 'maximum' => 50];
         $offset = ['type' => 'integer', 'minimum' => 0, 'maximum' => 10000];
+        $key = $this->idempotencySchema();
+        $quantity = ['type' => 'number', 'minimum' => 0.000001, 'maximum' => 1000000];
 
         if ($modules->isInstalled('KontorInventory')) {
             $tools = [
@@ -45,6 +47,20 @@ trait InventoryPurchasingTools
                     'List recent recorded stock movements.',
                     $this->mcpInventoryMovementsList(...), 'read', ['limit' => $limit]),
             ];
+            if ($modules->isInstalled('KontorCatalog')) {
+                $tools[] = $this->tool('kontor_inventory_movement_record', 'Record a reviewed stock movement',
+                    'Apply a stock movement after user review. Inventory units come from the catalog item.',
+                    $this->mcpInventoryMovementRecord(...), 'draft', [
+                        'action' => ['type' => 'string', 'enum' => ['receive', 'transfer', 'adjust_increase', 'adjust_decrease', 'reserve', 'release']],
+                        'warehouse_uid' => $uid,
+                        'item_uid' => $uid,
+                        'quantity' => $quantity,
+                        'idempotency_key' => $key,
+                        'confirmation' => ['type' => 'string', 'const' => 'APPLY_INVENTORY_MOVEMENT'],
+                        'destination_warehouse_uid' => $uid,
+                        'reason' => ['type' => 'string', 'maxLength' => 255],
+                    ], ['action', 'warehouse_uid', 'item_uid', 'quantity', 'idempotency_key', 'confirmation'], destructive: true);
+            }
         }
 
         if (!$modules->isInstalled('KontorPurchasing')) {
@@ -62,6 +78,31 @@ trait InventoryPurchasingTools
                 'Read a purchase order and the first 50 document lines.',
                 $this->mcpPurchaseOrderGet(...), 'read', ['uid' => $uid], ['uid']),
         );
+
+        $tools[] = $this->tool('kontor_purchase_order_action', 'Issue or cancel a reviewed purchase order',
+            'Apply the reviewed issue or cancel action to a purchase order. Issuing assigns an order number.',
+            $this->mcpPurchaseOrderAction(...), 'draft', [
+                'uid' => $uid,
+                'action' => ['type' => 'string', 'enum' => ['issue', 'cancel']],
+                'idempotency_key' => $key,
+                'confirmation' => ['type' => 'string', 'const' => 'APPLY_PURCHASE_ORDER_ACTION'],
+            ], ['uid', 'action', 'idempotency_key', 'confirmation'], destructive: true);
+        if ($modules->isInstalled('KontorInventory')) {
+            $tools[] = $this->tool('kontor_purchase_order_receive', 'Record a reviewed goods receipt',
+                'Record received quantities against purchase-order line UIDs and add the received stock to an active warehouse.',
+                $this->mcpPurchaseOrderReceive(...), 'draft', [
+                    'uid' => $uid,
+                    'warehouse_uid' => $uid,
+                    'lines' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 25, 'items' => [
+                        'type' => 'object',
+                        'additionalProperties' => false,
+                        'required' => ['line_uid', 'quantity'],
+                        'properties' => ['line_uid' => $uid, 'quantity' => $quantity],
+                    ]],
+                    'idempotency_key' => $key,
+                    'confirmation' => ['type' => 'string', 'const' => 'RECORD_PURCHASE_RECEIPT'],
+                ], ['uid', 'warehouse_uid', 'lines', 'idempotency_key', 'confirmation'], destructive: true);
+        }
 
         if ($modules->isInstalled('KontorInventory') && $modules->isInstalled('KontorCatalog')) {
             $tools[] = $this->tool('kontor_purchase_order_create_draft', 'Create a draft purchase order',
@@ -159,7 +200,7 @@ trait InventoryPurchasingTools
         $lines = $module->documentLineRepository()->forDocument('purchase_order', $uid, $organizationUid, 51);
         return $this->purchaseOrderSummary($order, $actor) + [
             'lines' => array_map(static fn (DocumentLine $line): array => [
-                'itemUid' => $line->itemUid, 'title' => $line->title, 'quantity' => $line->quantity,
+                'uid' => $line->uid->toString(), 'itemUid' => $line->itemUid, 'title' => $line->title, 'quantity' => $line->quantity,
                 'unitCode' => $line->unitCode, 'unitPriceMinor' => $line->unitPrice->amountMinor(),
             ], array_slice($lines, 0, 50)),
             'moreLines' => count($lines) > 50,
@@ -239,6 +280,212 @@ trait InventoryPurchasingTools
                 $pdo->commit();
             }
             return $receipt->body;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if ($error instanceof WireException) {
+                throw $error;
+            }
+            return $this->safe(static fn () => throw $error);
+        }
+    }
+
+    public function mcpPurchaseOrderAction(string $uid, string $action, string $idempotency_key, string $confirmation): array
+    {
+        if ($confirmation !== 'APPLY_PURCHASE_ORDER_ACTION' || !in_array($action, ['issue', 'cancel'], true)) {
+            throw new WireException('Confirm the purchase order issue or cancel action.');
+        }
+        $actor = $this->requireInventoryPurchasingActor('kontor-purchasing-po-' . $action);
+        $this->validateInventoryPurchasingUid($uid);
+        $purchasing = $this->inventoryPurchasingModule('KontorPurchasing');
+        return $this->writeReviewedStockOperation(
+            $actor, 'purchasing', $idempotency_key, [$uid, $action],
+            static function (string $organizationUid) use ($purchasing, $uid, $action): array {
+                $order = $purchasing->purchaseOrderRepository()->findForUpdate($uid, $organizationUid);
+                if ($order === null) {
+                    throw new Wire404Exception('Purchase order was not found.');
+                }
+                if ($action === 'issue' && !$order->isDraft() || $action === 'cancel' && !$order->isCancellable()) {
+                    throw new WireException('Purchase order status does not allow this action.');
+                }
+                $workflow = $purchasing->purchaseOrderWorkflow();
+                $updated = $action === 'issue' ? $workflow->issue($uid, $organizationUid) : $workflow->cancel($uid, $organizationUid);
+                return [
+                    'purchase_order', $uid, $action === 'issue' ? 'issued' : 'cancelled',
+                    ['uid' => $uid, 'number' => $updated->number, 'status' => $updated->status],
+                ];
+            },
+        );
+    }
+
+    public function mcpPurchaseOrderReceive(
+        string $uid,
+        string $warehouse_uid,
+        array $lines,
+        string $idempotency_key,
+        string $confirmation,
+    ): array {
+        $actor = $this->requireInventoryPurchasingActor('kontor-purchasing-receipt-create');
+        if ($confirmation !== 'RECORD_PURCHASE_RECEIPT') {
+            throw new WireException('Confirm the goods receipt and stock change.');
+        }
+        $this->validateInventoryPurchasingUid($uid);
+        $this->validateInventoryPurchasingUid($warehouse_uid);
+        if (!array_is_list($lines) || $lines === [] || count($lines) > 25) {
+            throw new WireException('Provide 1 to 25 purchase-order receipt lines.');
+        }
+        $requested = [];
+        foreach ($lines as $line) {
+            if (!is_array($line) || count($line) !== 2 || !isset($line['line_uid'], $line['quantity']) || !is_string($line['line_uid'])) {
+                throw new WireException('Each receipt line requires a line UID and quantity.');
+            }
+            $lineUid = $line['line_uid'];
+            $this->validateInventoryPurchasingUid($lineUid);
+            if (isset($requested[$lineUid])) {
+                throw new WireException('Supply each purchase-order line once.');
+            }
+            $requested[$lineUid] = ['poLineUid' => $lineUid, 'quantity' => $this->validatedStockQuantity($line['quantity'])];
+        }
+        ksort($requested);
+        $requested = array_values($requested);
+
+        $purchasing = $this->inventoryPurchasingModule('KontorPurchasing');
+        $inventory = $this->inventoryPurchasingModule('KontorInventory');
+        return $this->writeReviewedStockOperation(
+            $actor, 'purchasing', $idempotency_key, [$uid, 'receive', $warehouse_uid, $requested],
+            function (string $organizationUid) use ($actor, $purchasing, $inventory, $uid, $warehouse_uid, $requested): array {
+                $this->requireReviewedWarehouse($inventory, $organizationUid, $warehouse_uid);
+                $order = $purchasing->purchaseOrderRepository()->findForUpdate($uid, $organizationUid);
+                if ($order === null) {
+                    throw new Wire404Exception('Purchase order was not found.');
+                }
+                if (!$order->isReceivable()) {
+                    throw new WireException('Purchase order status does not allow receiving goods.');
+                }
+                $receipt = $purchasing->goodsReceipt()->receive($organizationUid, $uid, $warehouse_uid, $requested, (int) $actor->id);
+                $receiptUid = $receipt->uid->toString();
+                return ['goods_receipt', $receiptUid, 'received', ['uid' => $receiptUid, 'purchaseOrderUid' => $uid]];
+            },
+        );
+    }
+
+    public function mcpInventoryMovementRecord(
+        string $action,
+        string $warehouse_uid,
+        string $item_uid,
+        float $quantity,
+        string $idempotency_key,
+        string $confirmation,
+        ?string $destination_warehouse_uid = null,
+        ?string $reason = null,
+    ): array {
+        $permission = match ($action) {
+            'receive', 'transfer', 'reserve', 'release' => $action,
+            'adjust_increase', 'adjust_decrease' => 'adjust',
+            default => throw new WireException('Unknown stock movement.'),
+        };
+        $actor = $this->requireInventoryPurchasingActor('kontor-inventory-' . $permission);
+        if ($confirmation !== 'APPLY_INVENTORY_MOVEMENT') {
+            throw new WireException('Confirm the stock movement.');
+        }
+        $this->validateInventoryPurchasingUid($warehouse_uid);
+        $this->validateInventoryPurchasingUid($item_uid);
+        $quantity = $this->validatedStockQuantity($quantity);
+        if (($action === 'transfer') !== ($destination_warehouse_uid !== null)) {
+            throw new WireException('Provide a destination warehouse only for transfers.');
+        }
+        if ($destination_warehouse_uid !== null) {
+            $this->validateInventoryPurchasingUid($destination_warehouse_uid);
+            if ($destination_warehouse_uid === $warehouse_uid) {
+                throw new WireException('Transfer to a different warehouse.');
+            }
+        }
+        $reason = $reason === null ? null : trim(strip_tags($reason));
+        if (($reason !== null && mb_strlen($reason) > 255) || ($permission === 'adjust' && ($reason === null || $reason === ''))) {
+            throw new WireException('Stock adjustments need a reason of up to 255 characters.');
+        }
+        $inventory = $this->inventoryPurchasingModule('KontorInventory');
+        $catalog = $this->inventoryPurchasingModule('KontorCatalog');
+        return $this->writeReviewedStockOperation(
+            $actor, 'inventory', $idempotency_key,
+            [$action, $warehouse_uid, $item_uid, $quantity, $destination_warehouse_uid, $reason],
+            function (string $organizationUid) use ($inventory, $catalog, $actor, $action, $warehouse_uid, $item_uid, $quantity, $destination_warehouse_uid, $reason): array {
+                $this->requireReviewedWarehouse($inventory, $organizationUid, $warehouse_uid);
+                if ($destination_warehouse_uid !== null) {
+                    $this->requireReviewedWarehouse($inventory, $organizationUid, $destination_warehouse_uid);
+                }
+                $item = $catalog->itemRepository()->findActiveStockItem($organizationUid, $item_uid);
+                if ($item === null) {
+                    throw new Wire404Exception('Active inventory item was not found.');
+                }
+                $service = $inventory->movements();
+                $args = [$organizationUid, $warehouse_uid, $item_uid, $quantity];
+                $unit = $item->unitCode;
+                $actorId = (int) $actor->id;
+                $movement = match ($action) {
+                    'receive' => $service->receive(...$args, unitCode: $unit, reason: $reason, createdBy: $actorId),
+                    'transfer' => $service->transfer($organizationUid, $warehouse_uid, $destination_warehouse_uid, $item_uid, $quantity,
+                        unitCode: $unit, reason: $reason, createdBy: $actorId),
+                    'adjust_increase' => $service->adjustIncrease(...$args, reason: $reason, unitCode: $unit, createdBy: $actorId),
+                    'adjust_decrease' => $service->adjustDecrease(...$args, reason: $reason, unitCode: $unit,
+                        allowNegative: $actor->isSuperuser() || $actor->hasPermission('kontor-inventory-negative-stock-override'), createdBy: $actorId),
+                    'reserve' => $service->reserve(...$args, unitCode: $unit, createdBy: $actorId),
+                    'release' => $service->release(...$args, unitCode: $unit, createdBy: $actorId),
+                };
+                $uid = $movement->uid->toString();
+                return ['movement', $uid, $action, ['uid' => $uid, 'action' => $action]];
+            },
+        );
+    }
+
+    private function validatedStockQuantity(mixed $quantity): float
+    {
+        if ((!is_int($quantity) && !is_float($quantity)) || !is_finite($quantity)
+            || $quantity < 0.000001 || $quantity > 1000000 || round($quantity, 6) !== (float) $quantity) {
+            throw new WireException('Use a positive quantity with at most six decimal places.');
+        }
+        return (float) $quantity;
+    }
+
+    private function requireReviewedWarehouse(object $inventory, string $organizationUid, string $uid): void
+    {
+        $warehouse = $inventory->warehouseRepository()->find($uid);
+        if ($warehouse === null || !$warehouse->isActive() || !hash_equals($organizationUid, $warehouse->organizationId)) {
+            throw new Wire404Exception('Active warehouse was not found.');
+        }
+    }
+
+    private function writeReviewedStockOperation(User $actor, string $component, string $key, array $arguments, callable $operation): array
+    {
+        if (preg_match('/^[A-Za-z0-9._:-]{8,160}$/D', $key) !== 1) {
+            throw new WireException('Use an idempotency key of 8 to 160 safe characters.');
+        }
+        $modules = $this->wire()->modules;
+        $container = $modules->get('Kontor')->container();
+        $organizationUid = $this->inventoryPurchasingOrganization()->uid->toString();
+        $idempotency = new IdempotencyService($modules->get('KontorAPI')->idempotencyKeyRepository());
+        $pdo = $container->get(PDO::class);
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($pdo);
+        try {
+            $response = $idempotency->remember(
+                $organizationUid,
+                'mcp:reviewed:' . $component . ':' . $actor->id . ':' . hash('sha256', $key),
+                $arguments,
+                static function () use ($operation, $organizationUid, $container, $component, $actor): array {
+                    [$entity, $uid, $action, $result] = $operation($organizationUid);
+                    $container->get(AuditLogger::class)->record(
+                        $container->get(OrganizationRepository::class)->internalIdOf($organizationUid),
+                        $component, $entity, $uid, $action, 'user', (string) $actor->id,
+                        metadata: ['transport' => 'mcp'],
+                    );
+                    return ['status' => 200, 'body' => $result];
+                },
+            );
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+            return $response->body;
         } catch (\Throwable $error) {
             if ($ownsTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();
