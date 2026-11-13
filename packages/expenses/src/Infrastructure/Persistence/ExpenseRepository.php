@@ -31,10 +31,11 @@ final class ExpenseRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
-    public function findActive(string $organizationUid, string $uid): ?Expense
+    public function findActive(string $organizationUid, string $uid, bool $forUpdate = false): ?Expense
     {
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_expenses WHERE organization_id = :organization_id AND uid = :uid AND archived_at IS NULL'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : '')
         );
         $statement->execute(['organization_id' => $this->organizations->internalIdOf($organizationUid), 'uid' => $uid]);
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

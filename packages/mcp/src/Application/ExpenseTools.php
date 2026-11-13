@@ -53,6 +53,15 @@ trait ExpenseTools
                     'receipt_file_uid' => $uid,
                     'idempotency_key' => $this->idempotencySchema(),
                 ], ['category_uid', 'description', 'amount_minor', 'currency', 'expense_date', 'idempotency_key']),
+            $this->tool('kontor_expense_reviewed_action', 'Submit, approve or reject an expense',
+                'Apply the reviewed Workspace transition. Review the record and exact action with the user first.',
+                $this->mcpKontorExpenseReviewedAction(...), 'draft', [
+                    'uid' => $uid,
+                    'action' => ['type' => 'string', 'enum' => ['submit', 'approve', 'reject']],
+                    'reason' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 500],
+                    'confirmation' => ['type' => 'string', 'const' => 'APPLY_REVIEWED_EXPENSE_ACTION'],
+                    'idempotency_key' => $this->idempotencySchema(),
+                ], ['uid', 'action', 'confirmation', 'idempotency_key']),
         ];
     }
 
@@ -150,6 +159,85 @@ trait ExpenseTools
             if ($module->expenseRepository()->findActive($organization, $result->body['uid']) === null) {
                 throw new Wire404Exception('Expense not found.');
             }
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+
+            return $result->body;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if ($error instanceof WireException) {
+                throw $error;
+            }
+
+            return $this->safe(static fn () => throw $error);
+        }
+    }
+
+    public function mcpKontorExpenseReviewedAction(
+        string $uid,
+        string $action,
+        string $confirmation,
+        string $idempotency_key,
+        ?string $reason = null,
+    ): array {
+        if ($confirmation !== 'APPLY_REVIEWED_EXPENSE_ACTION' || !in_array($action, ['submit', 'approve', 'reject'], true)
+            || preg_match('/^[A-Za-z0-9._:-]{8,160}$/D', $idempotency_key) !== 1) {
+            throw new WireException('Provide a supported reviewed expense action, confirmation and idempotency key.');
+        }
+        [$module, $actor, $organization] = $this->mcpExpenseContext('expense-view');
+        $permission = $action === 'submit' ? 'kontor-expenses-expense-submit' : 'kontor-expenses-expense-approve';
+        if (!$this->mcpExpensePermission($actor, $permission)) {
+            throw new WirePermissionException('The linked user lacks permission for this expense action.');
+        }
+        $reason = trim($this->wire()->sanitizer->text($reason ?? '', ['maxLength' => 500]));
+        if (($action === 'reject' && $reason === '') || ($action !== 'reject' && $reason !== '')) {
+            throw new WireException('Supply a rejection reason only when rejecting an expense.');
+        }
+
+        $modules = $this->wire()->modules;
+        $container = $modules->get('Kontor')->container();
+        $idempotency = new IdempotencyService($modules->get('KontorAPI')->idempotencyKeyRepository());
+        $pdo = $container->get(PDO::class);
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($pdo);
+        try {
+            $expense = $module->expenseRepository()->findActive($organization, $uid, forUpdate: true);
+            if ($expense === null) {
+                throw new Wire404Exception('Expense not found.');
+            }
+            $result = $idempotency->remember(
+                $organization,
+                'mcp:expense-action:' . $actor->id . ':' . hash('sha256', $idempotency_key),
+                [$uid, $action, $reason],
+                function () use ($module, $actor, $organization, $container, $uid, $action, $reason, $expense): array {
+                    $expected = $action === 'submit' ? 'draft' : 'submitted';
+                    if ($expense->status !== $expected) {
+                        throw new WireException('This expense action requires status ' . $expected . '.');
+                    }
+                    $actorId = (int) $actor->id;
+                    $coordinator = $module->workflowCoordinator();
+                    if ($coordinator !== null) {
+                        $expense = $coordinator->perform($uid, $action, $actorId, $reason);
+                    } else {
+                        $workflow = $module->workflow();
+                        $expense = match ($action) {
+                            'submit' => $workflow->submit($uid, $actorId),
+                            'approve' => $workflow->approve($uid, $actorId),
+                            'reject' => $workflow->reject($uid, $actorId, $reason),
+                        };
+                    }
+                    $container->get(AuditLogger::class)->record(
+                        $container->get(OrganizationRepository::class)->internalIdOf($organization),
+                        'expenses', 'expense', $uid, $action, 'user', (string) $actor->id,
+                        current: ['status' => $expense->status, 'rejectionReason' => $expense->rejectionReason],
+                        metadata: ['transport' => 'mcp'],
+                    );
+
+                    return ['status' => 200, 'body' => ['uid' => $uid, 'status' => $expense->status]];
+                },
+            );
             if ($ownsTransaction) {
                 $pdo->commit();
             }
