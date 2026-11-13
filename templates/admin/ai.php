@@ -94,10 +94,7 @@ $displayOutput = static function (mixed $output) use ($e): string {
             <div class="uk-text-meta uk-margin-small-top">Enter one detail per line as “Name: type”. Available types: text, number, date and yes/no.</div>
           </div>
 
-          <div class="uk-margin uk-padding-small uk-background-muted">
-            <label><input class="uk-checkbox" type="checkbox" name="simulate" value="1" checked> Use private local preview</label>
-            <div class="uk-text-meta uk-margin-small-top">Runs entirely on this installation without sending the source information to an external provider.</div>
-          </div>
+          <p class="uk-text-meta">Running a task sends its input to the AI provider configured in Squad.</p>
 
           <div class="uk-flex uk-flex-wrap uk-flex-middle uk-grid-small" uk-grid>
             <div><button class="uk-button uk-button-primary" type="submit"><i class="fa fa-magic"></i> Run task</button></div>
@@ -114,8 +111,8 @@ $displayOutput = static function (mixed $output) use ($e): string {
         <span class="uk-label<?= $providers !== [] ? ' uk-label-success' : ' uk-label-warning' ?>"><?= $providers !== [] ? 'Ready' : 'Local preview only' ?></span>
         <p class="uk-text-muted uk-margin-small-top uk-margin-remove-bottom">
           <?= $providers !== []
-              ? 'A production provider is connected. You can still choose the private local preview for testing.'
-              : 'No external provider is connected. Private local preview remains available for safe testing.' ?>
+              ? 'Tasks use the AI provider configured in Squad.'
+              : 'Configure an AI provider in Squad to run tasks.' ?>
         </p>
       </section>
 
