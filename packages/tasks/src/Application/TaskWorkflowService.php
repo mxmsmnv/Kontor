@@ -20,9 +20,12 @@ final class TaskWorkflowService
     {
     }
 
-    public function start(string $taskUid): Task
+    public function start(string $taskUid, ?callable $authorize = null): Task
     {
-        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): Task {
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid, $authorize): Task {
+            if ($authorize !== null) {
+                $authorize($task);
+            }
             if (!$task->isOpen()) {
                 throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be started.");
             }
@@ -37,9 +40,12 @@ final class TaskWorkflowService
     /**
      * @return array{completed: Task, next: ?Task}
      */
-    public function complete(string $taskUid): array
+    public function complete(string $taskUid, ?callable $authorize = null): array
     {
-        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): array {
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid, $authorize): array {
+            if ($authorize !== null) {
+                $authorize($task);
+            }
             if (!$task->isOpen()) {
                 throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be completed.");
             }
@@ -61,6 +67,8 @@ final class TaskWorkflowService
                     dueAt: $nextDueAt,
                     recurrenceRule: $task->recurrenceRule,
                     recurrenceUntil: $task->recurrenceUntil,
+                    visibility: $task->visibility,
+                    departmentRoleId: $task->departmentRoleId,
                 );
                 $this->tasks->save($next);
             }
@@ -70,9 +78,12 @@ final class TaskWorkflowService
         });
     }
 
-    public function cancel(string $taskUid): Task
+    public function cancel(string $taskUid, ?callable $authorize = null): Task
     {
-        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): Task {
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid, $authorize): Task {
+            if ($authorize !== null) {
+                $authorize($task);
+            }
             if (!$task->isOpen()) {
                 throw new RuntimeException("Task \"{$taskUid}\" is not open and cannot be cancelled.");
             }
@@ -84,9 +95,12 @@ final class TaskWorkflowService
         });
     }
 
-    public function reopen(string $taskUid): Task
+    public function reopen(string $taskUid, ?callable $authorize = null): Task
     {
-        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid): Task {
+        return $this->tasks->changeActiveTask($taskUid, function (Task $task) use ($taskUid, $authorize): Task {
+            if ($authorize !== null) {
+                $authorize($task);
+            }
             if (!in_array($task->status, ['done', 'cancelled'], true)) {
                 throw new RuntimeException("Task \"{$taskUid}\" is not closed and cannot be reopened.");
             }

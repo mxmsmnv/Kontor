@@ -80,6 +80,40 @@ active queue. A recurring task keeps any next occurrence it already generated.
 An assigned task can also schedule email reminders and shows their scheduled
 and sent states.
 
+## Task access
+
+Give staff `kontor-access` and `kontor-tasks-task-view` to open Tasks. Grant
+create, edit, complete and other task permissions according to their duties.
+If the site uses Workspace, also grant `workspace-use`.
+
+Create one ProcessWire role per department, for example `media` or
+`production`, and grant it `kontor-tasks-department`. Assign the department
+role to each member alongside their usual staff role. A user can have more
+than one department role. Task permissions and department membership serve
+different purposes. Membership determines which department tasks appear,
+while task permissions determine what a member can do with them.
+
+New tasks created from the admin form default to **Assignee only**, assigned
+to the creator. Users with `kontor-tasks-task-assign` can choose another
+assignee or share with a department they belong to. If a department task has
+an assignee, that person must belong to the department or have permission
+to see all tasks. Existing tasks remain shared with everyone who can view
+tasks until an authorized user changes their visibility.
+
+For a manager who should see every task in the organization, grant both
+`kontor-tasks-task-view` and `kontor-tasks-task-view-all`. The manager can
+view assignee-only and department tasks with those permissions. Grant edit
+or assign separately if needed. A manager who can assign may share a task
+with any department or everyone with task access. The ProcessWire superuser
+can see all tasks in the organization.
+
+Task access also applies to linked CRM records, the Collaboration feed, and
+related mail and files. A signed link to a task attachment still requires
+signing in with permission to view that task. Customer Portal links do not
+serve task attachments. Comment email asks the recipient to sign in to read
+the comment. Task activity in the audit log requires permission to see all
+tasks in addition to the audit permission.
+
 ## Not in scope for this substage
 
 No API endpoints or calendar rendering. Task assignment (`assigned_to`) stores

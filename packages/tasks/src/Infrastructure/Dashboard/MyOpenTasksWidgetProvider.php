@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace Kontor\Tasks\Infrastructure\Dashboard;
 
 use Kontor\Dashboard\Contracts\WidgetProviderInterface;
+use Kontor\Tasks\Application\TaskAccessScope;
 use Kontor\Tasks\Domain\Task;
 use Kontor\Tasks\Infrastructure\Persistence\TaskRepository;
 
 final class MyOpenTasksWidgetProvider implements WidgetProviderInterface
 {
-    public function __construct(private readonly TaskRepository $tasks)
-    {
+    /** @param null|\Closure(int): TaskAccessScope $accessFor */
+    public function __construct(
+        private readonly TaskRepository $tasks,
+        private readonly ?\Closure $accessFor = null,
+    ) {
     }
 
     public function key(): string
@@ -30,7 +34,8 @@ final class MyOpenTasksWidgetProvider implements WidgetProviderInterface
             return ['count' => 0, 'overdueCount' => 0, 'tasks' => []];
         }
 
-        $tasks = $this->tasks->openForAssignee($organizationUid, $userId);
+        $access = $this->accessFor === null ? null : ($this->accessFor)($userId);
+        $tasks = $this->tasks->openForAssignee($organizationUid, $userId, access: $access);
 
         return [
             'count' => count($tasks),

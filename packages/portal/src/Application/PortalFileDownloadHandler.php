@@ -30,6 +30,7 @@ final class PortalFileDownloadHandler
     public function __construct(
         private readonly SignedUrlSigner $signer,
         private readonly StorageInterface $storage,
+        private readonly ?\Closure $isTaskAttachment = null,
     ) {
     }
 
@@ -39,7 +40,8 @@ final class PortalFileDownloadHandler
             return PortalDownloadResult::forbidden();
         }
 
-        if (!$this->storage->exists($path)) {
+        if (($this->isTaskAttachment !== null && ($this->isTaskAttachment)($path))
+            || !$this->storage->exists($path)) {
             return PortalDownloadResult::notFound();
         }
 

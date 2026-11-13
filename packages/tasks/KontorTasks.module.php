@@ -7,6 +7,7 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Persistence\RelationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Core\Infrastructure\Registry\TranslationRegistry;
+use Kontor\Tasks\Application\TaskAccessScope;
 use Kontor\Tasks\Application\TaskReminderService;
 use Kontor\Tasks\Application\TaskReminderDispatcher;
 use Kontor\Tasks\Application\TaskRelationService;
@@ -20,6 +21,7 @@ use Kontor\Tasks\Infrastructure\Queue\TaskReminderDeliveryJob;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
 use Kontor\Tasks\Migrations\Migration0003TrackTaskRecurrence;
+use Kontor\Tasks\Migrations\Migration0004AddTaskVisibility;
 
 /**
  * KontorTasks bootstrap module (kontor.md Substage 5.1). First business
@@ -29,12 +31,15 @@ use Kontor\Tasks\Migrations\Migration0003TrackTaskRecurrence;
  */
 class KontorTasks extends WireData implements Module
 {
+    private const VIEW_ALL = 'kontor-tasks-task-view-all';
+    private const DEPARTMENT = 'kontor-tasks-department';
+
     public static function getModuleInfo(): array
     {
         return [
             'title' => 'Kontor Tasks',
             'summary' => 'Tasks, reminders, recurrence, calendar, entity relations.',
-            'version' => '101',
+            'version' => '102',
             'author' => 'Maxim Semenov',
             'href' => 'https://github.com/mxmsmnv/KontorTasks',
             'icon' => 'check-square-o',
@@ -42,7 +47,9 @@ class KontorTasks extends WireData implements Module
             'autoload' => true,
             'requires' => ['Kontor', 'KontorQueue', 'KontorMail', 'KontorAutomation'],
             'permissions' => [
-                'kontor-tasks-task-view' => 'View tasks',
+                'kontor-tasks-task-view' => 'View tasks within your access scope',
+                self::VIEW_ALL => 'View all tasks in the organization',
+                self::DEPARTMENT => 'Use this role as a task department',
                 'kontor-tasks-task-create' => 'Create tasks',
                 'kontor-tasks-task-edit' => 'Edit tasks',
                 'kontor-tasks-task-complete' => 'Complete tasks',
@@ -75,6 +82,7 @@ class KontorTasks extends WireData implements Module
                 $this->reminders(),
                 $mail->outbound(),
                 $mail->entityLinking(),
+                $this->reminderMaySend(...),
             ),
         );
 
@@ -90,7 +98,10 @@ class KontorTasks extends WireData implements Module
             /** @var KontorDashboard $dashboard */
             $dashboard = $this->wire()->modules->get('KontorDashboard');
             $dashboard->widgetRegistry()->register(
-                new MyOpenTasksWidgetProvider($this->taskRepository())
+                new MyOpenTasksWidgetProvider(
+                    $this->taskRepository(),
+                    $this->accessForUserId(...),
+                )
             );
         }
     }
@@ -107,6 +118,74 @@ class KontorTasks extends WireData implements Module
             $strings = json_decode((string) file_get_contents($path), associative: true, flags: JSON_THROW_ON_ERROR);
             $translations->register('KontorTasks', $language, $strings);
         }
+    }
+
+    /** @return list<Role> */
+    public function departmentRoles(): array
+    {
+        $departments = [];
+        foreach ($this->wire()->roles as $role) {
+            if ($this->isDepartmentRole($role)) {
+                $departments[] = $role;
+            }
+        }
+
+        return $departments;
+    }
+
+    public function accessFor(User $user): TaskAccessScope
+    {
+        if (!$user->id || $user->isGuest() || $user->isUnpublished() || $user->isTrash()) {
+            return new TaskAccessScope((int) $user->id, false);
+        }
+
+        $departments = [];
+        foreach ($user->roles as $role) {
+            if ($this->isDepartmentRole($role)) {
+                $departments[] = (int) $role->id;
+            }
+        }
+
+        $superuser = $user->isSuperuser();
+
+        return new TaskAccessScope(
+            (int) $user->id,
+            $superuser || $user->hasPermission('kontor-tasks-task-view'),
+            $superuser || $user->hasPermission(self::VIEW_ALL),
+            $departments,
+        );
+    }
+
+    private function accessForUserId(int $userId): TaskAccessScope
+    {
+        $user = $this->wire()->users->get($userId);
+
+        return $user instanceof User ? $this->accessFor($user) : new TaskAccessScope($userId, false);
+    }
+
+    private function isDepartmentRole(Role $role): bool
+    {
+        $config = $this->wire()->config;
+
+        return !in_array((int) $role->id, [(int) $config->guestUserRolePageID, (int) $config->superUserRolePageID], true)
+            && $role->hasPermission(self::DEPARTMENT);
+    }
+
+    private function reminderMaySend(array $payload): bool
+    {
+        $task = $this->taskRepository()->findActive(
+            (string) $payload['organizationUid'],
+            (string) $payload['taskUid'],
+        );
+        $recipientId = (int) $payload['recipientUserId'];
+        if ($task === null || $task->assignedTo !== $recipientId) {
+            return false;
+        }
+
+        $recipient = $this->wire()->users->get($recipientId);
+
+        return $recipient instanceof User && $this->accessFor($recipient)->allows($task)
+            && strtolower(trim((string) $recipient->email)) === strtolower((string) $payload['recipientEmail']);
     }
 
     public function taskRepository(): TaskRepository
@@ -173,6 +252,7 @@ class KontorTasks extends WireData implements Module
             new Migration0001CreateTasksTable(),
             new Migration0002CreateTaskRemindersTable(),
             new Migration0003TrackTaskRecurrence(),
+            new Migration0004AddTaskVisibility(),
         ]);
 
         $components = new ComponentRegistry($pdo);
@@ -185,7 +265,19 @@ class KontorTasks extends WireData implements Module
         $pdo = $this->pdo();
         $runner = new MigrationRunner($pdo);
         $runner->ensureLedgerExists();
-        $runner->run([new Migration0003TrackTaskRecurrence()]);
+        $runner->run([new Migration0003TrackTaskRecurrence(), new Migration0004AddTaskVisibility()]);
+
+        $permissions = $this->wire()->permissions;
+        $definitions = self::getModuleInfo()['permissions'];
+        foreach ([self::VIEW_ALL, self::DEPARTMENT] as $name) {
+            if (!$permissions->get($name)->id) {
+                $permission = $permissions->add($name);
+                $permission->title = $definitions[$name];
+                if (!$permissions->save($permission)) {
+                    throw new WireException('Unable to register task permission: ' . $name);
+                }
+            }
+        }
 
         $components = new ComponentRegistry($pdo);
         $components->markInstalled('tasks', self::getModuleInfo()['version'], 'tasks');

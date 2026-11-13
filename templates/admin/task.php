@@ -26,6 +26,11 @@
 /** @var bool $canComplete */
 /** @var bool $canCancel */
 /** @var bool $canEdit */
+/** @var bool $canAssign */
+/** @var bool $canShareOrganization */
+/** @var array<int, string> $departments */
+/** @var array<int, string> $assignees */
+/** @var string $departmentLabel */
 /** @var string $adminUrl */
 /** @var string $csrfName */
 /** @var string $csrfValue */
@@ -69,6 +74,83 @@ $showReminderWorkspace = $task !== null && ($task->isOpen() || $reminders !== []
 $tasksUrl = $adminUrl . 'tasks/' . ($archived
     ? '?archived=1'
     : ($task !== null && !$task->isOpen() ? '?scope=closed' : ''));
+$visibilityOptions = [
+    'assignee' => 'Assignee only',
+    'department' => 'Department',
+    'organization' => 'Everyone with task access',
+];
+$visibilityLabel = static function (string $visibility, ?int $departmentRoleId) use (
+    $visibilityOptions, $departments, $departmentLabel
+): string {
+    if ($visibility === 'department') {
+        return $departments[$departmentRoleId] ?? ($departmentLabel !== '' ? $departmentLabel : $visibilityOptions[$visibility]);
+    }
+
+    return $visibilityOptions[$visibility];
+};
+$renderAssignment = static function (string $idPrefix) use (
+    $canAssign, $canShareOrganization, $task, $values, $visibilityOptions, $departments, $assignees, $assigneeLabel, $e
+): void {
+    if (!$canAssign) {
+        if ($task === null) {
+            ?>
+            <div class="uk-margin">
+              <span class="uk-form-label">Visibility</span>
+              <p class="uk-margin-remove">Assigned to you. Visible to you and people with permission to view all tasks.</p>
+            </div>
+            <?php
+        }
+        return;
+    }
+
+    $selectedDepartment = (int) $values['departmentRoleId'];
+    $selectedAssignee = (int) $values['assignedTo'];
+    if (!$canShareOrganization && $task?->visibility !== 'organization') {
+        unset($visibilityOptions['organization']);
+    }
+    if ($departments === [] && $task?->visibility !== 'department') {
+        unset($visibilityOptions['department']);
+    }
+    ?>
+    <div class="uk-margin">
+      <label class="uk-form-label" for="<?= $e($idPrefix . '-visibility') ?>">Visibility</label>
+      <select class="uk-select uk-margin-small-top" id="<?= $e($idPrefix . '-visibility') ?>" name="visibility">
+        <?php foreach ($visibilityOptions as $value => $label): ?>
+          <option value="<?= $e($value) ?>"<?= $values['visibility'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <div class="uk-text-meta uk-margin-small-top">People with permission to view all tasks can see every task.</div>
+    </div>
+    <?php if ($departments !== [] || $values['visibility'] === 'department'): ?>
+      <div class="uk-margin">
+        <label class="uk-form-label" for="<?= $e($idPrefix . '-department') ?>">Department</label>
+        <select class="uk-select uk-margin-small-top" id="<?= $e($idPrefix . '-department') ?>" name="department_role_id">
+          <option value="">Select a department</option>
+          <?php if ($selectedDepartment > 0 && !isset($departments[$selectedDepartment])): ?>
+            <option value="<?= $e((string) $selectedDepartment) ?>" selected>Department unavailable</option>
+          <?php endif; ?>
+          <?php foreach ($departments as $id => $label): ?>
+            <option value="<?= $e((string) $id) ?>"<?= $selectedDepartment === $id ? ' selected' : '' ?>><?= $e($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="uk-text-meta uk-margin-small-top">Required when visibility is set to Department.</div>
+      </div>
+    <?php endif; ?>
+    <div class="uk-margin">
+      <label class="uk-form-label" for="<?= $e($idPrefix . '-assignee') ?>">Assignee</label>
+      <select class="uk-select uk-margin-small-top" id="<?= $e($idPrefix . '-assignee') ?>" name="assigned_to">
+        <option value="">Unassigned</option>
+        <?php if ($selectedAssignee > 0 && !isset($assignees[$selectedAssignee])): ?>
+          <option value="<?= $e((string) $selectedAssignee) ?>" selected><?= $e($assigneeLabel) ?></option>
+        <?php endif; ?>
+        <?php foreach ($assignees as $id => $label): ?>
+          <option value="<?= $e((string) $id) ?>"<?= $selectedAssignee === $id ? ' selected' : '' ?>><?= $e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <div class="uk-text-meta uk-margin-small-top">Required when visibility is set to Assignee only.</div>
+    </div>
+    <?php
+};
 ?>
 <div class="ProcessKontor pw-module-workspace kontor-shell">
   <header class="pw-module-head kontor-pagehead">
@@ -126,7 +208,7 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
               <input class="uk-input uk-margin-small-top" id="task-due" type="datetime-local" name="due_at" value="<?= $e($values['dueAt']) ?>">
               <div class="uk-text-meta uk-margin-small-top">Choose a real commitment date, or leave this blank.</div>
             </div>
-            <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="assigned_to_me" value="1"<?= $values['assignedToMe'] ? ' checked' : '' ?>> <span class="uk-margin-small-left"><strong>Assign to me</strong></span><span class="uk-text-meta uk-display-block uk-margin-small-left">The task will appear in your personal work queue.</span></label>
+            <?php $renderAssignment('task'); ?>
             <ul class="uk-accordion uk-margin" uk-accordion>
               <li<?= $values['recurrenceRule'] !== '' ? ' class="uk-open"' : '' ?>>
                 <a class="uk-accordion-title uk-link-reset" href>Repeat this task</a>
@@ -196,6 +278,7 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
           <p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Execution</p><h3 class="uk-card-title uk-margin-small-top">Task overview</h3>
           <div class="uk-grid-small uk-grid-divider uk-child-width-1-1 uk-child-width-1-2@s<?= $showReminderWorkspace ? '' : ' uk-child-width-1-5@l' ?>" uk-grid>
             <div><div class="uk-text-meta">Owner</div><strong><i class="fa fa-user"></i> <?= $e($assigneeLabel) ?></strong></div>
+            <div><div class="uk-text-meta">Visibility</div><strong><?= $e($visibilityLabel($task->visibility, $task->departmentRoleId)) ?></strong></div>
             <div><div class="uk-text-meta">Priority</div><strong class="<?= $e($priorityClass($task->priority)) ?>"><i class="fa fa-<?= $e($priorityIcon($task->priority)) ?>"></i> <?= $e($humanize($task->priority)) ?></strong></div>
             <div><div class="uk-text-meta">Due</div><strong class="<?= $task->isOverdue() ? 'uk-text-danger' : '' ?>"><i class="fa fa-calendar"></i> <?= $e($dueLabel($task)) ?></strong></div>
             <div><div class="uk-text-meta">Schedule</div><strong><i class="fa fa-repeat"></i> <?= $e($task->recurrenceRule !== null ? 'Repeats ' . $humanize($task->recurrenceRule) : 'One-time task') ?></strong></div>
@@ -259,7 +342,7 @@ $tasksUrl = $adminUrl . 'tasks/' . ($archived
               <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-recurrence">Repeats</label><select class="uk-select uk-margin-small-top" id="task-edit-recurrence" name="recurrence_rule"><option value="">Does not repeat</option><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $value => $label): ?><option value="<?= $e($value) ?>"<?= $values['recurrenceRule'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Repeating tasks require a due date.</div></div>
               <div class="uk-width-1-1 uk-width-1-2@m"><label class="uk-form-label" for="task-edit-repeat-until">Repeat until</label><input class="uk-input uk-margin-small-top" id="task-edit-repeat-until" type="date" name="recurrence_until" value="<?= $e($values['recurrenceUntil']) ?>"><div class="uk-text-meta uk-margin-small-top">Optional final date for creating future occurrences.</div></div>
             </div>
-            <label class="uk-display-block uk-margin"><input class="uk-checkbox" type="checkbox" name="assigned_to_me" value="1"<?= $values['assignedToMe'] ? ' checked' : '' ?>> <span class="uk-margin-small-left"><strong>Assigned to me</strong></span><span class="uk-text-meta uk-display-block uk-margin-small-left">Show this task in your personal work queue.</span></label>
+            <?php $renderAssignment('task-edit'); ?>
             <div class="uk-flex uk-flex-right uk-grid-small" uk-grid><div><button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button></div><div><button class="uk-button uk-button-primary" name="submit_save" value="1" type="submit"><i class="fa fa-check"></i> Save changes</button></div></div>
           </form>
         </div>

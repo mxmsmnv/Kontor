@@ -8,6 +8,7 @@ use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\Contracts\RepositoryInterface;
 use Kontor\SDK\ValueObjects\Uid;
+use Kontor\Tasks\Application\TaskAccessScope;
 use Kontor\Tasks\Domain\Task;
 use InvalidArgumentException;
 use RuntimeException;
@@ -57,11 +58,22 @@ final class TaskRepository implements RepositoryInterface
      */
     public function changeActiveTask(string $id, callable $change): mixed
     {
+        return $this->changeTask($id, $change, activeOnly: true);
+    }
+
+    /**
+     * @template Result
+     * @param callable(Task): Result $change
+     * @return Result
+     */
+    private function changeTask(string $id, callable $change, bool $activeOnly = false): mixed
+    {
         $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($this->pdo);
 
         try {
             $statement = $this->pdo->prepare(
-                'SELECT * FROM kontor_tasks WHERE uid = :uid AND archived_at IS NULL'
+                'SELECT * FROM kontor_tasks WHERE uid = :uid'
+                . ($activeOnly ? ' AND archived_at IS NULL' : '')
                 . DatabaseConcurrency::forUpdate($this->pdo)
             );
             $statement->execute(['uid' => $id]);
@@ -69,7 +81,8 @@ final class TaskRepository implements RepositoryInterface
             $statement->closeCursor();
 
             if ($row === false) {
-                throw new RuntimeException("Active task \"{$id}\" was not found.");
+                $type = $activeOnly ? 'Active task' : 'Task';
+                throw new RuntimeException("{$type} \"{$id}\" was not found.");
             }
 
             $result = $change($this->hydrate($row));
@@ -135,15 +148,18 @@ final class TaskRepository implements RepositoryInterface
         $statement = $this->pdo->prepare(
             'INSERT INTO kontor_tasks
                 (uid, organization_id, title, description, status, priority, assigned_to, start_at, due_at,
-                 completed_at, recurrence_rule, recurrence_until, created_at, updated_at, version)
+                 completed_at, recurrence_rule, recurrence_until, visibility, department_role_id,
+                 created_at, updated_at, version)
              VALUES
                 (:uid, :organization_id, :title, :description, :status, :priority, :assigned_to, :start_at, :due_at,
-                 :completed_at, :recurrence_rule, :recurrence_until, :created_at, :updated_at, 1)
+                 :completed_at, :recurrence_rule, :recurrence_until, :visibility, :department_role_id,
+                 :created_at, :updated_at, 1)
              ON DUPLICATE KEY UPDATE
                 title = VALUES(title), description = VALUES(description), status = VALUES(status),
                 priority = VALUES(priority), assigned_to = VALUES(assigned_to), start_at = VALUES(start_at),
                 due_at = VALUES(due_at), completed_at = VALUES(completed_at), recurrence_rule = VALUES(recurrence_rule),
-                recurrence_until = VALUES(recurrence_until), updated_at = VALUES(updated_at), version = version + 1'
+                recurrence_until = VALUES(recurrence_until), visibility = VALUES(visibility),
+                department_role_id = VALUES(department_role_id), updated_at = VALUES(updated_at), version = version + 1'
         );
 
         $statement->execute([
@@ -159,21 +175,43 @@ final class TaskRepository implements RepositoryInterface
             'completed_at' => $entity->completedAt?->format('Y-m-d H:i:s.u'),
             'recurrence_rule' => $entity->recurrenceRule,
             'recurrence_until' => $entity->recurrenceUntil?->format('Y-m-d'),
+            'visibility' => $entity->visibility,
+            'department_role_id' => $entity->departmentRoleId,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
     }
 
-    public function archive(string $id): void
+    /** @param null|callable(Task): void $authorize */
+    public function archive(string $id, ?callable $authorize = null): void
     {
-        $statement = $this->pdo->prepare('UPDATE kontor_tasks SET archived_at = :now WHERE uid = :uid');
-        $statement->execute(['now' => $this->now(), 'uid' => $id]);
+        $this->setArchivedAt($id, $this->now(), $authorize);
     }
 
-    public function restore(string $id): void
+    /** @param null|callable(Task): void $authorize */
+    public function restore(string $id, ?callable $authorize = null): void
     {
-        $statement = $this->pdo->prepare('UPDATE kontor_tasks SET archived_at = NULL WHERE uid = :uid');
-        $statement->execute(['uid' => $id]);
+        $this->setArchivedAt($id, null, $authorize);
+    }
+
+    /** @param null|callable(Task): void $authorize */
+    private function setArchivedAt(string $id, ?string $archivedAt, ?callable $authorize): void
+    {
+        $update = function () use ($id, $archivedAt): void {
+            $statement = $this->pdo->prepare('UPDATE kontor_tasks SET archived_at = :archived_at WHERE uid = :uid');
+            $statement->execute(['archived_at' => $archivedAt, 'uid' => $id]);
+        };
+
+        if ($authorize === null) {
+            $update();
+
+            return;
+        }
+
+        $this->changeTask($id, static function (Task $task) use ($authorize, $update): void {
+            $authorize($task);
+            $update();
+        });
     }
 
     /**
@@ -188,7 +226,11 @@ final class TaskRepository implements RepositoryInterface
         int $limit = 50,
         int $offset = 0,
         bool $closedOnly = false,
+        ?TaskAccessScope $access = null,
     ): array {
+        if ($access !== null && !$access->canView) {
+            return [];
+        }
         [$where, $params] = $this->matchingConditions(
             $organizationUid,
             $query,
@@ -196,6 +238,9 @@ final class TaskRepository implements RepositoryInterface
             $priority,
             $archived,
         );
+        if ($access !== null && !$access->canViewAll) {
+            $where[] = $this->accessCondition($access, $params);
+        }
         if ($closedOnly) {
             $where[] = "t.status IN ('done', 'cancelled')";
         }
@@ -216,6 +261,31 @@ final class TaskRepository implements RepositoryInterface
             fn (array $row): Task => $this->hydrate($row),
             $statement->fetchAll(\PDO::FETCH_ASSOC)
         );
+    }
+
+    /** @param array<string, int|string> $params */
+    private function accessCondition(TaskAccessScope $access, array &$params): string
+    {
+        $params['access_organization'] = Task::VISIBILITY_ORGANIZATION;
+        $params['access_assignee'] = Task::VISIBILITY_ASSIGNEE;
+        $params['access_user'] = $access->userId;
+        $conditions = [
+            't.visibility = :access_organization',
+            '(t.visibility = :access_assignee AND t.assigned_to = :access_user)',
+        ];
+        if ($access->departmentRoleIds !== []) {
+            $departmentPlaceholders = [];
+            foreach (array_values($access->departmentRoleIds) as $index => $roleId) {
+                $key = 'access_role_' . $index;
+                $params[$key] = $roleId;
+                $departmentPlaceholders[] = ':' . $key;
+            }
+            $params['access_department'] = Task::VISIBILITY_DEPARTMENT;
+            $conditions[] = '(t.visibility = :access_department AND t.department_role_id IN ('
+                . implode(', ', $departmentPlaceholders) . '))';
+        }
+
+        return '(' . implode(' OR ', $conditions) . ')';
     }
 
     /**
@@ -279,23 +349,37 @@ final class TaskRepository implements RepositoryInterface
     /**
      * @return Task[]
      */
-    public function openForAssignee(string $organizationUid, int $userId, int $limit = 8): array
-    {
+    public function openForAssignee(
+        string $organizationUid,
+        int $userId,
+        int $limit = 8,
+        ?TaskAccessScope $access = null,
+    ): array {
+        if ($access !== null && !$access->canView) {
+            return [];
+        }
+
+        $params = [
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+            'assigned_to' => $userId,
+        ];
+        $where = [
+            't.organization_id = :organization_id',
+            't.assigned_to = :assigned_to',
+            't.archived_at IS NULL',
+            "t.status IN ('open', 'in_progress')",
+        ];
+        if ($access !== null && !$access->canViewAll) {
+            $where[] = $this->accessCondition($access, $params);
+        }
+
         $statement = $this->pdo->prepare(
-            "SELECT * FROM kontor_tasks
-             WHERE organization_id = :organization_id
-               AND assigned_to = :assigned_to
-               AND status IN ('open', 'in_progress')
-               AND archived_at IS NULL
-             ORDER BY due_at IS NULL, due_at ASC, updated_at DESC, id DESC
-             LIMIT :limit"
+            'SELECT t.* FROM kontor_tasks t WHERE ' . implode(' AND ', $where)
+            . ' ORDER BY t.due_at IS NULL, t.due_at ASC, t.updated_at DESC, t.id DESC LIMIT :limit'
         );
-        $statement->bindValue(
-            ':organization_id',
-            $this->organizations->internalIdOf($organizationUid),
-            \PDO::PARAM_INT,
-        );
-        $statement->bindValue(':assigned_to', $userId, \PDO::PARAM_INT);
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value, is_int($value) ? \PDO::PARAM_INT : \PDO::PARAM_STR);
+        }
         $statement->bindValue(':limit', max(1, min(50, $limit)), \PDO::PARAM_INT);
         $statement->execute();
 
@@ -318,6 +402,8 @@ final class TaskRepository implements RepositoryInterface
             recurrenceRule: $row['recurrence_rule'],
             recurrenceUntil: $row['recurrence_until'] !== null ? new \DateTimeImmutable($row['recurrence_until']) : null,
             archived: $row['archived_at'] !== null,
+            visibility: $row['visibility'],
+            departmentRoleId: $row['department_role_id'] !== null ? (int) $row['department_role_id'] : null,
         );
     }
 

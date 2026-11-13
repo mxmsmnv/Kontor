@@ -32,6 +32,60 @@ final class TaskWorkflowServiceTest extends DatabaseTestCase
         $this->assertSame('in_progress', $started->status);
     }
 
+    public function test_recurrence_inherits_task_visibility_and_department(): void
+    {
+        $task = Task::create(
+            $this->organizationUid,
+            'Department review',
+            assignedTo: 10,
+            dueAt: new \DateTimeImmutable('2026-10-01'),
+            recurrenceRule: 'weekly',
+            visibility: Task::VISIBILITY_DEPARTMENT,
+            departmentRoleId: 20,
+        );
+        $this->tasks->save($task);
+
+        $next = $this->workflow->complete($task->uid->toString())['next'];
+
+        self::assertNotNull($next);
+        $stored = $this->tasks->require($next->uid->toString());
+        self::assertSame(Task::VISIBILITY_DEPARTMENT, $stored->visibility);
+        self::assertSame(20, $stored->departmentRoleId);
+        self::assertSame(10, $stored->assignedTo);
+    }
+
+    public function test_denied_state_transitions_do_not_modify_the_locked_task(): void
+    {
+        $task = Task::create($this->organizationUid, 'Private task', assignedTo: 10, visibility: Task::VISIBILITY_ASSIGNEE);
+        $this->tasks->save($task);
+        $uid = $task->uid->toString();
+        $deny = static function (Task $current): void {
+            self::assertSame(10, $current->assignedTo);
+            throw new \DomainException('Denied');
+        };
+
+        foreach ([$this->workflow->complete(...), $this->tasks->archive(...)] as $change) {
+            try {
+                $change($uid, authorize: $deny);
+                self::fail('Expected the authorization callback to deny the transition');
+            } catch (\DomainException $exception) {
+                self::assertSame('Denied', $exception->getMessage());
+            }
+        }
+        $current = $this->tasks->require($uid);
+        self::assertSame('open', $current->status);
+        self::assertFalse($current->archived);
+
+        $this->tasks->archive($uid);
+        try {
+            $this->tasks->restore($uid, authorize: $deny);
+            self::fail('Expected the authorization callback to deny restoration');
+        } catch (\DomainException $exception) {
+            self::assertSame('Denied', $exception->getMessage());
+        }
+        self::assertTrue($this->tasks->require($uid)->archived);
+    }
+
     public function test_completing_a_non_recurring_task_creates_no_next_occurrence(): void
     {
         $task = Task::create($this->organizationUid, 'One-off task');

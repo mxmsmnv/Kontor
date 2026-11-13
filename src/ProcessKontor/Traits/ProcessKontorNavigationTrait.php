@@ -369,7 +369,11 @@ trait ProcessKontorNavigationTrait
             'queueReady' => $queueReady,
             'canViewQueue' => $canViewQueue,
             'recentActivity' => $canViewActivity
-                ? $this->auditEventRepository()->findRecent($this->organizationInternalId(), '', 6)
+                ? $this->auditEventRepository()->findRecent(
+                    $this->organizationInternalId(),
+                    limit: 6,
+                    includeTaskActivity: $this->canSeeTaskAudit(),
+                )
                 : [],
             'queueCounts' => $queueReady && $canViewQueue
                 ? $this->jobRepository()->summaryCounts()

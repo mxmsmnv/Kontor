@@ -101,6 +101,16 @@ final class FileRepository
         return $row === false ? null : $row;
     }
 
+    public function hasTaskAttachmentAtPath(string $path): bool
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT 1 FROM kontor_files WHERE path = :path AND entity_type = 'task' LIMIT 1"
+        );
+        $statement->execute(['path' => $path]);
+
+        return $statement->fetchColumn() !== false;
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */

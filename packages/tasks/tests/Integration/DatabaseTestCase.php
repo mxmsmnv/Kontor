@@ -12,6 +12,7 @@ use Kontor\Mail\Migrations\Migration0002CreateMessagesTable;
 use Kontor\Tasks\Migrations\Migration0001CreateTasksTable;
 use Kontor\Tasks\Migrations\Migration0002CreateTaskRemindersTable;
 use Kontor\Tasks\Migrations\Migration0003TrackTaskRecurrence;
+use Kontor\Tasks\Migrations\Migration0004AddTaskVisibility;
 use PHPUnit\Framework\TestCase;
 
 abstract class DatabaseTestCase extends TestCase
@@ -47,6 +48,7 @@ abstract class DatabaseTestCase extends TestCase
             new Migration0001CreateTasksTable(),
             new Migration0002CreateTaskRemindersTable(),
             new Migration0003TrackTaskRecurrence(),
+            new Migration0004AddTaskVisibility(),
             new Migration0002CreateMessagesTable(),
         ]);
 

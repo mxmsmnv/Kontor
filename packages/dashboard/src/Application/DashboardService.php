@@ -167,12 +167,14 @@ final class DashboardService
                 $layout->config,
             ], JSON_THROW_ON_ERROR));
             $tags = ['dashboard:' . $dashboardUid, 'widget:' . $layout->widgetKey];
-            $data = $this->cache?->get($cacheKey, $tags);
+            // A task assignment or department membership can be revoked between requests.
+            $cache = $layout->widgetKey === 'tasks.my_open' ? null : $this->cache;
+            $data = $cache?->get($cacheKey, $tags);
             $cacheHit = is_array($data);
             if (!$cacheHit) {
                 $data = $provider->render($organizationUid, $userId);
                 $ttl = max(5, min(3600, (int) ($layout->config['refreshSeconds'] ?? 30)));
-                $this->cache?->set($cacheKey, $data, $ttl, $tags);
+                $cache?->set($cacheKey, $data, $ttl, $tags);
             }
             $rendered[] = [
                 'layout' => $layout,

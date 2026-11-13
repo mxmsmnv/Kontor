@@ -14,6 +14,10 @@ use Kontor\SDK\ValueObjects\Uid;
  */
 final class Task
 {
+    public const VISIBILITY_ORGANIZATION = 'organization';
+    public const VISIBILITY_DEPARTMENT = 'department';
+    public const VISIBILITY_ASSIGNEE = 'assignee';
+
     private const RECURRENCE_INTERVALS = [
         'daily' => '+1 day',
         'weekly' => '+1 week',
@@ -35,6 +39,8 @@ final class Task
         public ?string $recurrenceRule,
         public ?\DateTimeImmutable $recurrenceUntil,
         public readonly bool $archived = false,
+        public string $visibility = self::VISIBILITY_ORGANIZATION,
+        public ?int $departmentRoleId = null,
     ) {
     }
 
@@ -48,6 +54,8 @@ final class Task
         ?\DateTimeImmutable $dueAt = null,
         ?string $recurrenceRule = null,
         ?\DateTimeImmutable $recurrenceUntil = null,
+        string $visibility = self::VISIBILITY_ORGANIZATION,
+        ?int $departmentRoleId = null,
     ): self {
         if ($recurrenceRule !== null && !array_key_exists($recurrenceRule, self::RECURRENCE_INTERVALS)) {
             throw new \InvalidArgumentException("\"{$recurrenceRule}\" is not a supported recurrence rule.");
@@ -66,6 +74,8 @@ final class Task
             completedAt: null,
             recurrenceRule: $recurrenceRule,
             recurrenceUntil: $recurrenceUntil,
+            visibility: $visibility,
+            departmentRoleId: $departmentRoleId,
         );
     }
 

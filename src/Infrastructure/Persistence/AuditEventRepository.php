@@ -23,6 +23,7 @@ final class AuditEventRepository
         ?string $entityType = null,
         ?string $action = null,
         int $offset = 0,
+        bool $includeTaskActivity = true,
     ): array {
         $limit = max(1, min($limit, 250));
         $offset = max(0, $offset);
@@ -32,6 +33,7 @@ final class AuditEventRepository
             $component,
             $entityType,
             $action,
+            $includeTaskActivity,
         );
         $sql = 'SELECT * FROM kontor_audit_events WHERE ' . $where
             . ' ORDER BY occurred_at DESC, id DESC LIMIT :limit OFFSET :offset';
@@ -56,6 +58,7 @@ final class AuditEventRepository
         ?string $component = null,
         ?string $entityType = null,
         ?string $action = null,
+        bool $includeTaskActivity = true,
     ): \Generator {
         [$where, $bindings] = $this->matchingWhere(
             $organizationId,
@@ -63,6 +66,7 @@ final class AuditEventRepository
             $component,
             $entityType,
             $action,
+            $includeTaskActivity,
         );
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_audit_events WHERE ' . $where
@@ -82,6 +86,7 @@ final class AuditEventRepository
         ?string $component = null,
         ?string $entityType = null,
         ?string $action = null,
+        bool $includeTaskActivity = true,
     ): int {
         [$where, $bindings] = $this->matchingWhere(
             $organizationId,
@@ -89,6 +94,7 @@ final class AuditEventRepository
             $component,
             $entityType,
             $action,
+            $includeTaskActivity,
         );
         $statement = $this->pdo->prepare(
             'SELECT COUNT(*) FROM kontor_audit_events WHERE ' . $where
@@ -108,9 +114,10 @@ final class AuditEventRepository
         ?string $component,
         ?string $entityType,
         ?string $action,
+        bool $includeTaskActivity,
     ): array {
         $query = trim($query);
-        $where = 'organization_id = :organization_id';
+        $where = $this->activityWhere($includeTaskActivity);
         $bindings = [':organization_id' => $organizationId];
 
         if ($query !== '') {
@@ -157,33 +164,45 @@ final class AuditEventRepository
     /**
      * @return array{components: string[], entityTypes: string[], actions: string[]}
      */
-    public function filterOptions(int $organizationId): array
+    public function filterOptions(int $organizationId, bool $includeTaskActivity = true): array
     {
         return [
-            'components' => $this->distinctValues($organizationId, 'component'),
-            'entityTypes' => $this->distinctValues($organizationId, 'entity_type'),
-            'actions' => $this->distinctValues($organizationId, 'action'),
+            'components' => $this->distinctValues($organizationId, 'component', $includeTaskActivity),
+            'entityTypes' => $this->distinctValues($organizationId, 'entity_type', $includeTaskActivity),
+            'actions' => $this->distinctValues($organizationId, 'action', $includeTaskActivity),
         ];
     }
 
     /**
      * @return string[]
      */
-    private function distinctValues(int $organizationId, string $column): array
+    private function distinctValues(int $organizationId, string $column, bool $includeTaskActivity): array
     {
         if (!in_array($column, ['component', 'entity_type', 'action'], true)) {
             throw new \InvalidArgumentException('Unsupported audit facet.');
         }
 
+        $where = $this->activityWhere($includeTaskActivity);
         $statement = $this->pdo->prepare(
             "SELECT DISTINCT {$column}
              FROM kontor_audit_events
-             WHERE organization_id = :organization_id
+             WHERE {$where}
              ORDER BY {$column}"
         );
         $statement->execute(['organization_id' => $organizationId]);
 
         return array_map('strval', $statement->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    private function activityWhere(bool $includeTaskActivity): string
+    {
+        $where = 'organization_id = :organization_id';
+        if (!$includeTaskActivity) {
+            // Current Collaboration actions are task comments, notes, and followers.
+            $where .= " AND component NOT IN ('tasks', 'collaboration')";
+        }
+
+        return $where;
     }
 
     private function hydrate(array $row): AuditEvent

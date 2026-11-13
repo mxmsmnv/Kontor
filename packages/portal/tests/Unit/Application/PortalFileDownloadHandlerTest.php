@@ -60,6 +60,24 @@ final class PortalFileDownloadHandlerTest extends TestCase
         $this->assertNotNull($result->stream);
     }
 
+    public function test_a_previous_signed_link_cannot_serve_a_task_attachment(): void
+    {
+        $signer = new SignedUrlSigner('secret', 'https://example.com/portal/files/download');
+        $path = 'org1/task1/file.pdf';
+        $signedUrl = $signer->sign($path, new \DateTimeImmutable('+10 minutes'));
+        parse_str((string) parse_url($signedUrl, PHP_URL_QUERY), $query);
+
+        $handler = new PortalFileDownloadHandler(
+            $signer,
+            $this->storage(),
+            static fn (string $candidate): bool => $candidate === $path,
+        );
+        $result = $handler->handle($query['path'], (int) $query['expires'], $query['signature']);
+
+        $this->assertSame(404, $result->status);
+        $this->assertNull($result->stream);
+    }
+
     public function test_a_tampered_signature_is_forbidden(): void
     {
         $signer = new SignedUrlSigner('secret', 'https://example.com/portal/files/download');

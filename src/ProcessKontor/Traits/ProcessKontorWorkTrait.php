@@ -91,6 +91,24 @@ use Kontor\Workflow\Domain\ApprovalRequest;
 trait ProcessKontorWorkTrait
 {
 
+    private function canViewTask(Task $task): bool
+    {
+        return hash_equals($this->organizationUid(), $task->organizationId)
+            && $this->taskModule()->accessFor($this->wire()->user)->allows($task);
+    }
+
+    private function requireVisibleTask(string $id): Task
+    {
+        $this->requireTasks();
+        $task = $this->taskModule()->taskRepository()->find($id);
+        if ($task === null || !$this->canViewTask($task)) {
+            http_response_code(404);
+            throw new Wire404Exception($this->_('Task not found.'));
+        }
+
+        return $task;
+    }
+
     public function ___executeTasks(): string
     {
         $this->requireTasks();
@@ -113,10 +131,12 @@ trait ProcessKontorWorkTrait
             $scope = 'all';
         }
         $repository = $this->taskModule()->taskRepository();
+        $access = $this->taskModule()->accessFor($this->wire()->user);
         $allTasks = $repository->findMatching(
             $this->organizationUid(),
             archived: $archived,
             limit: 500,
+            access: $access,
         );
         $tasks = $repository->findMatching(
             $this->organizationUid(),
@@ -126,6 +146,7 @@ trait ProcessKontorWorkTrait
             $archived,
             limit: 250,
             closedOnly: $scope === 'closed',
+            access: $access,
         );
         $today = new \DateTimeImmutable('today');
         $tomorrow = $today->modify('+1 day');
@@ -179,12 +200,36 @@ trait ProcessKontorWorkTrait
         $this->requireTasks();
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
         $repository = $this->taskModule()->taskRepository();
-        $task = $id !== '' ? $repository->require($id) : null;
+        $task = $id !== '' ? $this->requireVisibleTask($id) : null;
         $archived = $task?->archived ?? false;
-        $this->requirePermission($task === null ? 'kontor-tasks-task-create' : 'kontor-tasks-task-edit');
-
-        if ($task !== null) {
-            $this->requireSameOrganization($task->organizationId);
+        $canAssign = $this->can('kontor-tasks-task-assign');
+        $canEdit = $this->can('kontor-tasks-task-edit');
+        $actor = $this->wire()->user;
+        $currentUserId = (int) $actor->id;
+        $departmentRoles = [];
+        $departments = [];
+        $assignees = [];
+        if ($task === null) {
+            $this->requirePermission('kontor-tasks-task-create');
+            $this->requirePermission('kontor-tasks-task-view');
+        }
+        if ($canAssign && ($task === null || $canEdit)) {
+            $module = $this->taskModule();
+            foreach ($module->departmentRoles() as $role) {
+                $roleId = (int) $role->id;
+                if ($this->can('kontor-tasks-task-view-all') || $actor->hasRole($roleId)) {
+                    $departmentRoles[$roleId] = $role;
+                    $departments[$roleId] = (string) ($role->get('title') ?: $role->name);
+                }
+            }
+            foreach ($this->wire()->users as $candidate) {
+                if ($module->accessFor($candidate)->canView
+                    && ($candidate->isSuperuser() || $candidate->hasPermission('kontor-access'))) {
+                    $assignees[(int) $candidate->id] = (string) ($candidate->get('title') ?: $candidate->name);
+                }
+            }
+            asort($assignees, SORT_NATURAL | SORT_FLAG_CASE);
+            asort($departments, SORT_NATURAL | SORT_FLAG_CASE);
         }
 
         $contextType = '';
@@ -215,14 +260,21 @@ trait ProcessKontorWorkTrait
             'dueAt' => $task?->dueAt?->format('Y-m-d\TH:i') ?? '',
             'recurrenceRule' => $task?->recurrenceRule ?? '',
             'recurrenceUntil' => $task?->recurrenceUntil?->format('Y-m-d') ?? '',
-            'assignedToMe' => $task === null
-                || $task->assignedTo === (int) $this->wire()->user->id,
+            'assignedTo' => $task === null ? $currentUserId : $task->assignedTo,
+            'visibility' => $task?->visibility ?? Task::VISIBILITY_ASSIGNEE,
+            'departmentRoleId' => $task?->departmentRoleId,
         ];
         $error = '';
 
         if ($this->wire()->input->post('submit_save')) {
             $this->requirePost();
-            $values = [
+            if ($task !== null) {
+                $this->requirePermission('kontor-tasks-task-edit');
+                if ($archived) {
+                    throw new WirePermissionException($this->_('Restore the task before editing it.'));
+                }
+            }
+            $values = array_replace($values, [
                 'title' => trim($this->wire()->sanitizer->text((string) $this->wire()->input->post('title'))),
                 'description' => trim((string) $this->wire()->input->post('description')),
                 'priority' => $this->wire()->sanitizer->option(
@@ -237,8 +289,31 @@ trait ProcessKontorWorkTrait
                 'recurrenceUntil' => $this->wire()->sanitizer->text(
                     (string) $this->wire()->input->post('recurrence_until')
                 ),
-                'assignedToMe' => (string) $this->wire()->input->post('assigned_to_me') === '1',
-            ];
+            ]);
+            if ($canAssign && $this->wire()->input->post('visibility') !== null) {
+                $values['visibility'] = (string) $this->wire()->input->post('visibility');
+                $values['departmentRoleId'] = $values['visibility'] === Task::VISIBILITY_DEPARTMENT
+                    ? (int) $this->wire()->input->post('department_role_id') : null;
+                $values['assignedTo'] = (int) $this->wire()->input->post('assigned_to') ?: null;
+                $changedAudience = $task === null || $values['visibility'] !== $task->visibility
+                    || $values['departmentRoleId'] !== $task->departmentRoleId || $values['assignedTo'] !== $task->assignedTo;
+                if ($changedAudience && (!in_array($values['visibility'], [
+                    Task::VISIBILITY_ASSIGNEE, Task::VISIBILITY_DEPARTMENT, Task::VISIBILITY_ORGANIZATION,
+                ], true) || ($values['visibility'] === Task::VISIBILITY_ASSIGNEE && $values['assignedTo'] === null)
+                    || ($values['visibility'] === Task::VISIBILITY_ORGANIZATION && !$this->can('kontor-tasks-task-view-all'))
+                    || ($values['visibility'] === Task::VISIBILITY_DEPARTMENT && !isset($departmentRoles[$values['departmentRoleId']]))
+                    || ($values['assignedTo'] !== null && !isset($assignees[$values['assignedTo']])))) {
+                    $error = $this->_('Select a valid task audience and assignee.');
+                }
+                if ($error === '' && $changedAudience && $values['visibility'] === Task::VISIBILITY_DEPARTMENT
+                    && $values['assignedTo'] !== null) {
+                    $candidate = $this->wire()->users->get($values['assignedTo']);
+                    if (!$candidate->hasRole($values['departmentRoleId']) && !$candidate->isSuperuser()
+                        && !$candidate->hasPermission('kontor-tasks-task-view-all')) {
+                        $error = $this->_('The assignee must belong to the selected department.');
+                    }
+                }
+            }
             $dueAt = null;
             $recurrenceUntil = null;
 
@@ -267,16 +342,36 @@ trait ProcessKontorWorkTrait
                 if ($task === null && $contextType !== '' && $contextUid !== '') {
                     $this->requirePermission('kontor-tasks-relation-manage');
                 }
-                $task ??= Task::create($this->organizationUid(), $values['title']);
-                $task->title = $values['title'];
-                $task->description = $values['description'] !== '' ? $values['description'] : null;
-                $task->priority = $values['priority'];
-                $task->dueAt = $dueAt;
-                $task->recurrenceRule = $values['recurrenceRule'] !== '' ? $values['recurrenceRule'] : null;
-                $task->recurrenceUntil = $recurrenceUntil;
-                $task->assignedTo = $values['assignedToMe'] ? (int) $this->wire()->user->id : null;
-                $isNew = $id === '';
-                $repository->save($task);
+                $apply = static function (Task $target) use ($values, $dueAt, $recurrenceUntil, $repository): Task {
+                    $target->title = $values['title'];
+                    $target->description = $values['description'] !== '' ? $values['description'] : null;
+                    $target->priority = $values['priority'];
+                    $target->dueAt = $dueAt;
+                    $target->recurrenceRule = $values['recurrenceRule'] !== '' ? $values['recurrenceRule'] : null;
+                    $target->recurrenceUntil = $recurrenceUntil;
+                    $target->assignedTo = $values['assignedTo'];
+                    $target->visibility = $values['visibility'];
+                    $target->departmentRoleId = $values['departmentRoleId'];
+                    $repository->save($target);
+
+                    return $target;
+                };
+                $isNew = $task === null;
+                if ($task === null) {
+                    $task = $apply(Task::create($this->organizationUid(), $values['title']));
+                } else {
+                    $task = $repository->changeActiveTask($id, function (Task $current) use ($task, $apply): Task {
+                        if (!$this->canViewTask($current)) {
+                            throw new Wire404Exception($this->_('Task not found.'));
+                        }
+                        if ($current->assignedTo !== $task->assignedTo || $current->visibility !== $task->visibility
+                            || $current->departmentRoleId !== $task->departmentRoleId) {
+                            throw new WireException($this->_('Task access changed. Reload the task and try again.'));
+                        }
+
+                        return $apply($current);
+                    });
+                }
                 if ($isNew && $contextType !== '' && $contextUid !== '') {
                     $this->taskModule()->relations()->linkToEntity(
                         $this->organizationUid(),
@@ -299,7 +394,7 @@ trait ProcessKontorWorkTrait
                 );
                 $this->message($isNew ? $this->_('Task created.') : $this->_('Task updated.'));
                 $this->wire()->session->redirect(
-                    '../task/?id=' . rawurlencode($task->uid->toString())
+                    $this->canViewTask($task) ? '../task/?id=' . rawurlencode($task->uid->toString()) : '../tasks/'
                 );
             }
         }
@@ -382,6 +477,11 @@ trait ProcessKontorWorkTrait
             'relatedRecords' => $task !== null ? $this->taskRelatedRecords($task) : [],
             'authorLabels' => $this->collaborationAuthorLabels(array_merge($notes, $comments)),
             'assigneeLabel' => $assigneeLabel,
+            'canAssign' => $canAssign && ($task === null || $canEdit),
+            'canShareOrganization' => $this->can('kontor-tasks-task-view-all'),
+            'departments' => $departments,
+            'assignees' => $assignees,
+            'departmentLabel' => $task?->departmentRoleId ? (string) $this->wire()->roles->get($task->departmentRoleId)->name : '',
             'canComplete' => $this->can('kontor-tasks-task-complete'),
             'canCancel' => $this->can('kontor-tasks-task-cancel'),
             'canEdit' => $this->can('kontor-tasks-task-edit'),
@@ -405,13 +505,17 @@ trait ProcessKontorWorkTrait
         });
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->post('id'));
         $module = $this->taskModule();
-        $task = $module->taskRepository()->require($id);
-        $this->requireSameOrganization($task->organizationId);
+        $this->requireVisibleTask($id);
+        $authorize = function (Task $current): void {
+            if (!$this->canViewTask($current)) {
+                throw new Wire404Exception($this->_('Task not found.'));
+            }
+        };
 
         if ($action === 'start') {
-            $module->workflow()->start($id);
+            $module->workflow()->start($id, authorize: $authorize);
         } elseif ($action === 'complete') {
-            $result = $module->workflow()->complete($id);
+            $result = $module->workflow()->complete($id, authorize: $authorize);
             if ($result['next'] !== null) {
                 $this->audit('tasks', 'task', $id, 'complete');
                 $this->audit(
@@ -427,16 +531,16 @@ trait ProcessKontorWorkTrait
                 );
             }
         } elseif ($action === 'cancel') {
-            $module->workflow()->cancel($id);
+            $module->workflow()->cancel($id, authorize: $authorize);
         } elseif ($action === 'reopen') {
-            $module->workflow()->reopen($id);
+            $module->workflow()->reopen($id, authorize: $authorize);
         } elseif ($action === 'restore') {
-            $module->taskRepository()->restore($id);
+            $module->taskRepository()->restore($id, authorize: $authorize);
             $this->audit('tasks', 'task', $id, 'restored');
             $this->message($this->_('Task restored.'));
             $this->wire()->session->redirect('../tasks/');
         } else {
-            $module->taskRepository()->archive($id);
+            $module->taskRepository()->archive($id, authorize: $authorize);
             $this->audit('tasks', 'task', $id, 'archived');
             $this->message($this->_('Task archived.'));
             $this->wire()->session->redirect('../tasks/?archived=1');
@@ -455,8 +559,7 @@ trait ProcessKontorWorkTrait
         $taskUid = $this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('task_uid')
         );
-        $task = $this->taskModule()->taskRepository()->require($taskUid);
-        $this->requireSameOrganization($task->organizationId);
+        $task = $this->requireVisibleTask($taskUid);
         if ($task->assignedTo === null) {
             throw new WireException($this->_('Assign the task before scheduling an email reminder.'));
         }
@@ -523,6 +626,16 @@ trait ProcessKontorWorkTrait
             ? $module->noteRepository()->findRecent($this->organizationUid(), 50)
             : [];
         $comments = $module->commentRepository()->findRecent($this->organizationUid(), 50);
+        $taskVisibility = [];
+        $canViewRecord = function (Note|Comment $record) use (&$taskVisibility): bool {
+            if ($record->entityType !== 'task') {
+                return true;
+            }
+
+            return $taskVisibility[$record->entityUid] ??= $this->canViewTaskByUid($record->entityUid);
+        };
+        $notes = array_values(array_filter($notes, $canViewRecord));
+        $comments = array_values(array_filter($comments, $canViewRecord));
         $records = array_merge($notes, $comments);
         $selectedView = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('view'),
@@ -563,8 +676,7 @@ trait ProcessKontorWorkTrait
         );
         $this->requireAction($entityType, ['task']);
         $entityUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('entity_uid'));
-        $task = $this->taskModule()->taskRepository()->require($entityUid);
-        $this->requireSameOrganization($task->organizationId);
+        $task = $this->requireVisibleTask($entityUid);
         $body = trim((string) $this->wire()->input->post('body'));
 
         if ($body === '') {
@@ -636,8 +748,7 @@ trait ProcessKontorWorkTrait
         );
         $this->requireAction($action, ['archive_note', 'archive_comment', 'toggle_follow']);
         $entityUid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('entity_uid'));
-        $task = $this->taskModule()->taskRepository()->require($entityUid);
-        $this->requireSameOrganization($task->organizationId);
+        $task = $this->requireVisibleTask($entityUid);
         $module = $this->collaborationModule();
 
         if ($action === 'toggle_follow') {

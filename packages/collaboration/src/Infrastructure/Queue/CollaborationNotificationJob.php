@@ -19,6 +19,7 @@ final class CollaborationNotificationJob implements JobInterface
         private readonly array $payload,
         private readonly ?OutboundMailService $mail = null,
         private readonly ?EntityLinkingService $links = null,
+        private readonly ?\Closure $canDeliver = null,
     ) {
     }
 
@@ -68,6 +69,12 @@ final class CollaborationNotificationJob implements JobInterface
             throw new RuntimeException(
                 'CollaborationNotificationJob requires OutboundMailService; register its queue factory with Mail injected.'
             );
+        }
+
+        if ($this->canDeliver !== null && !($this->canDeliver)($payload)) {
+            $progress->report(100);
+
+            return;
         }
 
         $message = $this->mail->send(

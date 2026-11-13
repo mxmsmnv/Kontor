@@ -108,6 +108,7 @@ trait ProcessKontorAdministrationTrait
             $component,
             $entityType,
             $action,
+            includeTaskActivity: $this->canSeeTaskAudit(),
         );
         $totalPages = max(1, (int) ceil($totalEvents / $pageSize));
         $page = min(
@@ -122,6 +123,7 @@ trait ProcessKontorAdministrationTrait
             $entityType,
             $action,
             ($page - 1) * $pageSize,
+            includeTaskActivity: $this->canSeeTaskAudit(),
         );
         $actorLabels = [];
         foreach ($events as $event) {
@@ -181,6 +183,7 @@ trait ProcessKontorAdministrationTrait
                 $filters['component'],
                 $filters['entityType'],
                 $filters['action'],
+                includeTaskActivity: $this->canSeeTaskAudit(),
             ),
         );
         $activeFilters = array_filter([

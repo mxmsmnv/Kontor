@@ -39,7 +39,7 @@ final class ProcessKontorPermissionContractTest extends TestCase
             $method,
             "\$this->requirePermission('kontor-tasks-relation-manage');"
         );
-        $save = strpos($method, '$repository->save($task);');
+        $save = strpos($method, '$task = $apply(Task::create(');
         $link = strpos($method, '$this->taskModule()->relations()->linkToEntity(');
 
         self::assertNotFalse($relationGuard);

@@ -95,11 +95,15 @@ final class TaskReminderDeliveryTest extends DatabaseTestCase
         };
         $messages = new MailMessageRepository($this->pdo, $organizations);
         $links = new EntityLinkingService(new RelationRepository($this->pdo, $organizations));
+        $recipientMayReceive = false;
         $job = new TaskReminderDeliveryJob(
             $queue->job?->payload() ?? [],
             $reminders,
             new OutboundMailService($sender, $messages),
             $links,
+            static function () use (&$recipientMayReceive): bool {
+                return $recipientMayReceive;
+            },
         );
         $progress = new class implements JobProgressReporterInterface {
             public int $percent = 0;
@@ -110,6 +114,12 @@ final class TaskReminderDeliveryTest extends DatabaseTestCase
             }
         };
 
+        $job->handle($job->payload(), $progress);
+        $this->assertSame(100, $progress->percent);
+        $this->assertSame([], $sender->sent);
+        $this->assertFalse($reminders->reminder($scheduled['reminder']->uid->toString())->isSent());
+
+        $recipientMayReceive = true;
         $job->handle($job->payload(), $progress);
         $job->handle($job->payload(), $progress);
 

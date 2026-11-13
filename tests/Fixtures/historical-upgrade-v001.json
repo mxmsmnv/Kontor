@@ -33,6 +33,6 @@
   {"moduleName":"KontorSales","modulePath":"packages/sales/KontorSales.module.php","component":"sales","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorSearch","modulePath":"packages/search/KontorSearch.module.php","component":"search","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]},
   {"moduleName":"KontorSettings","modulePath":"packages/settings/KontorSettings.module.php","component":"settings","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":false,"pendingMigrations":[]},
-  {"moduleName":"KontorTasks","modulePath":"packages/tasks/KontorTasks.module.php","component":"tasks","sourceVersion":"001","targetVersion": "101","upgradeHookRequired":true,"pendingMigrations":["Kontor\\Tasks\\Migrations\\Migration0003TrackTaskRecurrence"]},
+  {"moduleName":"KontorTasks","modulePath":"packages/tasks/KontorTasks.module.php","component":"tasks","sourceVersion":"001","targetVersion": "102","upgradeHookRequired":true,"pendingMigrations":["Kontor\\Tasks\\Migrations\\Migration0003TrackTaskRecurrence","Kontor\\Tasks\\Migrations\\Migration0004AddTaskVisibility"]},
   {"moduleName":"KontorWorkflow","modulePath":"packages/workflow/KontorWorkflow.module.php","component":"workflow","sourceVersion":"001","targetVersion": "100","upgradeHookRequired":true,"pendingMigrations":[]}
 ]

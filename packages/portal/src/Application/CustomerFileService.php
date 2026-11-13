@@ -30,13 +30,18 @@ final class CustomerFileService
      */
     public function filesForDocument(string $documentType, string $documentUid): array
     {
+        if (strtolower($documentType) === 'task') {
+            return [];
+        }
+
         return $this->files->forEntity($documentType, $documentUid, $this->organizationId);
     }
 
     public function downloadUrl(string $fileUid, \DateTimeImmutable $expiresAt): string
     {
         $file = $this->files->find($fileUid) ?? throw new RuntimeException("File \"{$fileUid}\" was not found.");
-        if ((int) $file['organization_id'] !== $this->organizationId || $file['archived_at'] !== null) {
+        if ((int) $file['organization_id'] !== $this->organizationId || $file['archived_at'] !== null
+            || strtolower((string) $file['entity_type']) === 'task') {
             throw new RuntimeException("File \"{$fileUid}\" was not found.");
         }
 

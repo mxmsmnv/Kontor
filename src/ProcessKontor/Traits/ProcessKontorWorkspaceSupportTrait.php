@@ -141,7 +141,7 @@ trait ProcessKontorWorkspaceSupportTrait
                     $this->organizationUid(),
                     $taskUid,
                 );
-                if ($task !== null) {
+                if ($task !== null && $this->canViewTask($task)) {
                     $tasks[] = $task;
                 }
             }
@@ -295,6 +295,30 @@ trait ProcessKontorWorkspaceSupportTrait
         }
 
         return $views;
+    }
+
+    /** @param array<int, array<string, mixed>> $relations */
+    private function canViewTaskLinkedMail(array $relations): bool
+    {
+        foreach ($relations as $relation) {
+            if (($relation['targetType'] ?? null) === 'task'
+                && !$this->canViewTaskByUid((string) ($relation['targetUid'] ?? ''))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function canViewTaskByUid(string $uid): bool
+    {
+        if ($uid === '' || !$this->tasksReady() || !$this->can('kontor-tasks-task-view')) {
+            return false;
+        }
+
+        $task = $this->taskModule()->taskRepository()->find($uid);
+
+        return $task !== null && $this->canViewTask($task);
     }
 
     private function mailAssignedUserLabel(int $userId): string
@@ -895,8 +919,11 @@ trait ProcessKontorWorkspaceSupportTrait
             $label = '';
             if ($record->entityType === 'task' && $this->tasksReady() && $this->can('kontor-tasks-task-view')) {
                 $entity = $this->taskModule()->taskRepository()->find($record->entityUid);
+                if ($entity === null || !$this->canViewTask($entity)) {
+                    continue;
+                }
                 $route = 'task/';
-                $label = $entity?->title ?? '';
+                $label = $entity->title;
             } elseif ($record->entityType === 'project' && $this->projectsReady() && $this->can('kontor-projects-project-view')) {
                 $entity = $this->projectsModule()->projectRepository()->find($record->entityUid);
                 $route = 'project/';
@@ -958,6 +985,12 @@ trait ProcessKontorWorkspaceSupportTrait
      */
     private function queueCollaborationNotifications(Comment $comment, string $entityLabel): array
     {
+        $isTask = $comment->entityType === 'task';
+        $task = $isTask ? $this->taskModule()->taskRepository()->find($comment->entityUid) : null;
+        if ($isTask && $task === null) {
+            return [];
+        }
+
         $recipientReasons = [];
         foreach ($this->collaborationModule()->mentionRepository()->forComment($comment->uid->toString()) as $mention) {
             $recipientReasons[$mention->mentionedUserId] = 'mention';
@@ -980,6 +1013,9 @@ trait ProcessKontorWorkspaceSupportTrait
             if (!$user->id || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
                 continue;
             }
+            if ($task !== null && !$this->taskModule()->accessFor($user)->allows($task)) {
+                continue;
+            }
 
             $recipients[] = ['userId' => (int) $userId, 'email' => $email, 'reason' => $reason];
         }
@@ -998,8 +1034,9 @@ trait ProcessKontorWorkspaceSupportTrait
             authorUserId: $comment->createdBy,
             authorLabel: $authorLabel,
             fromAddress: $fromAddress,
-            subject: mb_substr("New comment on task: {$entityLabel}", 0, 255),
-            body: "{$authorLabel} posted a comment on “{$entityLabel}”:\n\n{$comment->body}",
+            subject: $isTask ? $this->_('New comment in Kontor') : mb_substr("New comment: {$entityLabel}", 0, 255),
+            body: $isTask ? $this->_('Sign in to Kontor to read the comment.')
+                : "{$authorLabel} posted a comment on “{$entityLabel}”:\n\n{$comment->body}",
             recipients: $recipients,
         );
     }

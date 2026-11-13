@@ -6,6 +6,8 @@ All notable changes to Kontor are documented here.
 
 ### Added
 
+- Scope tasks to an assignee, a department, or the organization, with separate manager visibility.
+
 - Create a selectable employee role with CRM and Contacts view/edit permissions and optional Workspace access.
 
 - Preview and install the connected demo's required modules in dependency order with the demo setup command.

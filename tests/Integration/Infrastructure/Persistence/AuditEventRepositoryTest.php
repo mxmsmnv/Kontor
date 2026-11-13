@@ -83,4 +83,30 @@ final class AuditEventRepositoryTest extends DatabaseTestCase
         $this->assertSame(['company', 'contact'], $options['entityTypes']);
         $this->assertSame(['created', 'updated'], $options['actions']);
     }
+
+    public function test_task_activity_is_omitted_consistently_from_list_count_export_and_filters(): void
+    {
+        $organizations = new OrganizationRepository($this->pdo);
+        $organization = $organizations->defaultOrganization('US', 'en', 'EUR');
+        $organizationId = $organizations->internalIdOf($organization->uid->toString());
+        $logger = new AuditLogger($this->pdo);
+        $logger->record($organizationId, 'tasks', 'task', 'task_01', 'created', 'user', 'user_01');
+        $logger->record($organizationId, 'collaboration', 'comment', 'comment_01', 'created', 'user', 'user_01');
+        $logger->record($organizationId, 'contacts', 'contact', 'contact_01', 'created', 'user', 'user_01');
+
+        $repository = new AuditEventRepository($this->pdo);
+        $this->assertSame(3, $repository->countMatching($organizationId));
+        $this->assertSame(1, $repository->countMatching($organizationId, includeTaskActivity: false));
+        $this->assertSame(0, $repository->countMatching($organizationId, component: 'tasks', includeTaskActivity: false));
+        $this->assertSame(
+            ['contact_01'],
+            array_column($repository->findRecent($organizationId, includeTaskActivity: false), 'entityUid'),
+        );
+        $this->assertSame(
+            ['contact_01'],
+            array_column(iterator_to_array($repository->iterateMatching($organizationId, includeTaskActivity: false)), 'entityUid'),
+        );
+        $this->assertSame(['contacts'], $repository->filterOptions($organizationId, false)['components']);
+    }
+
 }

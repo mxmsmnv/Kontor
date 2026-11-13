@@ -15,12 +15,14 @@ final class TaskReminderDeliveryJob implements JobInterface
 {
     /**
      * @param array<string, mixed> $payload
+     * @param null|\Closure(array<string, mixed>): bool $maySend
      */
     public function __construct(
         private readonly array $payload,
         private readonly ?TaskReminderService $reminders = null,
         private readonly ?OutboundMailService $mail = null,
         private readonly ?EntityLinkingService $links = null,
+        private readonly ?\Closure $maySend = null,
     ) {
     }
 
@@ -65,7 +67,7 @@ final class TaskReminderDeliveryJob implements JobInterface
         }
 
         $reminder = $this->reminders->reminder((string) $payload['reminderUid']);
-        if ($reminder->isSent()) {
+        if ($reminder->isSent() || ($this->maySend !== null && !($this->maySend)($payload))) {
             $progress->report(100);
 
             return;

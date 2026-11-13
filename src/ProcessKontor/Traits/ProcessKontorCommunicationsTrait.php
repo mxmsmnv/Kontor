@@ -107,13 +107,22 @@ trait ProcessKontorCommunicationsTrait
                 $selected->uid->toString(),
             )
             : [];
+        if (!$this->canViewTaskLinkedMail($relations)) {
+            throw new Wire404Exception();
+        }
+        $messages = array_values(array_filter(
+            $module->messageRepository()->forOrganization($this->organizationUid()),
+            fn ($message): bool => $this->canViewTaskLinkedMail(
+                $module->entityLinking()->linkedEntities($this->organizationUid(), $message->uid->toString()),
+            ),
+        ));
         $this->setPageTitle($selected === null
             ? $this->_('Kontor · Mail')
             : sprintf($this->_('Kontor · %s'), $selected->subject));
 
         return $this->renderTemplate('mail', [
             'mailboxes' => $module->mailboxRepository()->forOrganization($this->organizationUid()),
-            'messages' => $module->messageRepository()->forOrganization($this->organizationUid()),
+            'messages' => $messages,
             'selected' => $selected,
             'relations' => $relations,
             'relationViews' => $this->mailRelationViews($relations),
@@ -253,6 +262,12 @@ trait ProcessKontorCommunicationsTrait
         );
         $message = $this->mailModule()->messageRepository()->require($uid);
         $this->requireSameOrganization($message->organizationId);
+        if (!$this->canViewTaskLinkedMail($this->mailModule()->entityLinking()->linkedEntities(
+            $this->organizationUid(),
+            $message->uid->toString(),
+        ))) {
+            throw new Wire404Exception();
+        }
         $target = $this->wire()->sanitizer->text(
             (string) $this->wire()->input->post('entity_target')
         );
@@ -483,6 +498,13 @@ trait ProcessKontorCommunicationsTrait
         $this->wire()->session->redirect('../portal/?id=' . rawurlencode($uid));
     }
 
+    /** @param array<string, mixed> $file */
+    private function canViewTaskLinkedFile(array $file): bool
+    {
+        return ($file['entity_type'] ?? null) !== 'task'
+            || $this->canViewTaskByUid((string) ($file['entity_uid'] ?? ''));
+    }
+
     public function ___executeFiles(): string
     {
         $this->requireFiles();
@@ -491,7 +513,8 @@ trait ProcessKontorCommunicationsTrait
         $id = $this->wire()->sanitizer->text((string) $this->wire()->input->get('id'));
         $selected = $id !== '' ? $module->fileRepository()->find($id) : null;
         if ($id !== '' && ($selected === null
-            || (int) $selected['organization_id'] !== $this->organizationInternalId())) {
+            || (int) $selected['organization_id'] !== $this->organizationInternalId()
+            || !$this->canViewTaskLinkedFile($selected))) {
             throw new Wire404Exception($this->_('File metadata was not found.'));
         }
         $versions = [];
@@ -505,7 +528,10 @@ trait ProcessKontorCommunicationsTrait
         }
         $shareResult = $this->wire()->session->get('kontorFilesShareResult');
         $this->wire()->session->set('kontorFilesShareResult', null);
-        $allFiles = $module->fileRepository()->forOrganization($this->organizationInternalId());
+        $allFiles = array_values(array_filter(
+            $module->fileRepository()->forOrganization($this->organizationInternalId()),
+            $this->canViewTaskLinkedFile(...),
+        ));
         $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
         $classification = $this->wire()->sanitizer->option(
             (string) $this->wire()->input->get('classification'),
@@ -610,6 +636,9 @@ trait ProcessKontorCommunicationsTrait
                 || !Uid::isValid($entityUid))) {
             throw new WireException($this->_('Use a valid entity type and ULID.'));
         }
+        if ($entityType === 'task' && !$this->canViewTaskByUid($entityUid)) {
+            throw new Wire404Exception();
+        }
         $stream = fopen((string) $upload['tmp_name'], 'rb');
         if ($stream === false) {
             throw new WireException($this->_('The uploaded file could not be opened.'));
@@ -647,6 +676,11 @@ trait ProcessKontorCommunicationsTrait
         $uid = $this->wire()->sanitizer->text((string) $this->wire()->input->post('file_uid'));
         $action = $this->wire()->sanitizer->text((string) $this->wire()->input->post('action'));
         $this->requireAction($action, ['archive', 'restore']);
+        $file = $this->filesModule()->fileRepository()->find($uid);
+        if ($file === null || (int) $file['organization_id'] !== $this->organizationInternalId()
+            || !$this->canViewTaskLinkedFile($file)) {
+            throw new Wire404Exception();
+        }
         $manager = $this->filesModule()->fileManager();
         $action === 'archive'
             ? $manager->archive($uid, $this->organizationUid())
@@ -667,7 +701,7 @@ trait ProcessKontorCommunicationsTrait
         $file = $this->filesModule()->fileRepository()->find($uid);
         if ($file === null
             || (int) $file['organization_id'] !== $this->organizationInternalId()
-            || $file['archived_at'] !== null) {
+            || $file['archived_at'] !== null || !$this->canViewTaskLinkedFile($file)) {
             throw new WireException($this->_('Only an active file in this organization can be shared.'));
         }
         $expiresAt = new \DateTimeImmutable('+15 minutes');
@@ -703,7 +737,7 @@ trait ProcessKontorCommunicationsTrait
             $this->organizationInternalId(),
             $path,
         );
-        if ($file === null || $file['archived_at'] !== null) {
+        if ($file === null || $file['archived_at'] !== null || !$this->canViewTaskLinkedFile($file)) {
             throw new Wire404Exception($this->_('The active file was not found.'));
         }
         $stream = $this->filesModule()->fileManager()->read(

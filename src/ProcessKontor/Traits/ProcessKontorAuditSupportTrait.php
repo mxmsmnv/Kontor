@@ -734,7 +734,7 @@ trait ProcessKontorAuditSupportTrait
      */
     private function activityFilterSelection(int $organizationId): array
     {
-        $options = $this->auditEventRepository()->filterOptions($organizationId);
+        $options = $this->auditEventRepository()->filterOptions($organizationId, $this->canSeeTaskAudit());
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $component = $this->wire()->sanitizer->text((string) $this->wire()->input->get('component'));
         $entityType = $this->wire()->sanitizer->text((string) $this->wire()->input->get('entity_type'));
@@ -748,4 +748,10 @@ trait ProcessKontorAuditSupportTrait
             'options' => $options,
         ];
     }
+
+    private function canSeeTaskAudit(): bool
+    {
+        return $this->can('kontor-tasks-task-view') && $this->can('kontor-tasks-task-view-all');
+    }
+
 }

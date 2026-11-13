@@ -166,7 +166,11 @@ class KontorPortal extends WireData implements Module
         /** @var KontorFiles $filesModule */
         $filesModule = $this->wire()->modules->get('KontorFiles');
 
-        return new PortalFileDownloadHandler($this->signer(), $filesModule->storage());
+        return new PortalFileDownloadHandler(
+            $this->signer(),
+            $filesModule->storage(),
+            $filesModule->fileRepository()->hasTaskAttachmentAtPath(...),
+        );
     }
 
     public function profile(): CustomerProfileService

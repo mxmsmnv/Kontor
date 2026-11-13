@@ -72,6 +72,29 @@ $configureUser = static function (string $name, string $password, object $role) 
     return $user;
 };
 
+$taskAccess = ['page-view', 'kontor-access', 'kontor-tasks-task-view'];
+$taskDepartmentRoles = [
+    'media' => $configureRole('kontor-e2e-media-department', ['kontor-tasks-department']),
+    'production' => $configureRole('kontor-e2e-production-department', ['kontor-tasks-department']),
+];
+$taskStaffRole = $configureRole('kontor-e2e-task-staff-role', [...$taskAccess, 'kontor-tasks-task-edit']);
+$taskScopeUsers = [];
+foreach ($taskDepartmentRoles as $name => $department) {
+    $member = $configureUser('kontor-e2e-task-' . $name, $editorPassword, $taskStaffRole);
+    $member->addRole($department);
+    $member->save('roles');
+    $taskScopeUsers[$name] = $member;
+}
+$mediaPeer = $configureUser('kontor-e2e-task-media-peer', $editorPassword, $taskStaffRole);
+$mediaPeer->addRole($taskDepartmentRoles['media']);
+$mediaPeer->save('roles');
+$taskScopeUsers['mediaPeer'] = $mediaPeer;
+$taskManagerAccess = [...$taskAccess, 'kontor-tasks-task-view-all'];
+$taskScopeUsers['manager'] = $configureUser('kontor-e2e-task-manager', $editorPassword,
+    $configureRole('kontor-e2e-task-manager-role', $taskManagerAccess));
+$taskScopeUsers['dispatcher'] = $configureUser('kontor-e2e-task-dispatcher', $editorPassword,
+    $configureRole('kontor-e2e-task-dispatcher-role', [...$taskManagerAccess, 'kontor-tasks-task-create', 'kontor-tasks-task-assign']));
+
 $editorPermissions = [
     'page-view', 'kontor-access',
     'kontor-contacts-contact-view', 'kontor-contacts-contact-create', 'kontor-contacts-contact-edit',
@@ -119,7 +142,7 @@ foreach (['chromium-desktop', 'chromium-mobile', 'firefox-desktop', 'webkit-mobi
 // users' accumulated login throttle state so repeated browser matrices remain
 // deterministic without weakening the application's production defaults.
 $throttle = $database->pdo()->prepare('DELETE FROM session_login_throttle WHERE name = :name');
-foreach ([$editor, ...array_values($journeyUsers), ...array_values($restrictedUsers)] as $fixtureUser) {
+foreach ([$editor, ...array_values($journeyUsers), ...array_values($restrictedUsers), ...array_values($taskScopeUsers)] as $fixtureUser) {
     $throttle->execute(['name' => (string) $fixtureUser->name]);
 }
 
@@ -242,6 +265,11 @@ $state = [
     ),
     'restricted_lead_uid' => $lead->uid->toString(),
     'commerce_contact_uid' => $commerceContact->uid->toString(),
+    'task_scope_users' => array_map(static fn (object $user): array => [
+        'name' => (string) $user->name,
+        'id' => (string) $user->id,
+    ], $taskScopeUsers),
+    'task_department_roles' => array_map(static fn (object $role): string => (string) $role->id, $taskDepartmentRoles),
 ];
 if (file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
     throw new RuntimeException('Could not write the browser fixture state.');

@@ -76,12 +76,36 @@ class KontorCollaboration extends WireData implements Module
         $mail = $this->wire()->modules->get('KontorMail');
         $queue->jobRegistry()->register(
             'collaboration.notify',
-            static fn (array $payload): CollaborationNotificationJob => new CollaborationNotificationJob(
+            fn (array $payload): CollaborationNotificationJob => new CollaborationNotificationJob(
                 $payload,
                 $mail->outbound(),
                 $mail->entityLinking(),
+                $this->canDeliverNotification(...),
             ),
         );
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function canDeliverNotification(array $payload): bool
+    {
+        if (($payload['entityType'] ?? null) !== 'task') {
+            return true;
+        }
+        if (!$this->wire()->modules->isInstalled('KontorTasks')) {
+            return false;
+        }
+
+        /** @var KontorTasks $tasks */
+        $tasks = $this->wire()->modules->get('KontorTasks');
+        $task = $tasks->taskRepository()->findActive(
+            (string) $payload['organizationUid'],
+            (string) $payload['entityUid'],
+        );
+        $recipient = $this->wire()->users->get((int) $payload['recipientUserId']);
+
+        return $task !== null && $recipient->id > 0
+            && strcasecmp(trim((string) $recipient->email), (string) $payload['recipientEmail']) === 0
+            && $tasks->accessFor($recipient)->allows($task);
     }
 
     private function registerTranslations(TranslationRegistry $translations): void
