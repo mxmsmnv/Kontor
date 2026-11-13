@@ -131,6 +131,23 @@ final class PortalAccountRepository implements RepositoryInterface
         ]);
     }
 
+    public function changeActiveStatus(string $organizationUid, string $uid, string $expected, string $status): bool
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE kontor_portal_accounts SET status = :status, updated_at = :now, version = version + 1
+             WHERE uid = :uid AND organization_id = :organization_id AND archived_at IS NULL AND status = :expected'
+        );
+        $statement->execute([
+            'uid' => $uid,
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+            'expected' => $expected,
+            'status' => $status,
+            'now' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'),
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
+
     public function archive(string $id): void
     {
         $statement = $this->pdo->prepare('UPDATE kontor_portal_accounts SET archived_at = :now WHERE uid = :uid');

@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Kontor\MCP\Application;
 
+use Kontor\Core\Application\AuditLogger;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use PDO;
 use Kontor\Portal\Infrastructure\Persistence\PortalAccountRepository;
 use ProcessWire\Wire404Exception;
+use ProcessWire\WireException;
 use ProcessWire\WirePermissionException;
 
 trait PortalLookupTools
@@ -27,6 +31,13 @@ trait PortalLookupTools
             $this->tool('kontor_portal_account_get', 'Get a customer portal account',
                 'Read organization portal account status and contact metadata.',
                 $this->mcpKontorPortalAccountGet(...), 'read', ['uid' => $this->uidSchema()], ['uid']),
+            $this->tool('kontor_portal_account_status', 'Enable or disable a customer portal account',
+                'Apply a reviewed access change to a single portal account. Check its current status before confirming.',
+                $this->mcpKontorPortalAccountStatus(...), 'draft', [
+                    'uid' => $this->uidSchema(),
+                    'action' => ['type' => 'string', 'enum' => ['enable', 'disable']],
+                    'confirmation' => ['type' => 'string', 'const' => 'CHANGE_REVIEWED_PORTAL_ACCOUNT'],
+                ], ['uid', 'action', 'confirmation'], destructive: true),
         ];
     }
 
@@ -52,7 +63,45 @@ trait PortalLookupTools
         return ['record' => $record];
     }
 
-    /** @return array{PortalAccountRepository, string} */
+    public function mcpKontorPortalAccountStatus(string $uid, string $action, string $confirmation): array
+    {
+        [$repository, $organization, $actor] = $this->mcpPortalReadContext();
+        if ($confirmation !== 'CHANGE_REVIEWED_PORTAL_ACCOUNT' || !in_array($action, ['enable', 'disable'], true)) {
+            throw new WireException('Confirm the reviewed portal account action.');
+        }
+        $status = $action === 'enable' ? 'active' : 'disabled';
+        $container = $this->wire()->modules->get('Kontor')->container();
+        $database = $container->get(PDO::class);
+        $ownsTransaction = DatabaseConcurrency::beginWriteTransaction($database);
+        try {
+            $account = $repository->accountMetadata($organization, uid: $uid, limit: 1)[0] ?? null;
+            if ($account === null) {
+                throw new Wire404Exception('Portal account not found.');
+            }
+            if ($account['status'] !== $status) {
+                if (!$repository->changeActiveStatus($organization, $uid, $account['status'], $status)) {
+                    throw new WireException('The portal account changed. Review its status before retrying.');
+                }
+                $organizationId = $container->get(OrganizationRepository::class)->internalIdOf($organization);
+                $container->get(AuditLogger::class)->record(
+                    $organizationId, 'portal', 'account', $uid, $action . 'd', 'user', (string) $actor->id,
+                    metadata: ['transport' => 'mcp'],
+                );
+            }
+            if ($ownsTransaction) {
+                $database->commit();
+            }
+
+            return ['uid' => $uid, 'status' => $status];
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $database->inTransaction()) {
+                $database->rollBack();
+            }
+            throw $error;
+        }
+    }
+
+    /** @return array{PortalAccountRepository, string, \ProcessWire\User} */
     private function mcpPortalReadContext(): array
     {
         $actor = $this->mcpActor();
@@ -64,6 +113,6 @@ trait PortalLookupTools
         $organization = $modules->get('Kontor')->container()->get(OrganizationRepository::class)
             ->defaultOrganization('US', 'en', 'USD')->uid->toString();
 
-        return [$modules->get('KontorPortal')->accountRepository(), $organization];
+        return [$modules->get('KontorPortal')->accountRepository(), $organization, $actor];
     }
 }
