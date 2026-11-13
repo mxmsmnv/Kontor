@@ -46,4 +46,63 @@ final class KontorMcpModuleContractTest extends TestCase
             );
         }
     }
+    public function test_task_tools_are_optional_documented_and_expose_closed_schemas(): void
+    {
+        $provider = new class {
+            use \Kontor\MCP\Application\TaskTools;
+
+            public bool $installed = false;
+            public object $modules;
+
+            public function __construct()
+            {
+                $this->modules = $this;
+            }
+
+            public function wire(): self
+            {
+                return $this;
+            }
+
+            public function isInstalled(string $module): bool
+            {
+                return $this->installed && $module === 'KontorTasks';
+            }
+
+            public function uidSchema(): array
+            {
+                return ['type' => 'string'];
+            }
+
+            public function idempotencySchema(): array
+            {
+                return ['type' => 'string'];
+            }
+
+            public function tool(string $name, string $title, string $description, callable $handler, string $scope, array $properties, array $required = [], bool $destructive = false): array
+            {
+                return compact('name', 'handler', 'scope', 'properties', 'required', 'destructive');
+            }
+
+            public function tools(): array
+            {
+                return $this->taskTools();
+            }
+        };
+        self::assertSame([], $provider->tools());
+        $provider->installed = true;
+        $tools = array_column($provider->tools(), null, 'name');
+        $docs = file_get_contents(dirname(__DIR__, 2) . '/API.md');
+
+        self::assertCount(7, $tools);
+        foreach ($tools as $tool) {
+            self::assertIsCallable($tool['handler']);
+            self::assertStringContainsString($tool['name'], $docs);
+        }
+        self::assertFalse($tools['kontor_task_create']['properties']['fields']['additionalProperties']);
+        self::assertFalse($tools['kontor_task_create']['properties']['related_customer']['additionalProperties']);
+        self::assertTrue($tools['kontor_task_reviewed_action']['destructive']);
+        self::assertSame('APPLY_REVIEWED_KONTOR_TASK_ACTION', $tools['kontor_task_reviewed_action']['properties']['confirmation']['const']);
+    }
+
 }

@@ -8,6 +8,7 @@ use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\MCP\Application\ContactIntakeTools;
 use Kontor\MCP\Application\CrmActionTools;
 use Kontor\MCP\Application\CrmLookupTools;
+use Kontor\MCP\Application\CrmRecordTools;
 use Kontor\MCP\Application\KontorMcpBridge;
 use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
@@ -19,6 +20,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use ContactIntakeTools;
     use CrmActionTools;
     use CrmLookupTools;
+    use CrmRecordTools;
     use KontorMcpProjectsTrait;
     use TaskTools;
 
@@ -400,6 +402,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ),
             ...$this->contactIntakeTools(),
             ...$this->mcpCrmLookupTools(),
+            ...$this->crmRecordTools(),
             ...$this->crmActionTools(),
             ...$this->mcpProjectTools(),
             ...$this->taskTools(),
