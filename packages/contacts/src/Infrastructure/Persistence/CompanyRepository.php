@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Contacts\Infrastructure\Persistence;
 
 use Kontor\Contacts\Domain\Company;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\Contracts\RepositoryInterface;
 use Kontor\SDK\ValueObjects\Uid;
@@ -23,9 +24,12 @@ final class CompanyRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Company
+    public function find(string $id, bool $forUpdate = false): ?Company
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_companies WHERE uid = :uid AND deleted_at IS NULL');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_companies WHERE uid = :uid AND deleted_at IS NULL'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : '')
+        );
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

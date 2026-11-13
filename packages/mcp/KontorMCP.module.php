@@ -5,6 +5,7 @@ namespace ProcessWire;
 use Kontor\API\Application\IdempotencyService;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\MCP\Application\CompanyTools;
 use Kontor\MCP\Application\ContactIntakeTools;
 use Kontor\MCP\Application\CrmActionTools;
 use Kontor\MCP\Application\CrmLookupTools;
@@ -17,6 +18,7 @@ require_once __DIR__ . '/KontorMcpProjectsTrait.php';
 
 class KontorMCP extends WireData implements Module, ConfigurableModule
 {
+    use CompanyTools;
     use ContactIntakeTools;
     use CrmActionTools;
     use CrmLookupTools;
@@ -400,6 +402,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
                 ],
                 ['document', 'idempotency_key', 'confirmation'],
             ),
+            ...$this->companyTools(),
             ...$this->contactIntakeTools(),
             ...$this->mcpCrmLookupTools(),
             ...$this->crmRecordTools(),

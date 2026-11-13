@@ -17,7 +17,9 @@ A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegi
 - `kontor_crm_leads_list`, `kontor_crm_lead_get`, `kontor_crm_deals_list`, `kontor_crm_deal_get`, `kontor_crm_pipelines_list` and `kontor_crm_stages_list` expose scoped CRM lookup. Full lead detail requires lead edit, as in the Workspace form.
 - `kontor_crm_lead_convert` and `kontor_crm_deal_transition` use CRM workflow permissions and require an explicit confirmation and an idempotency key.
 - `kontor_crm_record_archive_action` applies a reviewed archive or restore to a lead or deal under its Workspace permission.
-- `kontor_crm_lead_create`, `kontor_crm_lead_update`, `kontor_crm_deal_create` and `kontor_crm_deal_update` accept the documented JSON fields, a per-user idempotency key and an optional dry-run preview. `kontor_crm_intake_get` describes custom lead and deal fields. Create deals in an open stage and use the transition tool for later stage changes.
+- [CRM record mutations and intake](CRM-RECORDS.md). `kontor_crm_lead_create`, `kontor_crm_lead_update`, `kontor_crm_deal_create` and `kontor_crm_deal_update` accept the documented JSON fields, a per-user idempotency key and an optional dry-run preview. `kontor_crm_intake_get` describes custom lead and deal fields. Create deals in an open stage and use the transition tool for later stage changes.
+
+- `kontor_companies_list`, `kontor_company_get`, `kontor_company_create`, `kontor_company_update` and `kontor_company_archive_action` expose CRM company records and their configured custom fields under the matching company permission. Company creation and updates require Draft access.
 
 ## Task tools
 
