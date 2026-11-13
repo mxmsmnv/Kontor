@@ -129,6 +129,10 @@ final class WorkflowEngine
 
         $instance = $this->instances->require($request->instanceUid);
 
+        if (!hash_equals($request->organizationId, $instance->organizationId)) {
+            throw new RuntimeException('Workflow approval does not belong to this organization.');
+        }
+
         if ($instance->currentState !== $request->fromState) {
             throw new RuntimeException("{$instance->entityType} \"{$instance->entityUid}\" has moved since this approval was requested.");
         }

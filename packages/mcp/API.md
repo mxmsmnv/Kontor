@@ -31,6 +31,14 @@ A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegi
 - `kontor_purchase_order_receive` records a goods receipt against the line UIDs returned by `kontor_purchase_order_get` and updates stock in the selected active warehouse. It requires Draft, receipt-create, an idempotency key and `RECORD_PURCHASE_RECEIPT`.
 - `kontor_inventory_movement_record` receives, transfers, adjusts, reserves or releases stock with the matching inventory permission. It requires Draft, an idempotency key and `APPLY_INVENTORY_MOVEMENT`. Adjustments require a reason. Negative stock requires the existing negative-stock override.
 
+## Workflow tools
+
+- `kontor_workflows_list` lists definitions. `kontor_workflow_instance_get` reads a workflow by record type and UID and returns only transitions the linked user can perform.
+- `kontor_workflow_history_list` requires workflow definition view and history view. `kontor_workflow_approvals_list` requires definition view and approval permission and returns requests for records the linked user can view.
+- `kontor_workflow_instance_start` uses an active definition and requires Draft, transition permission and an idempotency key. `kontor_workflow_transition` also requires any permission on the selected transition and confirmation `APPLY_WORKFLOW_TRANSITION`.
+- `kontor_workflow_approval_decide` requires Draft, approval permission, an idempotency key and confirmation `DECIDE_WORKFLOW_APPROVAL`. Rejections require a reason. A decision applies only to the pending request as reviewed.
+- Instance, history and approval tools also check the underlying record's Workspace access and organization. Unknown or custom record types require a superuser.
+
 ## Task tools
 
 When Kontor Tasks is installed, the gateway advertises these additional tools.
@@ -96,3 +104,5 @@ With the respective components installed, `kontor_mail_list` and `kontor_mail_ge
 `kontor_expense_categories_list`, `kontor_expenses_list` and `kontor_expense_get` return organization-scoped, active category and non-archived expense records, with the corresponding Workspace view permissions. `kontor_expense_draft_create` records a draft with category UID, description, positive integer minor-unit amount, currency and ISO calendar date. Confirm those fields with the user before writing. The tool requires expense creation and category view permissions. Optional suppliers must be active and visible, and optional receipt files must be active and visible through the file ACL. Creating a draft does not submit, approve or reimburse it.
 
 `kontor_expense_reviewed_action` submits a draft or approves or rejects a submitted expense. Review the expense and exact action with the user, then include `APPLY_REVIEWED_EXPENSE_ACTION` and an idempotency key. The linked user must be able to view expenses and hold the corresponding Workspace submit or approve permission. Rejection requires a reason. The tool records the transition in the same expense workflow as Workspace. Reimbursement is outside this tool.
+
+`kontor_invoice_payment_record` records and allocates an already received payment for an open invoice through the Workspace workflow. Review invoice, amount in minor units, currency, method and current balance with the user. Provide `RECORD_REVIEWED_RECEIVED_PAYMENT` and an idempotency key. The linked user needs invoice view and payment creation and allocation permissions. The invoice is locked during recording and a changed balance stops the operation. The tool does not charge a payment instrument.
