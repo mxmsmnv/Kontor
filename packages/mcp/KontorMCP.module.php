@@ -5,6 +5,7 @@ namespace ProcessWire;
 use Kontor\API\Application\IdempotencyService;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\Entities\Infrastructure\API\CustomEntityResource;
 use Kontor\MCP\Application\ActivityTools;
 use Kontor\MCP\Application\CatalogTools;
 use Kontor\MCP\Application\CommerceDraftTools;
@@ -124,12 +125,38 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             return;
         }
 
-        $allowed = $operation === 'view'
-            ? $this->pocketWireCanReadResource($resource, $actor)
-            : $resource === 'contacts' && $actor->hasPermission('kontor-contacts-contact-' . $operation);
-        if (!$allowed) {
+        if (!$this->mcpResourceAllowed($resource, $operation, $actor)) {
             throw new WirePermissionException('The linked user lacks the Kontor resource permission.');
         }
+    }
+
+    private function mcpResourceAllowed(string $resource, string $operation, User $actor): bool
+    {
+        if (in_array($resource, ['contacts', 'organizations'], true)) {
+            return $operation === 'view'
+                ? $this->pocketWireCanReadResource($resource, $actor)
+                : $resource === 'contacts' && $actor->hasPermission('kontor-contacts-contact-' . $operation);
+        }
+
+        $modules = $this->wire()->modules;
+        if (!$modules->isInstalled('KontorEntities') || !$actor->hasPermission('kontor-entities-record-view')) {
+            return false;
+        }
+        $registry = $modules->get('KontorAPI')->resourceRegistry();
+        if (!$registry->has($resource) || !$registry->get($resource) instanceof CustomEntityResource) {
+            return false;
+        }
+        $organizationUid = $modules->get('Kontor')->container()->get(OrganizationRepository::class)
+            ->defaultOrganization('US', 'en', 'USD')->uid->toString();
+        $definition = $modules->get('KontorEntities')->definitionRepository()->findActiveByKey($organizationUid, $resource);
+        if ($definition === null || !$definition->apiExposed
+            || ($definition->viewPermission !== null && !$actor->hasPermission($definition->viewPermission))) {
+            return false;
+        }
+
+        return $operation === 'view' || ($operation !== 'archive'
+            && $actor->hasPermission('kontor-entities-record-manage')
+            && ($definition->editPermission === null || $actor->hasPermission($definition->editPermission)));
     }
 
     private function requireMcpSuperuser(): void
@@ -465,14 +492,11 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             return $result;
         }
         $items = array_values(array_filter($result['items'], fn (array $item): bool =>
-            $this->pocketWireCanReadResource($item['resource'], $actor)));
+            $this->mcpResourceAllowed($item['resource'], 'view', $actor)));
         foreach ($items as &$item) {
-            if ($item['resource'] === 'contacts') {
-                foreach (['create' => 'create', 'update' => 'edit', 'archive' => 'archive'] as $action => $permission) {
-                    if (isset($item['operations'][$action])) {
-                        $item['operations'][$action] = $item['operations'][$action]
-                            && $actor->hasPermission('kontor-contacts-contact-' . $permission);
-                    }
+            foreach (['create' => 'create', 'update' => 'edit', 'archive' => 'archive'] as $action => $permission) {
+                if ($item['operations'][$action] ?? false) {
+                    $item['operations'][$action] = $this->mcpResourceAllowed($item['resource'], $permission, $actor);
                 }
             }
         }
