@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Workflow\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\ValueObjects\Uid;
 use Kontor\Workflow\Domain\WorkflowInstance;
@@ -19,14 +20,24 @@ final class InstanceRepository
 
     public function save(WorkflowInstance $instance): void
     {
+        $this->write($instance, false);
+    }
+
+    public function insert(WorkflowInstance $instance): void
+    {
+        $this->write($instance, true);
+    }
+
+    private function write(WorkflowInstance $instance, bool $insertOnly): void
+    {
         $organizationId = $this->organizations->internalIdOf($instance->organizationId);
 
         $statement = $this->pdo->prepare(
             'INSERT INTO kontor_workflow_instances
                 (uid, organization_id, definition_uid, entity_type, entity_uid, current_state, created_at, updated_at)
              VALUES
-                (:uid, :organization_id, :definition_uid, :entity_type, :entity_uid, :current_state, :created_at, :updated_at)
-             ON DUPLICATE KEY UPDATE current_state = VALUES(current_state), updated_at = VALUES(updated_at)'
+                (:uid, :organization_id, :definition_uid, :entity_type, :entity_uid, :current_state, :created_at, :updated_at)'
+             . ($insertOnly ? '' : ' ON DUPLICATE KEY UPDATE current_state = VALUES(current_state), updated_at = VALUES(updated_at)')
         );
 
         $statement->execute([
@@ -41,9 +52,10 @@ final class InstanceRepository
         ]);
     }
 
-    public function find(string $uid): ?WorkflowInstance
+    public function find(string $uid, bool $forUpdate = false): ?WorkflowInstance
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_workflow_instances WHERE uid = :uid');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_workflow_instances WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''));
         $statement->execute(['uid' => $uid]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

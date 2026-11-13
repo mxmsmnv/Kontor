@@ -47,6 +47,10 @@ final class WorkflowEngine
     {
         $definition = $this->definitions->require($definitionUid);
 
+        if (!hash_equals($organizationUid, $definition->organizationId)) {
+            throw new RuntimeException('Workflow definition was not found in this organization.');
+        }
+
         if ($definition->entityType !== $entityType) {
             throw new InvalidArgumentException("Workflow \"{$definition->workflowKey}\" is defined for entity type \"{$definition->entityType}\", not \"{$entityType}\".");
         }
@@ -56,7 +60,7 @@ final class WorkflowEngine
         }
 
         $instance = WorkflowInstance::create($organizationUid, $definitionUid, $entityType, $entityUid, $definition->initialState);
-        $this->instances->save($instance);
+        $this->instances->insert($instance);
 
         return $instance;
     }

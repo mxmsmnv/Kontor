@@ -57,6 +57,23 @@ final class HistoryRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return HistoryEntry[] */
+    public function pageForEntity(string $organizationUid, string $entityType, string $entityUid, int $offset): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_workflow_history
+             WHERE organization_id = :organization_id AND entity_type = :entity_type AND entity_uid = :entity_uid
+             ORDER BY occurred_at ASC, id ASC LIMIT 51 OFFSET :offset'
+        );
+        $statement->bindValue('organization_id', $this->organizations->internalIdOf($organizationUid), \PDO::PARAM_INT);
+        $statement->bindValue('entity_type', $entityType);
+        $statement->bindValue('entity_uid', $entityUid);
+        $statement->bindValue('offset', $offset, \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): HistoryEntry
     {
         return new HistoryEntry(

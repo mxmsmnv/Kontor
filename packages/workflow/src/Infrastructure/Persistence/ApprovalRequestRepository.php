@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Workflow\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\ValueObjects\Uid;
 use Kontor\Workflow\Domain\ApprovalRequest;
@@ -49,9 +50,10 @@ final class ApprovalRequestRepository
         ]);
     }
 
-    public function find(string $uid): ?ApprovalRequest
+    public function find(string $uid, bool $forUpdate = false): ?ApprovalRequest
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_workflow_approval_requests WHERE uid = :uid');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_workflow_approval_requests WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''));
         $statement->execute(['uid' => $uid]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
@@ -67,11 +69,12 @@ final class ApprovalRequestRepository
     /**
      * @return ApprovalRequest[]
      */
-    public function pendingFor(string $organizationUid): array
+    public function pendingFor(string $organizationUid, ?int $limit = null, int $offset = 0): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
-        $statement = $this->pdo->prepare("SELECT * FROM kontor_workflow_approval_requests WHERE organization_id = :organization_id AND status = 'pending'");
+        $statement = $this->pdo->prepare("SELECT * FROM kontor_workflow_approval_requests WHERE organization_id = :organization_id AND status = 'pending' ORDER BY created_at ASC, id ASC"
+            . ($limit === null ? '' : ' LIMIT ' . max(1, min($limit, 100)) . ' OFFSET ' . max(0, $offset)));
         $statement->execute(['organization_id' => $organizationId]);
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
