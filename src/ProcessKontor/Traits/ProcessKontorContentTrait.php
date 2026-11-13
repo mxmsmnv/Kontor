@@ -556,6 +556,32 @@ trait ProcessKontorContentTrait
         ]);
     }
 
+    public function ___executeAIWorkflow(): string
+    {
+        $this->requirePost();
+        $this->requireAI();
+        $this->requirePermission('kontor-ai-action-approve');
+
+        $context = (string) $this->wire()->input->post('workflow_context');
+        $instructions = \Kontor\Core\Application\WorkflowAIContexts::PROMPTS[$context] ?? null;
+        $notes = trim((string) $this->wire()->input->post('workflow_notes'));
+        if ($instructions === null || $notes === '' || mb_strlen($notes) > 4000) {
+            throw new WireException($this->_('Enter up to 4,000 characters of notes from a supported workflow.'));
+        }
+        $result = $this->aiModule()->drafting()->draft(
+            $this->organizationUid(),
+            ['notes' => $notes],
+            $instructions . ' Use the language of the notes. Flag uncertainty and avoid inventing facts.',
+            (string) $this->wire()->user->id,
+        );
+
+        $this->setPageTitle($this->_('Kontor · AI suggestion'));
+
+        return $this->renderTemplate('workflow-ai-result', [
+            'result' => $result->success ? ($result->output['draft'] ?? '') : '',
+        ]);
+    }
+
     public function ___executeAIExecute(): void
     {
         $this->requirePost();

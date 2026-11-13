@@ -81,9 +81,9 @@ final class ProcessKontorMutationGuardContractTest extends TestCase
         $missing = array_values(array_diff(self::READ_ONLY_HANDLERS, array_keys($handlers)));
         $mutations = array_diff_key($handlers, array_flip(self::READ_ONLY_HANDLERS));
 
-        self::assertCount(169, $handlers);
+        self::assertCount(170, $handlers);
         self::assertSame([], $missing, 'Unknown read-only execute handlers: ' . implode(', ', $missing));
-        self::assertCount(119, $mutations);
+        self::assertCount(120, $mutations);
     }
 
     #[DataProvider('conditionalMutationHandlerProvider')]

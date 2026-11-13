@@ -1,6 +1,6 @@
 # Kontor AI integration map
 
-Kontor AI uses the default provider configured in Squad. The workbench offers summary, extraction and drafts. Excel contact import offers optional suggestions for unknown headers. Active CRM deals and tasks offer on-demand next steps. The table describes further proposals for each component.
+Kontor AI uses the default provider configured in Squad. The workbench offers summary, extraction and drafts. Excel contact import offers optional suggestions for unknown headers. Active CRM deals and tasks offer on-demand next steps. The AI assistant on supported admin screens uses a workflow-specific prompt and only the notes staff explicitly enter. It produces suggestions for review. The table describes use cases and further record-aware integrations.
 
 | Component | Suggested use |
 | --- | --- |

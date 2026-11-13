@@ -473,6 +473,12 @@ trait ProcessKontorAuditSupportTrait
         ob_start();
         include dirname(__DIR__, 3) . '/templates/admin/' . $name . '.php';
 
+        $aiContext = \Kontor\Core\Application\WorkflowAIContexts::forTemplate($name);
+        if ($aiContext !== null && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null) {
+            include dirname(__DIR__, 3) . '/templates/admin/workflow-ai-panel.php';
+        }
+
         return (string) ob_get_clean();
     }
 
