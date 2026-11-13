@@ -49,10 +49,14 @@ final class ProcessWireSquadClient implements SquadClientInterface
         };
         $value = $output[$key] ?? null;
         if ($key === 'fields') {
+            $schema = (array) ($input['schema'] ?? []);
+            if ($value === null && is_array($output) && array_intersect_key($output, $schema) !== []) {
+                $value = $output;
+            }
             if (!is_array($value)) {
                 throw new RuntimeException('Squad returned invalid fields.');
             }
-            $value = array_intersect_key($value, (array) ($input['schema'] ?? []));
+            $value = array_intersect_key($value, $schema);
         } elseif (!is_string($value) || trim($value) === '') {
             throw new RuntimeException('Squad returned empty text.');
         }
