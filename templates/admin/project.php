@@ -99,6 +99,23 @@ $projectUid = $project?->uid->toString() ?? '';
 
   <?php if ($error !== ''): ?><div class="uk-alert-warning" uk-alert><p><strong><?= $e($error) ?></strong></p></div><?php endif; ?>
 
+  <?php if ($canDraftProject): ?>
+    <details class="uk-card uk-card-default uk-card-small uk-card-body uk-margin"<?= $projectDraft !== null || $projectDraftError !== null ? ' open' : '' ?>>
+      <summary class="uk-text-bold">Draft project update with AI</summary>
+      <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'project/?id=' . rawurlencode($project->uid->toString())) ?>">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <label class="uk-form-label" for="project-ai-excerpt">Project details to send to the configured AI provider</label>
+        <textarea class="uk-textarea uk-margin-small" id="project-ai-excerpt" name="project_ai_excerpt" rows="5" maxlength="4000" required><?= $e($projectExcerpt) ?></textarea>
+        <button class="uk-button uk-button-default" type="submit" name="draft_project_status" value="1">Generate status update</button>
+      </form>
+      <?php if ($projectDraftError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($projectDraftError) ?></p><?php endif; ?>
+      <?php if ($projectDraft !== null): ?>
+        <label class="uk-form-label uk-margin-small-top" for="project-ai-draft">Status update for review</label>
+        <textarea class="uk-textarea" id="project-ai-draft" rows="7"><?= $e($projectDraft) ?></textarea>
+      <?php endif; ?>
+    </details>
+  <?php endif; ?>
+
   <?php if ($project === null): ?>
     <div class="uk-grid-medium" uk-grid>
       <div class="uk-width-1-1 uk-width-2-3@l">

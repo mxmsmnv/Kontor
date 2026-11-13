@@ -1319,6 +1319,11 @@ trait ProcessKontorOperationsTrait
         } else {
             $this->requirePermission('kontor-projects-project-create');
         }
+        $draftRequested = $this->wire()->input->post('draft_project_status') === '1';
+        if ($draftRequested) {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+        }
         $customers = $this->salesCustomerLabels();
         $values = [
             'code' => '',
@@ -1329,7 +1334,7 @@ trait ProcessKontorOperationsTrait
         ];
         $error = '';
 
-        if ($project === null && $this->wire()->input->post('submit_save')) {
+        if (!$draftRequested && $project === null && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
             $values = [
                 'code' => strtoupper($this->wire()->sanitizer->text(
@@ -1408,6 +1413,49 @@ trait ProcessKontorOperationsTrait
             }
         }
 
+        $milestones = $project !== null
+            ? $module->milestoneRepository()->forProject($project->uid->toString())
+            : [];
+        $canDraftProject = $project !== null && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $projectExcerpt = '';
+        $projectDraft = null;
+        $projectDraftError = null;
+        if ($canDraftProject) {
+            $projectExcerpt = "Project: " . $project->name . "\nStatus: " . $project->status;
+            $projectExcerpt .= "\nCompleted milestones: "
+                . count(array_filter($milestones, static fn ($milestone): bool => $milestone->isCompleted()))
+                . ' of ' . count($milestones);
+            foreach (array_slice($milestones, 0, 20) as $milestone) {
+                $projectExcerpt .= "\n- " . $milestone->name . ': '
+                    . ($milestone->isCompleted() ? 'completed' : 'open')
+                    . ($milestone->dueDate ? ', due ' . $milestone->dueDate->format('Y-m-d') : '');
+            }
+            $projectExcerpt = mb_substr($projectExcerpt, 0, 4000);
+        }
+        if ($draftRequested) {
+            if (!$canDraftProject) {
+                throw new WirePermissionException($this->_('AI status drafting is unavailable for this project.'));
+            }
+            $projectExcerpt = trim((string) $this->wire()->input->post('project_ai_excerpt'));
+            if ($projectExcerpt === '' || mb_strlen($projectExcerpt) > 4000) {
+                $projectDraftError = $this->_('Enter up to 4,000 characters of project context.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $project->organizationId,
+                    ['projectExcerpt' => $projectExcerpt],
+                    'Write a concise project status update and suggest up to three next steps. Use the language of the project notes. State what is unknown and do not invent dates, blockers, or commitments.',
+                    (string) $this->wire()->user->id,
+                );
+                $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($draft) && trim($draft) !== '') {
+                    $projectDraft = $draft;
+                } else {
+                    $projectDraftError = $this->_('The AI provider did not return a draft. Try again.');
+                }
+            }
+        }
+
         return $this->renderTemplate('project', [
             'project' => $project,
             'values' => $values,
@@ -1417,9 +1465,11 @@ trait ProcessKontorOperationsTrait
                 ? ($customers[($project->customerType ?? '') . ':' . ($project->customerUid ?? '')] ?? '—')
                 : '—',
             'customerRoute' => $customerRoute,
-            'milestones' => $project !== null
-                ? $module->milestoneRepository()->forProject($project->uid->toString())
-                : [],
+            'milestones' => $milestones,
+            'canDraftProject' => $canDraftProject,
+            'projectExcerpt' => $projectExcerpt,
+            'projectDraft' => $projectDraft,
+            'projectDraftError' => $projectDraftError,
             'timeEntries' => $project !== null
                 ? array_reverse($module->timeEntryRepository()->forProject($project->uid->toString()))
                 : [],
