@@ -113,6 +113,9 @@ trait ProcessKontorWorkTrait
     {
         $this->requireTasks();
         $this->requirePermission('kontor-tasks-task-view');
+        if ($this->wire()->input->get('view') === 'calendar') {
+            return $this->renderTaskCalendar();
+        }
         $archived = (string) $this->wire()->input->get('archived') === '1';
         $query = $this->wire()->sanitizer->text((string) $this->wire()->input->get('q'));
         $status = $this->wire()->sanitizer->option(
@@ -194,6 +197,27 @@ trait ProcessKontorWorkTrait
             'canCreate' => $this->can('kontor-tasks-task-create'),
             'canManageTaskAccess' => $this->wire()->user->isSuperuser(),
         ]);
+    }
+
+    private function renderTaskCalendar(): string
+    {
+        $month = (string) $this->wire()->input->get('month');
+        $start = preg_match('/^[1-9][0-9]{3}-(0[1-9]|1[0-2])$/D', $month)
+            ? new \DateTimeImmutable($month . '-01')
+            : new \DateTimeImmutable('first day of this month midnight');
+        $end = $start->modify('first day of next month');
+        $module = $this->taskModule();
+        $tasks = $module->taskRepository()->dueBetween($this->organizationUid(), $start, $end->modify('-1 microsecond'));
+        $access = $module->accessFor($this->wire()->user);
+        $days = [];
+        foreach ($tasks as $task) {
+            if ($access->allows($task)) {
+                $days[$task->dueAt->format('j')][] = $task;
+            }
+        }
+        $this->setPageTitle($this->_('Kontor · Task calendar'));
+
+        return $this->renderTemplate('task-calendar', ['start' => $start, 'days' => $days]);
     }
 
     public function ___executeTaskAccess(): string
