@@ -87,6 +87,7 @@ require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorNavigationTrait.p
 require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorCustomerTrait.php';
 require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorCommerceTrait.php';
 require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorWorkTrait.php';
+require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorRemindersTrait.php';
 require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorOperationsTrait.php';
 require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorWorkflowTrait.php';
 require_once __DIR__ . '/src/ProcessKontor/Traits/ProcessKontorCommunicationsTrait.php';
@@ -117,6 +118,7 @@ class ProcessKontor extends Process
         'crm',
         'sales',
         'tasks',
+        'reminders',
     ];
 
     public static function getModuleInfo(): array
@@ -405,6 +407,13 @@ class ProcessKontor extends Process
                     'permission' => 'kontor-tasks-task-view',
                 ],
                 [
+                    'url' => 'reminders/',
+                    'label' => 'Reminders',
+                    'icon' => 'bell-o',
+                    'module' => 'KontorReminders',
+                    'permission' => 'kontor-tasks-task-view',
+                ],
+                [
                     'url' => 'collaboration/',
                     'label' => 'Collaboration',
                     'icon' => 'comments-o',
@@ -452,6 +461,7 @@ class ProcessKontor extends Process
     use ProcessKontorCustomerTrait;
     use ProcessKontorCommerceTrait;
     use ProcessKontorWorkTrait;
+    use ProcessKontorRemindersTrait;
     use ProcessKontorOperationsTrait;
     use ProcessKontorWorkflowTrait;
     use ProcessKontorCommunicationsTrait;

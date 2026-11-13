@@ -315,7 +315,7 @@ $renderAssignment = static function (string $idPrefix) use (
       </div>
 
       <?php if ($showReminderWorkspace): ?><div class="uk-width-1-1 uk-width-1-3@l">
-        <section class="uk-card uk-card-default uk-card-small uk-card-body">
+        <section id="task-email-reminders" class="uk-card uk-card-default uk-card-small uk-card-body">
           <div class="uk-flex uk-flex-between uk-flex-middle uk-grid-small" uk-grid><div><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Stay on track</p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom">Email reminders</h3></div><?php if ($canManageReminders && $task->assignedTo !== null && $task->isOpen() && !$archived): ?><div><button class="uk-button uk-button-default uk-button-small" type="button" uk-toggle="target: #kontor-task-reminder"><i class="fa fa-plus"></i> Add</button></div><?php endif; ?></div>
           <?php if ($reminders !== []): ?><ul class="uk-list uk-list-divider"><?php foreach ($reminders as $reminder): ?><li><div class="uk-flex uk-flex-between uk-flex-middle"><strong><?= $e($reminder->remindAt->format('M j · H:i')) ?></strong><span class="uk-label<?= $reminder->isSent() ? ' uk-label-success' : '' ?>"><?= $reminder->isSent() ? 'Sent' : 'Scheduled' ?></span></div><div class="uk-text-meta uk-margin-small-top">Email reminder</div></li><?php endforeach; ?></ul>
           <?php elseif ($task->assignedTo === null): ?><div class="uk-text-center uk-padding-small"><p class="uk-text-muted">Assign the task before scheduling an email reminder.</p></div>

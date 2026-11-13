@@ -934,6 +934,11 @@ trait ProcessKontorWorkTrait
             ],
         );
         $this->message($this->_('Email reminder scheduled.'));
+        if ($this->wire()->input->post('return_to') === 'reminders'
+            && $this->wire()->modules->isInstalled('KontorReminders')) {
+            $this->wire()->session->redirect('../reminders/?channel=email');
+            return;
+        }
         $this->wire()->session->redirect('../task/?id=' . rawurlencode($task->uid->toString()));
     }
 

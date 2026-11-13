@@ -263,6 +263,52 @@ final class TaskRepository implements RepositoryInterface
         );
     }
 
+    /** @return list<Task> */
+    public function reminderCandidates(
+        string $organizationUid,
+        TaskAccessScope $access,
+        string $afterUid = '',
+        int $limit = 100,
+    ): array {
+        if (!$access->canView) {
+            return [];
+        }
+
+        $where = [
+            't.organization_id = :organization_id',
+            't.archived_at IS NULL',
+            't.uid > :after_uid',
+            "(EXISTS (
+                SELECT 1 FROM kontor_task_reminders r
+                WHERE r.organization_id = t.organization_id AND r.task_uid = t.uid
+            ) OR (t.status IN ('open', 'in_progress') AND t.due_at IS NOT NULL AND EXISTS (
+                SELECT 1 FROM kontor_relations rel
+                WHERE rel.organization_id = t.organization_id AND rel.source_type = 'task'
+                    AND rel.source_uid = t.uid AND rel.target_type = 'contact' AND rel.archived_at IS NULL
+                    AND (rel.relation_type IN ('contact_birthday', 'contact_followup')
+                        OR t.title LIKE 'Birthday: %' OR t.title LIKE 'Follow up with %')
+            )))",
+        ];
+        $params = [
+            'organization_id' => $this->organizations->internalIdOf($organizationUid),
+            'after_uid' => $afterUid,
+        ];
+        if (!$access->canViewAll) {
+            $where[] = $this->accessCondition($access, $params);
+        }
+        $statement = $this->pdo->prepare(
+            'SELECT t.* FROM kontor_tasks t WHERE ' . implode(' AND ', $where)
+            . ' ORDER BY t.uid ASC LIMIT :limit',
+        );
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+        $statement->bindValue(':limit', max(1, min(250, $limit)), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     /** @param array<string, int|string> $params */
     private function accessCondition(TaskAccessScope $access, array &$params): string
     {

@@ -42,6 +42,12 @@ final class TaskRelationService
         return $this->relations->relatedTo($organizationUid, self::ENTITY_TYPE, $taskUid);
     }
 
+    /** @param list<string> $taskUids @return list<array<string, mixed>> */
+    public function relatedEntitiesForTasks(string $organizationUid, array $taskUids, string $entityType): array
+    {
+        return $this->relations->relatedFromMany($organizationUid, self::ENTITY_TYPE, $taskUids, $entityType);
+    }
+
     /**
      * Every task uid linked to a given entity.
      *

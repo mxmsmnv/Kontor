@@ -98,6 +98,24 @@ final class RelationRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @param list<string> $sourceUids @return list<array<string, mixed>> */
+    public function relatedFromMany(string $organizationUid, string $sourceType, array $sourceUids, string $targetType): array
+    {
+        if ($sourceUids === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($sourceUids), '?'));
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_relations
+             WHERE organization_id = ? AND source_type = ? AND target_type = ?
+                AND source_uid IN ($placeholders) AND archived_at IS NULL
+             ORDER BY created_at ASC, uid ASC",
+        );
+        $statement->execute([$this->organizations->internalIdOf($organizationUid), $sourceType, $targetType, ...$sourceUids]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     /**
      * Every active relation explicitly pointing at an entity, regardless
      * of whether the relation itself is directed or bidirectional.

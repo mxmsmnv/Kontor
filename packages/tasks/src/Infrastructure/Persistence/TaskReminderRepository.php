@@ -66,6 +66,23 @@ final class TaskReminderRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @param list<string> $taskUids @return list<TaskReminder> */
+    public function forTasks(string $organizationUid, array $taskUids): array
+    {
+        if ($taskUids === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($taskUids), '?'));
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_task_reminders
+             WHERE organization_id = ? AND task_uid IN ($placeholders)
+             ORDER BY remind_at ASC, uid ASC",
+        );
+        $statement->execute([$this->organizations->internalIdOf($organizationUid), ...$taskUids]);
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     /**
      * Unsent reminders whose remind_at has arrived — the query a future
      * kontor/queue-backed dispatcher would poll. No dispatcher is built in
