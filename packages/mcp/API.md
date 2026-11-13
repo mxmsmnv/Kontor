@@ -8,4 +8,11 @@ The provider publishes 13 tools covering readiness, components, live resource sc
 
 JSON record attributes, filters, sort instructions, sparse fields and settings profiles are passed as bounded JSON strings. The bridge decodes them only after MCP Server validates the closed outer schema, then validates resource names, capabilities, fields and value types against the live `ApiResourceSchema`.
 
-No component-specific names are hardcoded. Install an optional component that registers an `ApiResourceInterface` with `KontorAPI::resourceRegistry()` and its resource immediately appears in `kontor_resources` and the generic record tools.
+A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegistry()`. Generic operations remain subject to the linked user's resource permissions. The archive tool requires a resource that implements `ArchivableApiResourceInterface`.
+
+## Optional Workspace tools
+
+- [Contact intake fields](CONTACT-INTAKE.md) can be read, previewed and filled on an existing contact.
+- `kontor_projects_list` and `kontor_project_get` expose basic project lookup when the linked user has project view permission.
+- `kontor_crm_leads_list`, `kontor_crm_lead_get`, `kontor_crm_deals_list`, `kontor_crm_deal_get`, `kontor_crm_pipelines_list` and `kontor_crm_stages_list` expose scoped CRM lookup. Full lead detail requires lead edit, as in the Workspace form.
+- `kontor_crm_lead_convert` and `kontor_crm_deal_transition` use CRM workflow permissions and require an explicit confirmation and an idempotency key.

@@ -2,6 +2,12 @@
 
 All notable changes to `kontor/mcp` are documented here.
 
+## Unreleased
+
+- Add MCP tools for tasks, project lookup, CRM lookup and transitions, and configurable contact fields.
+- Show active client IDs alongside the ProcessWire user bindings.
+- Use reversible contact archival in the MCP archive tool.
+
 ## [1.0.1] - 2026-10-16
 
 ### Added

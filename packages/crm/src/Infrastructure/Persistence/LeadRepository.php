@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\CRM\Infrastructure\Persistence;
 
 use Kontor\CRM\Domain\Lead;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\Contracts\RepositoryInterface;
 use Kontor\SDK\ValueObjects\Money;
@@ -23,9 +24,12 @@ final class LeadRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Lead
+    public function find(string $id, bool $forUpdate = false): ?Lead
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_crm_leads WHERE uid = :uid');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_crm_leads WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : '')
+        );
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

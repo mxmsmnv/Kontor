@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\CRM\Infrastructure\Persistence;
 
 use Kontor\CRM\Domain\Deal;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\Contracts\RepositoryInterface;
 use Kontor\SDK\ValueObjects\Money;
@@ -23,9 +24,12 @@ final class DealRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Deal
+    public function find(string $id, bool $forUpdate = false): ?Deal
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_crm_deals WHERE uid = :uid');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_crm_deals WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : '')
+        );
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

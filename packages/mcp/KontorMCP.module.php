@@ -5,11 +5,23 @@ namespace ProcessWire;
 use Kontor\API\Application\IdempotencyService;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\MCP\Application\ContactIntakeTools;
+use Kontor\MCP\Application\CrmActionTools;
+use Kontor\MCP\Application\CrmLookupTools;
 use Kontor\MCP\Application\KontorMcpBridge;
+use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
+
+require_once __DIR__ . '/KontorMcpProjectsTrait.php';
 
 class KontorMCP extends WireData implements Module, ConfigurableModule
 {
+    use ContactIntakeTools;
+    use CrmActionTools;
+    use CrmLookupTools;
+    use KontorMcpProjectsTrait;
+    use TaskTools;
+
     private ?KontorMcpBridge $bridge = null;
 
     public static function getModuleInfo(): array
@@ -37,6 +49,17 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
         $bindings->label = $this->_('MCP client accounts');
         $bindings->description = $this->_('Enter one client ID and ProcessWire user ID per line, separated by a colon. Issue a new client for each user and device. Revoke a client before removing its binding.');
         $bindings->value = (string) ($data['client_user_bindings'] ?? '');
+        $bindings->entityEncodeText = true;
+        $bindings->textFormat = Inputfield::textFormatNone;
+        $clientLabels = [];
+        foreach ($this->wire()->modules->get('McpServer')->clients() as $client) {
+            if ($client['enabled'] && (!$client['expires_at'] || $client['expires_at'] > time())) {
+                $clientLabels[] = $client['id'] . ' — ' . $client['label'];
+            }
+        }
+        if ($clientLabels !== []) {
+            $bindings->notes = $this->_('Active client IDs') . "\n" . implode("\n", $clientLabels);
+        }
         $fields->add($bindings);
         return $fields;
     }
@@ -375,6 +398,11 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
                 ],
                 ['document', 'idempotency_key', 'confirmation'],
             ),
+            ...$this->contactIntakeTools(),
+            ...$this->mcpCrmLookupTools(),
+            ...$this->crmActionTools(),
+            ...$this->mcpProjectTools(),
+            ...$this->taskTools(),
         ];
     }
 
