@@ -24,6 +24,8 @@ use ProcessWire\WirePermissionException;
 
 trait TaskTools
 {
+    use TaskCollaborationTools;
+
     private const TASK_STATUSES = ['open', 'in_progress', 'done', 'cancelled'];
     private const TASK_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
     private const TASK_VISIBILITIES = [Task::VISIBILITY_ASSIGNEE, Task::VISIBILITY_DEPARTMENT, Task::VISIBILITY_ORGANIZATION];
@@ -142,6 +144,7 @@ trait TaskTools
                     'idempotency_key' => $key,
                     'confirmation' => ['type' => 'string', 'const' => 'UNLINK_REVIEWED_TASK_RECORD'],
                 ], ['uid', 'relation_uid', 'idempotency_key', 'confirmation'], destructive: true),
+            ...$this->taskCollaborationTools(),
         ];
     }
 
@@ -173,11 +176,18 @@ trait TaskTools
 
     public function mcpKontorTaskGet(string $uid): array
     {
-        [$module, , $access, $organizationUid] = $this->taskContext();
+        [$module, $actor, $access, $organizationUid] = $this->taskContext();
         $task = $module->taskRepository()->find($uid);
         $this->requireVisibleMcpTask($task, $access, $organizationUid);
 
-        return ['record' => $this->taskRecord($task)];
+        $record = $this->taskRecord($task);
+        if ($this->wire()->modules->isInstalled('KontorCollaboration')
+            && ($actor->isSuperuser() || $actor->hasPermission('kontor-collaboration-follow-manage'))) {
+            $record['following'] = $this->wire()->modules->get('KontorCollaboration')->followerRepository()
+                ->isFollowing($organizationUid, 'task', $uid, (int) $actor->id);
+        }
+
+        return ['record' => $record];
     }
 
     public function mcpKontorTaskAssignmentOptions(string $query = '', int $offset = 0): array
@@ -698,14 +708,22 @@ trait TaskTools
                 $organizationUid,
                 'mcp:task:' . $actor->id . ':' . hash('sha256', $key),
                 ['action' => $action, 'arguments' => $arguments],
-                function () use ($operation, $container, $organizationUid, $actor, $action, &$performed): array {
+                function () use ($operation, $container, $organizationUid, $actor, $action, $arguments, &$performed): array {
                     $body = $operation();
                     $performed = true;
                     $organizationId = $container->get(OrganizationRepository::class)->internalIdOf($organizationUid);
                     $audit = $container->get(AuditLogger::class);
-                    $audit->record($organizationId, 'tasks', 'task', $body['taskUid'], match ($action) {
-                        'create' => 'created', 'update' => 'updated', 'archive' => 'archived', 'restore' => 'restored', default => $action,
-                    }, 'user', (string) $actor->id, metadata: ['transport' => 'mcp']);
+                    [$component, $entity, $entityUid, $verb] = match ($action) {
+                        'schedule_reminder' => ['tasks', 'task_reminder', $body['reminderUid'], 'scheduled'],
+                        'discussion_post' => ['collaboration', $arguments['kind'], $body['recordUid'], 'created'],
+                        'discussion_archive' => ['collaboration', $arguments['kind'], $arguments['recordUid'], 'archived'],
+                        'discussion_follow' => ['collaboration', 'follower', $body['taskUid'], $body['following'] ? 'followed' : 'unfollowed'],
+                        default => ['tasks', 'task', $body['taskUid'], match ($action) {
+                            'create' => 'created', 'update' => 'updated', 'archive' => 'archived', 'restore' => 'restored', default => $action,
+                        }],
+                    };
+                    $audit->record($organizationId, $component, $entity, $entityUid, $verb, 'user', (string) $actor->id,
+                        metadata: ['transport' => 'mcp', 'taskUid' => $body['taskUid']]);
                     if (($body['nextTaskUid'] ?? null) !== null) {
                         $audit->record($organizationId, 'tasks', 'task', $body['nextTaskUid'], 'recurrence_created',
                             'user', (string) $actor->id, current: ['sourceTaskUid' => $body['taskUid']], metadata: ['transport' => 'mcp']);

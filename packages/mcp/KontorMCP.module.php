@@ -11,6 +11,7 @@ use Kontor\MCP\Application\CrmActionTools;
 use Kontor\MCP\Application\CrmLookupTools;
 use Kontor\MCP\Application\CrmRecordTools;
 use Kontor\MCP\Application\FileTools;
+use Kontor\MCP\Application\FinanceLookupTools;
 use Kontor\MCP\Application\KontorMcpBridge;
 use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
@@ -25,6 +26,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use CrmLookupTools;
     use CrmRecordTools;
     use FileTools;
+    use FinanceLookupTools;
     use KontorMcpProjectsTrait;
     use TaskTools;
 
@@ -412,6 +414,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->mcpProjectTools(),
             ...$this->taskTools(),
             ...$this->fileTools(),
+            ...$this->financeLookupTools(),
         ];
     }
 

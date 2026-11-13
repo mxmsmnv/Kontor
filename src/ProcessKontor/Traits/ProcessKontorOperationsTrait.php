@@ -1526,7 +1526,7 @@ trait ProcessKontorOperationsTrait
                     (int) $this->wire()->user->id,
                 );
                 try {
-                    $module->projectRepository()->save($project);
+                    $module->projectRepository()->insert($project);
                 } catch (\PDOException $exception) {
                     $error = $exception->getCode() === '23000'
                         ? $this->_('That project code is already in use.')

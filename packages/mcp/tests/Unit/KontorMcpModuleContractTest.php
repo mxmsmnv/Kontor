@@ -52,6 +52,7 @@ final class KontorMcpModuleContractTest extends TestCase
             use \Kontor\MCP\Application\TaskTools;
 
             public bool $installed = false;
+            public bool $collaborationInstalled = false;
             public object $modules;
 
             public function __construct()
@@ -66,7 +67,11 @@ final class KontorMcpModuleContractTest extends TestCase
 
             public function isInstalled(string $module): bool
             {
-                return $this->installed && $module === 'KontorTasks';
+                return match ($module) {
+                    'KontorTasks' => $this->installed,
+                    'KontorCollaboration' => $this->collaborationInstalled,
+                    default => false,
+                };
             }
 
             public function uidSchema(): array
@@ -95,6 +100,9 @@ final class KontorMcpModuleContractTest extends TestCase
         $docs = file_get_contents(dirname(__DIR__, 2) . '/API.md');
 
         self::assertCount(12, $tools);
+        $provider->collaborationInstalled = true;
+        $tools = array_column($provider->tools(), null, 'name');
+        self::assertCount(16, $tools);
         foreach ($tools as $tool) {
             self::assertIsCallable($tool['handler']);
             self::assertStringContainsString($tool['name'], $docs);

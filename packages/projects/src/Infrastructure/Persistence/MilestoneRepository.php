@@ -71,6 +71,22 @@ final class MilestoneRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return ProjectMilestone[] */
+    public function pageForProject(string $organizationUid, string $projectUid, int $offset): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_project_milestones
+             WHERE organization_id = :organization_id AND project_uid = :project_uid
+             ORDER BY sort_order ASC, id ASC LIMIT 51 OFFSET :offset'
+        );
+        $statement->bindValue('organization_id', $this->organizations->internalIdOf($organizationUid), \PDO::PARAM_INT);
+        $statement->bindValue('project_uid', $projectUid);
+        $statement->bindValue('offset', $offset, \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): ProjectMilestone
     {
         return new ProjectMilestone(

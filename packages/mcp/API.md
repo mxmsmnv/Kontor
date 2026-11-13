@@ -13,7 +13,8 @@ A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegi
 ## Optional Workspace tools
 
 - [Contact intake fields](CONTACT-INTAKE.md) can be read, previewed and filled on an existing contact.
-- `kontor_projects_list` and `kontor_project_get` expose basic project lookup when the linked user has project view permission.
+- `kontor_projects_list` and `kontor_project_get` expose project lookup when the linked user has project view permission. Project create, partial update, archive and restore use `kontor_project_create`, `kontor_project_update` and `kontor_project_archive_action`. Archive or restore requires `APPLY_PROJECT_ARCHIVE_ACTION`. Project customer selection requires view permission on the referenced contact or company.
+- `kontor_project_milestones_list` lists milestones and supplies `nextOffset` when another page is available. `kontor_project_milestone_create` and `kontor_project_milestone_action` add, complete and reopen milestones. `kontor_project_time_log` records manual time for the linked user and `kontor_project_billable_item_create` records a billable item in the project currency. Each write requires Draft scope, the corresponding Workspace permission and an idempotency key.
 - `kontor_crm_leads_list`, `kontor_crm_lead_get`, `kontor_crm_deals_list`, `kontor_crm_deal_get`, `kontor_crm_pipelines_list` and `kontor_crm_stages_list` expose scoped CRM lookup. Full lead detail requires lead edit, as in the Workspace form.
 - `kontor_crm_lead_convert` and `kontor_crm_deal_transition` use CRM workflow permissions and require an explicit confirmation and an idempotency key.
 - `kontor_crm_record_archive_action` applies a reviewed archive or restore to a lead or deal under its Workspace permission.
@@ -56,3 +57,15 @@ Writes take a per-user `idempotency_key` and return the task UID while it remain
 Reminder scheduling requires the task reminder management permission. Review the task UID, current assignee and future reminder timestamp before submitting. The request must supply that assignee's ID as `expected_assignee_id`. The server reads the recipient address from the assigned user's account and queues the message through the same notification service as Workspace. The tool response contains the reminder UID.
 
 Managing links on existing tasks requires task edit and relation management permissions plus permission to view the target contact or company. Link and reminder lists return up to 50 items with `nextOffset` when more items exist.
+
+
+When Kontor Collaboration is installed, task tools additionally include:
+
+| Tool | Scope | Operation |
+| --- | --- | --- |
+| `kontor_task_discussion_list` | `read` | Read notes or comments with the matching view permission. |
+| `kontor_task_discussion_post` | `draft` | Post a note or comment, with an optional same-task comment parent. |
+| `kontor_task_discussion_archive` | `draft` | Archive a note or comment with the matching permission. Confirm with `ARCHIVE_REVIEWED_TASK_DISCUSSION`. |
+| `kontor_task_follow` | `draft` | Set the linked user's follow preference, which also appears on task get when permitted. |
+
+Posting a comment records mentions and follows the task for its author through the collaboration service. MCP comment posting does not queue email.

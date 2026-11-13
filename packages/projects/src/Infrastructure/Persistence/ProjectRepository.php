@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Projects\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Projects\Domain\Project;
 use Kontor\SDK\Contracts\RepositoryInterface;
@@ -19,9 +20,12 @@ final class ProjectRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Project
+    public function find(string $id, bool $forUpdate = false): ?Project
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_projects WHERE uid = :uid');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_projects WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : '')
+        );
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
@@ -60,6 +64,16 @@ final class ProjectRepository implements RepositoryInterface
             throw new InvalidArgumentException('ProjectRepository::save() expects a Project.');
         }
 
+        $this->write($entity, false);
+    }
+
+    public function insert(Project $project): void
+    {
+        $this->write($project, true);
+    }
+
+    private function write(Project $entity, bool $insertOnly): void
+    {
         $organizationId = $this->organizations->internalIdOf($entity->organizationId);
 
         $statement = $this->pdo->prepare(
@@ -68,12 +82,13 @@ final class ProjectRepository implements RepositoryInterface
                  default_hourly_rate_minor, currency_code, created_at, updated_at, created_by, version)
              VALUES
                 (:uid, :organization_id, :code, :name, :customer_type, :customer_uid, :status, :start_date, :end_date,
-                 :default_hourly_rate_minor, :currency_code, :created_at, :updated_at, :created_by, 1)
+                 :default_hourly_rate_minor, :currency_code, :created_at, :updated_at, :created_by, 1)'
+             . ($insertOnly ? '' : '
              ON DUPLICATE KEY UPDATE
                 name = VALUES(name), customer_type = VALUES(customer_type), customer_uid = VALUES(customer_uid),
                 status = VALUES(status), start_date = VALUES(start_date), end_date = VALUES(end_date),
                 default_hourly_rate_minor = VALUES(default_hourly_rate_minor), currency_code = VALUES(currency_code),
-                updated_at = VALUES(updated_at), version = version + 1'
+                updated_at = VALUES(updated_at), version = version + 1')
         );
 
         $statement->execute([
