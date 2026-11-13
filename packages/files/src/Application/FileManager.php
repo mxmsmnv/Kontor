@@ -200,6 +200,13 @@ final class FileManager
     {
         $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $originalName) ?: 'file';
 
+        // Keep the display name in metadata. Storage keys must fit filesystem limits.
+        $safeName = preg_replace('/\.{2,}/', '.', $safeName) ?? 'file';
+        $extension = pathinfo($safeName, PATHINFO_EXTENSION);
+        $stem = pathinfo($safeName, PATHINFO_FILENAME);
+        $suffix = $extension !== '' && strlen($extension) <= 20 ? '.' . $extension : '';
+        $safeName = substr($stem, 0, 228 - strlen($suffix)) . $suffix;
+
         return "org-{$organizationId}/" . Uid::generate()->toString() . '-' . $safeName;
     }
 

@@ -601,10 +601,17 @@ trait ProcessKontorCommunicationsTrait
         $this->requireFiles();
         $this->requirePermission('kontor-files-file-upload');
         $upload = $_FILES['file_upload'] ?? null;
-        if (!is_array($upload)
-            || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
-            || !is_uploaded_file((string) ($upload['tmp_name'] ?? ''))) {
-            throw new WireException($this->_('Choose a file that completed uploading.'));
+        $uploadError = is_array($upload) ? (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) : UPLOAD_ERR_NO_FILE;
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            throw new WireException(match ($uploadError) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => $this->_('This file exceeds the upload size limit.'),
+                UPLOAD_ERR_PARTIAL => $this->_('The upload was interrupted. Please try again.'),
+                UPLOAD_ERR_NO_FILE => $this->_('Choose a file to upload.'),
+                default => $this->_('The server could not receive the file. Please try again or contact your administrator.'),
+            });
+        }
+        if (!is_uploaded_file((string) ($upload['tmp_name'] ?? ''))) {
+            throw new WireException($this->_('The uploaded file could not be verified.'));
         }
         $size = (int) ($upload['size'] ?? 0);
         if ($size < 1 || $size > 25 * 1024 * 1024) {
