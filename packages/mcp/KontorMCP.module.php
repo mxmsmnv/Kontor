@@ -83,6 +83,10 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     public function init(): void
     {
         $this->addHookAfter('ProcessProfile::execute', $this, 'renderProfileConnection');
+        if ($this->wire()->modules->isInstalled('Workspace')) {
+            $this->addHookAfter('ProcessWorkspace::executeAccount', $this, 'renderProfileConnection');
+            $this->addHookAfter('ProcessWorkspace::execute', $this, 'renderWorkspaceConnectionLink');
+        }
     }
 
     public function getModuleConfigInputfields(array $data): InputfieldWrapper

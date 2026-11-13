@@ -4,7 +4,7 @@ Use this guide to connect Codex or Claude Code to a Kontor workspace. Modenza us
 
 ## 1. Provision personal access
 
-Sign in to your Kontor account and open **Profile → Manage MCP connections**. Create a personal token, choose your client, and copy the setup instructions. Tokens created there are automatically linked to your user and expire after 30 days. You can revoke them from the same page.
+Sign in and open **Workspace → MCP connections**, or choose **Your account → Manage MCP connections** from the Workspace user menu. In the standard admin interface, use **Profile → Manage MCP connections**. Create a personal token, choose your client, and copy the setup instructions. Tokens created there are automatically linked to your user and expire after 30 days. You can revoke them from the same page.
 
 For an administrator-managed token:
 

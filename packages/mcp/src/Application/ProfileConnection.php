@@ -21,6 +21,26 @@ trait ProfileConnection
             && !$user->isLocked() && ($user->isSuperuser() || $user->hasPermission('kontor-access'));
     }
 
+    public function renderWorkspaceConnectionLink(HookEvent $event): void
+    {
+        $wire = $this->wire();
+        if (!$this->profileAccountAllowed($wire->user) || !$this->profileGatewayAvailable()) {
+            return;
+        }
+
+        $url = $wire->modules->get('Workspace')->homeUrl() . 'account/#kontor-mcp';
+        $event->return = '<p><a class="uk-button uk-button-default" href="'
+            . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '">MCP connections</a></p>' . (string) $event->return;
+    }
+
+    private function profileGatewayAvailable(): bool
+    {
+        $gateway = $this->wire()->modules->get('McpServer');
+
+        return $gateway->enabled && parse_url($gateway->endpointUrl(), PHP_URL_SCHEME) === 'https';
+    }
+
     public function renderProfileConnection(HookEvent $event): void
     {
         $wire = $this->wire();
@@ -29,10 +49,10 @@ trait ProfileConnection
             return;
         }
 
-        $gateway = $wire->modules->get('McpServer');
-        if (!$gateway->enabled || parse_url($gateway->endpointUrl(), PHP_URL_SCHEME) !== 'https') {
+        if (!$this->profileGatewayAvailable()) {
             return;
         }
+        $gateway = $wire->modules->get('McpServer');
         header('Cache-Control: private, no-store');
         $issued = null;
         $input = $wire->input;
