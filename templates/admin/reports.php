@@ -99,6 +99,25 @@ $filtersActive = $filters !== [] || $groupBy !== [];
     <?php if ($result !== null && $schema !== null): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-top">
         <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Report result</p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom"><?= $e($provider?->title() ?? $providerKey) ?></h3><p class="uk-text-muted uk-margin-small-top"><?= $e((string) count($result->rows)) ?> matching row<?= count($result->rows) === 1 ? '' : 's' ?>. Review the scope before exporting.</p></div><?php if ($canExport && $result->rows !== []): ?><div><form method="post" action="<?= $e($adminUrl) ?>reports-export/"><input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>"><input type="hidden" name="provider" value="<?= $e($providerKey) ?>"><input type="hidden" name="filters_json" value="<?= $e(json_encode($filters, JSON_THROW_ON_ERROR)) ?>"><input type="hidden" name="group_by_json" value="<?= $e(json_encode($groupBy, JSON_THROW_ON_ERROR)) ?>"><button class="uk-button uk-button-default" type="submit"><i class="fa fa-download"></i> Export CSV</button></form></div><?php endif; ?></div>
+        <?php if ($canExplainReport): ?>
+          <?php
+          $explainQuery = ['provider' => $providerKey, 'run' => '1', 'group_by' => $groupBy[0] ?? ''];
+          foreach ($filters as $field => $value) {
+              $explainQuery['filter_' . $field] = $value;
+          }
+          ?>
+          <details class="uk-margin"<?= $reportExplanation !== null || $reportAiError !== null ? ' open' : '' ?>>
+            <summary class="uk-text-bold">Explain report with AI</summary>
+            <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'reports/?' . http_build_query($explainQuery)) ?>">
+              <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+              <label class="uk-form-label" for="report-ai-excerpt">Report totals to send to the configured AI provider</label>
+              <textarea class="uk-textarea uk-margin-small" id="report-ai-excerpt" name="report_ai_excerpt" rows="5" maxlength="4000" required><?= $e($reportAiExcerpt) ?></textarea>
+              <button class="uk-button uk-button-default" type="submit" name="explain_report" value="1">Generate explanation</button>
+            </form>
+            <?php if ($reportAiError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($reportAiError) ?></p><?php endif; ?>
+            <?php if ($reportExplanation !== null): ?><div class="uk-margin-small-top"><?= nl2br($e($reportExplanation)) ?></div><?php endif; ?>
+          </details>
+        <?php endif; ?>
         <?php if ($result->rows !== []): ?><div class="uk-overflow-auto uk-margin-medium-top"><table class="uk-table uk-table-divider uk-table-middle uk-table-small"><thead><tr><?php foreach ($schema->fields as $field => $type): ?><th><?= $e($labelFor($field)) ?></th><?php endforeach; ?></tr></thead><tbody><?php foreach ($result->rows as $row): ?><tr><?php foreach ($schema->fields as $field => $type): ?><td><?= $e($formatValue($row[$field] ?? null, $type, $field)) ?></td><?php endforeach; ?></tr><?php endforeach; ?></tbody><?php if ($result->totals !== []): ?><tfoot><tr><?php foreach ($schema->fields as $field => $type): ?><td><?php if (array_key_exists($field, $result->totals)): ?><strong><?= $e($formatValue($result->totals[$field], $type, $field)) ?></strong><?php elseif ($field === array_key_first($schema->fields)): ?><strong>Total</strong><?php else: ?>—<?php endif; ?></td><?php endforeach; ?></tr></tfoot><?php endif; ?></table></div><?php else: ?><div class="uk-placeholder uk-text-center uk-margin-medium-top"><i class="fa fa-search fa-2x uk-text-muted"></i><h4>No matching data</h4><p class="uk-text-muted">The report ran successfully. Broaden the filters to include more records.</p></div><?php endif; ?>
       </section>
     <?php endif; ?>

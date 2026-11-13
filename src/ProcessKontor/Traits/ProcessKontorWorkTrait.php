@@ -1056,6 +1056,11 @@ trait ProcessKontorWorkTrait
     {
         $this->requireReports();
         $this->requirePermission('kontor-reports-report-view');
+        $explainRequested = $this->wire()->input->post('explain_report') === '1';
+        if ($explainRequested) {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+        }
         $this->setPageTitle($this->_('Kontor · Reports'));
         $module = $this->reportsModule();
         $providers = $module->providerRegistry()->all();
@@ -1131,12 +1136,54 @@ trait ProcessKontorWorkTrait
             }
         }
 
+        $canExplainReport = $result !== null && $result->rows !== []
+            && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $reportExplanation = null;
+        $reportAiError = null;
+        $reportAiExcerpt = '';
+        if ($canExplainReport) {
+            $reportAiExcerpt = "Report: " . $provider->title() . "\nMatching rows: " . count($result->rows);
+            foreach ($result->totals as $field => $total) {
+                if (isset($schema->fields[$field]) && (is_int($total) || is_float($total) || (is_string($total) && is_numeric($total)))) {
+                    $reportAiExcerpt .= "\n" . ($fieldLabels[$field] ?? $field) . " ({$field}): " . $total;
+                }
+            }
+            $reportAiExcerpt = mb_substr($reportAiExcerpt, 0, 4000);
+        }
+        if ($explainRequested) {
+            if (!$canExplainReport) {
+                throw new WirePermissionException($this->_('AI explanation is unavailable for this report.'));
+            }
+            $reportAiExcerpt = trim((string) $this->wire()->input->post('report_ai_excerpt'));
+            if ($reportAiExcerpt === '' || mb_strlen($reportAiExcerpt) > 4000) {
+                $reportAiError = $this->_('Enter up to 4,000 characters of report data.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $this->organizationUid(),
+                    ['reportExcerpt' => $reportAiExcerpt],
+                    'Explain these report totals and suggest what to investigate. Keep the language of the excerpt. Do not infer trends from a single snapshot, invent facts, or guess currencies or units.',
+                    (string) $this->wire()->user->id,
+                );
+                $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($draft) && trim($draft) !== '') {
+                    $reportExplanation = $draft;
+                } else {
+                    $reportAiError = $this->_('The AI provider did not return an explanation. Try again.');
+                }
+            }
+        }
+
         return $this->renderTemplate('reports', [
             'providers' => $providers,
             'providerKey' => $providerKey,
             'provider' => $provider,
             'filters' => $filters,
             'groupBy' => $groupBy,
+            'canExplainReport' => $canExplainReport,
+            'reportAiExcerpt' => $reportAiExcerpt,
+            'reportExplanation' => $reportExplanation,
+            'reportAiError' => $reportAiError,
             'result' => $result,
             'fieldOptions' => $fieldOptions,
             'fieldLabels' => $fieldLabels,
