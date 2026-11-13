@@ -277,6 +277,10 @@ trait ProcessKontorCustomerTrait
                     'contact',
                     $contact->uid->toString()
                 ),
+            'canCreateContactReminder' => $this->tasksReady()
+                && $this->can('kontor-tasks-task-view')
+                && $this->can('kontor-tasks-task-create')
+                && $this->can('kontor-tasks-relation-manage'),
             'workspace' => $contact === null
                 ? $this->emptyCustomerWorkspace()
                 : $this->customerWorkspace('contact', $contact->uid->toString()),

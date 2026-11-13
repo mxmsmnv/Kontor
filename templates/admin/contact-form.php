@@ -194,6 +194,18 @@ $connectedCount = count($workspace['leads']) + count($workspace['deals']) + coun
   </form>
 
   <?php if ($entity !== null): ?>
+    <?php if ($canCreateContactReminder): ?>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
+        <h3>Contact reminders</h3>
+        <p>Review and save a linked task. For a birthday, enter the next birthday date.</p>
+        <div class="uk-flex uk-flex-wrap">
+          <?php foreach (['birthday' => 'Birthday', 'month' => 'Follow up in one month', 'year' => 'Follow up in one year'] as $type => $label): ?>
+            <?php $query = http_build_query(['entity_type' => 'contact', 'entity_uid' => $entity->uid->toString(), 'contact_reminder' => $type]); ?>
+            <a class="uk-button uk-button-default uk-margin-small-right uk-margin-small-bottom" href="<?= $e($adminUrl . 'task/?' . $query) ?>"><?= $e($label) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </section>
+    <?php endif; ?>
     <?php if ($workspace['available']): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
         <header class="kontor-sectionhead">

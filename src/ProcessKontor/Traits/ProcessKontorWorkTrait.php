@@ -549,13 +549,26 @@ trait ProcessKontorWorkTrait
             }
         }
 
+        $reminder = $task === null && $contextType === 'contact' && $contextLabel !== ''
+            ? (string) $this->wire()->input->get('contact_reminder')
+            : '';
+        $reminderDate = match ($reminder) {
+            'month' => (new \DateTimeImmutable('today 09:00'))->modify('+1 month'),
+            'year' => (new \DateTimeImmutable('today 09:00'))->modify('+1 year'),
+            default => null,
+        };
+
         $values = [
-            'title' => $task?->title ?? ($contextLabel !== '' ? 'Follow up with ' . $contextLabel : ''),
+            'title' => $task?->title ?? match (true) {
+                $reminder === 'birthday' => 'Birthday: ' . $contextLabel,
+                $contextLabel !== '' => 'Follow up with ' . $contextLabel,
+                default => '',
+            },
             'description' => $task?->description ?? '',
             'workLabel' => $task === null ? '' : $this->taskLabel($task),
             'priority' => $task?->priority ?? 'normal',
-            'dueAt' => $task?->dueAt?->format('Y-m-d\TH:i') ?? '',
-            'recurrenceRule' => $task?->recurrenceRule ?? '',
+            'dueAt' => ($task?->dueAt ?? $reminderDate)?->format('Y-m-d\TH:i') ?? '',
+            'recurrenceRule' => $task?->recurrenceRule ?? ($reminder === 'birthday' ? 'yearly' : ''),
             'recurrenceUntil' => $task?->recurrenceUntil?->format('Y-m-d') ?? '',
             'assignedTo' => $task === null ? $currentUserId : $task->assignedTo,
             'visibility' => $task?->visibility ?? Task::VISIBILITY_ASSIGNEE,
