@@ -37,6 +37,19 @@ final class CatalogItemRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function findActiveStockItem(string $organizationUid, string $uid): ?CatalogItem
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_catalog_items
+             WHERE uid = :uid AND organization_id = :organization_id AND archived_at IS NULL
+               AND status = 'active' AND track_inventory = 1 AND item_type = 'product'"
+        );
+        $statement->execute(['uid' => $uid, 'organization_id' => $this->organizations->internalIdOf($organizationUid)]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function require(string $id): CatalogItem
     {
         return $this->find($id) ?? throw new RuntimeException("Catalog item \"{$id}\" was not found.");

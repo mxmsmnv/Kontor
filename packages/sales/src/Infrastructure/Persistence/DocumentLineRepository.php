@@ -71,12 +71,19 @@ final class DocumentLineRepository
     /**
      * @return array<int, DocumentLine> ordered by sort_order ascending
      */
-    public function forDocument(string $documentType, string $documentUid): array
+    public function forDocument(string $documentType, string $documentUid, ?string $organizationUid = null, ?int $limit = null): array
     {
+        $parameters = ['document_type' => $documentType, 'document_uid' => $documentUid];
+        if ($organizationUid !== null) {
+            $parameters['organization_id'] = $this->organizations->internalIdOf($organizationUid);
+        }
         $statement = $this->pdo->prepare(
-            'SELECT * FROM kontor_document_lines WHERE document_type = :document_type AND document_uid = :document_uid ORDER BY sort_order ASC'
+            'SELECT * FROM kontor_document_lines WHERE document_type = :document_type AND document_uid = :document_uid'
+            . ($organizationUid === null ? '' : ' AND organization_id = :organization_id')
+            . ' ORDER BY sort_order ASC, id ASC'
+            . ($limit === null ? '' : ' LIMIT ' . max(1, min(100, $limit)))
         );
-        $statement->execute(['document_type' => $documentType, 'document_uid' => $documentUid]);
+        $statement->execute($parameters);
 
         return array_map(fn (array $row): DocumentLine => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }

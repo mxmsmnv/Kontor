@@ -19,9 +19,10 @@ final class SupplierRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Supplier
+    public function find(string $id, bool $activeOnly = false): ?Supplier
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_purchasing_suppliers WHERE uid = :uid');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_purchasing_suppliers WHERE uid = :uid'
+            . ($activeOnly ? " AND archived_at IS NULL AND status = 'active'" : ''));
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
@@ -86,14 +87,15 @@ final class SupplierRepository implements RepositoryInterface
     /**
      * @return Supplier[]
      */
-    public function forOrganization(string $organizationUid, bool $archived = false): array
+    public function forOrganization(string $organizationUid, bool $archived = false, ?int $limit = null, int $offset = 0): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
         $statement = $this->pdo->prepare(
             'SELECT * FROM kontor_purchasing_suppliers
              WHERE organization_id = :organization_id
                AND ' . ($archived ? 'archived_at IS NOT NULL' : 'archived_at IS NULL') . '
-             ORDER BY legal_name ASC'
+             ORDER BY legal_name ASC, id ASC'
+             . ($limit === null ? '' : ' LIMIT ' . max(1, min($limit, 100)) . ' OFFSET ' . max(0, $offset))
         );
         $statement->execute(['organization_id' => $organizationId]);
 

@@ -84,11 +84,12 @@ final class WarehouseRepository implements RepositoryInterface
     /**
      * @return Warehouse[]
      */
-    public function forOrganization(string $organizationUid): array
+    public function forOrganization(string $organizationUid, ?int $limit = null, int $offset = 0): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
 
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_inventory_warehouses WHERE organization_id = :organization_id ORDER BY code ASC');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_inventory_warehouses WHERE organization_id = :organization_id ORDER BY code ASC, id ASC'
+            . ($limit === null ? '' : ' LIMIT ' . max(1, min($limit, 100)) . ' OFFSET ' . max(0, $offset)));
         $statement->execute(['organization_id' => $organizationId]);
 
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));

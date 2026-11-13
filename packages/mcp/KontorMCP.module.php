@@ -5,6 +5,7 @@ namespace ProcessWire;
 use Kontor\API\Application\IdempotencyService;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
+use Kontor\MCP\Application\ActivityTools;
 use Kontor\MCP\Application\CatalogTools;
 use Kontor\MCP\Application\CompanyTools;
 use Kontor\MCP\Application\ContactIntakeTools;
@@ -13,6 +14,7 @@ use Kontor\MCP\Application\CrmLookupTools;
 use Kontor\MCP\Application\CrmRecordTools;
 use Kontor\MCP\Application\FileTools;
 use Kontor\MCP\Application\FinanceLookupTools;
+use Kontor\MCP\Application\InventoryPurchasingTools;
 use Kontor\MCP\Application\KontorMcpBridge;
 use Kontor\MCP\Application\MailLookupTools;
 use Kontor\MCP\Application\ReportLookupTools;
@@ -23,6 +25,7 @@ require_once __DIR__ . '/KontorMcpProjectsTrait.php';
 
 class KontorMCP extends WireData implements Module, ConfigurableModule
 {
+    use ActivityTools;
     use CatalogTools;
     use CompanyTools;
     use ContactIntakeTools;
@@ -31,6 +34,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use CrmRecordTools;
     use FileTools;
     use FinanceLookupTools;
+    use InventoryPurchasingTools;
     use KontorMcpProjectsTrait;
     use MailLookupTools;
     use ReportLookupTools;
@@ -412,6 +416,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
                 ],
                 ['document', 'idempotency_key', 'confirmation'],
             ),
+            ...$this->activityTools(),
             ...$this->catalogTools(),
             ...$this->companyTools(),
             ...$this->contactIntakeTools(),
@@ -424,6 +429,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->taskTools(),
             ...$this->fileTools(),
             ...$this->financeLookupTools(),
+            ...$this->inventoryPurchasingTools(),
         ];
     }
 
