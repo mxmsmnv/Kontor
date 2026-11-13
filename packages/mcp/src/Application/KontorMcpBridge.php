@@ -7,6 +7,7 @@ namespace Kontor\MCP\Application;
 use InvalidArgumentException;
 use Kontor\API\Application\IdempotencyService;
 use Kontor\API\Contracts\ApiResourceInterface;
+use Kontor\API\Contracts\ArchivableApiResourceInterface;
 use Kontor\API\DTO\ApiQuery;
 use Kontor\API\Infrastructure\Registry\ApiResourceRegistry;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistryInterface;
@@ -84,7 +85,7 @@ final class KontorMcpBridge
                     'find' => true,
                     'create' => $schema->supportsCreate,
                     'update' => $schema->supportsUpdate,
-                    'archive' => $schema->supportsDelete,
+                    'archive' => $resource instanceof ArchivableApiResourceInterface,
                 ],
             ];
         }
@@ -239,17 +240,17 @@ final class KontorMcpBridge
             throw new InvalidArgumentException('Explicit archive confirmation is required.');
         }
         $resource = $this->resource($resourceKey);
-        if (!$resource->schema()->supportsDelete) {
+        if (!$resource instanceof ArchivableApiResourceInterface) {
             throw new InvalidArgumentException("Resource \"{$resourceKey}\" does not support archive.");
         }
         $uid = $this->uid($uid);
         $request = ['resource' => $resourceKey, 'uid' => $uid, 'confirmation' => $confirmation];
         $stored = $this->idempotency->remember(
             $this->organizationUid,
-            'mcp:archive:' . $this->idempotencyKey($idempotencyKey),
+            'mcp:archive:v2:' . $this->idempotencyKey($idempotencyKey),
             $request,
             function () use ($resource, $uid): array {
-                $resource->delete($this->organizationUid, $uid);
+                $resource->archive($this->organizationUid, $uid);
 
                 return ['status' => 200, 'body' => ['uid' => $uid, 'archived' => true]];
             },

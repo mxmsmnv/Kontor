@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Kontor\MCP\Tests\Unit;
 
 use Kontor\API\Application\IdempotencyService;
-use Kontor\API\Contracts\ApiResourceInterface;
+use Kontor\API\Contracts\ArchivableApiResourceInterface;
 use Kontor\API\Contracts\IdempotencyStoreInterface;
 use Kontor\API\DTO\ApiCollectionResult;
 use Kontor\API\DTO\ApiQuery;
@@ -78,7 +78,8 @@ final class KontorMcpBridgeTest extends TestCase
             'ARCHIVE_REVIEWED_KONTOR_RECORD',
         );
 
-        self::assertSame(1, $resource->deleteCalls);
+        self::assertSame(1, $resource->archiveCalls);
+        self::assertSame(0, $resource->deleteCalls);
     }
 
     public function testUnknownResourcesAndFiltersAreRejected(): void
@@ -199,10 +200,11 @@ final class KontorMcpBridgeTest extends TestCase
     }
 }
 
-final class FakeContactResource implements ApiResourceInterface
+final class FakeContactResource implements ArchivableApiResourceInterface
 {
     public int $createCalls = 0;
     public int $updateCalls = 0;
+    public int $archiveCalls = 0;
     public int $deleteCalls = 0;
 
     public function key(): string
@@ -243,6 +245,11 @@ final class FakeContactResource implements ApiResourceInterface
         $this->updateCalls++;
 
         return ['uid' => $uid, ...$attributes, 'apiToken' => 'hidden'];
+    }
+
+    public function archive(string $organizationId, string $uid): void
+    {
+        $this->archiveCalls++;
     }
 
     public function delete(string $organizationId, string $uid): void

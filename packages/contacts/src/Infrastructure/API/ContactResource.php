@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Kontor\Contacts\Infrastructure\API;
 
-use Kontor\API\Contracts\ApiResourceInterface;
+use Kontor\API\Contracts\ArchivableApiResourceInterface;
 use Kontor\API\DTO\ApiCollectionResult;
 use Kontor\API\DTO\ApiQuery;
 use Kontor\API\DTO\ApiResourceSchema;
 use Kontor\Contacts\Domain\Contact;
 use Kontor\Contacts\Infrastructure\Persistence\ContactRepository;
 
-final class ContactResource implements ApiResourceInterface
+final class ContactResource implements ArchivableApiResourceInterface
 {
     public function __construct(private readonly ContactRepository $contacts)
     {
@@ -149,6 +149,12 @@ final class ContactResource implements ApiResourceInterface
         $this->contacts->save($contact);
 
         return $this->present($contact);
+    }
+
+    public function archive(string $organizationId, string $uid): void
+    {
+        $this->requireOwned($organizationId, $uid);
+        $this->contacts->archive($uid);
     }
 
     public function delete(string $organizationId, string $uid): void
