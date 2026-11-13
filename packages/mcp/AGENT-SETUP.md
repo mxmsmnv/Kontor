@@ -4,6 +4,10 @@ Use this guide to connect Codex or Claude Code to a Kontor workspace. Modenza us
 
 ## 1. Provision personal access
 
+Sign in to your Kontor account and open **Profile → Manage MCP connections**. Create a personal token, choose your client, and copy the setup instructions. Tokens created there are automatically linked to your user and expire after 30 days. You can revoke them from the same page.
+
+For an administrator-managed token:
+
 1. An administrator issues a separate credential for the employee and device in [MCP Clients](https://office.modenza.org/roisin/setup/mcp-server/clients/). Select **Read** for lookup or **Draft** for supported record changes.
 2. In **Modules → Kontor MCP → MCP client accounts**, add `CLIENT_ID:USER_ID` using the employee's ProcessWire user ID. The active client IDs appear next to the field. Both the token scope and the linked user's Workspace permissions apply.
 3. Have the employee enter the token locally as `KONTOR_MCP_TOKEN`. Keep the token out of source control, chat, command history, logs, and reports.

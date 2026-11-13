@@ -29,6 +29,7 @@ use Kontor\MCP\Application\WorkflowLookupTools;
 use Kontor\MCP\Application\SalesLookupTools;
 use Kontor\MCP\Application\PaymentActionTools;
 use Kontor\MCP\Application\TaskTools;
+use Kontor\MCP\Application\ProfileConnection;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
 
 require_once __DIR__ . '/KontorMcpProjectsTrait.php';
@@ -58,6 +59,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use SalesLookupTools;
     use PaymentActionTools;
     use TaskTools;
+    use ProfileConnection;
 
     private ?KontorMcpBridge $bridge = null;
 
@@ -76,6 +78,11 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             'pocketWireProvider' => true,
             'requires' => ['Kontor', 'KontorAPI', 'McpServer'],
         ];
+    }
+
+    public function init(): void
+    {
+        $this->addHookAfter('ProcessProfile::execute', $this, 'renderProfileConnection');
     }
 
     public function getModuleConfigInputfields(array $data): InputfieldWrapper
@@ -115,6 +122,10 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
                 && $parts[1] === $context['id']) {
                 $ids[] = (int) $parts[2];
             }
+        }
+        $owner = $this->profileClientOwner($context['id']);
+        if ($owner > 0) {
+            $ids[] = $owner;
         }
         if (count($ids) !== 1) {
             throw new WirePermissionException('The MCP client requires a unique Kontor user binding.');
