@@ -63,8 +63,12 @@ class KontorAI extends WireData implements Module
         $modules = $this->wire()->modules;
         if ($modules->isInstalled('Squad')) {
             $squad = $modules->get('Squad');
-            if ($squad instanceof Squad && $squad->getProvider('openrouter') !== null) {
-                $this->providerRegistry()->register(new SquadAdapter(new ProcessWireSquadClient($squad->ask(...))));
+            if ($squad instanceof Squad) {
+                $provider = $squad->getDefaultProviderKey();
+                if ($squad->getProvider($provider) !== null) {
+                    $client = new ProcessWireSquadClient($squad->ask(...), $provider);
+                    $this->providerRegistry()->register(new SquadAdapter($client));
+                }
             }
         }
     }
