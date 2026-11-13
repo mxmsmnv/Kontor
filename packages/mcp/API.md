@@ -69,3 +69,9 @@ When Kontor Collaboration is installed, task tools additionally include:
 | `kontor_task_follow` | `draft` | Set the linked user's follow preference, which also appears on task get when permitted. |
 
 Posting a comment records mentions and follows the task for its author through the collaboration service. MCP comment posting does not queue email.
+
+### Mail and reports
+
+With the respective components installed, `kontor_mail_list` and `kontor_mail_get` provide read-only active mail lookup with the Workspace mail view permission. Mail linked to tasks is visible only when every linked task passes the linked account's task scope. The list searches subject and sender within the latest 500 matching messages, returning up to 25 visible messages per page. The get tool returns plain text up to 8,000 characters at a time.
+
+`kontor_reports_list` and `kontor_report_run` currently support the CRM pipeline report. The account must hold both report view and CRM deal view permissions. Pass the optional pipeline UID and open, won or lost status to filter. Results contain paged stage summaries and totals for the full filtered report.

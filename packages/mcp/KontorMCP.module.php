@@ -14,6 +14,8 @@ use Kontor\MCP\Application\CrmRecordTools;
 use Kontor\MCP\Application\FileTools;
 use Kontor\MCP\Application\FinanceLookupTools;
 use Kontor\MCP\Application\KontorMcpBridge;
+use Kontor\MCP\Application\MailLookupTools;
+use Kontor\MCP\Application\ReportLookupTools;
 use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
 
@@ -30,6 +32,8 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use FileTools;
     use FinanceLookupTools;
     use KontorMcpProjectsTrait;
+    use MailLookupTools;
+    use ReportLookupTools;
     use TaskTools;
 
     private ?KontorMcpBridge $bridge = null;
@@ -415,6 +419,8 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->crmRecordTools(),
             ...$this->crmActionTools(),
             ...$this->mcpProjectTools(),
+            ...$this->mcpMailLookupTools(),
+            ...$this->mcpReportLookupTools(),
             ...$this->taskTools(),
             ...$this->fileTools(),
             ...$this->financeLookupTools(),

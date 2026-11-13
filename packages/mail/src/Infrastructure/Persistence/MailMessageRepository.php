@@ -110,6 +110,38 @@ final class MailMessageRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return list<MailMessage> */
+    public function findActiveMatching(string $organizationUid, string $query = '', int $limit = 50, int $offset = 0): array
+    {
+        $organizationId = $this->organizations->internalIdOf($organizationUid);
+        $sql = 'SELECT * FROM kontor_mail_messages WHERE organization_id = :organization_id AND archived_at IS NULL';
+        if ($query !== '') {
+            $sql .= ' AND (subject LIKE :subject OR from_address LIKE :sender)';
+        }
+        $statement = $this->pdo->prepare($sql . ' ORDER BY occurred_at DESC, uid DESC LIMIT :limit OFFSET :offset');
+        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
+        if ($query !== '') {
+            $statement->bindValue(':subject', '%' . $query . '%');
+            $statement->bindValue(':sender', '%' . $query . '%');
+        }
+        $statement->bindValue(':limit', max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    public function findActive(string $organizationUid, string $uid): ?MailMessage
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_mail_messages WHERE organization_id = :organization_id AND uid = :uid AND archived_at IS NULL'
+        );
+        $statement->execute(['organization_id' => $this->organizations->internalIdOf($organizationUid), 'uid' => $uid]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function countByStatus(string $organizationUid, string $status): int
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
