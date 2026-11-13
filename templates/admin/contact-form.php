@@ -194,6 +194,20 @@ $connectedCount = count($workspace['leads']) + count($workspace['deals']) + coun
   </form>
 
   <?php if ($entity !== null): ?>
+    <?php if ($reminderDates !== null): ?>
+      <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
+        <h3>Automatic contact reminders</h3>
+        <?php if ($reminderError !== ''): ?><p class="uk-text-danger" role="alert"><?= $e($reminderError) ?></p><?php endif; ?>
+        <form method="post" class="uk-form-stacked">
+          <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+          <label class="uk-form-label">Birthday <input class="uk-input uk-form-width-medium" type="date" name="birthday" value="<?= $e($reminderDates['birthday'] ?? '') ?>"></label>
+          <label class="uk-form-label uk-margin-small-top">Last contact <input class="uk-input uk-form-width-medium" type="date" name="last_contact" value="<?= $e($reminderDates['last_contact'] ?? '') ?>"></label>
+          <p class="uk-text-meta">Kontor shows the next birthday and follow-ups one month and one year after the last contact.</p>
+          <button class="uk-button uk-button-primary" type="submit" name="save_reminder_dates" value="1">Save reminder dates</button>
+          <a class="uk-button uk-button-default" href="<?= $e($adminUrl . 'reminders/') ?>">View reminders</a>
+        </form>
+      </section>
+    <?php endif; ?>
     <?php if ($canCreateContactReminder): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card uk-margin-top">
         <h3>Contact reminders</h3>

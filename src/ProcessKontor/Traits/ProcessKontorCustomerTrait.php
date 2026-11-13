@@ -165,6 +165,28 @@ trait ProcessKontorCustomerTrait
             ? $this->_('Kontor · New contact')
             : sprintf($this->_('Kontor · %s'), $contact->displayName));
 
+        $reminderDates = null;
+        $reminderError = '';
+        if ($contact !== null && $this->wire()->modules->isInstalled('KontorReminders')) {
+            $this->requireSameOrganization($contact->organizationId);
+            $dates = $this->wire()->modules->get('KontorReminders')->contactDates();
+            $organizationId = $this->organizationInternalId();
+            $reminderDates = $dates->get($organizationId, $id);
+            if ($this->wire()->input->post('save_reminder_dates')) {
+                $this->requirePost();
+                $birthday = (string) $this->wire()->input->post('birthday');
+                $lastContact = (string) $this->wire()->input->post('last_contact');
+                try {
+                    $dates->save($organizationId, $id, $birthday, $lastContact);
+                    $this->message($this->_('Reminder dates saved.'));
+                    $this->wire()->session->redirect('./?id=' . rawurlencode($id));
+                } catch (\InvalidArgumentException $error) {
+                    $reminderError = $error->getMessage();
+                    $reminderDates = ['birthday' => $birthday, 'last_contact' => $lastContact];
+                }
+            }
+        }
+
         $isNew = $contact === null;
         $previous = $contact === null ? null : $this->contactAuditSnapshot($contact);
         $form = $this->buildContactForm($contact);
@@ -277,6 +299,8 @@ trait ProcessKontorCustomerTrait
                     'contact',
                     $contact->uid->toString()
                 ),
+            'reminderDates' => $reminderDates,
+            'reminderError' => $reminderError,
             'canCreateContactReminder' => $this->tasksReady()
                 && $this->can('kontor-tasks-task-view')
                 && $this->can('kontor-tasks-task-create')

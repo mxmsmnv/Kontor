@@ -1,6 +1,6 @@
 <?php
 
-$typeLabels = ['task' => 'Task', 'birthday' => 'Birthday', 'followup' => 'Client follow-up'];
+$typeLabels = ['task' => 'Task', 'birthday' => 'Birthday', 'followup' => 'Client follow-up', 'followup_month' => 'One-month follow-up', 'followup_year' => 'One-year follow-up'];
 $remindersUrl = $adminUrl . 'reminders/';
 $now = new DateTimeImmutable();
 ?>
@@ -33,15 +33,17 @@ $now = new DateTimeImmutable();
         </thead>
         <tbody>
           <?php foreach ($items as $item): ?>
-            <?php $taskUrl = $adminUrl . 'task/?id=' . rawurlencode($item['taskUid']); ?>
+            <?php $taskUrl = $item['taskUid'] === null
+                ? $adminUrl . 'contact/?id=' . rawurlencode($item['contactUid'])
+                : $adminUrl . 'task/?id=' . rawurlencode($item['taskUid']); ?>
             <tr>
               <td>
                 <a href="<?= $e($taskUrl) ?>"><?= $e($item['title']) ?></a>
                 <div class="uk-text-meta"><?= $e($typeLabels[$item['kind']] ?? 'Task') ?></div>
               </td>
-              <td><time datetime="<?= $e($item['remindAt']->format(DATE_ATOM)) ?>"><?= $e($item['remindAt']->format('M j, Y · H:i')) ?></time></td>
+              <td><time datetime="<?= $e($item['remindAt']->format(DATE_ATOM)) ?>"><?= $e($item['remindAt']->format($item['taskUid'] === null ? 'M j, Y' : 'M j, Y · H:i')) ?></time></td>
               <td><?= $e($channels[$item['channel']]['label'] ?? $item['channel']) ?></td>
-              <td><?= $item['channel'] === 'email' ? ($item['sentAt'] === null ? 'Not confirmed' : 'Sent') : 'Due date' ?></td>
+              <td><?= $item['channel'] === 'email' ? ($item['sentAt'] === null ? 'Not confirmed' : 'Sent') : ($item['taskUid'] === null && $item['remindAt'] < $now->setTime(0, 0) ? 'Overdue' : 'Due date') ?></td>
               <td>
                 <?php if ($item['contactUid'] !== null): ?>
                   <a class="uk-button uk-button-default uk-button-small" href="<?= $e($adminUrl . 'contact/?id=' . rawurlencode($item['contactUid'])) ?>">Contact</a>

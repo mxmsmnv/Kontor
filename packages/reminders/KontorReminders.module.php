@@ -7,8 +7,11 @@ namespace ProcessWire;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\Reminders\Application\ReminderInbox;
+use Kontor\Reminders\Application\ContactReminderDates;
+use Kontor\Core\Infrastructure\Persistence\ExtensionRepository;
 
 require_once __DIR__ . '/src/Application/ReminderInbox.php';
+require_once __DIR__ . '/src/Application/ContactReminderDates.php';
 
 class KontorReminders extends WireData implements Module
 {
@@ -44,6 +47,12 @@ class KontorReminders extends WireData implements Module
         $event->return = $apps;
     }
 
+    public function contactDates(): ContactReminderDates
+    {
+        $container = $this->wire()->modules->get('Kontor')->container();
+        return new ContactReminderDates($container->get(ExtensionRepository::class), $container->get(\PDO::class));
+    }
+
     public function inboxFor(User $actor): array
     {
         $wire = $this->wire();
@@ -57,9 +66,17 @@ class KontorReminders extends WireData implements Module
             ->defaultOrganization('US', 'en', 'USD')->uid->toString();
         $tasks = $wire->modules->get('KontorTasks');
 
-        return (new ReminderInbox($tasks->taskRepository(), $tasks->reminderRepository(), $tasks->relations()))
+        $items = (new ReminderInbox($tasks->taskRepository(), $tasks->reminderRepository(), $tasks->relations()))
             ->list($organization, $tasks->accessFor($actor),
                 $actor->isSuperuser() || $actor->hasPermission('kontor-contacts-contact-view'));
+        if ($wire->modules->isInstalled('KontorContacts')
+            && ($actor->isSuperuser() || $actor->hasPermission('kontor-contacts-contact-view'))) {
+            $organizationId = $container->get(OrganizationRepository::class)->internalIdOf($organization);
+            $items = array_merge($items, $this->contactDates()->list($organizationId, new \DateTimeImmutable('today')));
+            usort($items, static fn (array $a, array $b): int => $a['remindAt'] <=> $b['remindAt']);
+        }
+
+        return $items;
     }
 
     public function channels(): array
