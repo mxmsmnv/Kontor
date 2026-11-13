@@ -53,7 +53,59 @@ trait CrmActionTools
                 ],
                 ['uid', 'action', 'idempotency_key', 'confirmation'],
             ),
+            $this->tool(
+                'kontor_crm_record_archive_action',
+                'Archive or restore a Kontor CRM record',
+                'Archive or restore one lead or deal after the user confirms the action.',
+                $this->mcpCrmRecordArchiveAction(...),
+                'draft',
+                [
+                    'entity' => ['type' => 'string', 'enum' => ['lead', 'deal']],
+                    'uid' => $this->uidSchema(),
+                    'action' => ['type' => 'string', 'enum' => ['archive', 'restore']],
+                    'idempotency_key' => $this->idempotencySchema(),
+                    'confirmation' => ['type' => 'string', 'const' => 'APPLY_CRM_ARCHIVE_ACTION'],
+                ],
+                ['entity', 'uid', 'action', 'idempotency_key', 'confirmation'],
+                destructive: true,
+            ),
         ];
+    }
+
+    public function mcpCrmRecordArchiveAction(
+        string $entity,
+        string $uid,
+        string $action,
+        string $idempotency_key,
+        string $confirmation,
+    ): array {
+        $permission = match ($entity) {
+            'lead' => 'lead-archive',
+            'deal' => 'deal-edit',
+            default => throw new WireException('Unknown CRM record type.'),
+        };
+        $actor = $this->crmActionActor([$permission]);
+        if ($confirmation !== 'APPLY_CRM_ARCHIVE_ACTION' || !in_array($action, ['archive', 'restore'], true)) {
+            throw new WireException('Confirm archive or restore for this CRM record.');
+        }
+        $archived = $action === 'archive';
+        return $this->runCrmAction(
+            $actor,
+            $entity,
+            $uid,
+            $archived ? 'archived' : 'restored',
+            [],
+            $idempotency_key,
+            function (KontorCRM $crm) use ($entity, $uid, $archived): array {
+                $repository = $entity === 'lead' ? $crm->leadRepository() : $crm->dealRepository();
+                if ($archived) {
+                    $repository->archive($uid);
+                } else {
+                    $repository->restore($uid);
+                }
+                return ['uid' => $uid, 'entity' => $entity, 'archived' => $archived];
+            },
+        );
     }
 
     public function mcpCrmLeadConvert(string $uid, string $idempotency_key, string $confirmation): array

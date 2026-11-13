@@ -17,7 +17,7 @@ trait KontorMcpProjectsTrait
             $this->tool(
                 'kontor_projects_list',
                 'List Kontor projects',
-                'Find a project UID for use in task operations. Search matches the code or name among the 500 most recently updated projects.',
+                'Find projects by code or name among the 500 most recently updated projects.',
                 [$this, 'mcpKontorProjectsList'],
                 'read',
                 [

@@ -72,6 +72,16 @@ trait TaskTools
                 [$this, 'mcpKontorTaskCreate'], 'draft', [
                     'fields' => $taskDocument + ['required' => ['title']],
                     'idempotency_key' => $key,
+                    'related_customer' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'type' => ['type' => 'string', 'enum' => ['contact', 'company']],
+                            'uid' => $this->uidSchema(),
+                        ],
+                        'required' => ['type', 'uid'],
+                        'additionalProperties' => false,
+                        'description' => 'Optional visible CRM contact or company to link, as when creating a task from its Workspace record.',
+                    ],
                 ], ['fields', 'idempotency_key']),
             $this->tool('kontor_task_update', 'Update a Kontor task',
                 'Update selected fields of a visible, active task. Use the task action tool to change status.',
@@ -172,18 +182,34 @@ trait TaskTools
         ];
     }
 
-    public function mcpKontorTaskCreate(array $fields, string $idempotency_key): array
+    public function mcpKontorTaskCreate(array $fields, string $idempotency_key, ?array $related_customer = null): array
     {
         [$module, $actor, $access, $organizationUid] = $this->taskContext('create');
 
-        return $this->writeMcpTask($module, $actor, $access, $organizationUid, $idempotency_key, 'create', $fields,
-            function () use ($module, $actor, $access, $organizationUid, $fields): array {
+        if ($related_customer !== null) {
+            $this->requireMcpTaskCustomer($actor, $organizationUid, $related_customer);
+            ksort($related_customer);
+        }
+        return $this->writeMcpTask(
+            $module,
+            $actor,
+            $access,
+            $organizationUid,
+            $idempotency_key,
+            'create',
+            ['fields' => $fields, 'related_customer' => $related_customer],
+            function () use ($module, $actor, $access, $organizationUid, $fields, $related_customer): array {
                 $task = Task::create($organizationUid, '', assignedTo: (int) $actor->id, visibility: Task::VISIBILITY_ASSIGNEE);
                 $this->applyMcpTaskFields($task, $fields, $module, $actor, $access);
                 $module->taskRepository()->save($task);
+                $uid = $task->uid->toString();
+                if ($related_customer !== null) {
+                    $module->relations()->linkToEntity($organizationUid, $uid, $related_customer['type'], $related_customer['uid']);
+                }
 
-                return ['taskUid' => $task->uid->toString()];
-            });
+                return ['taskUid' => $uid];
+            },
+        );
     }
 
     public function mcpKontorTaskUpdate(string $uid, array $fields, string $idempotency_key): array
@@ -270,6 +296,28 @@ trait TaskTools
         $organization = $container->get(OrganizationRepository::class)->defaultOrganization('US', 'en', 'USD');
 
         return [$module, $actor, $access, $organization->uid->toString()];
+    }
+
+    private function requireMcpTaskCustomer(User $actor, string $organizationUid, array $customer): void
+    {
+        $type = $customer['type'] ?? '';
+        $uid = $customer['uid'] ?? '';
+        if (!in_array($type, ['contact', 'company'], true) || !preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/D', $uid)) {
+            throw new WireException('Supply a valid contact or company UID to link.');
+        }
+        if (!$actor->isSuperuser() && (!$actor->hasPermission('kontor-tasks-relation-manage')
+            || !$actor->hasPermission('kontor-contacts-' . $type . '-view'))) {
+            throw new WirePermissionException('Linking a task requires relation management and CRM record view permissions.');
+        }
+        $modules = $this->wire()->modules;
+        if (!$modules->isInstalled('KontorContacts')) {
+            throw new Wire404Exception('Related CRM record not found.');
+        }
+        $contacts = $modules->get('KontorContacts');
+        $customer = $type === 'contact' ? $contacts->contactRepository()->find($uid) : $contacts->companyRepository()->find($uid);
+        if ($customer === null || !hash_equals($organizationUid, $customer->organizationId)) {
+            throw new Wire404Exception('Related CRM record not found.');
+        }
     }
 
     private function taskPermission(User $actor, string $permission): bool

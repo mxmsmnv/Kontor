@@ -16,3 +16,4 @@ A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegi
 - `kontor_projects_list` and `kontor_project_get` expose basic project lookup when the linked user has project view permission.
 - `kontor_crm_leads_list`, `kontor_crm_lead_get`, `kontor_crm_deals_list`, `kontor_crm_deal_get`, `kontor_crm_pipelines_list` and `kontor_crm_stages_list` expose scoped CRM lookup. Full lead detail requires lead edit, as in the Workspace form.
 - `kontor_crm_lead_convert` and `kontor_crm_deal_transition` use CRM workflow permissions and require an explicit confirmation and an idempotency key.
+- `kontor_crm_record_archive_action` applies a reviewed archive or restore to a lead or deal under its Workspace permission.
