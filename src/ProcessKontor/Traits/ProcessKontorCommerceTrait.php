@@ -131,6 +131,37 @@ trait ProcessKontorCommerceTrait
             $this->requirePermission('kontor-sales-quotation-create');
         }
 
+        $draftRequested = $this->wire()->input->post('draft_quotation_email') === '1';
+        $canDraftQuotationEmail = $quotation !== null && !$quotation->isClosed()
+            && $this->can('kontor-sales-quotation-send') && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $quotationEmailBrief = '';
+        $quotationEmailDraft = null;
+        $quotationEmailError = null;
+        if ($draftRequested) {
+            $this->requirePost();
+            if (!$canDraftQuotationEmail) {
+                throw new WirePermissionException($this->_('AI email drafting is unavailable for this quotation.'));
+            }
+            $quotationEmailBrief = trim((string) $this->wire()->input->post('quotation_email_brief'));
+            if ($quotationEmailBrief === '' || mb_strlen($quotationEmailBrief) > 4000) {
+                $quotationEmailError = $this->_('Enter a brief of up to 4,000 characters.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $quotation->organizationId,
+                    ['brief' => $quotationEmailBrief, 'language' => $quotation->documentLanguage],
+                    'Draft a concise client email about a quotation in the specified language. Use only the facts in the brief. Do not invent prices, dates, terms, attachments or commitments. Use placeholders for missing details.',
+                    (string) $this->wire()->user->id,
+                );
+                $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($draft) && trim($draft) !== '') {
+                    $quotationEmailDraft = $draft;
+                } else {
+                    $quotationEmailError = $this->_('The AI provider did not return a draft. Try again.');
+                }
+            }
+        }
+
         $sourceDeal = null;
         $sourceDealError = '';
         if ($quotation !== null && $quotation->dealUid !== null
@@ -355,6 +386,10 @@ trait ProcessKontorCommerceTrait
             : sprintf($this->_('Kontor · %s'), $quotation->number ?? $this->_('Draft quotation')));
 
         return $this->renderTemplate('sales-quotation', [
+            'canDraftQuotationEmail' => $canDraftQuotationEmail,
+            'quotationEmailBrief' => $quotationEmailBrief,
+            'quotationEmailDraft' => $quotationEmailDraft,
+            'quotationEmailError' => $quotationEmailError,
             'quotation' => $quotation,
             'lines' => $lines,
             'existingOrder' => $existingOrder,

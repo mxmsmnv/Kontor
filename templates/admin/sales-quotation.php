@@ -65,6 +65,24 @@ $duplicateQuotation = $quotation === null && $existingDealQuotations !== [];
     </section>
   <?php endif; ?>
 
+  <?php if ($canDraftQuotationEmail): ?>
+    <details class="uk-card uk-card-default uk-card-small uk-card-body uk-margin"<?= $quotationEmailDraft !== null || $quotationEmailError !== null ? ' open' : '' ?>>
+      <summary class="uk-text-bold">Draft client email with AI</summary>
+      <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'sales-quotation/?id=' . rawurlencode($quotation->uid->toString())) ?>">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <label class="uk-form-label" for="quotation-ai-brief">What should the client know?</label>
+        <textarea class="uk-textarea uk-margin-small" id="quotation-ai-brief" name="quotation_email_brief" rows="4" maxlength="4000" required><?= $e($quotationEmailBrief) ?></textarea>
+        <p class="uk-text-meta">The AI provider receives this brief and the quotation language.</p>
+        <button class="uk-button uk-button-default" name="draft_quotation_email" value="1" type="submit">Generate email draft</button>
+      </form>
+      <?php if ($quotationEmailError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($quotationEmailError) ?></p><?php endif; ?>
+      <?php if ($quotationEmailDraft !== null): ?>
+        <label class="uk-form-label uk-margin-small-top" for="quotation-ai-draft">Email draft for review</label>
+        <textarea class="uk-textarea" id="quotation-ai-draft" rows="7"><?= $e($quotationEmailDraft) ?></textarea>
+      <?php endif; ?>
+    </details>
+  <?php endif; ?>
+
   <?php if ($quotation === null): ?>
     <?php if ($duplicateQuotation): ?>
       <section class="uk-card uk-card-default uk-card-small uk-card-body">
