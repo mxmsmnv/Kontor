@@ -86,6 +86,25 @@ final class CategoryRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return list<ExpenseCategory> */
+    public function activeForOrganization(string $organizationUid, int $limit, int $offset = 0, ?string $uid = null): array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM kontor_expense_categories WHERE organization_id = :organization_id
+                AND archived_at IS NULL AND status = 'active'" . ($uid === null ? '' : ' AND uid = :uid')
+            . ' ORDER BY name, uid LIMIT :limit OFFSET :offset'
+        );
+        $statement->bindValue(':organization_id', $this->organizations->internalIdOf($organizationUid), \PDO::PARAM_INT);
+        if ($uid !== null) {
+            $statement->bindValue(':uid', $uid);
+        }
+        $statement->bindValue(':limit', max(1, min(100, $limit)), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     private function hydrate(array $row): ExpenseCategory
     {
         return new ExpenseCategory(

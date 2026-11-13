@@ -152,9 +152,12 @@ final class QuotationRepository implements RepositoryInterface
         bool $archived = false,
         int $limit = 50,
         int $offset = 0,
+        bool $numberOnly = false,
+        ?string $customerType = null,
+        ?string $customerUid = null,
     ): array
     {
-        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived);
+        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived, $numberOnly, $customerType, $customerUid);
         $statement = $this->pdo->prepare(
             'SELECT q.* FROM kontor_sales_quotations q
              WHERE ' . implode(' AND ', $where) . '
@@ -198,6 +201,9 @@ final class QuotationRepository implements RepositoryInterface
         string $query,
         ?string $status,
         bool $archived,
+        bool $numberOnly = false,
+        ?string $customerType = null,
+        ?string $customerUid = null,
     ): array
     {
         $where = [
@@ -215,8 +221,14 @@ final class QuotationRepository implements RepositoryInterface
 
         $query = trim($query);
         if ($query !== '') {
-            $where[] = '(q.number LIKE :query OR q.customer_uid LIKE :query)';
+            $where[] = $numberOnly ? 'q.number LIKE :query' : '(q.number LIKE :query OR q.customer_uid LIKE :query)';
             $params['query'] = '%' . $query . '%';
+        }
+
+        if ($customerType !== null && $customerUid !== null) {
+            $where[] = 'q.customer_type = :customer_type AND q.customer_uid = :customer_uid';
+            $params['customer_type'] = $customerType;
+            $params['customer_uid'] = $customerUid;
         }
 
         return [$where, $params];

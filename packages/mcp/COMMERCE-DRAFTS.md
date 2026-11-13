@@ -11,6 +11,14 @@ All four require the MCP `draft` scope and a linked user in the Workspace
 organization. Operations write to the sales or invoice audit log. Use the
 same idempotency key and payload if a save needs retrying.
 
+To find source documents, use `kontor_sales_quotations_list` or
+`kontor_sales_orders_list` with a document number or a status filter. For
+invoice drafts, look for `confirmed` or `completed` orders. The corresponding
+`kontor_sales_quotation_get` and `kontor_sales_order_get` tools show totals
+and up to 25 document lines. These tools use the quotation or order view
+permission. Customer IDs and customer filters additionally require permission
+to view that customer type.
+
 Create a quotation with a customer UID, currency and 1–20 lines encoded as a
 JSON array. Use integer amounts in minor units. Quantity and tax rate may be
 decimal strings with up to six fractional digits.

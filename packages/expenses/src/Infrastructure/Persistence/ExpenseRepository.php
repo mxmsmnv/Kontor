@@ -31,6 +31,17 @@ final class ExpenseRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
+    public function findActive(string $organizationUid, string $uid): ?Expense
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_expenses WHERE organization_id = :organization_id AND uid = :uid AND archived_at IS NULL'
+        );
+        $statement->execute(['organization_id' => $this->organizations->internalIdOf($organizationUid), 'uid' => $uid]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
     public function require(string $id): Expense
     {
         return $this->find($id) ?? throw new RuntimeException("Expense \"{$id}\" was not found.");
@@ -148,17 +159,18 @@ final class ExpenseRepository implements RepositoryInterface
     /**
      * @return Expense[]
      */
-    public function forOrganization(string $organizationUid, ?string $status = null, int $limit = 100): array
+    public function forOrganization(string $organizationUid, ?string $status = null, int $limit = 100, int $offset = 0): array
     {
         $organizationId = $this->organizations->internalIdOf($organizationUid);
         $limit = max(1, min(500, $limit));
+        $offset = max(0, $offset);
         $statusClause = $status !== null ? ' AND status = :status' : '';
         $statement = $this->pdo->prepare(
             "SELECT * FROM kontor_expenses
              WHERE organization_id = :organization_id
                AND archived_at IS NULL{$statusClause}
-             ORDER BY expense_date DESC, created_at DESC
-             LIMIT {$limit}"
+             ORDER BY expense_date DESC, created_at DESC, uid DESC
+             LIMIT {$limit} OFFSET {$offset}"
         );
         $params = ['organization_id' => $organizationId];
         if ($status !== null) {

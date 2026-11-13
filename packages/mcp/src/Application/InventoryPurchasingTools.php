@@ -306,7 +306,7 @@ trait InventoryPurchasingTools
                 if ($order === null) {
                     throw new Wire404Exception('Purchase order was not found.');
                 }
-                if ($action === 'issue' && !$order->isDraft() || $action === 'cancel' && !$order->isCancellable()) {
+                if (($action === 'issue' && !$order->isDraft()) || ($action === 'cancel' && !$order->isCancellable())) {
                     throw new WireException('Purchase order status does not allow this action.');
                 }
                 $workflow = $purchasing->purchaseOrderWorkflow();
@@ -403,7 +403,10 @@ trait InventoryPurchasingTools
         }
         $reason = $reason === null ? null : trim(strip_tags($reason));
         if (($reason !== null && mb_strlen($reason) > 255) || ($permission === 'adjust' && ($reason === null || $reason === ''))) {
-            throw new WireException('Stock adjustments need a reason of up to 255 characters.');
+            throw new WireException('Reasons can contain up to 255 characters and are required for stock adjustments.');
+        }
+        if ($reason !== null && in_array($action, ['reserve', 'release'], true)) {
+            throw new WireException('Reserve and release movements do not accept a reason.');
         }
         $inventory = $this->inventoryPurchasingModule('KontorInventory');
         $catalog = $this->inventoryPurchasingModule('KontorCatalog');

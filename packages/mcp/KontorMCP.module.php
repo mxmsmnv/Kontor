@@ -14,6 +14,7 @@ use Kontor\MCP\Application\ContactIntakeTools;
 use Kontor\MCP\Application\CrmActionTools;
 use Kontor\MCP\Application\CrmLookupTools;
 use Kontor\MCP\Application\CrmRecordTools;
+use Kontor\MCP\Application\ExpenseTools;
 use Kontor\MCP\Application\FileTools;
 use Kontor\MCP\Application\FinanceLookupTools;
 use Kontor\MCP\Application\InventoryPurchasingTools;
@@ -22,6 +23,8 @@ use Kontor\MCP\Application\MailLookupTools;
 use Kontor\MCP\Application\ReportLookupTools;
 use Kontor\MCP\Application\PortalLookupTools;
 use Kontor\MCP\Application\DocumentLookupTools;
+use Kontor\MCP\Application\WorkflowLookupTools;
+use Kontor\MCP\Application\SalesLookupTools;
 use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
 
@@ -37,6 +40,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use CrmActionTools;
     use CrmLookupTools;
     use CrmRecordTools;
+    use ExpenseTools;
     use FileTools;
     use FinanceLookupTools;
     use InventoryPurchasingTools;
@@ -45,6 +49,8 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use ReportLookupTools;
     use PortalLookupTools;
     use DocumentLookupTools;
+    use WorkflowLookupTools;
+    use SalesLookupTools;
     use TaskTools;
 
     private ?KontorMcpBridge $bridge = null;
@@ -462,7 +468,10 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->mcpReportLookupTools(),
             ...$this->mcpPortalLookupTools(),
             ...$this->mcpDocumentLookupTools(),
+            ...$this->workflowLookupTools(),
+            ...$this->salesLookupTools(),
             ...$this->taskTools(),
+            ...$this->mcpExpenseTools(),
             ...$this->fileTools(),
             ...$this->financeLookupTools(),
             ...$this->inventoryPurchasingTools(),

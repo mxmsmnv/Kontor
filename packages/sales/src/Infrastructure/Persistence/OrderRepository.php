@@ -136,9 +136,12 @@ final class OrderRepository implements RepositoryInterface
         bool $archived = false,
         int $limit = 50,
         int $offset = 0,
+        bool $numberOnly = false,
+        ?string $customerType = null,
+        ?string $customerUid = null,
     ): array
     {
-        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived);
+        [$where, $params] = $this->matchingConditions($organizationUid, $query, $status, $archived, $numberOnly, $customerType, $customerUid);
         $statement = $this->pdo->prepare(
             'SELECT o.* FROM kontor_sales_orders o
              WHERE ' . implode(' AND ', $where) . '
@@ -182,6 +185,9 @@ final class OrderRepository implements RepositoryInterface
         string $query,
         ?string $status,
         bool $archived,
+        bool $numberOnly = false,
+        ?string $customerType = null,
+        ?string $customerUid = null,
     ): array
     {
         $where = [
@@ -199,8 +205,14 @@ final class OrderRepository implements RepositoryInterface
 
         $query = trim($query);
         if ($query !== '') {
-            $where[] = '(o.number LIKE :query OR o.customer_uid LIKE :query)';
+            $where[] = $numberOnly ? 'o.number LIKE :query' : '(o.number LIKE :query OR o.customer_uid LIKE :query)';
             $params['query'] = '%' . $query . '%';
+        }
+
+        if ($customerType !== null && $customerUid !== null) {
+            $where[] = 'o.customer_type = :customer_type AND o.customer_uid = :customer_uid';
+            $params['customer_type'] = $customerType;
+            $params['customer_uid'] = $customerUid;
         }
 
         return [$where, $params];

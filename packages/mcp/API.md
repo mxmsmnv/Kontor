@@ -27,6 +27,9 @@ A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegi
 - `kontor_inventory_warehouses_list` and `kontor_inventory_balances_list` require inventory stock view. `kontor_inventory_movements_list` requires movement view.
 - `kontor_purchasing_suppliers_list` requires supplier view. `kontor_purchase_orders_list` and `kontor_purchase_order_get` require purchase-order view. Supplier IDs on orders also require supplier view.
 - `kontor_purchase_order_create_draft` requires Draft, purchase-order create, supplier view and an idempotency key. Provide an active supplier, an active warehouse and one to 25 active inventory-tracked catalog items with quantities and prices in minor currency units. The tool stores the order and calculated totals as a draft.
+- `kontor_purchase_order_action` issues or cancels an order under the matching purchase-order permission. It requires Draft, an idempotency key and `APPLY_PURCHASE_ORDER_ACTION`. Issue allocates the official purchase-order number.
+- `kontor_purchase_order_receive` records a goods receipt against the line UIDs returned by `kontor_purchase_order_get` and updates stock in the selected active warehouse. It requires Draft, receipt-create, an idempotency key and `RECORD_PURCHASE_RECEIPT`.
+- `kontor_inventory_movement_record` receives, transfers, adjusts, reserves or releases stock with the matching inventory permission. It requires Draft, an idempotency key and `APPLY_INVENTORY_MOVEMENT`. Adjustments require a reason. Negative stock requires the existing negative-stock override.
 
 ## Task tools
 
@@ -87,3 +90,7 @@ With the respective components installed, `kontor_mail_list` and `kontor_mail_ge
 `kontor_portal_accounts_list` and `kontor_portal_account_get` return organization-scoped, non-archived portal account metadata for users with the Workspace account management permission. List accepts an optional contact UID. Responses contain account and contact IDs, email, status and timestamps.
 
 `kontor_document_templates_list` and `kontor_document_template_get` return metadata for organization document templates, including version and archive date, for users with template view permission. List accepts an optional document type. Both lists return up to 25 entries per page. These tools return no credentials, verification material, template source, rendered files or signed download URLs.
+
+### Expenses
+
+`kontor_expense_categories_list`, `kontor_expenses_list` and `kontor_expense_get` return organization-scoped, active category and non-archived expense records, with the corresponding Workspace view permissions. `kontor_expense_draft_create` records a draft with category UID, description, positive integer minor-unit amount, currency and ISO calendar date. Confirm those fields with the user before writing. The tool requires expense creation and category view permissions. Optional suppliers must be active and visible, and optional receipt files must be active and visible through the file ACL. Creating a draft does not submit, approve or reimburse it.
