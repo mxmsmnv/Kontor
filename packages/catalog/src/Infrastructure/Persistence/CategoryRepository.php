@@ -45,9 +45,10 @@ final class CategoryRepository
         ]);
     }
 
-    public function find(string $uid): ?Category
+    public function find(string $uid, bool $forUpdate = false): ?Category
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_categories WHERE uid = :uid');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_categories WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''));
         $statement->execute(['uid' => $uid]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

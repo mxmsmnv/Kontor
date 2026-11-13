@@ -46,9 +46,10 @@ final class PriceListRepository
         ]);
     }
 
-    public function find(string $uid): ?PriceList
+    public function find(string $uid, bool $forUpdate = false): ?PriceList
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_price_lists WHERE uid = :uid');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_price_lists WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''));
         $statement->execute(['uid' => $uid]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

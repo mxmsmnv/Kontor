@@ -26,9 +26,10 @@ final class CatalogItemRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?CatalogItem
+    public function find(string $id, bool $forUpdate = false): ?CatalogItem
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_items WHERE uid = :uid');
+        $statement = $this->pdo->prepare('SELECT * FROM kontor_catalog_items WHERE uid = :uid'
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''));
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
@@ -55,6 +56,16 @@ final class CatalogItemRepository implements RepositoryInterface
 
     public function save(object $entity): void
     {
+        $this->persist($entity);
+    }
+
+    public function saveByUid(CatalogItem $item, bool $isNew): void
+    {
+        $this->persist($item, $isNew);
+    }
+
+    private function persist(object $entity, ?bool $isNew = null): void
+    {
         if (!$entity instanceof CatalogItem) {
             throw new InvalidArgumentException('CatalogItemRepository::save() expects a CatalogItem.');
         }
@@ -62,16 +73,15 @@ final class CatalogItemRepository implements RepositoryInterface
         $organizationId = $this->organizations->internalIdOf($entity->organizationId);
         $now = $this->now();
 
-        $statement = $this->pdo->prepare(
-            'INSERT INTO kontor_catalog_items
+        $insert = 'INSERT INTO kontor_catalog_items
                 (uid, organization_id, item_type, sku, barcode, title_json, description_json, category_uid,
                  unit_code, tax_code, sales_price_minor, sales_currency, purchase_price_minor, purchase_currency,
                  cost_price_minor, cost_currency, track_inventory, status, metadata_json, created_at, updated_at, version)
              VALUES
                 (:uid, :organization_id, :item_type, :sku, :barcode, :title_json, :description_json, :category_uid,
                  :unit_code, :tax_code, :sales_price_minor, :sales_currency, :purchase_price_minor, :purchase_currency,
-                 :cost_price_minor, :cost_currency, :track_inventory, :status, :metadata_json, :created_at, :updated_at, 1)
-             ON DUPLICATE KEY UPDATE
+                 :cost_price_minor, :cost_currency, :track_inventory, :status, :metadata_json, :created_at, :updated_at, 1)';
+        $upsert = ' ON DUPLICATE KEY UPDATE
                 item_type = VALUES(item_type), sku = VALUES(sku), barcode = VALUES(barcode),
                 title_json = VALUES(title_json), description_json = VALUES(description_json),
                 category_uid = VALUES(category_uid), unit_code = VALUES(unit_code), tax_code = VALUES(tax_code),
@@ -79,10 +89,17 @@ final class CatalogItemRepository implements RepositoryInterface
                 purchase_price_minor = VALUES(purchase_price_minor), purchase_currency = VALUES(purchase_currency),
                 cost_price_minor = VALUES(cost_price_minor), cost_currency = VALUES(cost_currency),
                 track_inventory = VALUES(track_inventory), status = VALUES(status),
-                metadata_json = VALUES(metadata_json), updated_at = VALUES(updated_at), version = version + 1'
-        );
+                metadata_json = VALUES(metadata_json), updated_at = VALUES(updated_at), version = version + 1';
+        $update = 'UPDATE kontor_catalog_items SET item_type = :item_type, sku = :sku, barcode = :barcode,
+             title_json = :title_json, description_json = :description_json, category_uid = :category_uid,
+             unit_code = :unit_code, tax_code = :tax_code, sales_price_minor = :sales_price_minor,
+             sales_currency = :sales_currency, purchase_price_minor = :purchase_price_minor,
+             purchase_currency = :purchase_currency, cost_price_minor = :cost_price_minor,
+             cost_currency = :cost_currency, track_inventory = :track_inventory, status = :status,
+             metadata_json = :metadata_json, updated_at = :updated_at, version = version + 1
+             WHERE uid = :uid AND organization_id = :organization_id';
 
-        $statement->execute([
+        $parameters = [
             'uid' => $entity->uid->toString(),
             'organization_id' => $organizationId,
             'item_type' => $entity->itemType,
@@ -104,7 +121,16 @@ final class CatalogItemRepository implements RepositoryInterface
             'metadata_json' => $entity->metadata !== [] ? json_encode($entity->metadata, JSON_THROW_ON_ERROR) : null,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+        if ($isNew === false) {
+            unset($parameters['created_at']);
+        }
+        $statement = $this->pdo->prepare(match ($isNew) {
+            true => $insert,
+            false => $update,
+            null => $insert . $upsert,
+        });
+        $statement->execute($parameters);
     }
 
     public function archive(string $id): void

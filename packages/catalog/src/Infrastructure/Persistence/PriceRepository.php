@@ -97,6 +97,36 @@ final class PriceRepository
         return array_map(fn (array $row): PriceListEntry => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return list<PriceListEntry> */
+    public function listOrganizationTiers(
+        string $organizationUid,
+        string $priceListUid,
+        ?string $itemUid = null,
+        int $limit = 50,
+        int $offset = 0,
+    ): array {
+        $sql = 'SELECT prices.* FROM kontor_catalog_prices prices
+            INNER JOIN kontor_catalog_price_lists price_lists ON price_lists.uid = prices.price_list_uid
+            INNER JOIN kontor_catalog_items items ON items.uid = prices.item_uid
+                AND items.organization_id = price_lists.organization_id
+            INNER JOIN kontor_organizations organizations ON organizations.id = price_lists.organization_id
+            WHERE organizations.uid = :organization_uid AND prices.price_list_uid = :price_list_uid';
+        if ($itemUid !== null) {
+            $sql .= ' AND prices.item_uid = :item_uid';
+        }
+        $statement = $this->pdo->prepare($sql . ' ORDER BY prices.item_uid, prices.min_quantity LIMIT :limit OFFSET :offset');
+        $statement->bindValue(':organization_uid', $organizationUid);
+        $statement->bindValue(':price_list_uid', $priceListUid);
+        if ($itemUid !== null) {
+            $statement->bindValue(':item_uid', $itemUid);
+        }
+        $statement->bindValue(':limit', max(1, min($limit, 250)), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(fn (array $row): PriceListEntry => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     /**
      * @param array<int, string> $priceListUids
      * @return array<string, int>
