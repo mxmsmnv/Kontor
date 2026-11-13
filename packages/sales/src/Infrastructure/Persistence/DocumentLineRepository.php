@@ -88,10 +88,15 @@ final class DocumentLineRepository
         return array_map(fn (array $row): DocumentLine => $this->hydrate($row), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
-    public function deleteForDocument(string $documentType, string $documentUid): void
+    public function deleteForDocument(string $documentType, string $documentUid, ?string $organizationUid = null): void
     {
-        $statement = $this->pdo->prepare('DELETE FROM kontor_document_lines WHERE document_type = :document_type AND document_uid = :document_uid');
-        $statement->execute(['document_type' => $documentType, 'document_uid' => $documentUid]);
+        $parameters = ['document_type' => $documentType, 'document_uid' => $documentUid];
+        $sql = 'DELETE FROM kontor_document_lines WHERE document_type = :document_type AND document_uid = :document_uid';
+        if ($organizationUid !== null) {
+            $sql .= ' AND organization_id = :organization_id';
+            $parameters['organization_id'] = $this->organizations->internalIdOf($organizationUid);
+        }
+        $this->pdo->prepare($sql)->execute($parameters);
     }
 
     private function hydrate(array $row): DocumentLine

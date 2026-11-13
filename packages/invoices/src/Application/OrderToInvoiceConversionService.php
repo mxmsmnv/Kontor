@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kontor\Invoices\Application;
 
 use Kontor\Invoices\Domain\Invoice;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Invoices\Infrastructure\Persistence\InvoiceRepository;
 use Kontor\Sales\Domain\DocumentLine;
 use Kontor\Sales\Infrastructure\Persistence\DocumentLineRepository;
@@ -22,12 +23,30 @@ final class OrderToInvoiceConversionService
         private readonly InvoiceRepository $invoices,
         private readonly OrderRepository $orders,
         private readonly DocumentLineRepository $lines,
+        private readonly ?\PDO $database = null,
     ) {
     }
 
     public function convert(string $orderUid, ?\DateTimeImmutable $dueDate = null): Invoice
     {
-        $order = $this->orders->require($orderUid);
+        $ownsTransaction = $this->database !== null && DatabaseConcurrency::beginWriteTransaction($this->database);
+        try {
+            $invoice = $this->convertOrder($orderUid, $dueDate);
+            if ($ownsTransaction) {
+                $this->database->commit();
+            }
+            return $invoice;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $this->database->inTransaction()) {
+                $this->database->rollBack();
+            }
+            throw $error;
+        }
+    }
+
+    private function convertOrder(string $orderUid, ?\DateTimeImmutable $dueDate): Invoice
+    {
+        $order = $this->orders->require($orderUid, forUpdate: $this->database !== null);
 
         if (!in_array($order->orderStatus, ['confirmed', 'completed'], true)) {
             throw new RuntimeException(
@@ -35,7 +54,7 @@ final class OrderToInvoiceConversionService
             );
         }
 
-        $existingInvoice = $this->invoices->findByOrder($orderUid);
+        $existingInvoice = $this->invoices->findByOrder($orderUid, forUpdate: $this->database !== null);
         if ($existingInvoice !== null) {
             throw new RuntimeException(
                 "Order \"{$orderUid}\" was already converted to invoice \"{$existingInvoice->uid}\"."
@@ -45,6 +64,11 @@ final class OrderToInvoiceConversionService
         $orderLines = $this->lines->forDocument('order', $orderUid);
         if ($orderLines === []) {
             throw new RuntimeException("Order \"{$orderUid}\" has no document lines to invoice.");
+        }
+        foreach ($orderLines as $line) {
+            if ($line->organizationId !== $order->organizationId) {
+                throw new RuntimeException('Order contains a line outside its organization.');
+            }
         }
 
         $invoice = Invoice::create(

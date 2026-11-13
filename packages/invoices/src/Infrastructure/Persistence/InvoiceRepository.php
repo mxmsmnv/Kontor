@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Invoices\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Invoices\Domain\Invoice;
 use Kontor\SDK\Contracts\RepositoryInterface;
@@ -23,9 +24,13 @@ final class InvoiceRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Invoice
+    public function find(string $id, bool $forUpdate = false, bool $includeArchived = true): ?Invoice
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_invoices WHERE uid = :uid');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_invoices WHERE uid = :uid'
+            . ($includeArchived ? '' : ' AND archived_at IS NULL')
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''),
+        );
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
@@ -33,9 +38,9 @@ final class InvoiceRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
-    public function require(string $id): Invoice
+    public function require(string $id, bool $forUpdate = false): Invoice
     {
-        return $this->find($id) ?? throw new RuntimeException("Invoice \"{$id}\" was not found.");
+        return $this->find($id, $forUpdate) ?? throw new RuntimeException("Invoice \"{$id}\" was not found.");
     }
 
     public function save(object $entity): void
@@ -116,13 +121,13 @@ final class InvoiceRepository implements RepositoryInterface
         $statement->execute(['uid' => $id]);
     }
 
-    public function findByOrder(string $orderUid): ?Invoice
+    public function findByOrder(string $orderUid, bool $forUpdate = false): ?Invoice
     {
         $statement = $this->pdo->prepare(
             "SELECT * FROM kontor_invoices
              WHERE order_uid = :order_uid AND kind = 'invoice'
              ORDER BY id ASC
-             LIMIT 1"
+             LIMIT 1" . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''),
         );
         $statement->execute(['order_uid' => $orderUid]);
         $row = $statement->fetch(\PDO::FETCH_ASSOC);

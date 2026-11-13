@@ -63,6 +63,32 @@ final class PortalAccountRepository implements RepositoryInterface
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return list<array<string, mixed>> */
+    public function accountMetadata(string $organizationUid, ?string $uid = null, ?string $contactUid = null, int $limit = 26, int $offset = 0): array
+    {
+        $conditions = ['organization_id = :organization_id', 'archived_at IS NULL'];
+        $parameters = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
+        foreach (['uid' => $uid, 'contact_uid' => $contactUid] as $field => $value) {
+            if ($value !== null) {
+                $conditions[] = $field . ' = :' . $field;
+                $parameters[$field] = $value;
+            }
+        }
+        $statement = $this->pdo->prepare(
+            'SELECT uid, contact_uid, email, status, last_login_at, created_at FROM kontor_portal_accounts WHERE '
+            . implode(' AND ', $conditions)
+            . ' ORDER BY created_at DESC, uid DESC LIMIT :limit OFFSET :offset'
+        );
+        foreach ($parameters as $key => $value) {
+            $statement->bindValue(':' . $key, $value, is_int($value) ? \PDO::PARAM_INT : \PDO::PARAM_STR);
+        }
+        $statement->bindValue(':limit', max(1, min(100, $limit)), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function save(object $entity): void
     {
         if (!$entity instanceof PortalAccount) {

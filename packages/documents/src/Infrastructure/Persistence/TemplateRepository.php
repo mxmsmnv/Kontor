@@ -82,6 +82,32 @@ final class TemplateRepository
         return array_map($this->hydrate(...), $statement->fetchAll(\PDO::FETCH_ASSOC));
     }
 
+    /** @return list<array<string, mixed>> */
+    public function templateMetadata(string $organizationUid, ?string $uid = null, ?string $type = null, int $limit = 26, int $offset = 0): array
+    {
+        $conditions = ['organization_id = :organization_id'];
+        $parameters = ['organization_id' => $this->organizations->internalIdOf($organizationUid)];
+        foreach (['uid' => $uid, 'document_type' => $type] as $field => $value) {
+            if ($value !== null) {
+                $conditions[] = $field . ' = :' . $field;
+                $parameters[$field] = $value;
+            }
+        }
+        $statement = $this->pdo->prepare(
+            'SELECT uid, template_key, document_type, language, name, version_number, created_at, archived_at'
+            . ' FROM kontor_documents_templates WHERE ' . implode(' AND ', $conditions)
+            . ' ORDER BY created_at DESC, uid DESC LIMIT :limit OFFSET :offset'
+        );
+        foreach ($parameters as $key => $value) {
+            $statement->bindValue(':' . $key, $value, is_int($value) ? \PDO::PARAM_INT : \PDO::PARAM_STR);
+        }
+        $statement->bindValue(':limit', max(1, min(100, $limit)), \PDO::PARAM_INT);
+        $statement->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     /**
      * The active (non-archived, newest) version for a template family in a
      * given language. Falls back to English when the requested language

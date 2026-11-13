@@ -30,7 +30,7 @@ final class InvoiceWorkflowService
 
     public function issue(string $invoiceUid, ?int $createdBy = null): Invoice
     {
-        $invoice = $this->invoices->require($invoiceUid);
+        $invoice = $this->invoices->require($invoiceUid, forUpdate: true);
 
         if (!$invoice->isDraft()) {
             throw new RuntimeException("Invoice \"{$invoiceUid}\" is not a draft and cannot be issued.");

@@ -27,7 +27,7 @@ final class QuotationWorkflowService
 
     public function issue(string $quotationUid): Quotation
     {
-        $quotation = $this->quotations->require($quotationUid);
+        $quotation = $this->quotations->require($quotationUid, forUpdate: true);
 
         if (!$quotation->isDraft()) {
             throw new RuntimeException("Quotation \"{$quotationUid}\" is not a draft and cannot be issued.");

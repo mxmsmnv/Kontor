@@ -7,6 +7,7 @@ use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\Core\Infrastructure\Registry\ComponentRegistry;
 use Kontor\MCP\Application\ActivityTools;
 use Kontor\MCP\Application\CatalogTools;
+use Kontor\MCP\Application\CommerceDraftTools;
 use Kontor\MCP\Application\CompanyTools;
 use Kontor\MCP\Application\ContactIntakeTools;
 use Kontor\MCP\Application\CrmActionTools;
@@ -18,6 +19,8 @@ use Kontor\MCP\Application\InventoryPurchasingTools;
 use Kontor\MCP\Application\KontorMcpBridge;
 use Kontor\MCP\Application\MailLookupTools;
 use Kontor\MCP\Application\ReportLookupTools;
+use Kontor\MCP\Application\PortalLookupTools;
+use Kontor\MCP\Application\DocumentLookupTools;
 use Kontor\MCP\Application\TaskTools;
 use Kontor\MCP\Health\McpIntegrationHealthCheck;
 
@@ -27,6 +30,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
 {
     use ActivityTools;
     use CatalogTools;
+    use CommerceDraftTools;
     use CompanyTools;
     use ContactIntakeTools;
     use CrmActionTools;
@@ -38,6 +42,8 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     use KontorMcpProjectsTrait;
     use MailLookupTools;
     use ReportLookupTools;
+    use PortalLookupTools;
+    use DocumentLookupTools;
     use TaskTools;
 
     private ?KontorMcpBridge $bridge = null;
@@ -418,6 +424,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ),
             ...$this->activityTools(),
             ...$this->catalogTools(),
+            ...$this->commerceDraftTools(),
             ...$this->companyTools(),
             ...$this->contactIntakeTools(),
             ...$this->mcpCrmLookupTools(),
@@ -426,6 +433,8 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
             ...$this->mcpProjectTools(),
             ...$this->mcpMailLookupTools(),
             ...$this->mcpReportLookupTools(),
+            ...$this->mcpPortalLookupTools(),
+            ...$this->mcpDocumentLookupTools(),
             ...$this->taskTools(),
             ...$this->fileTools(),
             ...$this->financeLookupTools(),

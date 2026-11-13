@@ -115,6 +115,7 @@ class KontorInvoices extends WireData implements Module
             $this->invoiceRepository(),
             $sales->orderRepository(),
             $this->documentLineRepository(),
+            $this->pdo(),
         );
     }
 

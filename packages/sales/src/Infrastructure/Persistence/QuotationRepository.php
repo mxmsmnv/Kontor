@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kontor\Sales\Infrastructure\Persistence;
 
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
 use Kontor\SDK\Contracts\RepositoryInterface;
 use Kontor\SDK\ValueObjects\Money;
@@ -23,9 +24,13 @@ final class QuotationRepository implements RepositoryInterface
     ) {
     }
 
-    public function find(string $id): ?Quotation
+    public function find(string $id, bool $forUpdate = false, bool $includeArchived = true): ?Quotation
     {
-        $statement = $this->pdo->prepare('SELECT * FROM kontor_sales_quotations WHERE uid = :uid');
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_sales_quotations WHERE uid = :uid'
+            . ($includeArchived ? '' : ' AND archived_at IS NULL')
+            . ($forUpdate ? DatabaseConcurrency::forUpdate($this->pdo) : ''),
+        );
         $statement->execute(['uid' => $id]);
 
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
@@ -33,9 +38,9 @@ final class QuotationRepository implements RepositoryInterface
         return $row === false ? null : $this->hydrate($row);
     }
 
-    public function require(string $id): Quotation
+    public function require(string $id, bool $forUpdate = false): Quotation
     {
-        return $this->find($id) ?? throw new RuntimeException("Quotation \"{$id}\" was not found.");
+        return $this->find($id, $forUpdate) ?? throw new RuntimeException("Quotation \"{$id}\" was not found.");
     }
 
     /**

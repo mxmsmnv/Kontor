@@ -22,6 +22,12 @@ A component can register an `ApiResourceInterface` with `KontorAPI::resourceRegi
 
 - `kontor_companies_list`, `kontor_company_get`, `kontor_company_create`, `kontor_company_update` and `kontor_company_archive_action` expose CRM company records and their configured custom fields under the matching company permission. Company creation and updates require Draft access.
 
+## Inventory and purchasing tools
+
+- `kontor_inventory_warehouses_list` and `kontor_inventory_balances_list` require inventory stock view. `kontor_inventory_movements_list` requires movement view.
+- `kontor_purchasing_suppliers_list` requires supplier view. `kontor_purchase_orders_list` and `kontor_purchase_order_get` require purchase-order view. Supplier IDs on orders also require supplier view.
+- `kontor_purchase_order_create_draft` requires Draft, purchase-order create, supplier view and an idempotency key. Provide an active supplier, an active warehouse and one to 25 active inventory-tracked catalog items with quantities and prices in minor currency units. The tool stores the order and calculated totals as a draft.
+
 ## Task tools
 
 When Kontor Tasks is installed, the gateway advertises these additional tools.
@@ -75,3 +81,9 @@ Posting a comment records mentions and follows the task for its author through t
 With the respective components installed, `kontor_mail_list` and `kontor_mail_get` provide read-only active mail lookup with the Workspace mail view permission. Mail linked to tasks is visible only when every linked task passes the linked account's task scope. The list searches subject and sender within the latest 500 matching messages, returning up to 25 visible messages per page. The get tool returns plain text up to 8,000 characters at a time.
 
 `kontor_reports_list` and `kontor_report_run` currently support the CRM pipeline report. The account must hold both report view and CRM deal view permissions. Pass the optional pipeline UID and open, won or lost status to filter. Results contain paged stage summaries and totals for the full filtered report.
+
+### Customer portal and documents
+
+`kontor_portal_accounts_list` and `kontor_portal_account_get` return organization-scoped, non-archived portal account metadata for users with the Workspace account management permission. List accepts an optional contact UID. Responses contain account and contact IDs, email, status and timestamps.
+
+`kontor_document_templates_list` and `kontor_document_template_get` return metadata for organization document templates, including version and archive date, for users with template view permission. List accepts an optional document type. Both lists return up to 25 entries per page. These tools return no credentials, verification material, template source, rendered files or signed download URLs.
