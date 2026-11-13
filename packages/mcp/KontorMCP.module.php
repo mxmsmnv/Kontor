@@ -84,6 +84,7 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     {
         $this->addHookAfter('ProcessProfile::execute', $this, 'renderProfileConnection');
         if ($this->wire()->modules->isInstalled('Workspace')) {
+            $this->addHookAfter('ProcessController::execute', $this, 'addWorkspaceMcpMenu');
             $this->addHookAfter('ProcessWorkspace::executeAccount', $this, 'renderProfileConnection');
             $this->addHookAfter('ProcessWorkspace::execute', $this, 'renderWorkspaceConnectionLink');
         }
@@ -506,7 +507,9 @@ class KontorMCP extends WireData implements Module, ConfigurableModule
     public function mcpKontorStatus(): array
     {
         $this->mcpActor();
-        return $this->safe(fn (): array => $this->bridge()->status());
+        $status = $this->safe(fn (): array => $this->bridge()->status());
+        $this->recordProfileConnectionCheck();
+        return $status;
     }
 
     /** @return array<string, mixed> */

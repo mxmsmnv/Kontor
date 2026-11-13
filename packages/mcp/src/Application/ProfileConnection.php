@@ -21,6 +21,29 @@ trait ProfileConnection
             && !$user->isLocked() && ($user->isSuperuser() || $user->hasPermission('kontor-access'));
     }
 
+    public function addWorkspaceMcpMenu(): void
+    {
+        $wire = $this->wire();
+        if (!$wire->adminTheme instanceof \ProcessWire\AdminThemeWorkspace
+            || !$this->profileAccountAllowed($wire->user) || !$this->profileGatewayAvailable()) {
+            return;
+        }
+        $url = $wire->modules->get('Workspace')->homeUrl() . 'account/#kontor-mcp';
+        $asset = $wire->config->urls->siteModules . 'KontorMCP/workspace-connection.js';
+        $wire->adminTheme->addExtraMarkup('body', '<script defer src="'
+            . htmlspecialchars($asset, ENT_QUOTES, 'UTF-8') . '" data-mcp-account-url="'
+            . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '"></script>');
+    }
+
+    private function recordProfileConnectionCheck(): void
+    {
+        $wire = $this->wire();
+        $context = $wire->modules->get('McpServer')->requestClientContext();
+        if ($context !== null && $this->profileClientOwner($context['id']) > 0) {
+            $wire->cache->saveFor('KontorMCP', 'profile-check-' . $context['id'], (string) time(), 30 * 86400);
+        }
+    }
+
     public function renderWorkspaceConnectionLink(HookEvent $event): void
     {
         $wire = $this->wire();
@@ -94,6 +117,10 @@ trait ProfileConnection
         $clients = array_filter($gateway->clients(), fn (array $client): bool =>
             $client['enabled'] && $client['expires_at'] > time()
             && $this->profileClientOwner($client['id']) === (int) $actor->id);
+        foreach ($clients as &$client) {
+            $client['verified_at'] = (int) $wire->cache->getFor('KontorMCP', 'profile-check-' . $client['id']);
+        }
+        unset($client);
         $token = $wire->session->CSRF->getToken('kontor-mcp-profile');
         $url = $gateway->endpointUrl();
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
