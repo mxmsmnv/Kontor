@@ -40,3 +40,9 @@ Task access always uses the linked user's Workspace permissions and assignee, de
 Create and update use a closed `fields` object containing `title`, `description`, `priority`, `dueAt`, `recurrenceRule`, `recurrenceUntil`, `assignedTo`, `visibility` and `departmentRoleId`. Dates use ISO 8601 with an explicit offset, except `recurrenceUntil`, which uses YYYY-MM-DD. Use null to clear an optional field and omit a field to preserve it on update. Optional `related_customer` on create takes `type` (`contact` or `company`) and `uid`.
 
 Writes take a per-user `idempotency_key` and return the task UID while it remains visible to that user. Completion can also return the next visible task UID. Mutation receipts commit alongside the task changes and account-attributed audit entries.
+
+## File tools
+
+`kontor_files_list` searches file names, and `kontor_file_get` reads metadata by UID. Both enforce the linked user's file and record permissions. List results can contain an empty page after record filtering. Follow `next_offset` until null.
+
+`kontor_file_download` returns base64 bytes for active files up to 512 KiB and additionally requires file download permission. The metadata tools omit private storage paths and signed URLs.

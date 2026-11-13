@@ -126,6 +126,22 @@ final class FileRepository
         return $statement->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function searchForOrganization(int $organizationId, string $query, int $limit, int $offset): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM kontor_files
+             WHERE organization_id = :organization_id AND LOWER(original_name) LIKE :query
+             ORDER BY created_at DESC, uid DESC LIMIT :limit OFFSET :offset'
+        );
+        $statement->bindValue(':organization_id', $organizationId, \PDO::PARAM_INT);
+        $statement->bindValue(':query', '%' . mb_strtolower($query) . '%');
+        $statement->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     /**
      * The active (non-archived) row for a given entity + filename slot —
      * the "current version".
