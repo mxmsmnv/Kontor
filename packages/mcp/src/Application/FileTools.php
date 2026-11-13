@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Kontor\MCP\Application;
 
+use Kontor\API\Application\IdempotencyService;
 use Kontor\Core\Application\AuditLogger;
+use Kontor\Core\Infrastructure\Database\DatabaseConcurrency;
 use Kontor\Core\Infrastructure\Persistence\OrganizationRepository;
+use PDO;
 use ProcessWire\User;
 use ProcessWire\Wire404Exception;
 use ProcessWire\WireException;
@@ -13,6 +16,8 @@ use ProcessWire\WirePermissionException;
 
 trait FileTools
 {
+    private const MCP_FILE_BYTES = 512 * 1024;
+
     private function fileTools(): array
     {
         if (!$this->wire()->modules->isInstalled('KontorFiles')) {
@@ -20,6 +25,22 @@ trait FileTools
         }
 
         return [
+            $this->tool(
+                'kontor_file_upload',
+                'Upload a small private Kontor file',
+                'Store up to 512 KiB of base64-encoded bytes. Optionally attach the file to a visible task, contact, or company.',
+                $this->mcpFileUpload(...),
+                'draft',
+                [
+                    'filename' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                    'content_base64' => ['type' => 'string', 'minLength' => 4, 'maxLength' => 699052],
+                    'idempotency_key' => $this->idempotencySchema(),
+                    'classification' => ['type' => 'string', 'enum' => ['general', 'financial', 'confidential', 'restricted']],
+                    'entity_type' => ['type' => 'string', 'enum' => ['task', 'contact', 'company']],
+                    'entity_uid' => $this->uidSchema(),
+                ],
+                ['filename', 'content_base64', 'idempotency_key'],
+            ),
             $this->tool(
                 'kontor_file_archive_action',
                 'Archive or restore a Kontor file',
@@ -106,7 +127,7 @@ trait FileTools
     public function mcpFileDownload(string $uid): array
     {
         [$file, $organizationUid] = $this->mcpReadableFile($uid, 'kontor-files-file-download');
-        $maximum = 512 * 1024;
+        $maximum = self::MCP_FILE_BYTES;
         if ($file['archived_at'] !== null || (int) $file['size_bytes'] > $maximum) {
             throw new WireException('Download an active file of at most 512 KiB through MCP.');
         }
@@ -126,6 +147,90 @@ trait FileTools
                 'mime_type' => $file['mime_type'],
                 'content_base64' => base64_encode($bytes),
             ];
+        });
+    }
+
+    public function mcpFileUpload(
+        string $filename,
+        string $content_base64,
+        string $idempotency_key,
+        string $classification = 'general',
+        ?string $entity_type = null,
+        ?string $entity_uid = null,
+    ): array {
+        $actor = $this->mcpActor();
+        if ($actor === null || !$this->filePermission($actor, 'kontor-files-file-upload')) {
+            throw new WirePermissionException('The linked user cannot upload files.');
+        }
+        if ($filename === '.' || $filename === '..' || trim($filename) === '' || strlen($filename) > 255
+            || strpbrk($filename, "/\\") !== false || preg_match('/[[:cntrl:]]/', $filename)) {
+            throw new WireException('Use a filename without a directory or control characters.');
+        }
+        if (($entity_type === null) !== ($entity_uid === null)
+            || ($entity_type !== null && !in_array($entity_type, ['task', 'contact', 'company'], true))
+            || !in_array($classification, ['general', 'financial', 'confidential', 'restricted'], true)
+            || !preg_match('/^[A-Za-z0-9._:-]{8,160}$/D', $idempotency_key)) {
+            throw new WireException('Supply a valid classification, optional attachment target, and idempotency key.');
+        }
+        $bytes = strlen($content_base64) <= 699052 ? base64_decode($content_base64, true) : false;
+        if ($bytes === false || $bytes === '' || strlen($bytes) > self::MCP_FILE_BYTES
+            || base64_encode($bytes) !== $content_base64) {
+            throw new WireException('Supply between 1 byte and 512 KiB as standard padded base64.');
+        }
+
+        $modules = $this->wire()->modules;
+        $container = $modules->get('Kontor')->container();
+        $organizations = $container->get(OrganizationRepository::class);
+        $organizationUid = $organizations->defaultOrganization('US', 'en', 'USD')->uid->toString();
+        if (!$this->mcpFileTargetVisible($actor, ['entity_type' => $entity_type, 'entity_uid' => $entity_uid], $organizationUid)) {
+            throw new Wire404Exception('The attachment target was not found.');
+        }
+
+        $files = $modules->get('KontorFiles');
+        $idempotency = new IdempotencyService($modules->get('KontorAPI')->idempotencyKeyRepository());
+        $request = [$filename, hash('sha256', $bytes), $classification, $entity_type, $entity_uid];
+        $key = 'mcp:file-upload:' . $actor->id . ':' . hash('sha256', $idempotency_key);
+
+        return $this->safe(function () use ($idempotency, $organizationUid, $actor, $key, $request, $files, $bytes, $container, $organizations): array {
+            $database = $container->get(PDO::class);
+            if (!DatabaseConcurrency::beginWriteTransaction($database)) {
+                throw new WireException('A separate upload transaction is required.');
+            }
+            $path = null;
+            try {
+                $response = $idempotency->remember(
+                    $organizationUid,
+                    $key,
+                    $request,
+                    function () use ($files, $organizationUid, $actor, $request, $bytes, $container, $organizations, &$path): array {
+                        [$filename, , $classification, $entityType, $entityUid] = $request;
+                        $result = $files->fileManager()->upload(
+                            $organizationUid, $filename, $bytes, 'private', $classification, $entityType, $entityUid,
+                            actorId: (int) $actor->id,
+                        );
+                        $path = $files->fileRepository()->find($result['uid'])['path'] ?? null;
+                        $container->get(AuditLogger::class)->record(
+                            $organizations->internalIdOf($organizationUid), 'files', 'file', $result['uid'],
+                            'uploaded', 'user', (string) $actor->id, metadata: ['transport' => 'mcp'],
+                        );
+                        return ['status' => 201, 'body' => $result];
+                    },
+                );
+                $database->commit();
+                return $response->body;
+            } catch (\Throwable $error) {
+                if ($database->inTransaction()) {
+                    $database->rollBack();
+                    if ($path !== null) {
+                        try {
+                            $files->storage()->delete($path);
+                        } catch (\Throwable) {
+                            $this->wire()->log->save('kontor-mcp', 'File upload rollback storage cleanup failed.');
+                        }
+                    }
+                }
+                throw $error;
+            }
         });
     }
 
