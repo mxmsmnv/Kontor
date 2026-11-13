@@ -13,6 +13,7 @@ use Kontor\Core\Infrastructure\Backup\CoreBackupProvider;
 use Kontor\Core\Infrastructure\Backup\BackupArchiveBuilder;
 use Kontor\Core\Infrastructure\Database\TranslatingPDO;
 use Kontor\Core\Infrastructure\Events\EventDispatcher;
+use Kontor\Core\Infrastructure\Installation\EmployeeProfile;
 use Kontor\Core\Infrastructure\Installation\EmployeeRoleProvisioner;
 use Kontor\Core\Infrastructure\Migrations\MigrationRunner;
 use Kontor\Core\Infrastructure\Persistence\ExtensionRepository;
@@ -95,6 +96,11 @@ class Kontor extends WireData implements Module
     {
         $this->container();
         $this->registerEmployeeRoleHook();
+        if ($this->wire()->modules->isInstalled('Workspace')) {
+            $profile = $this->wire(new EmployeeProfile());
+            $this->addHookAfter('ProcessWorkspace::executeAccount', $profile, 'renderAccount');
+            $this->addHookAfter('ProcessController::execute', $profile, 'addWorkspaceMenu');
+        }
     }
 
     /**

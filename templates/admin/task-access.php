@@ -64,6 +64,29 @@ $hasEmployee = isset($employees[$selectedId]);
 
         <?php if ($hasEmployee): ?>
           <hr>
+          <h4>Employee profile</h4>
+          <?php if ($employeeProfile['avatar'] !== ''): ?>
+            <img class="uk-border-circle" src="<?= $e($employeeProfile['avatar']) ?>" alt="Employee avatar" width="48" height="48">
+          <?php endif; ?>
+          <form method="post" action="<?= $e($accessUrl) ?>" class="uk-form-stacked">
+            <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+            <input type="hidden" name="action" value="save_employee_profile">
+            <input type="hidden" name="user_id" value="<?= $e($selectedId) ?>">
+            <div class="uk-margin-small">
+              <label class="uk-form-label" for="employee-name">Full name</label>
+              <input class="uk-input" id="employee-name" name="employee_name" value="<?= $e($employeeProfile['name']) ?>" maxlength="100" required>
+            </div>
+            <div class="uk-margin-small">
+              <label class="uk-form-label" for="employee-category">Category</label>
+              <input class="uk-input" id="employee-category" name="employee_category" value="<?= $e($employeeProfile['category']) ?>" maxlength="100">
+            </div>
+            <div class="uk-margin-small">
+              <label class="uk-form-label" for="employee-labels">Labels (comma-separated)</label>
+              <input class="uk-input" id="employee-labels" name="employee_labels" value="<?= $e($employeeProfile['labels']) ?>" maxlength="2020">
+            </div>
+            <button class="uk-button uk-button-primary">Save employee profile</button>
+          </form>
+          <hr>
           <p class="uk-text-meta"><strong>Current access:</strong> <?= $e($effectiveAccess) ?></p>
           <?php if ($externalAccess): ?>
             <p class="uk-alert-warning" role="status">This employee also has task permissions from another ProcessWire role. Those permissions still apply when you change access here.</p>

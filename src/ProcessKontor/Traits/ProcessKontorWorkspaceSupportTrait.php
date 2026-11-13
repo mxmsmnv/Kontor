@@ -325,7 +325,7 @@ trait ProcessKontorWorkspaceSupportTrait
     {
         $user = $this->wire()->users->get($userId);
 
-        return $user->id ? ($user->get('title') ?: $user->name) : $this->_('Unassigned');
+        return $user->id ? \Kontor\Core\Infrastructure\Installation\EmployeeProfile::name($user) : $this->_('Unassigned');
     }
 
     /**

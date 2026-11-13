@@ -2,6 +2,8 @@
 
 namespace ProcessWire;
 
+use Kontor\Core\Infrastructure\Installation\EmployeeProfile;
+
 use Kontor\Collaboration\Domain\Comment;
 use Kontor\Collaboration\Domain\Note;
 use Kontor\Catalog\Application\PriceListDuplicator;
@@ -202,7 +204,7 @@ trait ProcessKontorWorkTrait
             $assignee = $this->wire()->users->get($task->assignedTo);
             if ($assignee->id > 0) {
                 $assigneeLabels[$task->assignedTo] = (string) (
-                    $assignee->get('title') ?: ucfirst((string) $assignee->name)
+                    EmployeeProfile::name($assignee)
                 );
             }
         }
@@ -261,7 +263,7 @@ trait ProcessKontorWorkTrait
         $employees = [];
         foreach ($wire->users as $employee) {
             if (!$employee->isGuest() && !$employee->isSuperuser() && !$employee->isUnpublished() && !$employee->isTrash()) {
-                $employees[(int) $employee->id] = (string) ($employee->get('title') ?: $employee->name);
+                $employees[(int) $employee->id] = EmployeeProfile::name($employee);
             }
         }
         asort($employees, SORT_NATURAL | SORT_FLAG_CASE);
@@ -306,6 +308,31 @@ trait ProcessKontorWorkTrait
                     $this->createTaskAccessRole('kontor-dept-' . $slug, ['kontor-tasks-department'], $label);
                     $this->message($this->_('Department created. Select an employee to add members.'));
                     $wire->session->redirect($url . ($selectedId ? '?user_id=' . $selectedId : ''));
+                }
+
+                if ($action === 'save_employee_profile') {
+                    $selectedId = (int) $input->post('user_id');
+                    $target = $wire->users->get($selectedId);
+                    if (!isset($employees[$selectedId]) || !$target instanceof User || !$target->id) {
+                        throw new WireException($this->_('Choose an available employee.'));
+                    }
+                    $text = static fn (string $value): string => trim($wire->sanitizer->text($value, ['maxLength' => 100]));
+                    $name = $text((string) $input->post('employee_name'));
+                    if ($name === '') {
+                        throw new WireException($this->_('Enter the employee’s full name.'));
+                    }
+                    $labels = array_values(array_unique(array_filter(array_map(
+                        $text,
+                        explode(',', (string) $input->post('employee_labels'), 21),
+                    ), static fn (string $label): bool => $label !== '')));
+                    if (count($labels) > 20 || str_contains(implode('', $labels), ',')) {
+                        throw new WireException($this->_('Enter up to 20 comma-separated labels.'));
+                    }
+                    $target->meta()->set('kontorEmployeeName', $name);
+                    $target->meta()->set('kontorEmployeeLabels', $labels);
+                    $target->meta()->set('kontorEmployeeCategory', $text((string) $input->post('employee_category')));
+                    $this->message($this->_('Employee profile saved.'));
+                    $wire->session->redirect($url . '?user_id=' . $selectedId);
                 }
 
                 if ($action !== 'save') {
@@ -368,7 +395,14 @@ trait ProcessKontorWorkTrait
         $selectedDepartments = [];
         $externalAccess = false;
         $effectiveAccess = '';
+        $employeeProfile = [];
         if ($target instanceof User && $target->id) {
+            $employeeProfile = [
+                'name' => (string) $target->meta('kontorEmployeeName'),
+                'labels' => implode(', ', (array) $target->meta('kontorEmployeeLabels')),
+                'category' => (string) $target->meta('kontorEmployeeCategory'),
+                'avatar' => EmployeeProfile::avatar($target),
+            ];
             $scope = $this->taskModule()->accessFor($target);
             $effectiveAccess = !$scope->canView ? $this->_('No task access')
                 : ($scope->canViewAll ? $this->_('Can view all tasks') : $this->_('Can view assigned, department and shared tasks'));
@@ -401,7 +435,7 @@ trait ProcessKontorWorkTrait
         $this->setPageTitle($this->_('Kontor · Task access'));
 
         return $this->renderTemplate('task-access', compact(
-            'employees', 'selectedId', 'departments', 'selectedDepartments', 'selectedLevel', 'externalAccess', 'effectiveAccess', 'error'
+            'employees', 'selectedId', 'departments', 'selectedDepartments', 'selectedLevel', 'externalAccess', 'effectiveAccess', 'employeeProfile', 'error'
         ));
     }
 
@@ -521,7 +555,7 @@ trait ProcessKontorWorkTrait
             foreach ($this->wire()->users as $candidate) {
                 if ($module->accessFor($candidate)->canView
                     && ($candidate->isSuperuser() || $candidate->hasPermission('kontor-access'))) {
-                    $assignees[(int) $candidate->id] = (string) ($candidate->get('title') ?: $candidate->name);
+                    $assignees[(int) $candidate->id] = EmployeeProfile::name($candidate);
                 }
             }
             asort($assignees, SORT_NATURAL | SORT_FLAG_CASE);
@@ -767,7 +801,7 @@ trait ProcessKontorWorkTrait
         if ($task?->assignedTo !== null) {
             $assignee = $this->wire()->users->get($task->assignedTo);
             $assigneeLabel = $assignee->id > 0
-                ? (string) ($assignee->get('title') ?: ucfirst((string) $assignee->name))
+                ? (string) (EmployeeProfile::name($assignee))
                 : $this->_('Former user');
         }
 
