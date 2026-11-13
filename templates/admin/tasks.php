@@ -10,6 +10,7 @@
 /** @var array<int, string> $assigneeLabels */
 /** @var int $currentUserId */
 /** @var bool $canCreate */
+/** @var bool $canManageTaskAccess */
 /** @var string $adminUrl */
 /** @var callable $e */
 
@@ -104,6 +105,7 @@ $scopeUrl = static function (string $scope) use ($adminUrl, $archived): string {
     </div>
     <div class="pw-module-actions kontor-pagehead__actions">
       <a class="uk-button uk-button-default" href="<?= $e($adminUrl) ?>tasks/?archived=<?= $archived ? '0' : '1' ?>"><i class="fa fa-<?= $archived ? 'check-square-o' : 'archive' ?>"></i> <?= $archived ? 'Active tasks' : 'Archive' ?></a>
+      <?php if ($canManageTaskAccess): ?><a class="uk-button uk-button-default" href="<?= $e($adminUrl) ?>task-access/"><i class="fa fa-users" aria-hidden="true"></i> Manage access</a><?php endif; ?>
       <?php if ($canCreate && !$archived): ?><a class="uk-button uk-button-primary" href="<?= $e($adminUrl) ?>task/"><i class="fa fa-plus"></i> New task</a><?php endif; ?>
     </div>
   </header>

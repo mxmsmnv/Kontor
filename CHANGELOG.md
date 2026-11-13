@@ -6,6 +6,8 @@ All notable changes to Kontor are documented here.
 
 ### Added
 
+- Add a Task access screen to assign staff access levels and manage department membership.
+
 - Scope tasks to an assignee, a department, or the organization, with separate manager visibility.
 
 - Create a selectable employee role with CRM and Contacts view/edit permissions and optional Workspace access.

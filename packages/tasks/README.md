@@ -82,6 +82,13 @@ and sent states.
 
 ## Task access
 
+A site superuser can open **Kontor → Tasks → Manage access**, select an
+employee, choose an access level and check their departments. The same page
+can create departments. The employee's other ProcessWire roles stay in place;
+the form flags task access inherited from roles that it does not manage.
+
+For manual setup or custom roles, use the permissions below.
+
 Give staff `kontor-access` and `kontor-tasks-task-view` to open Tasks. Grant
 create, edit, complete and other task permissions according to their duties.
 If the site uses Workspace, also grant `workspace-use`.

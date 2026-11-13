@@ -192,7 +192,214 @@ trait ProcessKontorWorkTrait
             'assigneeLabels' => $assigneeLabels,
             'currentUserId' => $currentUserId,
             'canCreate' => $this->can('kontor-tasks-task-create'),
+            'canManageTaskAccess' => $this->wire()->user->isSuperuser(),
         ]);
+    }
+
+    public function ___executeTaskAccess(): string
+    {
+        if (!$this->wire()->user->isSuperuser()) {
+            throw new WirePermissionException($this->_('Only a site administrator can manage task access.'));
+        }
+        $this->requireTasks();
+        $wire = $this->wire();
+        $input = $wire->input;
+        $selectedId = (int) $input->get('user_id');
+        $employees = [];
+        foreach ($wire->users as $employee) {
+            if (!$employee->isGuest() && !$employee->isSuperuser() && !$employee->isUnpublished() && !$employee->isTrash()) {
+                $employees[(int) $employee->id] = (string) ($employee->get('title') ?: $employee->name);
+            }
+        }
+        asort($employees, SORT_NATURAL | SORT_FLAG_CASE);
+
+        $base = ['kontor-access', 'kontor-tasks-task-view'];
+        if ($wire->modules->isInstalled('Workspace')) {
+            $base[] = 'workspace-use';
+        }
+        $staff = [...$base, 'kontor-tasks-task-create', 'kontor-tasks-task-edit', 'kontor-tasks-task-complete'];
+        $presets = [
+            'staff' => ['kontor-tasks-staff', $staff],
+            'coordinator' => ['kontor-tasks-coordinator', [...$staff, 'kontor-tasks-task-assign']],
+            'manager' => ['kontor-tasks-manager', [...$base, 'kontor-tasks-task-view-all']],
+        ];
+        $managed = [];
+        $departments = [];
+        foreach ($this->taskModule()->departmentRoles() as $role) {
+            if ($this->taskRoleMatches($role, ['kontor-tasks-department'])) {
+                $departments[(int) $role->id] = $this->taskDepartmentLabel($role);
+            }
+        }
+        asort($departments, SORT_NATURAL | SORT_FLAG_CASE);
+
+        $url = $wire->config->urls->admin . 'kontor/task-access/';
+        $error = '';
+        if ($input->requestMethod('POST')) {
+            $this->requirePost();
+            $action = (string) $input->post('action');
+            try {
+                if ($action === 'create_department') {
+                    $selectedId = (int) $input->post('user_id');
+                    $label = trim($wire->sanitizer->text((string) $input->post('department_name'), ['maxLength' => 64]));
+                    $slug = $wire->sanitizer->pageNameTranslate($label, 64);
+                    if ($slug === '') {
+                        throw new WireException($this->_('Enter a department name.'));
+                    }
+                    foreach ($departments as $departmentLabel) {
+                        if (mb_strtolower($departmentLabel) === mb_strtolower($label)) {
+                            throw new WireException($this->_('A department with this name already exists.'));
+                        }
+                    }
+                    $this->createTaskAccessRole('kontor-dept-' . $slug, ['kontor-tasks-department'], $label);
+                    $this->message($this->_('Department created. Select an employee to add members.'));
+                    $wire->session->redirect($url . ($selectedId ? '?user_id=' . $selectedId : ''));
+                }
+
+                if ($action !== 'save') {
+                    throw new WireException($this->_('Unknown action.'));
+                }
+                $selectedId = (int) $input->post('user_id');
+                $level = (string) $input->post('level');
+                $chosen = array_values(array_unique(array_map('intval', (array) $input->post('departments'))));
+                if (!isset($employees[$selectedId]) || ($level !== 'none' && !isset($presets[$level]))
+                    || array_diff($chosen, array_keys($departments)) !== []) {
+                    throw new WireException($this->_('Choose an available employee, access level and departments.'));
+                }
+                $target = $wire->users->get($selectedId);
+                if (!$target instanceof User || !$target->id || $target->isSuperuser() || $target->isGuest()
+                    || $target->isUnpublished() || $target->isTrash()) {
+                    throw new WireException($this->_('This account cannot be managed here.'));
+                }
+                foreach ($presets as $key => [$name, $grants]) {
+                    $role = $wire->roles->get($name);
+                    if ($role->id && $this->taskRoleMatches($role, $grants)) {
+                        $managed[$key] = $role;
+                    }
+                }
+                if ($level !== 'none' && !isset($managed[$level])) {
+                    [$name, $grants] = $presets[$level];
+                    $managed[$level] = $this->createTaskAccessRole($name, $grants);
+                }
+                $target->of(false);
+                foreach ($managed as $key => $role) {
+                    if ($key === $level) {
+                        $target->addRole($role);
+                    } elseif ($target->hasRole($role)) {
+                        $target->removeRole($role);
+                    }
+                }
+                foreach (array_keys($departments) as $id) {
+                    $role = $wire->roles->get($id);
+                    if (!$role instanceof Role || !$role->id || !$this->taskRoleMatches($role, ['kontor-tasks-department'])) {
+                        continue;
+                    }
+                    if (in_array($id, $chosen, true)) {
+                        $target->addRole($role);
+                    } elseif ($target->hasRole($role)) {
+                        $target->removeRole($role);
+                    }
+                }
+                if (!$target->save('roles')) {
+                    throw new WireException($this->_('Could not save employee access.'));
+                }
+                $this->message($this->_('Task access saved.'));
+                $wire->session->redirect($url . '?user_id=' . $selectedId);
+            } catch (WireException $exception) {
+                $error = $exception->getMessage();
+            }
+        }
+
+        $selectedId = isset($employees[$selectedId]) ? $selectedId : 0;
+        $target = $selectedId ? $wire->users->get($selectedId) : null;
+        $selectedLevel = 'none';
+        $selectedDepartments = [];
+        $externalAccess = false;
+        $effectiveAccess = '';
+        if ($target instanceof User && $target->id) {
+            $scope = $this->taskModule()->accessFor($target);
+            $effectiveAccess = !$scope->canView ? $this->_('No task access')
+                : ($scope->canViewAll ? $this->_('Can view all tasks') : $this->_('Can view assigned, department and shared tasks'));
+
+            $knownIds = array_keys($departments);
+            $selectedDepartments = array_values(array_filter($knownIds, $target->hasRole(...)));
+            foreach ($presets as $key => [$name, $grants]) {
+                $role = $wire->roles->get($name);
+                if ($role->id && $this->taskRoleMatches($role, $grants)) {
+                    $knownIds[] = (int) $role->id;
+                    if ($target->hasRole($role)) {
+                        $externalAccess = $externalAccess || $selectedLevel !== 'none';
+                        $selectedLevel = $key;
+                    }
+                }
+            }
+            foreach ($target->roles as $role) {
+                if (in_array((int) $role->id, $knownIds, true)) {
+                    continue;
+                }
+                foreach ($role->permissions as $permission) {
+                    if (str_starts_with((string) $permission->name, 'kontor-tasks-')) {
+                        $externalAccess = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $this->setPageTitle($this->_('Kontor · Task access'));
+
+        return $this->renderTemplate('task-access', compact(
+            'employees', 'selectedId', 'departments', 'selectedDepartments', 'selectedLevel', 'externalAccess', 'effectiveAccess', 'error'
+        ));
+    }
+
+    private function taskDepartmentLabel(Role $role): string
+    {
+        $name = preg_replace('/^kontor-(?:dept-)?/', '', (string) $role->name);
+
+        return (string) ($role->meta('kontorTaskDepartmentLabel') ?: $role->get('title') ?: ucwords(str_replace('-', ' ', $name)));
+    }
+
+    /** @param list<string> $grants */
+    private function taskRoleMatches(Role $role, array $grants): bool
+    {
+        $actual = array_values(array_diff($role->permissions->explode('name'), ['page-view']));
+        sort($actual);
+        sort($grants);
+
+        return $actual === $grants;
+    }
+
+    /** @param list<string> $grants */
+    private function createTaskAccessRole(string $name, array $grants, string $title = ''): Role
+    {
+        $wire = $this->wire();
+        if ($wire->roles->get($name)->id) {
+            throw new WireException($this->_('A role with this name already exists. Review it in Access → Roles.'));
+        }
+        $permissionPages = [];
+        foreach ($grants as $grant) {
+            $permission = $wire->permissions->get($grant);
+            if (!$permission->id) {
+                throw new WireException($this->_('A required task permission is missing.'));
+            }
+            $permissionPages[] = $permission;
+        }
+        $role = $wire->roles->add($name);
+        if (!$role instanceof Role || !$role->id) {
+            throw new WireException($this->_('Could not create the access role.'));
+        }
+        foreach ($permissionPages as $permission) {
+            $role->addPermission($permission);
+        }
+        if (!$wire->roles->save($role)) {
+            throw new WireException($this->_('Could not save the access role.'));
+        }
+
+        if ($title !== '') {
+            $role->meta('kontorTaskDepartmentLabel', $title);
+        }
+
+        return $role;
     }
 
     public function ___executeTask(): string
@@ -219,7 +426,7 @@ trait ProcessKontorWorkTrait
                 $roleId = (int) $role->id;
                 if ($this->can('kontor-tasks-task-view-all') || $actor->hasRole($roleId)) {
                     $departmentRoles[$roleId] = $role;
-                    $departments[$roleId] = (string) ($role->get('title') ?: $role->name);
+                    $departments[$roleId] = $this->taskDepartmentLabel($role);
                 }
             }
             foreach ($this->wire()->users as $candidate) {
@@ -452,6 +659,8 @@ trait ProcessKontorWorkTrait
                 : $this->_('Former user');
         }
 
+        $taskDepartment = $task?->departmentRoleId ? $this->wire()->roles->get($task->departmentRoleId) : null;
+
         return $this->renderTemplate('task', [
             'task' => $task,
             'values' => $values,
@@ -481,7 +690,7 @@ trait ProcessKontorWorkTrait
             'canShareOrganization' => $this->can('kontor-tasks-task-view-all'),
             'departments' => $departments,
             'assignees' => $assignees,
-            'departmentLabel' => $task?->departmentRoleId ? (string) $this->wire()->roles->get($task->departmentRoleId)->name : '',
+            'departmentLabel' => $taskDepartment instanceof Role ? $this->taskDepartmentLabel($taskDepartment) : '',
             'canComplete' => $this->can('kontor-tasks-task-complete'),
             'canCancel' => $this->can('kontor-tasks-task-cancel'),
             'canEdit' => $this->can('kontor-tasks-task-edit'),
