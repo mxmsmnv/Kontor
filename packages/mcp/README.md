@@ -1,5 +1,7 @@
 # Kontor MCP
 
+[Agent setup for Codex and Claude Code](AGENT-SETUP.md).
+
 Kontor MCP is the optional provider component connecting Kontor to [MCP Server](https://github.com/mxmsmnv/McpServer). MCP Server owns authenticated Streamable HTTP transport, client identities, scopes, rate limits and audit evidence; this component owns the Kontor operations exposed through that boundary.
 
 Version 1.0.1 additionally provides an opt-in, read-only PocketWire SDK surface. A matching ProcessWire actor with `kontor-access` can inspect bounded component/resource metadata, search, and read organization-scoped API resources only when the relevant component view permission is explicitly mapped. Unknown or dynamic resources fail closed for non-superusers. PocketWire receives no write actions, settings profiles, secrets, raw files, or external integrations.
