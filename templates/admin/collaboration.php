@@ -96,6 +96,14 @@ $hasFilters = $query !== '' || $selectedView !== 'all';
       <?php if ($canCreateTasks): ?><a class="uk-button uk-button-primary uk-link-reset" href="<?= $e($adminUrl) ?>task/"><i class="fa fa-plus"></i> New task</a><?php endif; ?>
     </div><?php endif; ?>
   </header>
+  <?php if ($canSummarizeDiscussion):
+      $screenAiTitle = 'Summarize recent discussion with AI';
+      $screenAiAction = 'summarize_discussion';
+      $screenAi = $discussionAi;
+      $screenAiUrl = $adminUrl . 'collaboration/?' . http_build_query(['view' => $selectedView, 'q' => $query]);
+      include __DIR__ . '/screen-ai-draft.php';
+  endif; ?>
+
 
   <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-margin-medium-bottom" uk-grid>
     <div><div class="uk-card uk-card-default uk-card-small uk-card-body kontor-stat"><span class="kontor-stat__icon"><i class="fa fa-comments-o"></i></span><span><strong class="kontor-stat__value"><?= $e((string) count($comments)) ?></strong><span class="kontor-stat__label">Recent discussions</span></span></div></div>

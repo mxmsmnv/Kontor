@@ -37,6 +37,23 @@ $isFullyAllocated = $allocationTotalMinor === $payment->amount->amountMinor();
     <div class="pw-module-actions kontor-pagehead__actions"><a class="uk-button uk-button-default uk-link-reset" href="<?= $e($adminUrl) ?>payments/"><i class="fa fa-arrow-left"></i> Back to Payments</a></div>
   </header>
 
+  <?php if ($canDraftPaymentReview): ?>
+    <details class="uk-card uk-card-default uk-card-small uk-card-body uk-margin"<?= $paymentReviewDraft !== null || $paymentReviewError !== null ? ' open' : '' ?>>
+      <summary class="uk-text-bold">Suggest reconciliation checks with AI</summary>
+      <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'payment/?id=' . rawurlencode($payment->uid->toString())) ?>">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <label class="uk-form-label" for="payment-ai-excerpt">Review or remove details before sending them to the configured AI provider</label>
+        <textarea class="uk-textarea uk-margin-small" id="payment-ai-excerpt" name="payment_ai_excerpt" rows="5" maxlength="4000" required><?= $e($paymentReviewExcerpt) ?></textarea>
+        <button class="uk-button uk-button-default" name="draft_payment_review" value="1" type="submit">Generate review</button>
+      </form>
+      <?php if ($paymentReviewError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($paymentReviewError) ?></p><?php endif; ?>
+      <?php if ($paymentReviewDraft !== null): ?>
+        <label class="uk-form-label uk-margin-small-top" for="payment-ai-review">Suggested checks for review</label>
+        <textarea class="uk-textarea" id="payment-ai-review" rows="7" readonly><?= $e($paymentReviewDraft) ?></textarea>
+      <?php endif; ?>
+    </details>
+  <?php endif; ?>
+
   <div class="<?= $payment->isReversed() ? 'uk-alert-warning' : ($payment->isConfirmed() ? 'uk-alert-success' : 'uk-alert-primary') ?> uk-margin-medium-bottom" uk-alert>
     <div class="uk-flex uk-flex-between uk-flex-middle uk-flex-wrap uk-grid-small" uk-grid>
       <div class="uk-width-expand@m"><h3 class="uk-h4"><i class="fa fa-<?= $payment->isReversed() ? 'undo' : ($payment->isConfirmed() ? 'check-circle' : 'clock-o') ?>"></i> <?= $payment->isReversed() ? 'Payment reversed' : ($payment->isConfirmed() ? 'Payment confirmed' : 'Payment awaiting confirmation') ?></h3><p><?= $payment->isReversed() ? 'The receipt and its allocations were reversed. The original record remains visible for audit.' : ($payment->isConfirmed() ? 'The receipt is confirmed and its active allocations are reflected in the connected invoice and ledger.' : 'This payment has not yet become a confirmed cash receipt.') ?></p></div>

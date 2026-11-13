@@ -70,6 +70,15 @@ $queryReady = mb_strlen($query) >= 2;
     <div><p class="kontor-eyebrow">Navigation · Global search</p><h2>Search</h2><p>Find customers, opportunities, catalog items and installed workspaces from one place.</p></div>
   </header>
 
+  <?php if ($canSuggestSearch):
+      $screenAiTitle = 'Suggest search terms with AI';
+      $screenAiAction = 'suggest_search_terms';
+      $screenAi = $searchAi;
+      $screenAiUrl = $adminUrl . 'search/?' . http_build_query(['q' => $query, 'type' => $selectedEntityType, 'page' => $page]);
+      include __DIR__ . '/screen-ai-draft.php';
+  endif; ?>
+
+
   <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
     <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid><div class="uk-width-expand@m"><p class="uk-text-meta uk-text-uppercase uk-margin-remove-bottom">Search Kontor</p><h3 class="uk-card-title uk-margin-small-top uk-margin-remove-bottom">What are you looking for?</h3><p class="uk-text-muted uk-margin-small-top">Search by a name, email, company, opportunity, SKU, barcode or component title.</p></div><div><span class="uk-label"><?= $e((string) count($availableEntityTypes)) ?> workspace<?= count($availableEntityTypes) === 1 ? '' : 's' ?></span></div></div>
     <form class="uk-form-stacked uk-margin-medium-top" method="get" action="./"><div class="uk-grid-small uk-flex-bottom" uk-grid><div class="uk-width-1-1 uk-width-expand@m"><label class="uk-form-label" for="global-search-query">Search terms</label><div class="uk-inline uk-width-1-1 uk-margin-small-top"><span class="uk-form-icon"><i class="fa fa-search"></i></span><input class="uk-input" id="global-search-query" name="q" type="search" minlength="2" value="<?= $e($query) ?>" placeholder="Customer, deal, SKU or workspace" autocomplete="off" autofocus required></div><div class="uk-text-meta uk-margin-small-top">Enter at least two characters. More specific terms produce better matches.</div></div><div class="uk-width-1-1 uk-width-1-3@m"><label class="uk-form-label" for="global-search-type">Search within</label><select class="uk-select uk-margin-small-top" id="global-search-type" name="type"><option value="">Every available workspace</option><?php foreach ($availableEntityTypes as $type => $label): ?><option value="<?= $e($type) ?>"<?= $selectedEntityType === $type ? ' selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?></select><div class="uk-text-meta uk-margin-small-top">Narrow the scope only when the result set is too broad.</div></div><div class="uk-width-1-1 uk-width-auto@m"><button class="uk-button uk-button-primary uk-width-1-1" type="submit">Search</button></div><?php if ($hasInput): ?><div class="uk-width-1-1 uk-width-auto@m"><a class="uk-button uk-button-default uk-link-reset uk-width-1-1" href="./">Clear</a></div><?php endif; ?></div></form>

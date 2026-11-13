@@ -475,7 +475,33 @@ trait ProcessKontorCustomerTrait
             $this->organizationUid(),
         );
 
+        $canDraftIntakeQuestions = $profile !== null && $this->can('kontor-crm-intake-admin')
+            && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $intakeExcerpt = '';
+        if ($canDraftIntakeQuestions) {
+            $this->requireSameOrganization($profile->organizationId);
+            $lines = ['Profile: ' . $profile->name];
+            foreach (array_slice($profile->fields, 0, 25) as $field) {
+                $lines[] = sprintf(
+                    '- %s (%s, %s)',
+                    $field['label'],
+                    implode(', ', $field['targets']),
+                    $field['required'] ? 'required' : 'optional',
+                );
+            }
+            $intakeExcerpt = mb_substr(implode("\n", $lines), 0, 4000);
+        }
+        $intakeAi = $this->screenAiDraft(
+            'draft_intake_questions',
+            $canDraftIntakeQuestions,
+            $intakeExcerpt,
+            'Suggest up to five useful questions for gaps in this CRM intake profile. Explain why each question matters and avoid collecting sensitive personal information.',
+        );
+
         return $this->renderTemplate('crm-intake', [
+            'canDraftIntakeQuestions' => $canDraftIntakeQuestions,
+            'intakeAi' => $intakeAi,
             'profile' => $profile,
             'settingsReady' => $this->wire()->modules->isInstalled('KontorSettings'),
             'canManage' => $this->can('kontor-crm-intake-admin')

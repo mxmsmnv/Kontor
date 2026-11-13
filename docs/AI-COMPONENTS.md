@@ -2,6 +2,8 @@
 
 Kontor AI uses the default provider configured in Squad. The workbench offers summary, extraction and drafts. Excel contact import offers optional suggestions for unknown headers. Active CRM deals and tasks offer on-demand next steps. The AI assistant on supported admin screens uses a workflow-specific prompt and only the notes staff explicitly enter. It produces suggestions for review. The table describes use cases and further record-aware integrations.
 
+Built-in actions also cover mail replies, document sections, report totals, project status, quotation emails, invoice reminders, stock balances, purchase orders, expenses, payment reconciliation, catalog descriptions, qualification profiles, recent discussions, dashboard metrics, file metadata and search terms. Availability depends on the record, installed components and staff permissions. The forms show what will be sent and return drafts for review.
+
 | Component | Suggested use |
 | --- | --- |
 | Core | Explain import errors and summarize administrator diagnostics |

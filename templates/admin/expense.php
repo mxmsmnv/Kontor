@@ -33,6 +33,23 @@
   <?php else: ?>
     <header class="kontor-formhead"><a class="kontor-formhead__back" href="<?= $e($adminUrl) ?>expenses/"><i class="fa fa-arrow-left"></i> Back to expenses</a><p class="kontor-eyebrow">Expenses · Approval</p><h2><?= $e($expense->description) ?></h2></header>
   <?php endif; ?>
+  <?php if ($canDraftExpenseReview): ?>
+    <details class="uk-card uk-card-default uk-card-small uk-card-body uk-margin"<?= $expenseReviewDraft !== null || $expenseReviewError !== null ? ' open' : '' ?>>
+      <summary class="uk-text-bold">Review expense with AI</summary>
+      <form class="uk-form-stacked uk-margin-small-top" method="post" action="<?= $e($adminUrl . 'expense/?id=' . rawurlencode($expense->uid->toString())) ?>">
+        <input type="hidden" name="<?= $e($csrfName) ?>" value="<?= $e($csrfValue) ?>">
+        <label class="uk-form-label" for="expense-ai-excerpt">Review or remove details before sending them to the configured AI provider</label>
+        <textarea class="uk-textarea uk-margin-small" id="expense-ai-excerpt" name="expense_ai_excerpt" rows="5" maxlength="4000" required><?= $e($expenseReviewExcerpt) ?></textarea>
+        <button class="uk-button uk-button-default" name="draft_expense_review" value="1" type="submit">Generate review</button>
+      </form>
+      <?php if ($expenseReviewError !== null): ?><p class="uk-text-danger" role="alert"><?= $e($expenseReviewError) ?></p><?php endif; ?>
+      <?php if ($expenseReviewDraft !== null): ?>
+        <label class="uk-form-label uk-margin-small-top" for="expense-ai-review">Suggested checks for review</label>
+        <textarea class="uk-textarea" id="expense-ai-review" rows="7" readonly><?= $e($expenseReviewDraft) ?></textarea>
+      <?php endif; ?>
+    </details>
+  <?php endif; ?>
+
   <?php if ($error !== ''): ?><div class="uk-alert uk-alert-warning kontor-warning"><strong><?= $e($error) ?></strong></div><?php endif; ?>
   <?php if ($expense === null): ?>
     <?php if ($categories === []): ?>

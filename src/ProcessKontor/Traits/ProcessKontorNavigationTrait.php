@@ -345,7 +345,30 @@ trait ProcessKontorNavigationTrait
                 ? trim($storedDashboardIntro['message'])
                 : self::DEFAULT_DASHBOARD_MESSAGE;
 
+        $metrics = [];
+        if ($this->can('kontor-contacts-contact-view') && $contactsReady) {
+            $metrics[] = 'Active contacts: ' . $contacts;
+        }
+        if ($this->can('kontor-contacts-company-view') && $contactsReady) {
+            $metrics[] = 'Active companies: ' . $companies;
+        }
+        if ($canViewCatalog) {
+            foreach (['products', 'services', 'unpriced', 'uncategorized'] as $metric) {
+                $metrics[] = ucfirst($metric) . ': ' . (int) ($catalogSummary[$metric] ?? 0);
+            }
+        }
+        $canExplainDashboard = $metrics !== [] && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $dashboardAi = $this->screenAiDraft(
+            'explain_dashboard',
+            $canExplainDashboard,
+            implode("\n", $metrics),
+            'Explain the dashboard metrics and suggest up to three checks. Do not infer trends from a single snapshot.',
+        );
+
         return $this->renderTemplate('dashboard', [
+            'canExplainDashboard' => $canExplainDashboard,
+            'dashboardAi' => $dashboardAi,
             'components' => $components,
             'contactsReady' => $contactsReady,
             'contactCount' => $contacts,

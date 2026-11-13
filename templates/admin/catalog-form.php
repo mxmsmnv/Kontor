@@ -62,6 +62,14 @@ $statusClass = static fn (string $status): string => match ($status) {
     </div>
   </header>
 
+  <?php if ($canDraftCatalogDescription):
+      $screenAi = $catalogAi;
+      $screenAiTitle = 'Draft catalog description with AI';
+      $screenAiAction = 'draft_catalog_description';
+      $screenAiUrl = $adminUrl . 'catalog-item/?id=' . rawurlencode($item->uid->toString());
+      include __DIR__ . '/screen-ai-draft.php';
+  endif; ?>
+
   <?php if ($item !== null): ?>
     <section class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-medium-bottom">
       <div class="uk-flex uk-flex-between uk-flex-top uk-flex-wrap uk-grid-small" uk-grid>

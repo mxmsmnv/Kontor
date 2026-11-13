@@ -34,6 +34,14 @@ foreach ($profile?->fields ?? [] as $field) {
     </div>
   </header>
 
+  <?php if ($canDraftIntakeQuestions):
+      $screenAi = $intakeAi;
+      $screenAiTitle = 'Suggest qualification questions with AI';
+      $screenAiAction = 'draft_intake_questions';
+      $screenAiUrl = $adminUrl . 'crm-intake/';
+      include __DIR__ . '/screen-ai-draft.php';
+  endif; ?>
+
   <section class="kontor-section-intro uk-margin-bottom" aria-label="About this section">
     <i class="fa fa-info-circle" aria-hidden="true"></i>
     <div><strong>One profile, connected across the customer workflow</strong><p>Contact fields describe the person. Lead fields qualify the request. Shared Lead and Deal fields follow the opportunity automatically during conversion.</p></div>

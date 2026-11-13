@@ -454,6 +454,42 @@ trait ProcessKontorAuditSupportTrait
         return $links;
     }
 
+    /**
+     * Build a draft from the editable excerpt of an already authorized screen.
+     * @return array{excerpt: string, draft: string, error: string}
+     */
+    private function screenAiDraft(string $action, bool $available, string $excerpt, string $instructions): array
+    {
+        $draft = '';
+        $error = '';
+        if ($this->wire()->input->post($action) === '1') {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+            if (!$available) {
+                throw new WirePermissionException($this->_('AI assistance is unavailable for this view.'));
+            }
+            $excerpt = trim((string) $this->wire()->input->post('screen_ai_excerpt'));
+            if ($excerpt === '' || mb_strlen($excerpt) > 4000) {
+                $error = $this->_('Enter up to 4,000 characters.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $this->organizationUid(),
+                    ['excerpt' => $excerpt],
+                    $instructions . ' Match the language of the excerpt unless a language is specified. Do not invent facts.',
+                    (string) $this->wire()->user->id,
+                );
+                $value = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($value) && trim($value) !== '') {
+                    $draft = $value;
+                } else {
+                    $error = $this->_('The AI provider did not return a suggestion. Try again.');
+                }
+            }
+        }
+
+        return compact('excerpt', 'draft', 'error');
+    }
+
     private function renderTemplate(string $name, array $variables): string
     {
         $variables['adminUrl'] = $this->wire()->config->urls->admin . 'kontor/';

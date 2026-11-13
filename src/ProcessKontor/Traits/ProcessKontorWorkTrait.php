@@ -892,10 +892,31 @@ trait ProcessKontorWorkTrait
             $selectedView = 'all';
         }
 
+        $query = trim($this->wire()->sanitizer->text((string) $this->wire()->input->get('q')));
+        $discussionLinks = $this->collaborationEntityLinks($records);
+        // Only include records whose linked entity is visible to the current user.
+        $discussion = array_values(array_filter($records, static function (Note|Comment $record) use ($selectedView, $query, $discussionLinks): bool {
+            return isset($discussionLinks[$record->entityType . ':' . $record->entityUid])
+                && ($selectedView !== 'comments' || $record instanceof Comment)
+                && ($selectedView !== 'notes' || $record instanceof Note)
+                && ($query === '' || mb_stripos($record->body, $query) !== false);
+        }));
+        usort($discussion, static fn (Note|Comment $left, Note|Comment $right): int => $right->createdAt <=> $left->createdAt);
+        $canSummarizeDiscussion = $discussion !== [] && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $discussionAi = $this->screenAiDraft(
+            'summarize_discussion',
+            $canSummarizeDiscussion,
+            mb_substr(implode("\n\n", array_map(static fn (Note|Comment $record): string => $record->body, array_slice($discussion, 0, 10))), 0, 4000),
+            'Summarize the discussion, distinguishing agreed decisions, unresolved questions and next actions.',
+        );
+
         return $this->renderTemplate('collaboration', [
+            'canSummarizeDiscussion' => $canSummarizeDiscussion,
+            'discussionAi' => $discussionAi,
             'notes' => $notes,
             'comments' => $comments,
-            'entityLinks' => $this->collaborationEntityLinks($records),
+            'entityLinks' => $discussionLinks,
             'authorLabels' => $this->collaborationAuthorLabels($records),
             'canViewNotes' => $canViewNotes,
             'canViewTasks' => $this->tasksReady() && $this->can('kontor-tasks-task-view'),

@@ -44,6 +44,8 @@ $orderUid = $order?->uid->toString() ?? '';
     <p><?= $order === null ? 'Prepare a reviewable supplier commitment with a destination, item, price and expected date.' : 'Follow the commitment from draft and issue through warehouse receipt.' ?></p>
   </header>
 
+  <?php require __DIR__ . '/operations-ai-panel.php'; ?>
+
   <?php if ($error !== ''): ?><div class="uk-alert-warning" uk-alert><p><i class="fa fa-exclamation-triangle uk-margin-small-right"></i><strong><?= $e($error) ?></strong></p></div><?php endif; ?>
 
   <?php if ($order === null): ?>

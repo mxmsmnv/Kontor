@@ -103,6 +103,15 @@ $filtersActive = $query !== '' || $selectedClassification !== null || $selectedS
     </div>
   </header>
 
+  <?php if ($canSuggestFileMetadata):
+      $screenAiTitle = 'Suggest file tags with AI';
+      $screenAiAction = 'suggest_file_metadata';
+      $screenAi = $fileMetadataAi;
+      $screenAiUrl = $adminUrl . 'files/?id=' . rawurlencode($selected['uid']);
+      include __DIR__ . '/screen-ai-draft.php';
+  endif; ?>
+
+
   <?php if ($storageHealth->status !== 'ok'): ?>
     <div class="uk-alert-danger uk-margin-medium-bottom" uk-alert><p><strong>Private storage needs attention.</strong> <?= $e($storageHealth->message) ?></p></div>
   <?php endif; ?>

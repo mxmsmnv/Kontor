@@ -1402,7 +1402,63 @@ trait ProcessKontorCommerceTrait
             $payment->number ?? $this->_('Draft payment')
         ));
 
+        $paymentReviewRequested = $this->wire()->input->post('draft_payment_review') === '1';
+        if ($paymentReviewRequested) {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+        }
+        $canDraftPaymentReview = !$payment->isReversed()
+            && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $paymentReviewExcerpt = '';
+        $paymentReviewDraft = null;
+        $paymentReviewError = null;
+        if ($canDraftPaymentReview) {
+            $activeAllocations = array_filter(
+                $allocations,
+                static fn ($allocation): bool => !$allocation->isReversed(),
+            );
+            $paymentReviewExcerpt = "Payment date: " . ($payment->paymentDate?->format('Y-m-d') ?? 'not recorded')
+                . "\nPayment in minor units: " . $payment->amount->amountMinor()
+                . "\nCurrency: " . $payment->amount->currencyCode()
+                . "\nActive allocations: " . count($activeAllocations);
+            foreach (array_slice($activeAllocations, 0, 20) as $allocation) {
+                $paymentReviewExcerpt .= "\nAllocation in minor units: " . $allocation->amount->amountMinor()
+                    . ' ' . $allocation->amount->currencyCode();
+            }
+            if (count($activeAllocations) > 20) {
+                $paymentReviewExcerpt .= "\nOnly the first 20 allocations are shown.";
+            }
+            $paymentReviewExcerpt = mb_substr($paymentReviewExcerpt, 0, 4000);
+        }
+        if ($paymentReviewRequested) {
+            if (!$canDraftPaymentReview) {
+                throw new WirePermissionException($this->_('AI review is unavailable for this record.'));
+            }
+            $paymentReviewExcerpt = trim((string) $this->wire()->input->post('payment_ai_excerpt'));
+            if ($paymentReviewExcerpt === '' || mb_strlen($paymentReviewExcerpt) > 4000) {
+                $paymentReviewError = $this->_('Enter up to 4,000 characters for review.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $payment->organizationId,
+                    ['reviewExcerpt' => $paymentReviewExcerpt],
+                    'Suggest up to three reconciliation checks for a human reviewer based on the payment and recorded allocations. Identify missing evidence and state that matching a balance alone does not verify the payment. Do not invent invoice matches or recommend executing allocations or reversals.',
+                    (string) $this->wire()->user->id,
+                );
+                $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($draft) && trim($draft) !== '') {
+                    $paymentReviewDraft = $draft;
+                } else {
+                    $paymentReviewError = $this->_('The AI provider did not return a draft. Try again.');
+                }
+            }
+        }
+
         return $this->renderTemplate('payment', [
+            'canDraftPaymentReview' => $canDraftPaymentReview,
+            'paymentReviewExcerpt' => $paymentReviewExcerpt,
+            'paymentReviewDraft' => $paymentReviewDraft,
+            'paymentReviewError' => $paymentReviewError,
             'payment' => $payment,
             'allocations' => $allocations,
             'invoiceLabels' => $invoiceLabels,

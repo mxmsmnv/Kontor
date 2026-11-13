@@ -100,17 +100,43 @@ trait ProcessKontorOperationsTrait
         $organizationUid = $this->organizationUid();
         $warehouses = $module->warehouseRepository()->forOrganization($organizationUid);
 
+        $warehouseLabels = array_column(array_map(
+            static fn (Warehouse $warehouse): array => [
+                $warehouse->uid->toString(),
+                $warehouse->code . ' · ' . $warehouse->name,
+            ],
+            $warehouses,
+        ), 1, 0);
+        $itemLabels = $this->inventoryItemLabels();
+        $balances = $module->balanceRepository()->forOrganization($organizationUid);
+        $operationAi = $this->operationsAiDraft(
+            $balances !== [],
+            'Review stock balances with AI',
+            'inventory/',
+            static function () use ($balances, $itemLabels, $warehouseLabels): string {
+                $zero = array_filter($balances, static fn ($balance): bool => $balance->quantityAvailable <= 0);
+                $positive = array_filter($balances, static fn ($balance): bool => $balance->quantityAvailable > 0);
+                $excerpt = 'Stock balance rows: ' . count($balances) . '. Rows with no available stock: ' . count($zero) . '.'
+                    . "\n" . 'Showing up to 20 rows, with unavailable stock first.';
+                foreach (array_slice(array_merge($zero, $positive), 0, 20) as $balance) {
+                    $excerpt .= "\n" . ($itemLabels[$balance->itemUid] ?? 'Item ' . $balance->itemUid)
+                        . ' at ' . ($warehouseLabels[$balance->warehouseUid] ?? 'Warehouse ' . $balance->warehouseUid)
+                        . ': on hand ' . $balance->quantityOnHand
+                        . ', reserved ' . $balance->quantityReserved
+                        . ', available ' . $balance->quantityAvailable;
+                }
+
+                return $excerpt;
+            },
+            'Flag balances that merit review and suggest practical checks. This is a snapshot. Do not predict shortages or propose order quantities without demand and lead-time data.',
+        );
+
         return $this->renderTemplate('inventory', [
             'warehouses' => $warehouses,
-            'warehouseLabels' => array_column(array_map(
-                static fn (Warehouse $warehouse): array => [
-                    $warehouse->uid->toString(),
-                    $warehouse->code . ' · ' . $warehouse->name,
-                ],
-                $warehouses,
-            ), 1, 0),
-            'itemLabels' => $this->inventoryItemLabels(),
-            'balances' => $module->balanceRepository()->forOrganization($organizationUid),
+            'warehouseLabels' => $warehouseLabels,
+            'itemLabels' => $itemLabels,
+            'balances' => $balances,
+            'operationAi' => $operationAi,
             'movements' => ($this->wire()->user->isSuperuser()
                 || $this->wire()->user->hasPermission('kontor-inventory-movement-view'))
                 ? $module->movementRepository()->recentForOrganization($organizationUid)
@@ -119,6 +145,54 @@ trait ProcessKontorOperationsTrait
                 || $this->wire()->user->hasPermission('kontor-inventory-warehouse-admin'),
             'canMoveStock' => $this->canPerformAnyInventoryMovement(),
         ]);
+    }
+
+    /** @param callable(): string $excerpt */
+    private function operationsAiDraft(bool $eligible, string $title, string $route, callable $excerpt, string $prompt): ?array
+    {
+        $requested = $this->wire()->input->post('draft_operation_ai') === '1';
+        if ($requested) {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+        }
+        if (!$eligible || !$this->can('kontor-ai-action-approve') || !$this->aiReady()
+            || $this->aiModule()->providerRegistry()->find('draft') === null) {
+            if ($requested) {
+                throw new WirePermissionException($this->_('AI drafting is unavailable for this view.'));
+            }
+
+            return null;
+        }
+
+        $result = ['title' => $title, 'route' => $route, 'excerpt' => '', 'draft' => null, 'error' => null];
+        if (!$requested) {
+            $result['excerpt'] = mb_substr($excerpt(), 0, 4000);
+
+            return $result;
+        }
+
+        $text = trim((string) $this->wire()->input->post('operation_ai_excerpt'));
+        $result['excerpt'] = mb_substr($text, 0, 4000);
+        if ($text === '' || mb_strlen($text) > 4000) {
+            $result['error'] = $this->_('Enter up to 4,000 characters.');
+
+            return $result;
+        }
+
+        $response = $this->aiModule()->drafting()->draft(
+            $this->organizationUid(),
+            ['excerpt' => $text],
+            $prompt . ' Use the language of the excerpt.',
+            (string) $this->wire()->user->id,
+        );
+        $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+        if (is_string($draft) && trim($draft) !== '') {
+            $result['draft'] = $draft;
+        } else {
+            $result['error'] = $this->_('The AI provider did not return a suggestion. Try again.');
+        }
+
+        return $result;
     }
 
     public function ___executeInventoryWarehouse(): string
@@ -570,7 +644,8 @@ trait ProcessKontorOperationsTrait
         ];
         $error = '';
 
-        if ($order === null && $this->wire()->input->post('submit_save')) {
+        if ($order === null && $this->wire()->input->post('draft_operation_ai') !== '1'
+            && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
             $values = [
                 'supplierUid' => $this->wire()->sanitizer->text(
@@ -668,7 +743,26 @@ trait ProcessKontorOperationsTrait
             ? $this->_('Kontor · New purchase order')
             : sprintf($this->_('Kontor · %s'), $order->number ?? 'Draft purchase order'));
 
+        $operationAi = $this->operationsAiDraft(
+            $order !== null && in_array($order->status, ['draft', 'issued', 'partially_received'], true),
+            'Draft supplier note with AI',
+            'purchase-order/?id=' . rawurlencode($id),
+            static function () use ($order, $lines): string {
+                $excerpt = 'Purchase order: ' . ($order->number ?? 'Draft')
+                    . "\nStatus: " . $order->status
+                    . "\nExpected date: " . ($order->expectedDate?->format('Y-m-d') ?? 'Not set')
+                    . "\n" . 'Order lines (up to 20):';
+                foreach (array_slice($lines, 0, 20) as $line) {
+                    $excerpt .= "\n" . $line->title . ': ' . $line->quantity . ' ' . $line->unitCode;
+                }
+
+                return $excerpt;
+            },
+            'Draft a short supplier note asking them to confirm delivery details. Use only the supplied order data and flag questions for the operator. Do not invent dates, prices, quantities, or commitments.',
+        );
+
         return $this->renderTemplate('purchase-order', [
+            'operationAi' => $operationAi,
             'order' => $order,
             'values' => $values,
             'error' => $error,
@@ -996,7 +1090,8 @@ trait ProcessKontorOperationsTrait
         ];
         $error = '';
 
-        if ($expense === null && $this->wire()->input->post('submit_save')) {
+        if ($expense === null && $this->wire()->input->post('draft_expense_review') !== '1'
+            && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
             $values = [
                 'categoryUid' => $this->wire()->sanitizer->text(
@@ -1084,7 +1179,60 @@ trait ProcessKontorOperationsTrait
 
         $workflowCoordinator = $expense !== null ? $module->workflowCoordinator() : null;
 
+        $expenseReviewRequested = $this->wire()->input->post('draft_expense_review') === '1';
+        if ($expenseReviewRequested) {
+            $this->requirePost();
+            $this->requirePermission('kontor-ai-action-approve');
+        }
+        $canDraftExpenseReview = $expense !== null
+            && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $expenseReviewExcerpt = '';
+        $expenseReviewDraft = null;
+        $expenseReviewError = null;
+        if ($canDraftExpenseReview) {
+            $expenseReviewExcerpt = "Description: " . $expense->description
+                . "\nExpense date: " . $expense->expenseDate->format('Y-m-d')
+                . "\nAmount in minor units: " . $expense->amount->amountMinor()
+                . "\nCurrency: " . $expense->amount->currencyCode()
+                . "\nReceipt linked: " . ($expense->receiptFileUid !== null ? 'yes' : 'no');
+            if ($categories !== []) {
+                $categoryNames = array_map(
+                    static fn (ExpenseCategory $category): string => $category->name,
+                    array_slice($categories, 0, 30),
+                );
+                $expenseReviewExcerpt .= "\nAvailable categories (up to 30): " . implode(', ', $categoryNames);
+            }
+            $expenseReviewExcerpt = mb_substr($expenseReviewExcerpt, 0, 4000);
+        }
+        if ($expenseReviewRequested) {
+            if (!$canDraftExpenseReview) {
+                throw new WirePermissionException($this->_('AI review is unavailable for this record.'));
+            }
+            $expenseReviewExcerpt = trim((string) $this->wire()->input->post('expense_ai_excerpt'));
+            if ($expenseReviewExcerpt === '' || mb_strlen($expenseReviewExcerpt) > 4000) {
+                $expenseReviewError = $this->_('Enter up to 4,000 characters for review.');
+            } else {
+                $response = $this->aiModule()->drafting()->draft(
+                    $expense->organizationId,
+                    ['reviewExcerpt' => $expenseReviewExcerpt],
+                    'Suggest up to three checks for this expense and, when an available category fits, suggest it by name. If information is missing, say so. Use the language of the description. Do not infer a tax treatment or recommend approval or reimbursement.',
+                    (string) $this->wire()->user->id,
+                );
+                $draft = $response->success ? ($response->output['draft'] ?? null) : null;
+                if (is_string($draft) && trim($draft) !== '') {
+                    $expenseReviewDraft = $draft;
+                } else {
+                    $expenseReviewError = $this->_('The AI provider did not return a draft. Try again.');
+                }
+            }
+        }
+
         return $this->renderTemplate('expense', [
+            'canDraftExpenseReview' => $canDraftExpenseReview,
+            'expenseReviewExcerpt' => $expenseReviewExcerpt,
+            'expenseReviewDraft' => $expenseReviewDraft,
+            'expenseReviewError' => $expenseReviewError,
             'expense' => $expense,
             'values' => $values,
             'error' => $error,

@@ -65,6 +65,14 @@ $humanize = static fn (string $value): string => ucwords(str_replace(['.', '_', 
     </div>
   </section>
 
+
+  <?php if ($canExplainDashboard):
+      $screenAiTitle = 'Explain dashboard with AI';
+      $screenAiAction = 'explain_dashboard';
+      $screenAi = $dashboardAi;
+      $screenAiUrl = $adminUrl;
+      include __DIR__ . '/screen-ai-draft.php';
+  endif; ?>
   <div id="kontor-dashboard-intro" uk-modal>
     <div class="uk-modal-dialog uk-modal-body">
       <button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>

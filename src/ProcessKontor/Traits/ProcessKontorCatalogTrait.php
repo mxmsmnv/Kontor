@@ -288,7 +288,23 @@ trait ProcessKontorCatalogTrait
         $isNew = $item === null;
         $previous = $item === null ? null : $this->catalogItemAuditSnapshot($item);
 
-        if ($this->wire()->input->post('submit_save')) {
+        $language = $this->organization()->defaultLanguage;
+        $canDraftCatalogDescription = $item !== null && $this->can('kontor-ai-action-approve')
+            && $this->aiReady() && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $catalogBrief = $canDraftCatalogDescription
+            ? mb_substr($this->catalogItemTitle($item) . "\nType: " . $item->itemType . "\n"
+                . ($item->description[$language] ?? $item->description['en'] ?? ''), 0, 4000)
+            : '';
+        $catalogAi = $this->screenAiDraft(
+            'draft_catalog_description',
+            $canDraftCatalogDescription,
+            $catalogBrief,
+            'Draft a concise product or service description in language ' . $language
+                . '. Use the supplied facts and do not invent specifications, guarantees or prices.',
+        );
+
+        if ($this->wire()->input->post('draft_catalog_description') !== '1'
+            && $this->wire()->input->post('submit_save')) {
             $this->requirePost();
             $form->processInput($this->wire()->input->post);
             $this->validateCatalogItemForm($form, $item);
@@ -334,6 +350,8 @@ trait ProcessKontorCatalogTrait
         }
 
         return $this->renderTemplate('catalog-form', [
+            'canDraftCatalogDescription' => $canDraftCatalogDescription,
+            'catalogAi' => $catalogAi,
             'form' => $form,
             'item' => $item,
             'canViewPriceLists' => $canViewPriceLists,

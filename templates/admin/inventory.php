@@ -33,6 +33,8 @@
     </div>
   </header>
 
+  <?php require __DIR__ . '/operations-ai-panel.php'; ?>
+
   <section class="uk-card uk-card-default uk-card-small uk-card-body kontor-card pw-table-panel uk-overflow-auto kontor-tablewrap">
     <header class="kontor-sectionhead">
       <div><p class="kontor-eyebrow">Locations</p><h3>Warehouses</h3></div>

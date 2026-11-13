@@ -609,7 +609,19 @@ trait ProcessKontorCommunicationsTrait
             ? $this->_('Kontor · Files')
             : sprintf($this->_('Kontor · %s'), (string) $selected['original_name']));
 
+        $canSuggestFileMetadata = $selected !== null && $selected['archived_at'] === null && $this->can('kontor-files-file-upload')
+            && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $fileMetadataAi = $this->screenAiDraft(
+            'suggest_file_metadata',
+            $canSuggestFileMetadata,
+            mb_substr($selected === null ? '' : "File name: " . $selected['original_name'] . "\nMedia type: " . ($selected['mime_type'] ?? 'Unknown'), 0, 4000),
+            'Suggest a short description and up to five tags. Use only the metadata supplied and do not claim to have read the file.',
+        );
+
         return $this->renderTemplate('files', [
+            'canSuggestFileMetadata' => $canSuggestFileMetadata,
+            'fileMetadataAi' => $fileMetadataAi,
             'files' => $files,
             'allFiles' => $allFiles,
             'selected' => $selected,

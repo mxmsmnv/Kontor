@@ -857,7 +857,19 @@ trait ProcessKontorPlatformTrait
             }
         }
 
+        $canSuggestSearch = mb_strlen($query) >= 2 && $availableEntityTypes !== []
+            && $this->can('kontor-ai-action-approve') && $this->aiReady()
+            && $this->aiModule()->providerRegistry()->find('draft') !== null;
+        $searchAi = $this->screenAiDraft(
+            'suggest_search_terms',
+            $canSuggestSearch,
+            mb_substr($query, 0, 4000),
+            'Suggest up to five alternative search phrases. Provide search terms only and do not claim that any records match.',
+        );
+
         return $this->renderTemplate('search', [
+            'canSuggestSearch' => $canSuggestSearch,
+            'searchAi' => $searchAi,
             'query' => $query,
             'result' => $result,
             'selectedEntityType' => $entityType,
